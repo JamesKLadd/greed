@@ -240,20 +240,29 @@ button {
   );
 }
 .game__bar {
-  display: flex;
+  /* Three equal-weight columns keep the logo centered to the screen even though
+     the left (Leave) and right (controls) groups are different widths. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 18px;
   border-bottom: 1px solid var(--panel-line);
   gap: 10px;
 }
+.game__bar > *:first-child {
+  justify-self: start;
+}
 .game__logo {
   font-size: 26px;
   letter-spacing: 4px;
+  justify-self: center;
+  text-align: center;
+  white-space: nowrap;
 }
 .game__bar-right {
   display: flex;
   gap: 8px;
+  justify-self: end;
 }
 .game__main {
   flex: 1;

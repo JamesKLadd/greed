@@ -1,4 +1,4 @@
-import { createGame, determineOrder, makeSeed, GOAL_DEFAULT } from "@greed/core";
+import { createGame, determineOrder, makeSeed, cleanPlayerName, GOAL_DEFAULT } from "@greed/core";
 import type { BotDifficulty, BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
 
@@ -50,7 +50,7 @@ export function buildGame(setup: MatchSetup): BuiltGame {
     setup.seed ?? makeSeed((Date.now() & 0xffffffff) ^ Math.floor(Math.random() * 2 ** 31));
   const configs: PlayerConfig[] = setup.seats.map((s, i) => ({
     id: `p${i}`,
-    name: s.name.trim() || `Player ${i + 1}`,
+    name: cleanPlayerName(s.name, `Player ${i + 1}`),
     isBot: s.isBot,
     botDifficulty: s.isBot ? s.difficulty : undefined,
     botPersonality: s.isBot ? s.personality : undefined,

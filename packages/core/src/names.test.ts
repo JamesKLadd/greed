@@ -1,0 +1,53 @@
+import { describe, it, expect } from "vitest";
+import { cleanPlayerName, hasProfanity, MAX_NAME_LENGTH } from "./names.js";
+
+describe("cleanPlayerName", () => {
+  it("passes normal names through, trimmed and whitespace-collapsed", () => {
+    expect(cleanPlayerName("  Alex  ")).toBe("Alex");
+    expect(cleanPlayerName("Big   Joe")).toBe("Big Joe");
+    expect(cleanPlayerName("Player_99")).toBe("Player_99");
+  });
+
+  it("caps length", () => {
+    const long = "A".repeat(40);
+    expect(cleanPlayerName(long).length).toBe(MAX_NAME_LENGTH);
+  });
+
+  it("falls back for empty / whitespace names", () => {
+    expect(cleanPlayerName("")).toBe("Player");
+    expect(cleanPlayerName("   ")).toBe("Player");
+    expect(cleanPlayerName("", "Player 3")).toBe("Player 3");
+  });
+
+  it("replaces profane names with the fallback", () => {
+    for (const bad of [
+      "fuck",
+      "SHIT",
+      "a bitch",
+      "asshole99",
+      "b!tch",
+      "sh1t",
+      "f u c k",
+      "$hit",
+    ]) {
+      expect(cleanPlayerName(bad), bad).toBe("Player");
+    }
+  });
+
+  it("catches leet-speak and repeated-letter obfuscation", () => {
+    expect(hasProfanity("fuuuuck")).toBe(true);
+    expect(hasProfanity("sh1tter")).toBe(true);
+    expect(hasProfanity("b i t c h")).toBe(true);
+  });
+
+  it("blocks short ambiguous roots only as whole words (no Scunthorpe)", () => {
+    // whole-word hits
+    expect(hasProfanity("ass")).toBe(true);
+    expect(hasProfanity("a$$")).toBe(true);
+    // innocent words that merely contain a short root must pass
+    for (const ok of ["assassin", "bass", "Cockburn", "Cumberland", "Dickinson", "grape"]) {
+      expect(hasProfanity(ok), ok).toBe(false);
+      expect(cleanPlayerName(ok), ok).toBe(ok.slice(0, MAX_NAME_LENGTH));
+    }
+  });
+});

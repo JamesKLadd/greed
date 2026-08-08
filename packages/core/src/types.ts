@@ -12,7 +12,7 @@ export type DieValue = 1 | 2 | 3 | 4 | 5 | 6;
 export const DICE_COUNT = 5;
 
 /** Default banked-total needed to trigger the endgame. */
-export const GOAL_DEFAULT = 2000;
+export const GOAL_DEFAULT = 3000;
 
 export type BotDifficulty = "easy" | "medium" | "hard" | "expert";
 

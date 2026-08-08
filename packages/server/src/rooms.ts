@@ -5,7 +5,7 @@
  * player can reconnect with their token.
  */
 
-import { createGame, makeSeed, GOAL_DEFAULT } from "@greed/core";
+import { createGame, makeSeed, cleanPlayerName, GOAL_DEFAULT } from "@greed/core";
 import type { BotDifficulty, BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { LobbySeat, LobbyView } from "@greed/protocol";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -111,7 +111,7 @@ export function clearTimers(room: Room): void {
 export function makeHumanSeat(name: string, isHost: boolean): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
-    name: name.trim() || "Player",
+    name: cleanPlayerName(name),
     isBot: false,
     ready: isHost, // host starts ready
     isHost,

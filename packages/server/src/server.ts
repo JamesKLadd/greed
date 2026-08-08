@@ -6,7 +6,7 @@
  * information, the full GameState is broadcast to everyone.
  */
 
-import { applyAction, determineOrder, getLegalActions, makeSeed } from "@greed/core";
+import { applyAction, determineOrder, getLegalActions, makeSeed, GOAL_DEFAULT } from "@greed/core";
 import type { GameAction } from "@greed/core";
 import { decide } from "@greed/bots";
 import { decode, encode } from "@greed/protocol";
@@ -102,7 +102,7 @@ export class GreedServer {
       case "ping":
         return this.send(ws, { type: "pong" });
       case "create-room":
-        return this.onCreate(ws, msg.name, msg.isPublic ?? false, msg.goal ?? 2000);
+        return this.onCreate(ws, msg.name, msg.isPublic ?? false, msg.goal ?? GOAL_DEFAULT);
       case "join-room":
         return this.onJoin(ws, msg.code, msg.name);
       case "quick-match":
@@ -137,7 +137,7 @@ export class GreedServer {
   }
 
   private onQuickMatch(ws: WebSocket, name: string): void {
-    const room = this.store.findOpenPublic() ?? this.store.create(true, 2000);
+    const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
     const seat = makeHumanSeat(name, isHost);
     room.seats.push(seat);

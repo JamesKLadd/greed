@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./names.js";
 export * from "./rng.js";
 export * from "./scoring.js";
 export * from "./rolloff.js";

@@ -22,6 +22,16 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   "hat-trick": "ACH_HAT_TRICK",
   "giant-slayer": "ACH_GIANT_SLAYER",
   veteran: "ACH_VETERAN",
+  inferno: "ACH_INFERNO",
+  moonshot: "ACH_MOONSHOT",
+  landslide: "ACH_LANDSLIDE",
+  "on-fire": "ACH_ON_FIRE",
+  dedicated: "ACH_DEDICATED",
+  champion: "ACH_CHAMPION",
+  "full-table": "ACH_FULL_TABLE",
+  marathon: "ACH_MARATHON",
+  untouchable: "ACH_UNTOUCHABLE",
+  "big-banker": "ACH_BIG_BANKER",
 };
 
 interface TauriInternals {
