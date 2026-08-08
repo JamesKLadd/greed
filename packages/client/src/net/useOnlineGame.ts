@@ -11,6 +11,7 @@ import {
 import { diceToRoll } from "@greed/core";
 import { toastFor, type ToastMessage } from "../game/toasts.js";
 import { SERVER_URL } from "../game/online.js";
+import { loadProfile } from "../game/profile.js";
 
 const TOKEN_KEY = "greed-token";
 
@@ -29,6 +30,8 @@ export interface OnlineController {
   rollingIndices: number[];
   /** Live connection status per player id (bots always true). */
   presence: Record<string, boolean>;
+  /** Equipped dice-skin id per player id (for rendering the current player's dice). */
+  skins: Record<string, string>;
   /** True when this client is a read-only watcher (no seat). */
   isSpectator: boolean;
   createRoom: (name: string, opts?: { isPublic?: boolean; goal?: number }) => void;
@@ -63,6 +66,7 @@ export function useOnlineGame(): OnlineController {
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollTick, setRollTick] = useState(0);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
+  const [skins, setSkins] = useState<Record<string, string>>({});
   const [isSpectator, setIsSpectator] = useState(false);
   const lastLogLen = useRef(0);
   const rollSeen = useRef(0);
@@ -78,6 +82,7 @@ export function useOnlineGame(): OnlineController {
     setYouId(null);
     setCode(null);
     setPresence({});
+    setSkins({});
     setIsSpectator(false);
     prevPresenceRef.current = {};
   }, []);
@@ -135,6 +140,9 @@ export function useOnlineGame(): OnlineController {
           }
           prevPresenceRef.current = next;
           setPresence(next);
+          const nextSkins: Record<string, string> = {};
+          for (const s of msg.skins ?? []) nextSkins[s.id] = s.dice;
+          setSkins(nextSkins);
           setGame(msg.state);
           setStatus("in-game");
           break;
@@ -270,11 +278,19 @@ export function useOnlineGame(): OnlineController {
     isRolling,
     rollingIndices,
     presence,
+    skins,
     isSpectator,
     createRoom: (name, opts) =>
-      send({ type: "create-room", name, isPublic: opts?.isPublic, goal: opts?.goal }),
-    joinRoom: (roomCode, name) => send({ type: "join-room", code: roomCode, name }),
-    quickMatch: (name) => send({ type: "quick-match", name }),
+      send({
+        type: "create-room",
+        name,
+        isPublic: opts?.isPublic,
+        goal: opts?.goal,
+        dice: loadProfile().dice,
+      }),
+    joinRoom: (roomCode, name) =>
+      send({ type: "join-room", code: roomCode, name, dice: loadProfile().dice }),
+    quickMatch: (name) => send({ type: "quick-match", name, dice: loadProfile().dice }),
     spectate: (roomCode) => {
       setIsSpectator(true);
       setStatus("connecting");

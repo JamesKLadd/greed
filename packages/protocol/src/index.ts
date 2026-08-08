@@ -38,9 +38,9 @@ export interface LobbyView {
 // ---------------------------------------------------------------------------
 
 export type ClientMessage =
-  | { type: "create-room"; name: string; isPublic?: boolean; goal?: number }
-  | { type: "join-room"; code: string; name: string }
-  | { type: "quick-match"; name: string }
+  | { type: "create-room"; name: string; isPublic?: boolean; goal?: number; dice?: string }
+  | { type: "join-room"; code: string; name: string; dice?: string }
+  | { type: "quick-match"; name: string; dice?: string }
   | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
   | { type: "set-ready"; ready: boolean }
@@ -70,12 +70,24 @@ export interface PlayerPresence {
   connected: boolean;
 }
 
+/** A player's equipped dice-skin id, so every client can render their dice. */
+export interface PlayerSkin {
+  id: string;
+  dice: string;
+}
+
 export type ServerMessage =
   | { type: "welcome"; youId: string; token: string; code: string }
   | { type: "spectating"; code: string }
   | { type: "lobby"; lobby: LobbyView }
   | { type: "roll-off"; rows: RollOffRow[] }
-  | { type: "game"; code: string; state: GameState; presence: PlayerPresence[] }
+  | {
+      type: "game";
+      code: string;
+      state: GameState;
+      presence: PlayerPresence[];
+      skins: PlayerSkin[];
+    }
   | { type: "error"; message: string }
   | { type: "left" }
   | { type: "pong" };

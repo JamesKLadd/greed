@@ -75,7 +75,12 @@ export class GreedServer {
       const seat = room.seats.find((s) => s.id === p.id);
       return { id: p.id, connected: seat ? seat.isBot || seat.ws != null : false };
     });
-    return { type: "game", code: room.code, state: room.game, presence };
+    // Equipped dice skins, so every client can render the current player's dice.
+    const skins = room.game.players.map((p) => {
+      const seat = room.seats.find((s) => s.id === p.id);
+      return { id: p.id, dice: seat?.dice ?? "ivory" };
+    });
+    return { type: "game", code: room.code, state: room.game, presence, skins };
   }
 
   private broadcastGame(room: Room): void {
@@ -102,11 +107,17 @@ export class GreedServer {
       case "ping":
         return this.send(ws, { type: "pong" });
       case "create-room":
-        return this.onCreate(ws, msg.name, msg.isPublic ?? false, msg.goal ?? GOAL_DEFAULT);
+        return this.onCreate(
+          ws,
+          msg.name,
+          msg.isPublic ?? false,
+          msg.goal ?? GOAL_DEFAULT,
+          msg.dice,
+        );
       case "join-room":
-        return this.onJoin(ws, msg.code, msg.name);
+        return this.onJoin(ws, msg.code, msg.name, msg.dice);
       case "quick-match":
-        return this.onQuickMatch(ws, msg.name);
+        return this.onQuickMatch(ws, msg.name, msg.dice);
       case "spectate":
         return this.onSpectate(ws, msg.code);
       case "reconnect":
@@ -116,30 +127,36 @@ export class GreedServer {
     }
   }
 
-  private onCreate(ws: WebSocket, name: string, isPublic: boolean, goal: number): void {
+  private onCreate(
+    ws: WebSocket,
+    name: string,
+    isPublic: boolean,
+    goal: number,
+    dice?: string,
+  ): void {
     const room = this.store.create(isPublic, goal);
-    const seat = makeHumanSeat(name, true);
+    const seat = makeHumanSeat(name, true, dice);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
   }
 
-  private onJoin(ws: WebSocket, code: string, name: string): void {
+  private onJoin(ws: WebSocket, code: string, name: string, dice?: string): void {
     const room = this.store.get(code);
     if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
     if (room.phase !== "lobby")
       return this.send(ws, { type: "error", message: "That game has already started." });
     if (room.seats.length >= MAX_SEATS)
       return this.send(ws, { type: "error", message: "That room is full." });
-    const seat = makeHumanSeat(name, false);
+    const seat = makeHumanSeat(name, false, dice);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
   }
 
-  private onQuickMatch(ws: WebSocket, name: string): void {
+  private onQuickMatch(ws: WebSocket, name: string, dice?: string): void {
     const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
-    const seat = makeHumanSeat(name, isHost);
+    const seat = makeHumanSeat(name, isHost, dice);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);

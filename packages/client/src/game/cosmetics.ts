@@ -308,12 +308,12 @@ export function cosmeticVars(profile: Profile): CSSProperties {
 }
 
 /**
- * Dice-only CSS variables (no table theme). Used online, where a player's dice
- * skin is shown only while it's their turn — the shared felt stays the default
- * so everyone sees the same table.
+ * Dice-only CSS variables (no table theme) for a given skin id. Used online: the
+ * server broadcasts each player's equipped skin, and every client renders the
+ * CURRENT player's dice with it (so a skin shows on its owner's turn for everyone).
+ * Unknown ids fall back to the default — the shared felt is never themed here.
  */
-export function diceCosmeticVars(profile: Profile): CSSProperties {
-  const dice = find(DICE_SKINS, profile.dice);
-  const diceVars = isUnlocked(dice, profile) ? dice.vars : DICE_SKINS[0].vars;
-  return { ...diceVars } as CSSProperties;
+export function diceVarsById(id: string): CSSProperties {
+  const dice = DICE_SKINS.find((c) => c.id === id) ?? DICE_SKINS[0];
+  return { ...dice.vars } as CSSProperties;
 }

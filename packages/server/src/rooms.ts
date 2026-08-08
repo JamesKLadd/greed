@@ -19,6 +19,8 @@ export interface Seat {
   personality?: BotPersonality;
   ready: boolean;
   isHost: boolean;
+  /** Equipped dice-skin id (cosmetic), broadcast so all clients render it. */
+  dice: string;
   /** Reconnection token (humans only). */
   token: string;
   /** Live socket, or null when a bot or a disconnected human. */
@@ -108,13 +110,14 @@ export function clearTimers(room: Room): void {
   room.timers.clear();
 }
 
-export function makeHumanSeat(name: string, isHost: boolean): Seat {
+export function makeHumanSeat(name: string, isHost: boolean, dice = "ivory"): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
     name: cleanPlayerName(name),
     isBot: false,
     ready: isHost, // host starts ready
     isHost,
+    dice: dice || "ivory",
     token: randomBytes(16).toString("hex"),
     ws: null,
   };
@@ -133,6 +136,7 @@ export function makeBotSeat(
     personality,
     ready: true,
     isHost: false,
+    dice: "ivory",
     token: "",
     ws: null,
   };

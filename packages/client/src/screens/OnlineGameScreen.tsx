@@ -9,14 +9,8 @@ import { TurnHistory } from "../components/TurnHistory.js";
 import { MuteButton } from "../components/MuteButton.js";
 import { useGameSounds } from "../game/useGameSounds.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
-import {
-  loadProfile,
-  recordGame,
-  summarize,
-  type Achievement,
-  type GameSummary,
-} from "../game/profile.js";
-import { diceCosmeticVars } from "../game/cosmetics.js";
+import { recordGame, summarize, type Achievement, type GameSummary } from "../game/profile.js";
+import { diceVarsById } from "../game/cosmetics.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { useT } from "../i18n/i18n.js";
@@ -58,10 +52,10 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const winner = state.players.find((p) => p.id === state.winnerId);
   const youWon = state.winnerId === net.youId;
   const standings = [...state.players].sort((a, b) => b.total - a.total);
-  // Online: show this client's dice skin only while it's their turn (the dice in
-  // the center are theirs); never apply a table theme — the felt stays shared.
-  const [diceVars] = useState(() => diceCosmeticVars(loadProfile()));
-  const isYourTurn = current.id === net.youId;
+  // Online: the dice in the center belong to whoever's turn it is, so render the
+  // CURRENT player's equipped skin (broadcast by the server) for every viewer.
+  // Never a table theme — the felt stays shared/identical for everyone.
+  const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
 
   useKeyboardShortcuts({
     enabled: !showRules && !showHistory && state.phase !== "game-over",
@@ -73,7 +67,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   });
 
   return (
-    <div className="game" style={isYourTurn ? diceVars : undefined}>
+    <div className="game" style={diceVars}>
       <header className="game__bar">
         <button className="btn btn--ghost" onClick={net.leave}>
           {t("bar.leave")}
