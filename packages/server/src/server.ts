@@ -29,6 +29,10 @@ const INTER_TURN_MS = 1500;
 const BOT_THINK_MS = 800;
 const DISCONNECT_AUTOPLAY_MS = 1200;
 const ROLLOFF_MS = 4200;
+/** A connected player has this long to start their turn before it's forfeited. */
+const TURN_IDLE_MS = 10000;
+/** Forfeit this many turns in one game and the player is kicked. */
+const MAX_MISSED_TURNS = 3;
 
 export class GreedServer {
   private store = new RoomStore();
@@ -335,8 +339,61 @@ export class GreedServer {
         if (!room.game) return;
         this.applyAndBroadcast(room, decide(room.game, difficulty));
       });
+      return;
     }
-    // A connected human: wait for their ROLL/BANK.
+
+    // A connected human. If they haven't STARTED their turn (no roll yet), give
+    // them a grace period; a time-out forfeits the turn and counts against them.
+    if (seat && g.turn.rollCount === 0) {
+      this.schedule(room, TURN_IDLE_MS, () => this.onTurnTimeout(room, seat));
+    }
+    // Otherwise (they've already rolled) wait for their ROLL/BANK.
+  }
+
+  /**
+   * A connected human let their turn's grace period lapse without starting it.
+   * Forfeit the turn, count the miss, and kick the player once they hit the cap.
+   */
+  private onTurnTimeout(room: Room, seat: Seat): void {
+    const g = room.game;
+    if (!g || g.phase === "game-over") return;
+    // Still their turn, still not started, still connected? (Guards stale timers.)
+    if (g.players[g.turn.playerIndex].id !== seat.id) return;
+    if (g.turn.rollCount !== 0 || seat.ws == null) return;
+
+    seat.missedTurns += 1;
+    room.game = applyAction(g, { type: "SKIP" });
+
+    if (seat.missedTurns >= MAX_MISSED_TURNS) {
+      this.kickSeat(room, seat);
+      // Everyone gone? kickSeat tore the room down; nothing more to do.
+      if (!this.store.get(room.code)) return;
+    }
+
+    this.broadcastGame(room);
+    this.scheduleFollowups(room);
+  }
+
+  /**
+   * Remove a seat from a running game (a kick). The player is dropped from the
+   * room and told to leave; their game slot stays in the state and auto-plays
+   * like a disconnected player, so turn order and indices are preserved.
+   */
+  private kickSeat(room: Room, seat: Seat): void {
+    const ws = seat.ws;
+    seat.ws = null;
+    room.seats = room.seats.filter((s) => s.id !== seat.id);
+    if (seat.isHost) this.reassignHost(room);
+    if (ws) {
+      this.conns.delete(ws);
+      this.send(ws, { type: "left" });
+    }
+    // If no connected humans remain, tear the room (and its watchers) down.
+    if (!room.seats.some((s) => !s.isBot && s.ws)) {
+      for (const spectatorWs of room.spectators) this.send(spectatorWs, { type: "left" });
+      room.spectators.clear();
+      this.store.delete(room);
+    }
   }
 
   // -------------------------------------------------------------------------

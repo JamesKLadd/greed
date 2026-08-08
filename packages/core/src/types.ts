@@ -128,6 +128,7 @@ export type GameEvent =
   | { type: "roll"; playerId: string; dice: DieValue[]; result: ScoreResult }
   | { type: "bust"; playerId: string; lostPoints: number }
   | { type: "bank"; playerId: string; gained: number; total: number }
+  | { type: "skip"; playerId: string }
   | { type: "hot-dice"; playerId: string }
   | { type: "endgame-triggered"; playerId: string }
   | { type: "auto-win"; playerId: string }
@@ -151,7 +152,12 @@ export interface GameState {
   log: GameEvent[];
 }
 
-export type GameAction = { type: "ROLL" } | { type: "BANK" } | { type: "ADVANCE" };
+export type GameAction =
+  | { type: "ROLL" }
+  | { type: "BANK" }
+  | { type: "ADVANCE" }
+  /** Forfeit the current (not-yet-finished) turn with no points — used for time-outs. */
+  | { type: "SKIP" };
 
 export interface LegalActions {
   canRoll: boolean;

@@ -188,7 +188,8 @@ function uiClick(): void {
   noiseBurst(c.currentTime, 0.02, { freq: 2600 * vary(0.15), q: 1.2, gain: 0.06 });
 }
 
-type Sound = "roll" | "bank" | "bust" | "hotDice" | "endgame" | "suddenDeath" | "win" | "click";
+type Sound =
+  "roll" | "bank" | "bust" | "hotDice" | "endgame" | "suddenDeath" | "win" | "yourTurn" | "click";
 
 export function play(sound: Sound): void {
   if (muted) return;
@@ -232,6 +233,13 @@ export function play(sound: Sound): void {
     case "suddenDeath": {
       tone(440 * v, t, 0.3, { type: "sawtooth", gain: 0.18 });
       tone(466.16 * v, t + 0.02, 0.4, { type: "sawtooth", gain: 0.16 });
+      break;
+    }
+    case "yourTurn": {
+      // A soft two-note "ding-dong" bell to cue the local player it's their turn.
+      tone(880 * v, t, 0.22, { type: "sine", gain: 0.22 });
+      tone(1174.66 * v, t + 0.12, 0.34, { type: "sine", gain: 0.2 });
+      tone(587.33 * v, t + 0.12, 0.34, { type: "triangle", gain: 0.08 });
       break;
     }
     case "win": {

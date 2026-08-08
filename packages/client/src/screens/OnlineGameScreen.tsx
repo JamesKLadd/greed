@@ -7,6 +7,7 @@ import { Toast } from "../components/Toast.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
 import { useGameSounds } from "../game/useGameSounds.js";
+import { useTurnCue } from "../game/useTurnCue.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
 import { recordGame, summarize, type Achievement, type GameSummary } from "../game/profile.js";
 import { diceVarsById } from "../game/cosmetics.js";
@@ -26,6 +27,8 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const recordedRef = useRef(false);
 
   useGameSounds(state);
+  // Chime when it becomes this client's turn (not for spectators).
+  useTurnCue(state, state.players[state.turn.playerIndex].id === net.youId);
 
   // Record a finished online game into the local profile (this client's seat).
   useEffect(() => {

@@ -154,6 +154,29 @@ describe("turn stays visible until advanced", () => {
   });
 });
 
+describe("SKIP forfeits a turn", () => {
+  it("ends the current turn with no points and advances to the next player", () => {
+    let g = createGame(players(3), { goal: 2000, seed: 5, order: [0, 1, 2] });
+    expect(g.turn.playerIndex).toBe(0);
+    g = applyAction(g, { type: "SKIP" });
+    expect(g.turn.outcome).toBe("banked");
+    expect(g.players[0].total).toBe(0); // gained nothing
+    expect(g.log.some((e) => e.type === "skip")).toBe(true);
+    g = applyAction(g, { type: "ADVANCE" });
+    expect(g.turn.playerIndex).toBe(1);
+  });
+
+  it("is a no-op once the turn has already finished", () => {
+    let g = createGame(players(2), { goal: 2000, seed: 5, order: [0, 1] });
+    g = applyAction(g, { type: "SKIP" });
+    const afterFirst = structuredClone(g);
+    g = applyAction(g, { type: "SKIP" }); // second skip must not double-log
+    expect(g.log.filter((e) => e.type === "skip").length).toBe(
+      afterFirst.log.filter((e) => e.type === "skip").length,
+    );
+  });
+});
+
 describe("full random games terminate with a valid winner", () => {
   function autoPlay(seed: number): GameState {
     let g = createGame(players(4), { goal: 2000, seed });

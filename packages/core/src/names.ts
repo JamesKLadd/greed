@@ -124,14 +124,28 @@ export function hasProfanity(raw: string): boolean {
   return tokens.some((t) => WORD.includes(t) || WORD.includes(t.replace(/(.)\1+/g, "$1")));
 }
 
-// Characters allowed in a display name: letters (any script), digits, spaces, and
-// a few safe joiners (apostrophe, period, underscore, hyphen). Everything else —
-// symbols, punctuation, emoji, stray combining marks (zalgo) — is stripped out.
-const DISALLOWED = /[^\p{L}\p{N} '._-]/gu;
+// Characters allowed in a display name: Latin-script letters (incl. accented),
+// digits, spaces, and a few safe joiners (' . _ -). Everything else — symbols,
+// punctuation, emoji, stray combining marks (zalgo), and letters from other
+// scripts — is stripped out.
+const DISALLOWED = /[^\p{Script=Latin}0-9 '._-]/gu;
 
 /** Remove special characters (input is already NFKC-normalised by the caller). */
 function stripSpecialChars(s: string): string {
   return s.replace(DISALLOWED, "");
+}
+
+/**
+ * True when the string carries a letter from a non-Latin script. This is the
+ * usual homoglyph dodge — Cyrillic/Greek/CJK/Arabic look-alikes spelling a slur
+ * (f卂وgᗝT, ϝαɠɠσƚ, ѕhіt) that no ASCII fold would catch — so such names are
+ * rejected outright. (Accented Latin like José/Muñoz is Latin-script, so it stays.)
+ */
+function hasNonLatinLetter(s: string): boolean {
+  for (const ch of s) {
+    if (/\p{L}/u.test(ch) && !/\p{Script=Latin}/u.test(ch)) return true;
+  }
+  return false;
 }
 
 /**
@@ -152,6 +166,8 @@ export function cleanPlayerName(raw: string, fallback = "Player"): string {
   if (!trimmed) return fallback;
   // Check profanity BEFORE stripping, so leet obfuscation (b!tch, $hit) is still caught.
   if (hasProfanity(trimmed)) return fallback;
+  // Reject cross-script homoglyph spellings outright (see hasNonLatinLetter).
+  if (hasNonLatinLetter(trimmed)) return fallback;
   const cleaned = stripSpecialChars(trimmed).replace(/\s+/g, " ").trim();
   return cleaned || fallback;
 }

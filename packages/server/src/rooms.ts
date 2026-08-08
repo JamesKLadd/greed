@@ -21,6 +21,8 @@ export interface Seat {
   isHost: boolean;
   /** Equipped dice-skin id (cosmetic), broadcast so all clients render it. */
   dice: string;
+  /** Turns this player let time out this game (kicked once it hits the cap). */
+  missedTurns: number;
   /** Reconnection token (humans only). */
   token: string;
   /** Live socket, or null when a bot or a disconnected human. */
@@ -118,6 +120,7 @@ export function makeHumanSeat(name: string, isHost: boolean, dice = "ivory"): Se
     ready: isHost, // host starts ready
     isHost,
     dice: dice || "ivory",
+    missedTurns: 0,
     token: randomBytes(16).toString("hex"),
     ws: null,
   };
@@ -137,6 +140,7 @@ export function makeBotSeat(
     ready: true,
     isHost: false,
     dice: "ivory",
+    missedTurns: 0,
     token: "",
     ws: null,
   };
@@ -177,6 +181,7 @@ export function startGame(room: Room, order?: number[]): GameState {
     botPersonality: s.isBot ? s.personality : undefined,
   }));
   const seed = makeSeed(Date.now() ^ Math.floor(Math.random() * 2 ** 31));
+  for (const s of room.seats) s.missedTurns = 0; // fresh turn-timeout count per game
   room.game = createGame(configs, { goal: room.goal, seed, order });
   room.phase = "in-game";
   return room.game;

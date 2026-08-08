@@ -20,6 +20,7 @@ import { RollOffView } from "../components/RollOffView.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { CoachBar } from "../components/CoachBar.js";
 import { useGameSounds } from "../game/useGameSounds.js";
+import { useTurnCue } from "../game/useTurnCue.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
 import { useT } from "../i18n/i18n.js";
 
@@ -41,6 +42,8 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
   const recordedRef = useRef(false);
 
   useGameSounds(state);
+  // Chime when it becomes a human player's turn (skip while the roll-off is up).
+  useTurnCue(state, !state.players[state.turn.playerIndex].isBot && !ctl.rollOffActive);
 
   // Record a finished solo game (one human vs. bots) into the local profile.
   useEffect(() => {

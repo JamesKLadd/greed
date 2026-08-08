@@ -16,6 +16,12 @@ export function toastFor(event: GameEvent, state: GameState): ToastMessage | nul
         text: `${name(event.playerId)} busted!${event.lostPoints ? ` Lost ${event.lostPoints}.` : ""}`,
         tone: "bad",
       };
+    case "skip":
+      return {
+        id: Math.random(),
+        text: `${name(event.playerId)} ran out of time — turn skipped.`,
+        tone: "bad",
+      };
     case "hot-dice":
       return { id: Math.random(), text: "Hot dice! Roll all 5 again.", tone: "good" };
     case "endgame-triggered":

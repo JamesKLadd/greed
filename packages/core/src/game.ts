@@ -96,6 +96,8 @@ export function applyAction(prev: GameState, action: GameAction): GameState {
       return doBank(state);
     case "ADVANCE":
       return doAdvance(state);
+    case "SKIP":
+      return doSkip(state);
     default:
       return state;
   }
@@ -168,6 +170,23 @@ function doBank(state: GameState): GameState {
   // May end the game outright (last-seat auto-win) or arm the endgame. Either way the
   // banked turn stays on screen until ADVANCE.
   handleBankGoal(state, turn.playerIndex);
+  return state;
+}
+
+/**
+ * Forfeit the current turn with no points (a time-out). Marks it finished so an
+ * ADVANCE moves play on, exactly like a bank of zero. No-op if the turn already
+ * ended (bust/bank) so a late time-out can't double-forfeit.
+ */
+function doSkip(state: GameState): GameState {
+  const turn = state.turn;
+  if (turn.outcome) return state;
+  const player = state.players[turn.playerIndex];
+  turn.turnScore = 0;
+  turn.awaitingDecision = false;
+  turn.busted = false;
+  turn.outcome = "banked"; // finished, gained nothing
+  state.log.push({ type: "skip", playerId: player.id });
   return state;
 }
 

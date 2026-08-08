@@ -45,10 +45,10 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("J.R.")).toBe("J.R.");
   });
 
-  it("keeps accented / non-Latin letters but drops emoji and symbols", () => {
+  it("keeps accented Latin letters but drops emoji and symbols", () => {
     expect(cleanPlayerName("José")).toBe("José");
     expect(cleanPlayerName("Muñoz")).toBe("Muñoz");
-    expect(cleanPlayerName("大和")).toBe("大和");
+    expect(cleanPlayerName("Zoë")).toBe("Zoë");
   });
 
   it("falls back when only special characters remain", () => {
@@ -70,6 +70,13 @@ describe("cleanPlayerName", () => {
       expect(hasProfanity(bad), bad).toBe(true);
     }
     expect(cleanPlayerName("ϝαɠɠσƚ")).toBe("Player");
+  });
+
+  it("rejects names carrying letters from other scripts (mixed-script spoofing)", () => {
+    // CJK + Arabic + Canadian syllabics, Cyrillic look-alikes, plain other-script.
+    for (const bad of ["f卂وgᗝT", "Аlех", "ѕhіt", "大和", "Мoscow"]) {
+      expect(cleanPlayerName(bad), bad).toBe("Player");
+    }
   });
 
   it("folds accented letters when screening (shít -> shit)", () => {
