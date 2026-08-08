@@ -41,6 +41,7 @@ export type ClientMessage =
   | { type: "create-room"; name: string; isPublic?: boolean; goal?: number }
   | { type: "join-room"; code: string; name: string }
   | { type: "quick-match"; name: string }
+  | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
   | { type: "set-ready"; ready: boolean }
   | { type: "set-goal"; goal: number }
@@ -71,6 +72,7 @@ export interface PlayerPresence {
 
 export type ServerMessage =
   | { type: "welcome"; youId: string; token: string; code: string }
+  | { type: "spectating"; code: string }
   | { type: "lobby"; lobby: LobbyView }
   | { type: "roll-off"; rows: RollOffRow[] }
   | { type: "game"; code: string; state: GameState; presence: PlayerPresence[] }

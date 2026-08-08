@@ -39,6 +39,10 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
           </div>
         )}
 
+        {net.isSpectator && (
+          <div className="banner banner--spectate">{t("spectate.lobbyWait")}</div>
+        )}
+
         <div className="setup__row setup__row--head">
           <h2>{t("lobby.players", { count: lobby.seats.length })}</h2>
           {isHost && (
@@ -127,7 +131,7 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
           <button className="btn btn--ghost" onClick={net.leave}>
             {t("bar.leave")}
           </button>
-          {!isHost && (
+          {!isHost && !net.isSpectator && (
             <button
               className={me?.ready ? "btn" : "btn btn--roll btn--big"}
               onClick={() => net.setReady(!me?.ready)}

@@ -34,6 +34,8 @@ export interface Room {
   game: GameState | null;
   /** Pending scheduled follow-ups (bot moves / inter-turn advances). */
   timers: Set<NodeJS.Timeout>;
+  /** Read-only watchers: sockets that receive broadcasts but hold no seat. */
+  spectators: Set<WebSocket>;
 }
 
 const MAX_SEATS = 8;
@@ -62,6 +64,7 @@ export class RoomStore {
       phase: "lobby",
       game: null,
       timers: new Set(),
+      spectators: new Set(),
     };
     this.rooms.set(room.code, room);
     return room;

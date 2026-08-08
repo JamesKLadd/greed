@@ -82,6 +82,14 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
           >
             {t("onlineMenu.join")}
           </button>
+          <button
+            className="btn btn--ghost"
+            disabled={code.length < 4}
+            title={t("onlineMenu.watchHint")}
+            onClick={() => net.spectate(code)}
+          >
+            {t("onlineMenu.watch")}
+          </button>
         </div>
 
         <div className="setup__actions">

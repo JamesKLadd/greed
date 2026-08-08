@@ -225,6 +225,12 @@ export const en = {
   "onlineMenu.createRoom": "Create private room",
   "onlineMenu.roomCodePlaceholder": "ROOM CODE",
   "onlineMenu.join": "Join",
+  "onlineMenu.watch": "Watch",
+  "onlineMenu.watchHint": "Watch this room without taking a seat",
+
+  // Spectating.
+  "spectate.watching": "👀 Spectating — you're watching this game",
+  "spectate.lobbyWait": "👀 Spectating — waiting for the game to start",
 
   // Lobby.
   "lobby.reconnecting": "Reconnecting…",
@@ -474,6 +480,11 @@ export const es: Record<MsgKey, string> = {
   "onlineMenu.createRoom": "Crear sala privada",
   "onlineMenu.roomCodePlaceholder": "CÓDIGO",
   "onlineMenu.join": "Unirse",
+  "onlineMenu.watch": "Ver",
+  "onlineMenu.watchHint": "Mira esta sala sin ocupar un asiento",
+
+  "spectate.watching": "👀 Espectando — estás viendo esta partida",
+  "spectate.lobbyWait": "👀 Espectando — esperando a que empiece la partida",
 
   "lobby.reconnecting": "Reconectando…",
   "lobby.starting": "Empezando…",

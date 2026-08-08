@@ -33,6 +33,8 @@ const ROLLOFF_MS = 4200;
 export class GreedServer {
   private store = new RoomStore();
   private conns = new Map<WebSocket, { room: Room; seat: Seat }>();
+  /** Spectator sockets → the room they're watching (they hold no seat). */
+  private spectators = new Map<WebSocket, Room>();
 
   constructor(wss: WebSocketServer) {
     wss.on("connection", (ws) => this.onConnection(ws));
@@ -62,17 +64,25 @@ export class GreedServer {
   private broadcastLobby(room: Room): void {
     const msg: ServerMessage = { type: "lobby", lobby: lobbyView(room) };
     for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+    for (const ws of room.spectators) this.send(ws, msg);
   }
 
-  private broadcastGame(room: Room): void {
-    if (!room.game) return;
+  /** Build the authoritative game snapshot (with presence) for a room, or null. */
+  private gameMessage(room: Room): ServerMessage | null {
+    if (!room.game) return null;
     // A human is "connected" when their socket is live; bots always count as present.
     const presence = room.game.players.map((p) => {
       const seat = room.seats.find((s) => s.id === p.id);
       return { id: p.id, connected: seat ? seat.isBot || seat.ws != null : false };
     });
-    const msg: ServerMessage = { type: "game", code: room.code, state: room.game, presence };
+    return { type: "game", code: room.code, state: room.game, presence };
+  }
+
+  private broadcastGame(room: Room): void {
+    const msg = this.gameMessage(room);
+    if (!msg) return;
     for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+    for (const ws of room.spectators) this.send(ws, msg);
   }
 
   private welcome(ws: WebSocket, room: Room, seat: Seat): void {
@@ -97,6 +107,8 @@ export class GreedServer {
         return this.onJoin(ws, msg.code, msg.name);
       case "quick-match":
         return this.onQuickMatch(ws, msg.name);
+      case "spectate":
+        return this.onSpectate(ws, msg.code);
       case "reconnect":
         return this.onReconnect(ws, msg.token);
       default:
@@ -133,6 +145,19 @@ export class GreedServer {
     this.broadcastLobby(room);
   }
 
+  /** Attach a read-only watcher to a room and send it the current snapshot. */
+  private onSpectate(ws: WebSocket, code: string): void {
+    if (this.conns.has(ws) || this.spectators.has(ws)) return; // already in a room
+    const room = this.store.get(code);
+    if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
+    room.spectators.add(ws);
+    this.spectators.set(ws, room);
+    this.send(ws, { type: "spectating", code: room.code });
+    // Bring the watcher up to speed: the live game if one is running, else the lobby.
+    const snapshot = this.gameMessage(room);
+    this.send(ws, snapshot ?? { type: "lobby", lobby: lobbyView(room) });
+  }
+
   private onReconnect(ws: WebSocket, token: string): void {
     const found = this.store.findByToken(token);
     if (!found) return this.send(ws, { type: "error", message: "Session expired." });
@@ -145,7 +170,17 @@ export class GreedServer {
   /** Messages that require the sender to already be seated in a room. */
   private handleInRoom(ws: WebSocket, msg: ClientMessage): void {
     const conn = this.conns.get(ws);
-    if (!conn) return this.send(ws, { type: "error", message: "You are not in a room." });
+    if (!conn) {
+      // A spectator holds no seat; the only thing it may do is stop watching.
+      if (this.spectators.has(ws)) {
+        if (msg.type === "leave") {
+          this.send(ws, { type: "left" });
+          this.dropSpectator(ws);
+        }
+        return;
+      }
+      return this.send(ws, { type: "error", message: "You are not in a room." });
+    }
     const { room, seat } = conn;
     const isHost = seat.isHost;
 
@@ -233,6 +268,7 @@ export class GreedServer {
     room.phase = "in-game"; // protect seats from lobby-removal during the roll-off
     const msg: ServerMessage = { type: "roll-off", rows };
     for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+    for (const ws of room.spectators) this.send(ws, msg);
 
     this.schedule(room, ROLLOFF_MS, () => {
       startGame(room, order);
@@ -290,7 +326,16 @@ export class GreedServer {
   // Disconnect / leave
   // -------------------------------------------------------------------------
 
+  /** Detach a spectator socket from whatever room it was watching. */
+  private dropSpectator(ws: WebSocket): void {
+    const room = this.spectators.get(ws);
+    if (!room) return;
+    this.spectators.delete(ws);
+    room.spectators.delete(ws);
+  }
+
   private onClose(ws: WebSocket): void {
+    if (this.spectators.has(ws)) return this.dropSpectator(ws);
     const conn = this.conns.get(ws);
     if (!conn) return;
     this.conns.delete(ws);
@@ -309,7 +354,13 @@ export class GreedServer {
     }
 
     if (!room.seats.some((s) => !s.isBot && s.ws)) {
-      this.store.delete(room); // nobody human left connected
+      // Nobody human left connected — tear the room down and release its watchers.
+      for (const spectatorWs of room.spectators) {
+        this.send(spectatorWs, { type: "left" });
+        this.spectators.delete(spectatorWs);
+      }
+      room.spectators.clear();
+      this.store.delete(room);
       return;
     }
     if (room.phase === "lobby") this.broadcastLobby(room);

@@ -1,0 +1,151 @@
+/**
+ * Integration tests for spectator mode: a watcher joins a room by code over a real
+ * WebSocket, receives the same lobby / roll-off / game broadcasts the players get,
+ * holds no seat, and can leave cleanly.
+ */
+
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
+import type { AddressInfo } from "node:net";
+import { encode, decode, type ClientMessage, type ServerMessage } from "@greed/protocol";
+import { GreedServer } from "./server.js";
+
+interface TestClient {
+  ws: WebSocket;
+  send(msg: ClientMessage): void;
+  /** Resolve with the first buffered-or-future message matching pred. */
+  waitFor(pred: (m: ServerMessage) => boolean, timeout?: number): Promise<ServerMessage>;
+}
+
+async function connect(url: string): Promise<TestClient> {
+  const ws = new WebSocket(url);
+  const msgs: ServerMessage[] = [];
+  const waiters: { pred: (m: ServerMessage) => boolean; resolve: (m: ServerMessage) => void }[] =
+    [];
+  ws.on("message", (data) => {
+    const m = decode<ServerMessage>(data.toString());
+    msgs.push(m);
+    for (let i = waiters.length - 1; i >= 0; i--) {
+      if (waiters[i].pred(m)) {
+        waiters[i].resolve(m);
+        waiters.splice(i, 1);
+      }
+    }
+  });
+  await new Promise<void>((res, rej) => {
+    ws.once("open", () => res());
+    ws.once("error", rej);
+  });
+  return {
+    ws,
+    send: (msg) => ws.send(encode(msg)),
+    waitFor: (pred, timeout = 4000) => {
+      const seen = msgs.find(pred);
+      if (seen) return Promise.resolve(seen);
+      return new Promise<ServerMessage>((resolve, reject) => {
+        const waiter = {
+          pred,
+          resolve: (m: ServerMessage) => {
+            clearTimeout(timer);
+            resolve(m);
+          },
+        };
+        const timer = setTimeout(() => {
+          const i = waiters.indexOf(waiter);
+          if (i >= 0) waiters.splice(i, 1);
+          reject(new Error("timed out waiting for message"));
+        }, timeout);
+        waiters.push(waiter);
+      });
+    },
+  };
+}
+
+describe("spectator mode", () => {
+  let wss: WebSocketServer;
+  let url: string;
+
+  beforeEach(async () => {
+    wss = new WebSocketServer({ port: 0 });
+    new GreedServer(wss);
+    await new Promise<void>((r) => wss.once("listening", () => r()));
+    url = `ws://localhost:${(wss.address() as AddressInfo).port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((r) => wss.close(() => r()));
+  });
+
+  async function hostRoom(): Promise<{ host: TestClient; code: string }> {
+    const host = await connect(url);
+    host.send({ type: "create-room", name: "Host" });
+    const welcome = await host.waitFor((m) => m.type === "welcome");
+    return { host, code: (welcome as Extract<ServerMessage, { type: "welcome" }>).code };
+  }
+
+  it("spectating an unknown room returns an error", async () => {
+    const spec = await connect(url);
+    spec.send({ type: "spectate", code: "ZZZZ" });
+    const err = await spec.waitFor((m) => m.type === "error");
+    expect((err as Extract<ServerMessage, { type: "error" }>).message).toMatch(/no room/i);
+    spec.ws.close();
+  });
+
+  it("a watcher receives the lobby snapshot and live lobby updates", async () => {
+    const { host, code } = await hostRoom();
+
+    const spec = await connect(url);
+    spec.send({ type: "spectate", code });
+    const spectating = await spec.waitFor((m) => m.type === "spectating");
+    expect((spectating as Extract<ServerMessage, { type: "spectating" }>).code).toBe(code);
+
+    // Immediate snapshot: the one-seat lobby.
+    const snap = await spec.waitFor((m) => m.type === "lobby");
+    expect((snap as Extract<ServerMessage, { type: "lobby" }>).lobby.seats).toHaveLength(1);
+
+    // Host adds a bot → the watcher sees the updated lobby too.
+    host.send({ type: "add-bot", difficulty: "easy" });
+    const updated = await spec.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
+    expect((updated as Extract<ServerMessage, { type: "lobby" }>).lobby.seats).toHaveLength(2);
+
+    host.ws.close();
+    spec.ws.close();
+  });
+
+  it("a watcher receives the roll-off and the live game state, holding no seat", async () => {
+    const { host, code } = await hostRoom();
+    host.send({ type: "add-bot", difficulty: "easy" });
+
+    const spec = await connect(url);
+    spec.send({ type: "spectate", code });
+    await spec.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
+
+    host.send({ type: "start-game" });
+
+    const rollOff = await spec.waitFor((m) => m.type === "roll-off");
+    expect((rollOff as Extract<ServerMessage, { type: "roll-off" }>).rows).toHaveLength(2);
+
+    // The live game arrives after the roll-off beat; the watcher gets it with no youId.
+    const game = await spec.waitFor((m) => m.type === "game", 8000);
+    const g = game as Extract<ServerMessage, { type: "game" }>;
+    expect(g.code).toBe(code);
+    expect(g.state.players).toHaveLength(2);
+
+    host.ws.close();
+    spec.ws.close();
+  }, 12000);
+
+  it("a watcher can leave and is released", async () => {
+    const { host, code } = await hostRoom();
+    const spec = await connect(url);
+    spec.send({ type: "spectate", code });
+    await spec.waitFor((m) => m.type === "spectating");
+
+    spec.send({ type: "leave" });
+    const left = await spec.waitFor((m) => m.type === "left");
+    expect(left.type).toBe("left");
+
+    host.ws.close();
+    spec.ws.close();
+  });
+});

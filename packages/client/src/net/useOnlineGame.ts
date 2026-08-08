@@ -29,9 +29,12 @@ export interface OnlineController {
   rollingIndices: number[];
   /** Live connection status per player id (bots always true). */
   presence: Record<string, boolean>;
+  /** True when this client is a read-only watcher (no seat). */
+  isSpectator: boolean;
   createRoom: (name: string, opts?: { isPublic?: boolean; goal?: number }) => void;
   joinRoom: (code: string, name: string) => void;
   quickMatch: (name: string) => void;
+  spectate: (code: string) => void;
   setReady: (ready: boolean) => void;
   setGoal: (goal: number) => void;
   addBot: (difficulty: BotDifficulty, personality?: BotPersonality) => void;
@@ -60,6 +63,7 @@ export function useOnlineGame(): OnlineController {
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollTick, setRollTick] = useState(0);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
+  const [isSpectator, setIsSpectator] = useState(false);
   const lastLogLen = useRef(0);
   const rollSeen = useRef(0);
   const prevGameRef = useRef<GameState | null>(null);
@@ -74,6 +78,7 @@ export function useOnlineGame(): OnlineController {
     setYouId(null);
     setCode(null);
     setPresence({});
+    setIsSpectator(false);
     prevPresenceRef.current = {};
   }, []);
 
@@ -90,7 +95,14 @@ export function useOnlineGame(): OnlineController {
           setYouId(msg.youId);
           youIdRef.current = msg.youId;
           setCode(msg.code);
+          setIsSpectator(false);
           localStorage.setItem(TOKEN_KEY, msg.token);
+          break;
+        case "spectating":
+          // A watcher holds no seat: no youId, no reconnect token. The lobby/game
+          // snapshot that follows drives the status.
+          setIsSpectator(true);
+          setCode(msg.code);
           break;
         case "lobby":
           setLobby(msg.lobby);
@@ -258,10 +270,16 @@ export function useOnlineGame(): OnlineController {
     isRolling,
     rollingIndices,
     presence,
+    isSpectator,
     createRoom: (name, opts) =>
       send({ type: "create-room", name, isPublic: opts?.isPublic, goal: opts?.goal }),
     joinRoom: (roomCode, name) => send({ type: "join-room", code: roomCode, name }),
     quickMatch: (name) => send({ type: "quick-match", name }),
+    spectate: (roomCode) => {
+      setIsSpectator(true);
+      setStatus("connecting");
+      send({ type: "spectate", code: roomCode });
+    },
     setReady: (ready) => send({ type: "set-ready", ready }),
     setGoal: (goal) => send({ type: "set-goal", goal }),
     addBot: (difficulty, personality) => send({ type: "add-bot", difficulty, personality }),

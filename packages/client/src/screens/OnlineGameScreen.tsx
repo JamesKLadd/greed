@@ -110,14 +110,18 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
           presence={net.presence}
         />
 
-        <Controls
-          state={state}
-          legal={legal}
-          isRolling={net.isRolling}
-          canAct={canAct}
-          onRoll={net.roll}
-          onBank={net.bank}
-        />
+        {net.isSpectator ? (
+          <div className="spectator-bar">{t("spectate.watching")}</div>
+        ) : (
+          <Controls
+            state={state}
+            legal={legal}
+            isRolling={net.isRolling}
+            canAct={canAct}
+            onRoll={net.roll}
+            onBank={net.bank}
+          />
+        )}
       </main>
 
       <Toast toast={net.toast} />
@@ -184,13 +188,14 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
             )}
 
             <div className="overlay__actions">
-              {isHost ? (
-                <button className="btn btn--roll" onClick={net.rematch}>
-                  {t("gameOver.playAgain")}
-                </button>
-              ) : (
-                <span className="overlay__note">{t("gameOver.waitingRematch")}</span>
-              )}
+              {!net.isSpectator &&
+                (isHost ? (
+                  <button className="btn btn--roll" onClick={net.rematch}>
+                    {t("gameOver.playAgain")}
+                  </button>
+                ) : (
+                  <span className="overlay__note">{t("gameOver.waitingRematch")}</span>
+                ))}
               <button className="btn" onClick={net.leave}>
                 {t("common.leavePlain")}
               </button>
