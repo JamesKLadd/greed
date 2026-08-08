@@ -17,7 +17,6 @@ import { GameOver } from "../components/GameOver.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
 import { RollOffView } from "../components/RollOffView.js";
-import { MuteButton } from "../components/MuteButton.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { CoachBar } from "../components/CoachBar.js";
 import { useGameSounds } from "../game/useGameSounds.js";
@@ -92,7 +91,6 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
           >
             {t("bar.hints")}
           </button>
-          <MuteButton />
           <VolumeControls />
           <button
             className="btn btn--ghost"

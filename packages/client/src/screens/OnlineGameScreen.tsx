@@ -6,11 +6,11 @@ import { Controls } from "../components/Controls.js";
 import { Toast } from "../components/Toast.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
-import { MuteButton } from "../components/MuteButton.js";
 import { useGameSounds } from "../game/useGameSounds.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
 import { recordGame, summarize, type Achievement, type GameSummary } from "../game/profile.js";
 import { diceVarsById } from "../game/cosmetics.js";
+import { loadSettings } from "../game/settings.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { useT } from "../i18n/i18n.js";
@@ -72,9 +72,10 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
         <button className="btn btn--ghost" onClick={net.leave}>
           {t("bar.leave")}
         </button>
-        <h1 className="game__logo">GREED · {net.code}</h1>
+        <h1 className="game__logo">
+          {loadSettings().hideRoomCode ? "GREED" : `GREED · ${net.code}`}
+        </h1>
         <div className="game__bar-right">
-          <MuteButton />
           <VolumeControls />
           <button
             className="btn btn--ghost"

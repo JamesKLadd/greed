@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { OnlineController } from "../net/useOnlineGame.js";
 import { useT } from "../i18n/i18n.js";
 
@@ -8,14 +8,37 @@ interface OnlineMenuProps {
 }
 
 const NAME_KEY = "greed-name";
+const CREATE_CD_KEY = "greed-create-cd";
+const CREATE_COOLDOWN_MS = 8000;
+
+/** Whole seconds left before another private room may be created (0 when ready). */
+function createCooldownLeft(): number {
+  const last = Number(localStorage.getItem(CREATE_CD_KEY) ?? 0);
+  return Math.max(0, Math.ceil((last + CREATE_COOLDOWN_MS - Date.now()) / 1000));
+}
 
 export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
   const t = useT();
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? "");
   const [code, setCode] = useState("");
+  const [cooldown, setCooldown] = useState(() => createCooldownLeft());
+
+  // Tick the create-room cooldown down to zero.
+  useEffect(() => {
+    const id = window.setInterval(() => setCooldown(createCooldownLeft()), 250);
+    return () => window.clearInterval(id);
+  }, []);
 
   const rememberName = () => localStorage.setItem(NAME_KEY, name.trim());
   const displayName = name.trim() || t("common.playerDefault");
+
+  const createRoom = () => {
+    if (createCooldownLeft() > 0) return; // rate-limit spam-creating rooms
+    localStorage.setItem(CREATE_CD_KEY, String(Date.now()));
+    setCooldown(createCooldownLeft());
+    rememberName();
+    net.createRoom(displayName);
+  };
 
   return (
     <div className="setup">
@@ -53,14 +76,10 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
           >
             {t("onlineMenu.quickMatch")}
           </button>
-          <button
-            className="btn btn--bank btn--big"
-            onClick={() => {
-              rememberName();
-              net.createRoom(displayName);
-            }}
-          >
-            {t("onlineMenu.createRoom")}
+          <button className="btn btn--bank btn--big" disabled={cooldown > 0} onClick={createRoom}>
+            {cooldown > 0
+              ? t("onlineMenu.createWait", { s: cooldown })
+              : t("onlineMenu.createRoom")}
           </button>
         </div>
 

@@ -1,20 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { loadSettings, updateSettings, type Settings } from "../game/settings.js";
-import { play } from "../game/sfx.js";
+import { play, isMuted, setMuted } from "../game/sfx.js";
 import { useT } from "../i18n/i18n.js";
 
 /**
- * In-game volume popover: adjust sound-effects and music levels without leaving
- * the table. Reads/writes the same persisted settings as the Settings screen, so
- * changes apply live and stick across sessions.
+ * In-game sound control: a speaker button (reflecting mute state) that opens a
+ * popover with the sound-effects and music sliders plus a Mute toggle. Reads and
+ * writes the same persisted settings as the Settings screen, so changes apply
+ * live and stick across sessions.
  */
 export function VolumeControls() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  const [muted, setMutedState] = useState(isMuted());
   const ref = useRef<HTMLDivElement>(null);
 
   const patch = (p: Partial<Settings>) => setSettings(updateSettings(p));
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  };
 
   // Close the popover when clicking outside it.
   useEffect(() => {
@@ -35,7 +42,7 @@ export function VolumeControls() {
         aria-label={t("bar.volume")}
         title={t("bar.volume")}
       >
-        🎚️
+        {muted ? "🔇" : "🔊"}
       </button>
 
       {open && (
@@ -53,8 +60,8 @@ export function VolumeControls() {
               value={Math.round(settings.sfxVolume * 100)}
               aria-label={t("settings.sfx")}
               onChange={(e) => patch({ sfxVolume: Number(e.target.value) / 100 })}
-              onMouseUp={() => play("bank")}
-              onKeyUp={() => play("bank")}
+              onMouseUp={() => !muted && play("bank")}
+              onKeyUp={() => !muted && play("bank")}
             />
           </div>
 
@@ -73,6 +80,15 @@ export function VolumeControls() {
               onChange={(e) => patch({ musicVolume: Number(e.target.value) / 100 })}
             />
           </div>
+
+          <button
+            className={muted ? "btn btn--bank volume__mute volume__mute--on" : "btn volume__mute"}
+            role="switch"
+            aria-checked={muted}
+            onClick={toggleMute}
+          >
+            {muted ? `🔇 ${t("volume.unmute")}` : `🔊 ${t("volume.mute")}`}
+          </button>
         </div>
       )}
     </div>

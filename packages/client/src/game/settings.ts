@@ -12,6 +12,8 @@ export interface Settings {
   highContrast: boolean;
   colorblind: boolean;
   reduceMotion: boolean;
+  /** Hide the room code in the in-game header (e.g. while streaming). */
+  hideRoomCode: boolean;
   /** Sound-effects volume, 0..1. */
   sfxVolume: number;
   /** Background-music volume, 0..1. */
@@ -26,6 +28,7 @@ function defaults(): Settings {
     highContrast: false,
     colorblind: false,
     reduceMotion: false,
+    hideRoomCode: false,
     sfxVolume: 1,
     musicVolume: 0.4,
   };

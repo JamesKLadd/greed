@@ -1758,6 +1758,10 @@ button {
 .volume__pop .slider {
   width: 100%;
 }
+.volume__mute {
+  width: 100%;
+  margin-top: 2px;
+}
 
 /* ---------- Custom goal input (setup) ---------- */
 .setup__goal-custom {

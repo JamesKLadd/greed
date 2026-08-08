@@ -105,6 +105,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           value={settings.reduceMotion}
           onChange={(v) => patch({ reduceMotion: v })}
         />
+        <Toggle
+          label={t("settings.hideCode")}
+          hint={t("settings.hideCode.hint")}
+          value={settings.hideRoomCode}
+          onChange={(v) => patch({ hideRoomCode: v })}
+        />
 
         <div className="settings-row">
           <div className="settings-row__text">

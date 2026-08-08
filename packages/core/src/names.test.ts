@@ -65,6 +65,18 @@ describe("cleanPlayerName", () => {
     }
   });
 
+  it("folds cross-script homoglyphs (Greek / Cyrillic / IPA look-alikes)", () => {
+    for (const bad of ["ϝαɠɠσƚ", "ѕhіt", "а$$"]) {
+      expect(hasProfanity(bad), bad).toBe(true);
+    }
+    expect(cleanPlayerName("ϝαɠɠσƚ")).toBe("Player");
+  });
+
+  it("folds accented letters when screening (shít -> shit)", () => {
+    expect(hasProfanity("shít")).toBe(true);
+    expect(hasProfanity("bìtch")).toBe(true);
+  });
+
   it("normalises fancy-font names to plain letters", () => {
     expect(cleanPlayerName("𝔸𝕝𝕖𝕩")).toBe("Alex");
     expect(cleanPlayerName("Ｃｏｏｌ")).toBe("Cool");

@@ -51,11 +51,56 @@ const STRONG = [
 // grape, assassin…) — matched only as a whole token.
 const WORD = ["ass", "cum", "fag", "cock", "dick", "prick", "hoe", "tit", "tits", "rape", "boner"];
 
-/** Fold leet-speak to letters, keeping other characters so tokens survive. */
+// Cross-script look-alikes (Greek / Cyrillic / IPA / etc.) folded to the Latin
+// letter they imitate, so homoglyph spellings — ϝαɠɠσƚ, а$$, ѕhіt — can't dodge
+// the denylist. Chosen by visual resemblance and observed abuse, not a formal set.
+const CONFUSABLES: Record<string, string> = {};
+for (const [ascii, group] of Object.entries({
+  a: "аαɑ⍺",
+  b: "ƀɓ",
+  c: "сϲςɕ",
+  d: "ԁɗ",
+  e: "еεёϵ",
+  f: "ϝƒ",
+  g: "ɠɡɢԍ",
+  h: "һℎ",
+  i: "іιїıɪɩ",
+  j: "јʝ",
+  k: "κкⱪ",
+  l: "ⅼӏł",
+  m: "мⅿ",
+  n: "ոɳ",
+  o: "оοσøɵθ",
+  p: "рρ",
+  q: "ԛɋ",
+  r: "гɼ",
+  s: "ѕʂ",
+  t: "тτƚ",
+  u: "υս",
+  v: "νѵ",
+  w: "ѡ",
+  x: "хχ",
+  y: "уγ",
+  z: "ʐ",
+})) {
+  for (const ch of group) CONFUSABLES[ch] = ascii;
+}
+
+/** Replace cross-script look-alike letters with the ASCII letter they imitate. */
+function foldConfusables(s: string): string {
+  let out = "";
+  for (const ch of s) out += CONFUSABLES[ch] ?? ch;
+  return out;
+}
+
+/** Fold fancy fonts, accents and homoglyphs to plain letters, then leet-speak. */
 function deleet(s: string): string {
-  return s
-    .normalize("NFKC") // fold "fancy font" letters (𝖋𝖆𝖌, ｆｕｌｌ, ⓒⓘⓡ) to plain ASCII
-    .toLowerCase()
+  return foldConfusables(
+    s
+      .normalize("NFKD") // fold "fancy fonts" + split accents into base + combining mark
+      .replace(/\p{M}/gu, "") // drop the accents (é -> e, ñ -> n)
+      .toLowerCase(),
+  )
     .replace(/[@4]/g, "a")
     .replace(/3/g, "e")
     .replace(/[1!|]/g, "i")
