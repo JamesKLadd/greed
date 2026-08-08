@@ -25,22 +25,40 @@ import {
   type Seat,
 } from "./rooms.js";
 
-const INTER_TURN_MS = 1500;
-const BOT_THINK_MS = 800;
-const DISCONNECT_AUTOPLAY_MS = 1200;
-const ROLLOFF_MS = 4200;
-/** A connected player has this long to start their turn before it's forfeited. */
-const TURN_IDLE_MS = 10000;
-/** Forfeit this many turns in one game and the player is kicked. */
-const MAX_MISSED_TURNS = 3;
+/** Tunable server timings. Defaults are used in production; tests override them. */
+export interface GreedServerOptions {
+  /** Hold between a finished turn and starting the next (so results are visible). */
+  interTurnMs: number;
+  /** A bot's "thinking" delay before it acts. */
+  botThinkMs: number;
+  /** Delay before autoplaying a disconnected player's turn. */
+  disconnectAutoplayMs: number;
+  /** Hold showing the opening roll-off before play begins. */
+  rollOffMs: number;
+  /** How long a connected player has to start their turn before it's forfeited. */
+  turnIdleMs: number;
+  /** Forfeit this many turns in one game and the player is kicked. */
+  maxMissedTurns: number;
+}
+
+const DEFAULT_OPTIONS: GreedServerOptions = {
+  interTurnMs: 1500,
+  botThinkMs: 800,
+  disconnectAutoplayMs: 1200,
+  rollOffMs: 4200,
+  turnIdleMs: 10000,
+  maxMissedTurns: 3,
+};
 
 export class GreedServer {
   private store = new RoomStore();
   private conns = new Map<WebSocket, { room: Room; seat: Seat }>();
   /** Spectator sockets → the room they're watching (they hold no seat). */
   private spectators = new Map<WebSocket, Room>();
+  private readonly cfg: GreedServerOptions;
 
-  constructor(wss: WebSocketServer) {
+  constructor(wss: WebSocketServer, options: Partial<GreedServerOptions> = {}) {
+    this.cfg = { ...DEFAULT_OPTIONS, ...options };
     wss.on("connection", (ws) => this.onConnection(ws));
   }
 
@@ -291,7 +309,7 @@ export class GreedServer {
     for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
     for (const ws of room.spectators) this.send(ws, msg);
 
-    this.schedule(room, ROLLOFF_MS, () => {
+    this.schedule(room, this.cfg.rollOffMs, () => {
       startGame(room, order);
       this.broadcastGame(room);
       this.scheduleFollowups(room);
@@ -324,7 +342,9 @@ export class GreedServer {
     if (!g || g.phase === "game-over") return;
 
     if (g.turn.outcome) {
-      this.schedule(room, INTER_TURN_MS, () => this.applyAndBroadcast(room, { type: "ADVANCE" }));
+      this.schedule(room, this.cfg.interTurnMs, () =>
+        this.applyAndBroadcast(room, { type: "ADVANCE" }),
+      );
       return;
     }
 
@@ -334,7 +354,7 @@ export class GreedServer {
 
     if (isBot || disconnected) {
       const difficulty = seat?.difficulty ?? "medium";
-      const delay = disconnected ? DISCONNECT_AUTOPLAY_MS : BOT_THINK_MS;
+      const delay = disconnected ? this.cfg.disconnectAutoplayMs : this.cfg.botThinkMs;
       this.schedule(room, delay, () => {
         if (!room.game) return;
         this.applyAndBroadcast(room, decide(room.game, difficulty));
@@ -345,7 +365,7 @@ export class GreedServer {
     // A connected human. If they haven't STARTED their turn (no roll yet), give
     // them a grace period; a time-out forfeits the turn and counts against them.
     if (seat && g.turn.rollCount === 0) {
-      this.schedule(room, TURN_IDLE_MS, () => this.onTurnTimeout(room, seat));
+      this.schedule(room, this.cfg.turnIdleMs, () => this.onTurnTimeout(room, seat));
     }
     // Otherwise (they've already rolled) wait for their ROLL/BANK.
   }
@@ -364,7 +384,7 @@ export class GreedServer {
     seat.missedTurns += 1;
     room.game = applyAction(g, { type: "SKIP" });
 
-    if (seat.missedTurns >= MAX_MISSED_TURNS) {
+    if (seat.missedTurns >= this.cfg.maxMissedTurns) {
       this.kickSeat(room, seat);
       // Everyone gone? kickSeat tore the room down; nothing more to do.
       if (!this.store.get(room.code)) return;
