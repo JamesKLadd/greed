@@ -8,3 +8,6 @@
 *.svg text eol=lf
 *.msi binary
 *.exe binary
+*.mp3 binary
+*.ogg binary
+*.wav binary

@@ -35,6 +35,15 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // never touch the ws server / cross-origin
 
+  // Never intercept media. Audio streams via HTTP Range requests, but the browser
+  // hides the Range header from the service worker, so we can't detect them that
+  // way — and streaming a cloned multi-MB response through the Cache API stalls
+  // playback. Bypass by extension (the URL is always visible) and let the browser
+  // handle range/streaming natively.
+  if (req.destination === "audio" || /\.(mp3|ogg|wav|m4a|aac|flac|webm)$/i.test(url.pathname)) {
+    return;
+  }
+
   // Navigations: try the network, fall back to the cached shell when offline.
   if (req.mode === "navigate") {
     event.respondWith(fetch(req).catch(() => caches.match("/index.html")));

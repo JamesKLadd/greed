@@ -1,10 +1,12 @@
 /**
- * Sound for Greed — everything is synthesized live with the Web Audio API, so
- * there are NO binary audio assets to ship. A shared AudioContext is created
- * lazily and resumed on the first user gesture (browsers suspend audio until
- * then). Two buses — SFX and Music — have independent volumes; a single mute
+ * Sound for Greed. SFX are synthesized live with the Web Audio API (no binary
+ * assets); the background MUSIC is a looping audio track. A shared AudioContext
+ * is created lazily and resumed on the first user gesture (browsers suspend
+ * audio until then). SFX and Music have independent volumes; a single mute
  * (persisted) silences both.
  */
+
+import musicUrl from "../assets/background-music.mp3";
 
 const MUTE_KEY = "greed:muted";
 
@@ -243,75 +245,68 @@ export function play(sound: Sound): void {
 }
 
 // ---------------------------------------------------------------------------
-// Ambient background music (routed to the Music bus)
+// Background music — a looping track decoded through the Web Audio API and
+// routed to the Music bus (so mute + music volume apply, like the SFX bus).
+// We use a decoded AudioBuffer rather than an <audio> element because the same
+// AudioContext already drives the SFX, and a buffer source loops seamlessly.
 // ---------------------------------------------------------------------------
 
-// A slow, lounge-y ii–V–I-ish loop. Each chord = a bass note + a soft triad.
-const CHORDS: { bass: number; notes: number[] }[] = [
-  { bass: 130.81, notes: [261.63, 329.63, 392.0] }, // C major
-  { bass: 110.0, notes: [261.63, 329.63, 392.0] }, // A minor 7
-  { bass: 146.83, notes: [293.66, 349.23, 440.0] }, // D minor 7
-  { bass: 98.0, notes: [246.94, 293.66, 349.23] }, // G7
-];
-const CHORD_DUR = 3.4;
-const LOOKAHEAD = 0.35;
+let musicBuffer: AudioBuffer | null = null;
+let musicSource: AudioBufferSourceNode | null = null;
+let musicLoading = false;
 
-let musicPlaying = false;
-let musicTimer: number | null = null;
-let nextChordTime = 0;
-let progIndex = 0;
-
-function padNote(
-  freq: number,
-  start: number,
-  dur: number,
-  gain: number,
-  type: OscillatorType,
-): void {
-  if (!ctx || !musicBus) return;
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  const atk = 0.6;
-  const rel = 1.2;
-  g.gain.setValueAtTime(0.0001, start);
-  g.gain.exponentialRampToValueAtTime(gain, start + atk);
-  g.gain.setValueAtTime(gain, Math.max(start + atk, start + dur - rel));
-  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-  osc.connect(g).connect(musicBus);
-  osc.start(start);
-  osc.stop(start + dur + 0.1);
-}
-
-function scheduleChord(time: number, chord: { bass: number; notes: number[] }): void {
-  padNote(chord.bass, time, CHORD_DUR * 0.98, 0.1, "sine");
-  padNote(chord.bass * 2, time, CHORD_DUR * 0.9, 0.04, "sine");
-  for (const f of chord.notes) padNote(f, time, CHORD_DUR * 0.9, 0.04, "triangle");
-  // A gentle high shimmer over the top note.
-  const top = chord.notes[chord.notes.length - 1] * 2;
-  padNote(top, time + 0.25, CHORD_DUR * 0.55, 0.018, "sine");
-}
-
-function scheduler(): void {
-  if (!ctx) return;
-  while (nextChordTime < ctx.currentTime + LOOKAHEAD) {
-    scheduleChord(nextChordTime, CHORDS[progIndex % CHORDS.length]);
-    progIndex += 1;
-    nextChordTime += CHORD_DUR;
+/** Fetch + decode the track once, then (re)evaluate whether it should play. */
+async function loadMusicBuffer(context: AudioContext): Promise<void> {
+  if (musicBuffer || musicLoading) return;
+  musicLoading = true;
+  try {
+    const res = await fetch(musicUrl);
+    const data = await res.arrayBuffer();
+    musicBuffer = await context.decodeAudioData(data);
+  } catch {
+    /* leave musicBuffer null — music simply won't play */
+  } finally {
+    musicLoading = false;
   }
+  updateMusicState();
 }
 
+function startMusic(): void {
+  if (!ctx || !musicBus || !musicBuffer || musicSource) return;
+  const src = ctx.createBufferSource();
+  src.buffer = musicBuffer;
+  src.loop = true;
+  src.connect(musicBus);
+  src.start();
+  musicSource = src;
+}
+
+function stopMusic(): void {
+  if (!musicSource) return;
+  try {
+    musicSource.stop();
+  } catch {
+    /* already stopped */
+  }
+  musicSource.disconnect();
+  musicSource = null;
+}
+
+/**
+ * Keep the looping source in sync with state. Mute is handled by the Music bus
+ * gain (so muting/unmuting doesn't restart the track mid-song); we only fully
+ * stop when the music volume is zero or there's no AudioContext yet. `ctx`
+ * exists only after the first user gesture, satisfying the autoplay policy.
+ */
 function updateMusicState(): void {
-  const want = !!ctx && !muted && musicVolume > 0;
-  if (want && !musicPlaying) {
-    musicPlaying = true;
-    nextChordTime = (ctx as AudioContext).currentTime + 0.15;
-    scheduler();
-    musicTimer = window.setInterval(scheduler, 60);
-  } else if (!want && musicPlaying) {
-    musicPlaying = false;
-    if (musicTimer !== null) window.clearInterval(musicTimer);
-    musicTimer = null;
+  const want = !!ctx && musicVolume > 0;
+  if (!want) {
+    stopMusic();
+    return;
   }
+  if (!musicBuffer) {
+    if (ctx) void loadMusicBuffer(ctx);
+    return;
+  }
+  startMusic();
 }
