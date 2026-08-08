@@ -16,7 +16,8 @@ import {
   type Achievement,
   type GameSummary,
 } from "../game/profile.js";
-import { cosmeticVars } from "../game/cosmetics.js";
+import { diceCosmeticVars } from "../game/cosmetics.js";
+import { VolumeControls } from "../components/VolumeControls.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
@@ -57,7 +58,10 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const winner = state.players.find((p) => p.id === state.winnerId);
   const youWon = state.winnerId === net.youId;
   const standings = [...state.players].sort((a, b) => b.total - a.total);
-  const [cosmetics] = useState(() => cosmeticVars(loadProfile()));
+  // Online: show this client's dice skin only while it's their turn (the dice in
+  // the center are theirs); never apply a table theme — the felt stays shared.
+  const [diceVars] = useState(() => diceCosmeticVars(loadProfile()));
+  const isYourTurn = current.id === net.youId;
 
   useKeyboardShortcuts({
     enabled: !showRules && !showHistory && state.phase !== "game-over",
@@ -69,7 +73,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   });
 
   return (
-    <div className="game" style={cosmetics}>
+    <div className="game" style={isYourTurn ? diceVars : undefined}>
       <header className="game__bar">
         <button className="btn btn--ghost" onClick={net.leave}>
           {t("bar.leave")}
@@ -77,6 +81,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
         <h1 className="game__logo">GREED · {net.code}</h1>
         <div className="game__bar-right">
           <MuteButton />
+          <VolumeControls />
           <button
             className="btn btn--ghost"
             onClick={() => setShowHistory(true)}

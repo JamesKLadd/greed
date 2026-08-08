@@ -20,6 +20,7 @@ export const en = {
   "bar.restart": "Restart",
   "bar.hints": "💡 Hints",
   "bar.history": "📜 History",
+  "bar.volume": "Volume",
 
   // In-game banners.
   "banner.finalRoundPre": "Final round — the last turn goes to ",
@@ -332,6 +333,7 @@ export const es: Record<MsgKey, string> = {
   "bar.restart": "Reiniciar",
   "bar.hints": "💡 Pistas",
   "bar.history": "📜 Historial",
+  "bar.volume": "Volumen",
 
   "banner.finalRoundPre": "Ronda final — el último turno es para ",
   "banner.finalRoundPost": ".",

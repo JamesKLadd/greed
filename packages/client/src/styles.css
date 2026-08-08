@@ -1716,6 +1716,49 @@ button {
   accent-color: var(--gold);
 }
 
+/* ---------- In-game volume popover ---------- */
+.volume {
+  position: relative;
+  display: inline-flex;
+}
+.volume__pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 216px;
+  padding: 14px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.volume__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.volume__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+}
+.volume__label {
+  color: var(--text);
+}
+.volume__pct {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.volume__pop .slider {
+  width: 100%;
+}
+
 /* ---------- Custom goal input (setup) ---------- */
 .setup__goal-custom {
   display: inline-flex;
