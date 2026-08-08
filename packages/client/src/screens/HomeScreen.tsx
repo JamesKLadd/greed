@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { RulesModal } from "../components/RulesModal.js";
 import { useInstallPrompt } from "../game/pwa.js";
+import { ONLINE_ENABLED } from "../game/online.js";
 import { useT } from "../i18n/i18n.js";
 
 interface HomeScreenProps {
@@ -70,10 +71,12 @@ export function HomeScreen({
           {t("home.local")}
           <span className="home-menu__sub">{t("home.local.sub")}</span>
         </button>
-        <button className="btn btn--bank btn--big home-menu__btn" onClick={onOnline}>
-          {t("home.online")}
-          <span className="home-menu__sub">{t("home.online.sub")}</span>
-        </button>
+        {ONLINE_ENABLED && (
+          <button className="btn btn--bank btn--big home-menu__btn" onClick={onOnline}>
+            {t("home.online")}
+            <span className="home-menu__sub">{t("home.online.sub")}</span>
+          </button>
+        )}
         <div className="home-menu__foot">
           <button
             className="btn btn--ghost"

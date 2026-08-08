@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BotDifficulty, BotPersonality, GameState } from "@greed/core";
 import {
-  DEFAULT_SERVER_PORT,
   decode,
   encode,
   type ClientMessage,
@@ -11,10 +10,8 @@ import {
 } from "@greed/protocol";
 import { diceToRoll } from "@greed/core";
 import { toastFor, type ToastMessage } from "../game/toasts.js";
+import { SERVER_URL } from "../game/online.js";
 
-const SERVER_URL: string =
-  (import.meta.env.VITE_SERVER_URL as string | undefined) ??
-  `ws://${location.hostname}:${DEFAULT_SERVER_PORT}`;
 const TOKEN_KEY = "greed-token";
 
 export type OnlineStatus = "menu" | "connecting" | "lobby" | "roll-off" | "in-game";
