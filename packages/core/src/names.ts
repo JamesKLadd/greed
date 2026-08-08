@@ -54,6 +54,7 @@ const WORD = ["ass", "cum", "fag", "cock", "dick", "prick", "hoe", "tit", "tits"
 /** Fold leet-speak to letters, keeping other characters so tokens survive. */
 function deleet(s: string): string {
   return s
+    .normalize("NFKC") // fold "fancy font" letters (𝖋𝖆𝖌, ｆｕｌｌ, ⓒⓘⓡ) to plain ASCII
     .toLowerCase()
     .replace(/[@4]/g, "a")
     .replace(/3/g, "e")
@@ -83,18 +84,26 @@ export function hasProfanity(raw: string): boolean {
 // symbols, punctuation, emoji, stray combining marks (zalgo) — is stripped out.
 const DISALLOWED = /[^\p{L}\p{N} '._-]/gu;
 
-/** Remove special characters, composing accents first so "José" survives but "😎" doesn't. */
+/** Remove special characters (input is already NFKC-normalised by the caller). */
 function stripSpecialChars(s: string): string {
-  return s.normalize("NFC").replace(DISALLOWED, "");
+  return s.replace(DISALLOWED, "");
 }
 
 /**
  * A safe display name: trimmed, whitespace-collapsed and length-capped; special
  * characters removed (only letters, digits, spaces and simple joiners survive);
  * replaced with `fallback` when it is empty or contains blocked words.
+ *
+ * NFKC normalisation runs first so alternate-font letters (𝖋𝖆𝖌𝖌𝖔𝖙, ｆｕｌｌｗｉｄｔｈ,
+ * ⓒⓘⓡⓒⓛⓔ⓭) collapse to their plain equivalents — they can't dodge the profanity
+ * screen or smuggle "fancy" fonts into the displayed name.
  */
 export function cleanPlayerName(raw: string, fallback = "Player"): string {
-  const trimmed = (raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LENGTH);
+  const trimmed = (raw ?? "")
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_NAME_LENGTH);
   if (!trimmed) return fallback;
   // Check profanity BEFORE stripping, so leet obfuscation (b!tch, $hit) is still caught.
   if (hasProfanity(trimmed)) return fallback;

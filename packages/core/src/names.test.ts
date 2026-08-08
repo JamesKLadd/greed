@@ -57,6 +57,20 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("💀🔥")).toBe("Player");
   });
 
+  it("folds alternate-font letters so they can't dodge the profanity filter", () => {
+    // Mathematical bold fraktur, bold, italic, double-struck, fullwidth, circled.
+    for (const bad of ["𝖋𝖆𝖌𝖌𝖔𝖙", "𝐟𝐮𝐜𝐤", "𝘴𝘩𝘪𝘵", "𝕓𝕚𝕥𝕔𝕙", "ｆｕｃｋ", "ⓕⓤⓒⓚ"]) {
+      expect(hasProfanity(bad), bad).toBe(true);
+      expect(cleanPlayerName(bad), bad).toBe("Player");
+    }
+  });
+
+  it("normalises fancy-font names to plain letters", () => {
+    expect(cleanPlayerName("𝔸𝕝𝕖𝕩")).toBe("Alex");
+    expect(cleanPlayerName("Ｃｏｏｌ")).toBe("Cool");
+    expect(cleanPlayerName("𝓙𝓸𝓼𝓮")).toBe("Jose");
+  });
+
   it("catches leet-speak and repeated-letter obfuscation", () => {
     expect(hasProfanity("fuuuuck")).toBe(true);
     expect(hasProfanity("sh1tter")).toBe(true);
