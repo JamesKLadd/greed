@@ -17,3 +17,6 @@ steam/output/
 steam/app_build_[0-9]*.vdf
 steam/depot_build_[0-9]*.vdf
 steam_appid.txt
+
+.vercel
+.env*
