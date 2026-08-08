@@ -13,7 +13,7 @@ function players(n: number): PlayerConfig[] {
 /**
  * Force the current player to bank exactly `points`, then advance to the next
  * turn (bypasses random rolls). Banking no longer auto-advances, so tests
- * explicitly ADVANCE unless the bank ended the game (P1 auto-win).
+ * explicitly ADVANCE unless the bank ended the game (last-seat auto-win).
  */
 function forceBank(state: GameState, points: number): GameState {
   const s: GameState = structuredClone(state);
@@ -47,8 +47,8 @@ describe("createGame", () => {
   });
 });
 
-describe("endgame - the final turn belongs to the last seat", () => {
-  it("finishes the round through the last player; the starter does not go again", () => {
+describe("endgame - the round runs through the last seat", () => {
+  it("an earlier player reaching the goal arms the endgame; the round finishes through the last seat", () => {
     let g = createGame(players(4), { goal: 2000, seed: 1, startIndex: 0 });
     // order = [A, B, C, D]; A starts, D is the last seat (to A's right).
     expect(currentPlayer(g).id).toBe("A");
@@ -56,8 +56,9 @@ describe("endgame - the final turn belongs to the last seat", () => {
     g = forceBank(g, 100); // A opens the round
     expect(currentPlayer(g).id).toBe("B");
 
-    g = forceBank(g, 2000); // B triggers the endgame
+    g = forceBank(g, 2000); // B (a middle seat) triggers the endgame
     expect(eventTypes(g)).toContain("endgame-triggered");
+    expect(eventTypes(g)).not.toContain("auto-win");
     expect(g.endgame.triggerPlayerId).toBe("B");
     expect(currentPlayer(g).id).toBe("C"); // B does not play again
 
@@ -71,35 +72,45 @@ describe("endgame - the final turn belongs to the last seat", () => {
     expect(g.winnerId).toBe("B"); // B's 2000 is the highest; A never got a final turn
   });
 
-  it("ends immediately when the last seat triggers the endgame", () => {
+  it("the starting (first) seat reaching the goal first does NOT win instantly", () => {
+    let g = createGame(players(4), { goal: 2000, seed: 1, startIndex: 0 });
+    g = forceBank(g, 2000); // A, the first seat, reaches the goal first
+    // No instant win for the first seat: the endgame arms and the round plays on.
+    expect(eventTypes(g)).not.toContain("auto-win");
+    expect(eventTypes(g)).toContain("endgame-triggered");
+    expect(g.phase).toBe("playing");
+    expect(currentPlayer(g).id).toBe("B"); // B, C, D still get a final turn
+
+    g = forceBank(g, 100); // B
+    g = forceBank(g, 100); // C
+    expect(g.phase).toBe("playing");
+    g = forceBank(g, 100); // D (last seat) -> game ends
+    expect(g.phase).toBe("game-over");
+    expect(g.winnerId).toBe("A"); // nobody beat A's 2000, but everyone got the chance
+  });
+});
+
+describe("endgame - last-seat auto-win", () => {
+  it("the last seat wins immediately when it is first to the goal", () => {
     let g = createGame(players(4), { goal: 2000, seed: 1, startIndex: 0 });
     g = forceBank(g, 100); // A
     g = forceBank(g, 100); // B
     g = forceBank(g, 100); // C
-    g = forceBank(g, 2000); // D (last seat) triggers -> nobody follows
-    expect(g.phase).toBe("game-over");
-    expect(g.winnerId).toBe("D");
-  });
-});
-
-describe("endgame - P1 auto-win", () => {
-  it("ends immediately when the starting player is first to the goal", () => {
-    let g = createGame(players(4), { goal: 2000, seed: 1, startIndex: 0 });
-    g = forceBank(g, 2000); // A (P1) reaches goal first
+    g = forceBank(g, 2000); // D (last seat) reaches the goal first -> instant win
     expect(eventTypes(g)).toContain("auto-win");
     expect(g.phase).toBe("game-over");
-    expect(g.winnerId).toBe("A");
+    expect(g.winnerId).toBe("D");
   });
 
   it("a later goal-reacher does not auto-win; highest total wins", () => {
     let g = createGame(players(4), { goal: 2000, seed: 1, startIndex: 0 });
     g = forceBank(g, 100); // A
-    g = forceBank(g, 100); // B
-    g = forceBank(g, 2000); // C triggers
+    g = forceBank(g, 2000); // B triggers the endgame
+    g = forceBank(g, 300); // C final turn
     g = forceBank(g, 2100); // D (last) overtakes on the final turn
     expect(eventTypes(g)).not.toContain("auto-win");
     expect(g.phase).toBe("game-over");
-    expect(g.winnerId).toBe("D"); // 2100 > C's 2000
+    expect(g.winnerId).toBe("D"); // 2100 > B's 2000
   });
 });
 

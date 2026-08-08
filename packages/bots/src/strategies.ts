@@ -18,7 +18,7 @@
  * Endgame rule for the smart bots (medium/hard/expert): in the final round there
  * is no point banking a total that would still be behind first place — you can
  * only win by at least tying the leader, so keep rolling until you do (or bust).
- * A starting player who can reach the goal first banks immediately for the win.
+ * The last seat, if it can reach the goal first, banks immediately for the win.
  */
 
 import { diceRemaining, getLegalActions } from "@greed/core";
@@ -105,10 +105,10 @@ function endgameAwareDecision(state: GameState): GameAction | null {
   const player = state.players[turn.playerIndex];
   const goal = state.config.goal;
   const prospective = player.total + turn.turnScore;
-  const isStartingPlayer = turn.playerIndex === state.order[0];
+  const isLastSeat = turn.playerIndex === state.order[state.order.length - 1];
 
-  // Starting player first to the goal wins outright — lock it in.
-  if (!state.endgame.triggered && isStartingPlayer && prospective >= goal) {
+  // Last seat first to the goal wins outright — lock it in.
+  if (!state.endgame.triggered && isLastSeat && prospective >= goal) {
     return { type: "BANK" };
   }
 

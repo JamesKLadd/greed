@@ -278,7 +278,7 @@ export const en = {
     "Three 1s = 300 (the singles beat the triple), three 5s = 500, four 6s = 600. Everything in a throw adds together.",
   "rules.finishHead": "Turn order & the finish",
   "rules.finishText":
-    "Everyone rolls five dice once at the start; the highest pip total plays last — the best seat, since the last player takes the final turn. When someone banks 2000, if the starting player got there first they win instantly; otherwise the round plays out to its end and the highest total wins. Ties are settled by a sudden-death round.",
+    "Everyone rolls five dice once at the start; the highest pip total plays last — the best seat, since the last player takes the final turn. When someone banks 2000, if the last seat got there first they win instantly; otherwise the round plays out through the last seat (everyone gets a final turn) and the highest total wins. Ties are settled by a sudden-death round.",
   "rules.gotIt": "Got it",
 } as const;
 
@@ -529,7 +529,7 @@ export const es: Record<MsgKey, string> = {
     "Tres 1 = 300 (los sueltos superan al trío), tres 5 = 500, cuatro 6 = 600. Todo lo de una tirada se suma.",
   "rules.finishHead": "Orden de turno y el final",
   "rules.finishText":
-    "Todos tiran cinco dados una vez al inicio; el mayor total de puntos juega el último — el mejor asiento, ya que ese jugador hace el turno final. Cuando alguien guarda 2000, si el jugador inicial llegó primero gana al instante; si no, la ronda se juega hasta el final y gana el mayor total. Los empates se deciden con una ronda de muerte súbita.",
+    "Todos tiran cinco dados una vez al inicio; el mayor total de puntos juega el último — el mejor asiento, ya que ese jugador hace el turno final. Cuando alguien guarda 2000, si el último asiento llegó primero gana al instante; si no, la ronda se juega hasta el último asiento (todos tienen un turno final) y gana el mayor total. Los empates se deciden con una ronda de muerte súbita.",
   "rules.gotIt": "Entendido",
 };
 

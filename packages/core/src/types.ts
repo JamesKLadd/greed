@@ -112,7 +112,7 @@ export type GamePhase = "playing" | "sudden-death" | "game-over";
 
 export interface EndgameState {
   triggered: boolean;
-  /** Player id who first banked >= goal (excluding an outright P1 auto-win). */
+  /** Player id who first banked >= goal (excluding an outright last-seat auto-win). */
   triggerPlayerId: string | null;
 }
 

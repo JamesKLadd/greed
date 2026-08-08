@@ -7,10 +7,13 @@
  *
  * Endgame rules (confirmed with the designer):
  *  - Banking a total >= goal triggers the endgame.
- *  - If the starting player (P1) is the first of all to reach the goal, P1 wins
- *    immediately.
- *  - Otherwise every player through P1 gets one final turn; the game ends right
- *    after P1's turn. Highest banked total wins.
+ *  - The last seat in the turn order (the highest opening roll) is the anchor and
+ *    always takes the final turn of the round.
+ *  - If the last seat is the first of all to reach the goal, it wins immediately
+ *    (nobody acts after it anyway).
+ *  - Otherwise the round plays out through the last seat, so every remaining
+ *    player gets one final turn; the game ends after the last seat. Highest
+ *    banked total wins.
  *  - A tie for the lead is broken by a sudden-death round among the tied players.
  */
 
@@ -162,7 +165,7 @@ function doBank(state: GameState): GameState {
   turn.awaitingDecision = false;
   state.log.push({ type: "bank", playerId: player.id, gained, total: player.total });
 
-  // May end the game outright (P1 auto-win) or arm the endgame. Either way the
+  // May end the game outright (last-seat auto-win) or arm the endgame. Either way the
   // banked turn stays on screen until ADVANCE.
   handleBankGoal(state, turn.playerIndex);
   return state;
@@ -182,12 +185,15 @@ function handleBankGoal(state: GameState, playerIndex: number): void {
   if (player.total < state.config.goal) return;
   if (state.endgame.triggered) return; // endgame already armed this round
 
-  const startIndex = state.order[0];
-  if (playerIndex === startIndex) {
-    // Starting player is first of all to reach the goal -> instant win.
+  const lastSeatIndex = state.order[state.order.length - 1];
+  if (playerIndex === lastSeatIndex) {
+    // The last seat acts last each round, so if it is first to the goal there is
+    // nobody left to respond -> instant win.
     state.log.push({ type: "auto-win", playerId: player.id });
     endGame(state, player.id);
   } else {
+    // An earlier seat reached the goal: arm the endgame and let the round run to
+    // the last seat, so everyone still gets one final turn.
     state.endgame.triggered = true;
     state.endgame.triggerPlayerId = player.id;
     state.log.push({ type: "endgame-triggered", playerId: player.id });
