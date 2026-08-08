@@ -1,0 +1,333 @@
+/**
+ * Authoritative Greed server. The server owns every room's GameState and is the
+ * only place actions are validated and applied (`@greed/core`), so clients can't
+ * cheat. It also drives pacing — bot turns and the inter-turn advance run on
+ * server timers so all clients see the same tempo. Because Greed has no hidden
+ * information, the full GameState is broadcast to everyone.
+ */
+
+import { applyAction, determineOrder, getLegalActions, makeSeed } from "@greed/core";
+import type { GameAction } from "@greed/core";
+import { decide } from "@greed/bots";
+import { decode, encode } from "@greed/protocol";
+import type { ClientMessage, ServerMessage } from "@greed/protocol";
+import type { WebSocket, WebSocketServer } from "ws";
+import {
+  canStart,
+  clearTimers,
+  lobbyView,
+  makeBotSeat,
+  makeHumanSeat,
+  RoomStore,
+  startGame,
+  MAX_SEATS,
+  type Room,
+  type Seat,
+} from "./rooms.js";
+
+const INTER_TURN_MS = 1500;
+const BOT_THINK_MS = 800;
+const DISCONNECT_AUTOPLAY_MS = 1200;
+const ROLLOFF_MS = 4200;
+
+export class GreedServer {
+  private store = new RoomStore();
+  private conns = new Map<WebSocket, { room: Room; seat: Seat }>();
+
+  constructor(wss: WebSocketServer) {
+    wss.on("connection", (ws) => this.onConnection(ws));
+  }
+
+  private onConnection(ws: WebSocket): void {
+    ws.on("message", (data) => {
+      let msg: ClientMessage;
+      try {
+        msg = decode<ClientMessage>(data.toString());
+      } catch {
+        return this.send(ws, { type: "error", message: "Malformed message." });
+      }
+      try {
+        this.handle(ws, msg);
+      } catch (err) {
+        this.send(ws, { type: "error", message: (err as Error).message });
+      }
+    });
+    ws.on("close", () => this.onClose(ws));
+  }
+
+  private send(ws: WebSocket, msg: ServerMessage): void {
+    if (ws.readyState === ws.OPEN) ws.send(encode(msg));
+  }
+
+  private broadcastLobby(room: Room): void {
+    const msg: ServerMessage = { type: "lobby", lobby: lobbyView(room) };
+    for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+  }
+
+  private broadcastGame(room: Room): void {
+    if (!room.game) return;
+    // A human is "connected" when their socket is live; bots always count as present.
+    const presence = room.game.players.map((p) => {
+      const seat = room.seats.find((s) => s.id === p.id);
+      return { id: p.id, connected: seat ? seat.isBot || seat.ws != null : false };
+    });
+    const msg: ServerMessage = { type: "game", code: room.code, state: room.game, presence };
+    for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+  }
+
+  private welcome(ws: WebSocket, room: Room, seat: Seat): void {
+    this.conns.set(ws, { room, seat });
+    seat.ws = ws;
+    this.send(ws, { type: "welcome", youId: seat.id, token: seat.token, code: room.code });
+    if (room.phase === "in-game") this.broadcastGame(room);
+    else this.broadcastLobby(room);
+  }
+
+  // -------------------------------------------------------------------------
+  // Message dispatch
+  // -------------------------------------------------------------------------
+
+  private handle(ws: WebSocket, msg: ClientMessage): void {
+    switch (msg.type) {
+      case "ping":
+        return this.send(ws, { type: "pong" });
+      case "create-room":
+        return this.onCreate(ws, msg.name, msg.isPublic ?? false, msg.goal ?? 2000);
+      case "join-room":
+        return this.onJoin(ws, msg.code, msg.name);
+      case "quick-match":
+        return this.onQuickMatch(ws, msg.name);
+      case "reconnect":
+        return this.onReconnect(ws, msg.token);
+      default:
+        return this.handleInRoom(ws, msg);
+    }
+  }
+
+  private onCreate(ws: WebSocket, name: string, isPublic: boolean, goal: number): void {
+    const room = this.store.create(isPublic, goal);
+    const seat = makeHumanSeat(name, true);
+    room.seats.push(seat);
+    this.welcome(ws, room, seat);
+  }
+
+  private onJoin(ws: WebSocket, code: string, name: string): void {
+    const room = this.store.get(code);
+    if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
+    if (room.phase !== "lobby")
+      return this.send(ws, { type: "error", message: "That game has already started." });
+    if (room.seats.length >= MAX_SEATS)
+      return this.send(ws, { type: "error", message: "That room is full." });
+    const seat = makeHumanSeat(name, false);
+    room.seats.push(seat);
+    this.welcome(ws, room, seat);
+    this.broadcastLobby(room);
+  }
+
+  private onQuickMatch(ws: WebSocket, name: string): void {
+    const room = this.store.findOpenPublic() ?? this.store.create(true, 2000);
+    const isHost = room.seats.length === 0;
+    const seat = makeHumanSeat(name, isHost);
+    room.seats.push(seat);
+    this.welcome(ws, room, seat);
+    this.broadcastLobby(room);
+  }
+
+  private onReconnect(ws: WebSocket, token: string): void {
+    const found = this.store.findByToken(token);
+    if (!found) return this.send(ws, { type: "error", message: "Session expired." });
+    found.seat.ws = ws;
+    this.welcome(ws, found.room, found.seat);
+    // Let the rest of the table see them come back online.
+    if (found.room.phase === "in-game") this.broadcastGame(found.room);
+  }
+
+  /** Messages that require the sender to already be seated in a room. */
+  private handleInRoom(ws: WebSocket, msg: ClientMessage): void {
+    const conn = this.conns.get(ws);
+    if (!conn) return this.send(ws, { type: "error", message: "You are not in a room." });
+    const { room, seat } = conn;
+    const isHost = seat.isHost;
+
+    switch (msg.type) {
+      case "set-ready":
+        seat.ready = msg.ready;
+        return this.broadcastLobby(room);
+
+      case "set-goal":
+        if (!isHost || room.phase !== "lobby") return;
+        room.goal = msg.goal;
+        return this.broadcastLobby(room);
+
+      case "add-bot": {
+        if (!isHost || room.phase !== "lobby") return;
+        if (room.seats.length >= MAX_SEATS) return;
+        const botCount = room.seats.filter((s) => s.isBot).length + 1;
+        room.seats.push(makeBotSeat(msg.difficulty, botCount, msg.personality));
+        return this.broadcastLobby(room);
+      }
+
+      case "remove-seat": {
+        if (!isHost || room.phase !== "lobby") return;
+        const target = room.seats.find((s) => s.id === msg.seatId);
+        if (!target || target.isHost) return;
+        room.seats = room.seats.filter((s) => s.id !== target.id);
+        if (target.ws) {
+          this.send(target.ws, { type: "left" });
+          this.conns.delete(target.ws);
+        }
+        return this.broadcastLobby(room);
+      }
+
+      case "start-game": {
+        if (!isHost || room.phase !== "lobby" || !canStart(room)) return;
+        return this.beginRollOff(room);
+      }
+
+      case "game-action":
+        return this.onGameAction(room, seat, msg.action);
+
+      case "rematch": {
+        if (!isHost || room.phase !== "in-game") return;
+        clearTimers(room);
+        room.phase = "lobby";
+        room.game = null;
+        for (const s of room.seats) if (!s.isBot) s.ready = s.isHost;
+        return this.broadcastLobby(room);
+      }
+
+      case "leave":
+        return this.leaveRoom(ws);
+
+      default:
+        return;
+    }
+  }
+
+  private onGameAction(room: Room, seat: Seat, action: GameAction): void {
+    const g = room.game;
+    if (!g || room.phase !== "in-game" || g.phase === "game-over") return;
+    // The server owns ADVANCE (inter-turn timing); clients only ROLL or BANK.
+    if (action.type !== "ROLL" && action.type !== "BANK") return;
+    const current = g.players[g.turn.playerIndex];
+    if (current.id !== seat.id) return; // not your turn
+    const legal = getLegalActions(g);
+    if (action.type === "ROLL" && !legal.canRoll) return;
+    if (action.type === "BANK" && !legal.canBank) return;
+    this.applyAndBroadcast(room, action);
+  }
+
+  // -------------------------------------------------------------------------
+  // Authoritative loop
+  // -------------------------------------------------------------------------
+
+  /** Run the opening roll-off, broadcast it, then start the game after a beat. */
+  private beginRollOff(room: Room): void {
+    const seed = makeSeed(Date.now() ^ Math.floor(Math.random() * 2 ** 31));
+    const { order, entries } = determineOrder(room.seats.length, seed);
+    const rows = order.map((pi) => ({
+      name: room.seats[pi].name,
+      dice: entries[pi].dice,
+      sum: entries[pi].sum,
+    }));
+    room.phase = "in-game"; // protect seats from lobby-removal during the roll-off
+    const msg: ServerMessage = { type: "roll-off", rows };
+    for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
+
+    this.schedule(room, ROLLOFF_MS, () => {
+      startGame(room, order);
+      this.broadcastGame(room);
+      this.scheduleFollowups(room);
+    });
+  }
+
+  private applyAndBroadcast(room: Room, action: Parameters<typeof applyAction>[1]): void {
+    if (!room.game) return;
+    room.game = applyAction(room.game, action);
+    this.broadcastGame(room);
+    this.scheduleFollowups(room);
+  }
+
+  private schedule(room: Room, ms: number, fn: () => void): void {
+    const t = setTimeout(() => {
+      room.timers.delete(t);
+      try {
+        fn();
+      } catch {
+        /* room may have been torn down */
+      }
+    }, ms);
+    room.timers.add(t);
+  }
+
+  /** Decide what happens next: advance a finished turn, or play a bot / stalled seat. */
+  private scheduleFollowups(room: Room): void {
+    clearTimers(room);
+    const g = room.game;
+    if (!g || g.phase === "game-over") return;
+
+    if (g.turn.outcome) {
+      this.schedule(room, INTER_TURN_MS, () => this.applyAndBroadcast(room, { type: "ADVANCE" }));
+      return;
+    }
+
+    const seat = room.seats.find((s) => s.id === g.players[g.turn.playerIndex].id);
+    const isBot = seat?.isBot ?? true;
+    const disconnected = !isBot && seat?.ws == null;
+
+    if (isBot || disconnected) {
+      const difficulty = seat?.difficulty ?? "medium";
+      const delay = disconnected ? DISCONNECT_AUTOPLAY_MS : BOT_THINK_MS;
+      this.schedule(room, delay, () => {
+        if (!room.game) return;
+        this.applyAndBroadcast(room, decide(room.game, difficulty));
+      });
+    }
+    // A connected human: wait for their ROLL/BANK.
+  }
+
+  // -------------------------------------------------------------------------
+  // Disconnect / leave
+  // -------------------------------------------------------------------------
+
+  private onClose(ws: WebSocket): void {
+    const conn = this.conns.get(ws);
+    if (!conn) return;
+    this.conns.delete(ws);
+    const { room, seat } = conn;
+    seat.ws = null;
+
+    if (room.phase === "lobby") {
+      // Remove the empty seat outright in the lobby.
+      room.seats = room.seats.filter((s) => s.id !== seat.id);
+      if (seat.isHost) this.reassignHost(room);
+    } else {
+      // In-game: keep the seat for reconnection, but keep play moving and tell
+      // the others this player dropped (presence dot + toast).
+      this.scheduleFollowups(room);
+      if (room.game) this.broadcastGame(room);
+    }
+
+    if (!room.seats.some((s) => !s.isBot && s.ws)) {
+      this.store.delete(room); // nobody human left connected
+      return;
+    }
+    if (room.phase === "lobby") this.broadcastLobby(room);
+  }
+
+  private leaveRoom(ws: WebSocket): void {
+    const conn = this.conns.get(ws);
+    if (!conn) return;
+    this.send(ws, { type: "left" });
+    this.onClose(ws);
+  }
+
+  private reassignHost(room: Room): void {
+    if (room.seats.some((s) => s.isHost)) return;
+    const next = room.seats.find((s) => !s.isBot);
+    if (next) {
+      next.isHost = true;
+      next.ready = true;
+    }
+  }
+}

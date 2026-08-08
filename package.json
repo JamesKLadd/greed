@@ -1,0 +1,40 @@
+{
+  "name": "greed",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Greed - a push-your-luck 5-dice game (web, offline v1).",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace @greed/client run dev",
+    "build": "npm --workspace @greed/client run build",
+    "preview": "npm --workspace @greed/client run preview",
+    "server": "npm --workspace @greed/server run start",
+    "tauri:dev": "npm --workspace @greed/client run tauri:dev",
+    "tauri:build": "npm --workspace @greed/client run tauri:build",
+    "desktop:icon": "node scripts/gen-desktop-icon.mjs && npm --workspace @greed/client exec -- tauri icon src-tauri/icon-source.png",
+    "steam:assets": "node scripts/gen-store-assets.mjs",
+    "tauri:build:steam": "npm --workspace @greed/client run tauri:build -- --features steam",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/protocol/tsconfig.json && tsc --noEmit -p packages/bots/tsconfig.json && tsc --noEmit -p packages/server/tsconfig.json && tsc --noEmit -p packages/client/tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^22.20.1",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^2.1.8"
+  }
+}

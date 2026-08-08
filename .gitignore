@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.vite/
+coverage/
+
+# Compiled desktop installers (distribute via GitHub Releases, not git history)
+installers/
+
+# Rust/Tauri build cache
+packages/client/src-tauri/target/
+
+# Steam: keep the templates + placeholder assets, ignore real build/upload artifacts
+steam/content/
+steam/output/
+steam/app_build_[0-9]*.vdf
+steam/depot_build_[0-9]*.vdf
+steam_appid.txt

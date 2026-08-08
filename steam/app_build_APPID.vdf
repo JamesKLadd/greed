@@ -1,0 +1,24 @@
+// Steam ContentBuilder app-build script (TEMPLATE).
+//
+// 1. Rename APPID -> your Steam App ID and DEPOTID -> your depot's ID.
+// 2. Put your built game (the contents of the Tauri bundle / the app folder)
+//    under steam/content/ so `contentroot` resolves.
+// 3. Upload with steamcmd (see steam/README.md).
+//
+// `setlive` is intentionally empty: builds land unset so you can promote them to
+// a branch manually in App Admin. Set it to a beta branch name (e.g. "beta") to
+// auto-publish there — never auto-publish straight to "default".
+
+"appbuild"
+{
+	"appid"        "APPID"
+	"desc"         "Greed 0.1.0"            // shown in the Builds list; bump per release
+	"buildoutput"  "..\\output\\"           // steamcmd logs + chunk cache (git-ignored)
+	"contentroot"  "..\\content\\"          // the folder holding your built app
+	"setlive"      ""                       // "" = don't auto-set live; or a branch name
+
+	"depots"
+	{
+		"DEPOTID"  "depot_build_DEPOTID.vdf"
+	}
+}

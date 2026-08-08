@@ -1,0 +1,22 @@
+// Steam ContentBuilder depot script (TEMPLATE).
+// Rename DEPOTID -> your depot ID (must match app_build_APPID.vdf).
+//
+// This maps everything under contentroot into the depot root, recursively.
+// Adjust FileExclusion as needed (debug symbols, source maps, logs).
+
+"DepotBuildConfig"
+{
+	"DepotID"      "DEPOTID"
+	"contentroot"  "..\\content\\"
+
+	"FileMapping"
+	{
+		"LocalPath"  "*"      // everything under contentroot
+		"DepotPath"  "."      // ... into the depot root
+		"recursive"  "1"
+	}
+
+	"FileExclusion" "*.pdb"
+	"FileExclusion" "*.map"
+	"FileExclusion" "**/*.log"
+}
