@@ -51,7 +51,6 @@ const STRONG = [
 // grape, assassin…) — matched only as a whole token.
 const WORD = ["ass", "cum", "fag", "cock", "dick", "prick", "hoe", "tit", "tits", "rape", "boner"];
 
-/** Fold leet-speak to letters and drop everything that isn't a–z. */
 /** Fold leet-speak to letters, keeping other characters so tokens survive. */
 function deleet(s: string): string {
   return s
@@ -79,13 +78,26 @@ export function hasProfanity(raw: string): boolean {
   return tokens.some((t) => WORD.includes(t) || WORD.includes(t.replace(/(.)\1+/g, "$1")));
 }
 
+// Characters allowed in a display name: letters (any script), digits, spaces, and
+// a few safe joiners (apostrophe, period, underscore, hyphen). Everything else —
+// symbols, punctuation, emoji, stray combining marks (zalgo) — is stripped out.
+const DISALLOWED = /[^\p{L}\p{N} '._-]/gu;
+
+/** Remove special characters, composing accents first so "José" survives but "😎" doesn't. */
+function stripSpecialChars(s: string): string {
+  return s.normalize("NFC").replace(DISALLOWED, "");
+}
+
 /**
- * A safe display name: trimmed, whitespace-collapsed and length-capped; replaced
- * with `fallback` when it is empty or contains blocked words.
+ * A safe display name: trimmed, whitespace-collapsed and length-capped; special
+ * characters removed (only letters, digits, spaces and simple joiners survive);
+ * replaced with `fallback` when it is empty or contains blocked words.
  */
 export function cleanPlayerName(raw: string, fallback = "Player"): string {
   const trimmed = (raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LENGTH);
   if (!trimmed) return fallback;
+  // Check profanity BEFORE stripping, so leet obfuscation (b!tch, $hit) is still caught.
   if (hasProfanity(trimmed)) return fallback;
-  return trimmed;
+  const cleaned = stripSpecialChars(trimmed).replace(/\s+/g, " ").trim();
+  return cleaned || fallback;
 }

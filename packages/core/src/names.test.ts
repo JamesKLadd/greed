@@ -34,6 +34,29 @@ describe("cleanPlayerName", () => {
     }
   });
 
+  it("strips special characters, keeping letters, digits, spaces and simple joiners", () => {
+    expect(cleanPlayerName("Alex!!!")).toBe("Alex");
+    expect(cleanPlayerName("@Alex#99")).toBe("Alex99");
+    expect(cleanPlayerName("<script>")).toBe("script");
+    expect(cleanPlayerName("Cool😎Guy")).toBe("CoolGuy");
+    // Safe joiners survive.
+    expect(cleanPlayerName("Anne-Marie")).toBe("Anne-Marie");
+    expect(cleanPlayerName("O'Brien")).toBe("O'Brien");
+    expect(cleanPlayerName("J.R.")).toBe("J.R.");
+  });
+
+  it("keeps accented / non-Latin letters but drops emoji and symbols", () => {
+    expect(cleanPlayerName("José")).toBe("José");
+    expect(cleanPlayerName("Muñoz")).toBe("Muñoz");
+    expect(cleanPlayerName("大和")).toBe("大和");
+  });
+
+  it("falls back when only special characters remain", () => {
+    expect(cleanPlayerName("@#%^&")).toBe("Player");
+    expect(cleanPlayerName("★☆✦")).toBe("Player");
+    expect(cleanPlayerName("💀🔥")).toBe("Player");
+  });
+
   it("catches leet-speak and repeated-letter obfuscation", () => {
     expect(hasProfanity("fuuuuck")).toBe(true);
     expect(hasProfanity("sh1tter")).toBe(true);
