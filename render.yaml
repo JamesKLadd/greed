@@ -1,0 +1,16 @@
+# Render Blueprint for the Greed online server (@greed/server).
+# The server speaks WebSocket (game traffic) + a tiny HTTP layer for health checks.
+# Deploy: on render.com -> New -> Blueprint -> pick this repo. Free plan sleeps after
+# ~15 min idle (first connect then cold-starts ~30-50s), which is fine for casual play.
+services:
+  - type: web
+    name: greed-server
+    runtime: node
+    plan: free
+    # Install the whole workspace so @greed/core|bots|protocol resolve; tsx runs the TS.
+    buildCommand: npm install
+    startCommand: npm run server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
