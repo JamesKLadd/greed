@@ -30,7 +30,7 @@ function defaults(): Settings {
     reduceMotion: false,
     hideRoomCode: false,
     sfxVolume: 1,
-    musicVolume: 0.4,
+    musicVolume: 0.5,
   };
 }
 
