@@ -13,13 +13,13 @@ export const LOCALES: { code: Locale; label: string }[] = [
 
 export const en = {
   // Top bars shared across screens.
-  "bar.menu": "← Menu",
-  "bar.leave": "← Leave",
+  "bar.menu": "Menu",
+  "bar.leave": "Leave",
   "bar.home": "← Home",
   "bar.rules": "Rules",
   "bar.restart": "Restart",
-  "bar.hints": "💡 Hints",
-  "bar.history": "📜 History",
+  "bar.hints": "Hints",
+  "bar.history": "History",
   "bar.volume": "Volume",
   "volume.mute": "Mute",
   "volume.unmute": "Unmute",
@@ -50,20 +50,20 @@ export const en = {
 
   // Home screen.
   "home.tagline": "Roll. Risk it. Bank it — before it all slips away.",
-  "home.learn": "🎓 Learn to play",
+  "home.learn": "Learn to play",
   "home.learn.subNew": "New here? Start with a guided game",
   "home.learn.sub": "A guided game vs. one easy bot",
-  "home.local": "🎲 Local game",
+  "home.local": "Local game",
   "home.local.sub": "Pass-and-play or vs. bots",
-  "home.online": "🌐 Play online",
+  "home.online": "Play online",
   "home.online.sub": "Matchmaking & private rooms",
-  "home.online.signInSub": "🔒 Sign in to play online",
+  "home.online.signInSub": "Sign in to play online",
   "home.howToPlay": "How to play",
-  "home.stats": "📊 Stats",
-  "home.locker": "🎨 Locker",
-  "home.settings": "⚙️ Settings",
+  "home.stats": "Stats",
+  "home.locker": "Locker",
+  "home.settings": "Settings",
   "home.signIn": "Log in / Sign up",
-  "home.install": "📥 Install app",
+  "home.install": "Install app",
 
   // Settings screen.
   "settings.title": "SETTINGS",
@@ -277,8 +277,8 @@ export const en = {
   "onlineMenu.watchHint": "Watch this room without taking a seat",
 
   // Spectating.
-  "spectate.watching": "👀 Spectating — you're watching this game",
-  "spectate.lobbyWait": "👀 Spectating — waiting for the game to start",
+  "spectate.watching": "Spectating — you're watching this game",
+  "spectate.lobbyWait": "Spectating — waiting for the game to start",
 
   // Lobby.
   "lobby.reconnecting": "Reconnecting…",
@@ -333,13 +333,13 @@ export const en = {
 export type MsgKey = keyof typeof en;
 
 export const es: Record<MsgKey, string> = {
-  "bar.menu": "← Menú",
-  "bar.leave": "← Salir",
+  "bar.menu": "Menú",
+  "bar.leave": "Salir",
   "bar.home": "← Inicio",
   "bar.rules": "Reglas",
   "bar.restart": "Reiniciar",
-  "bar.hints": "💡 Pistas",
-  "bar.history": "📜 Historial",
+  "bar.hints": "Pistas",
+  "bar.history": "Historial",
   "bar.volume": "Volumen",
   "volume.mute": "Silenciar",
   "volume.unmute": "Activar sonido",
@@ -366,20 +366,20 @@ export const es: Record<MsgKey, string> = {
   "pers.reckless": "temerario",
 
   "home.tagline": "Tira. Arriésgate. Guarda — antes de que se te escape todo.",
-  "home.learn": "🎓 Aprende a jugar",
+  "home.learn": "Aprende a jugar",
   "home.learn.subNew": "¿Nuevo? Empieza con una partida guiada",
   "home.learn.sub": "Una partida guiada contra un bot fácil",
-  "home.local": "🎲 Partida local",
+  "home.local": "Partida local",
   "home.local.sub": "Por turnos o contra bots",
-  "home.online": "🌐 Jugar en línea",
+  "home.online": "Jugar en línea",
   "home.online.sub": "Emparejamiento y salas privadas",
-  "home.online.signInSub": "🔒 Inicia sesión para jugar en línea",
+  "home.online.signInSub": "Inicia sesión para jugar en línea",
   "home.howToPlay": "Cómo jugar",
-  "home.stats": "📊 Estadísticas",
-  "home.locker": "🎨 Vestuario",
-  "home.settings": "⚙️ Ajustes",
+  "home.stats": "Estadísticas",
+  "home.locker": "Vestuario",
+  "home.settings": "Ajustes",
   "home.signIn": "Entrar / Registrarse",
-  "home.install": "📥 Instalar app",
+  "home.install": "Instalar app",
 
   "settings.title": "AJUSTES",
   "settings.tagline": "Haz que Greed sea cómodo de jugar.",
@@ -579,8 +579,8 @@ export const es: Record<MsgKey, string> = {
   "onlineMenu.watch": "Ver",
   "onlineMenu.watchHint": "Mira esta sala sin ocupar un asiento",
 
-  "spectate.watching": "👀 Espectando — estás viendo esta partida",
-  "spectate.lobbyWait": "👀 Espectando — esperando a que empiece la partida",
+  "spectate.watching": "Espectando — estás viendo esta partida",
+  "spectate.lobbyWait": "Espectando — esperando a que empiece la partida",
 
   "lobby.reconnecting": "Reconectando…",
   "lobby.starting": "Empezando…",

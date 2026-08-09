@@ -3,6 +3,7 @@ import { RulesModal } from "../components/RulesModal.js";
 import { useInstallPrompt } from "../game/pwa.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
+import { Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface HomeScreenProps {
@@ -93,13 +94,19 @@ export function HomeScreen({
           className={`btn btn--big home-menu__btn home-menu__learn${firstRun ? " home-menu__learn--pulse" : ""}`}
           onClick={practice}
         >
-          {t("home.learn")}
+          <span className="home-menu__label">
+            <Icon name="graduate" />
+            {t("home.learn")}
+          </span>
           <span className="home-menu__sub">
             {firstRun ? t("home.learn.subNew") : t("home.learn.sub")}
           </span>
         </button>
         <button className="btn btn--roll btn--big home-menu__btn" onClick={onLocal}>
-          {t("home.local")}
+          <span className="home-menu__label">
+            <Icon name="dice" />
+            {t("home.local")}
+          </span>
           <span className="home-menu__sub">{t("home.local.sub")}</span>
         </button>
         {ONLINE_ENABLED && (
@@ -111,7 +118,10 @@ export function HomeScreen({
             // then drop the player straight into online once they're in.
             onClick={status === "authed" ? onOnline : onAuthForOnline}
           >
-            {t("home.online")}
+            <span className="home-menu__label">
+              <Icon name={status === "authed" ? "globe" : "lock"} />
+              {t("home.online")}
+            </span>
             <span className="home-menu__sub">
               {status === "authed" ? t("home.online.sub") : t("home.online.signInSub")}
             </span>
@@ -125,21 +135,26 @@ export function HomeScreen({
               setShowRules(true);
             }}
           >
+            <Icon name="book" />
             {t("home.howToPlay")}
           </button>
           <button className="btn btn--ghost" onClick={onStats}>
+            <Icon name="chart" />
             {t("home.stats")}
           </button>
           <button className="btn btn--ghost" onClick={onLocker}>
+            <Icon name="palette" />
             {t("home.locker")}
           </button>
           <button className="btn btn--ghost" onClick={onSettings}>
+            <Icon name="gear" />
             {t("home.settings")}
           </button>
         </div>
 
         {canInstall && (
           <button className="btn btn--ghost home-menu__install" onClick={promptInstall}>
+            <Icon name="download" />
             {t("home.install")}
           </button>
         )}

@@ -194,6 +194,25 @@
   align-items: center;
   gap: 2px;
 }
+/* Icon + label on one line, above the sub-label. */
+.home-menu__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+/* Footer buttons carry an inline icon too. */
+.home-menu__foot .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.home-menu__install {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 .home-menu__sub {
   font-size: 12px;
   font-weight: 500;

@@ -10,6 +10,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import type { DieValue } from "@greed/core";
 import { Die } from "../components/Die.js";
+import { Icon, type IconName } from "../ui/index.js";
 import { DICE_SKINS, TABLE_THEMES } from "../game/cosmetics.js";
 import { seatColor, initials } from "../game/theme.js";
 
@@ -86,6 +87,41 @@ export function UiGallery() {
                 </button>
               ))}
             </div>
+          </div>
+        </Section>
+
+        <Section title="Icons">
+          <div style={{ ...row, gap: 18 }}>
+            {(
+              [
+                "back",
+                "close",
+                "bulb",
+                "scroll",
+                "book",
+                "refresh",
+                "download",
+                "chart",
+                "palette",
+                "gear",
+                "graduate",
+                "dice",
+                "globe",
+                "lock",
+                "volume",
+                "volume-off",
+                "eye",
+                "user",
+                "check",
+                "plus",
+                "minus",
+              ] as IconName[]
+            ).map((n) => (
+              <div key={n} style={{ textAlign: "center", width: 62 }}>
+                <Icon name={n} size={26} />
+                <div style={{ fontSize: 10, opacity: 0.7 }}>{n}</div>
+              </div>
+            ))}
           </div>
         </Section>
 

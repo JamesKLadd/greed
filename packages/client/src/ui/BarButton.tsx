@@ -1,17 +1,25 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cx } from "./cx.js";
+import { Icon, type IconName } from "./Icon.js";
 
 /**
- * A button in the in-game top bar. Below 760px these collapse to icon-only
- * squares — the glyph comes from a `::before` keyed off the `bar-btn--*`
- * modifier, while the label stays in the DOM for screen readers.
+ * A button in the in-game top bar: icon plus label, where the label is hidden
+ * (but still announced) below 760px so all of them fit across a phone.
  *
- * `name` is required precisely because that modifier is what supplies the
- * glyph: hand-written call sites could (and did) forget it, leaving a button
- * that renders as an empty square on phones.
+ * `name` is required and drives the icon, so a call site cannot render a bar
+ * button with no glyph — which is exactly what happened when this markup was
+ * hand-written and the online screen's leave button lost its modifier class.
  */
 
 export type BarButtonName = "menu" | "hints" | "history" | "rules" | "restart";
+
+const ICONS: Record<BarButtonName, IconName> = {
+  menu: "back",
+  hints: "bulb",
+  history: "scroll",
+  rules: "book",
+  restart: "refresh",
+};
 
 export interface BarButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   name: BarButtonName;
@@ -34,7 +42,8 @@ export function BarButton({ name, pressed, className, children, ...rest }: BarBu
       )}
       aria-pressed={pressed}
     >
-      {children}
+      <Icon name={ICONS[name]} />
+      <span className="bar-btn__label">{children}</span>
     </button>
   );
 }
