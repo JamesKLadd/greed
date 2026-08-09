@@ -101,9 +101,17 @@ export function HomeScreen({
           <span className="home-menu__sub">{t("home.local.sub")}</span>
         </button>
         {ONLINE_ENABLED && (
-          <button className="btn btn--bank btn--big home-menu__btn" onClick={onOnline}>
+          <button
+            className={`btn btn--bank btn--big home-menu__btn${
+              status === "authed" ? "" : " home-menu__btn--locked"
+            }`}
+            // Online play requires an account: signed-out clicks go to sign-in.
+            onClick={status === "authed" ? onOnline : onAuth}
+          >
             {t("home.online")}
-            <span className="home-menu__sub">{t("home.online.sub")}</span>
+            <span className="home-menu__sub">
+              {status === "authed" ? t("home.online.sub") : t("home.online.signInSub")}
+            </span>
           </button>
         )}
         <div className="home-menu__foot">

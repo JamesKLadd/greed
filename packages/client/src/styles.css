@@ -2047,6 +2047,10 @@ button {
 }
 
 /* ---------------------------------------------------------------- Accounts */
+/* Online play is gated behind an account: the button reads as sign-in-required. */
+.home-menu__btn--locked {
+  filter: saturate(0.55) brightness(0.94);
+}
 .home-account {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
