@@ -9,11 +9,13 @@ import { SettingsScreen } from "./screens/SettingsScreen.js";
 import { AuthScreen } from "./screens/AuthScreen.js";
 import { AccountScreen } from "./screens/AccountScreen.js";
 import { UiGallery } from "./screens/UiGallery.js";
+import { DailyScreen } from "./screens/DailyScreen.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
 import { useT } from "./i18n/i18n.js";
 
-type Mode = "home" | "local" | "online" | "stats" | "locker" | "settings" | "auth" | "account";
+type Mode =
+  "home" | "local" | "online" | "daily" | "stats" | "locker" | "settings" | "auth" | "account";
 
 export function App() {
   const t = useT();
@@ -91,6 +93,18 @@ export function App() {
     );
   }
 
+  if (mode === "daily") {
+    return (
+      <DailyScreen
+        onBack={() => setMode("home")}
+        onSignIn={() => {
+          setAuthNext("daily");
+          setMode("auth");
+        }}
+      />
+    );
+  }
+
   if (mode === "account") {
     return <AccountScreen onBack={() => setMode("home")} />;
   }
@@ -130,6 +144,7 @@ export function App() {
     <HomeScreen
       flash={flash}
       onDismissFlash={() => setFlash(null)}
+      onDaily={() => setMode("daily")}
       onLocal={() => setMode("local")}
       onOnline={() => setMode("online")}
       onPractice={startPractice}

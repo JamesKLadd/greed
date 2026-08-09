@@ -1165,3 +1165,89 @@
   color: var(--text-dim);
   line-height: var(--lh-body);
 }
+
+/* ---------- Daily challenge ---------- */
+.daily__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.daily__day {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.daily__streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--gold-deep);
+  background: var(--accent-soft, rgba(181, 101, 29, 0.14));
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-size: 0.8125rem;
+}
+.daily__note {
+  color: var(--text-dim);
+  line-height: var(--lh-body);
+  margin: 0 0 14px;
+}
+.daily__intro,
+.daily__result,
+.daily__run {
+  text-align: center;
+}
+.daily__meters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.daily__meters .meter {
+  flex: 1;
+}
+.daily__dice {
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.daily__status {
+  min-height: 1.4em;
+  margin: 0 0 14px;
+  color: var(--text-dim);
+}
+.daily__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.daily__score {
+  font-family: var(--ff-display);
+  font-size: 3.25rem;
+  font-weight: 900;
+  color: var(--gold-deep);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.daily__board {
+  margin-top: 22px;
+}
+.daily__boardTitle {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.daily__rank {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+}
+/* Daily entry on the home menu: a distinct "calendar card" stock. */
+.home-menu__daily {
+  background: linear-gradient(178deg, #f7efe0, #eadfc8);
+  border-color: var(--paper-edge-deep);
+}
+.home-menu__daily:hover:not(:disabled) {
+  background: linear-gradient(178deg, #fdf7ea, #f2e8d3);
+}

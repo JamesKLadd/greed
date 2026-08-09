@@ -62,7 +62,9 @@ export class ApiError extends Error {
   }
 }
 
-async function api<T>(
+/** Shared fetch wrapper: JSON in/out, bearer auth, and ApiError on failure.
+ *  Exported so other API modules (daily, social) get the same handling. */
+export async function api<T>(
   path: string,
   opts: { method?: string; body?: unknown; auth?: boolean } = {},
 ): Promise<T> {
