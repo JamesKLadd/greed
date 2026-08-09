@@ -2,3 +2,7 @@ node_modules
 packages/*/dist
 package-lock.json
 packages/client/src-tauri
+
+# Tool-generated plugin skills (Vercel marketplace integrations)
+.agents
+skills-lock.json

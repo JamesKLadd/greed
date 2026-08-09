@@ -1,0 +1,48 @@
+/* ---------- Accessibility: respect reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Keep the dice legible instead of tumbling/shaking. */
+  .die--rolling,
+  .dice-tray--busted {
+    animation: none !important;
+  }
+}
+/* Same, but user-forced via the Settings screen. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+:root[data-motion="reduced"] .die--rolling,
+:root[data-motion="reduced"] .dice-tray--busted {
+  animation: none !important;
+}
+
+/* ---------- Accessibility: text scale & high contrast ---------- */
+:root[data-text-scale="large"] #root {
+  zoom: 1.14;
+}
+:root[data-contrast="high"] {
+  --text: #ffffff;
+  --text-dim: #d7e6dc;
+  --panel: rgba(4, 22, 13, 0.92);
+  --panel-line: rgba(245, 196, 81, 0.6);
+}
+:root[data-contrast="high"] .btn {
+  border-width: 1.5px;
+}
+:root[data-contrast="high"] .seats-config__name,
+:root[data-contrast="high"] .seats-config__diff,
+:root[data-contrast="high"] .join-row__code {
+  border-width: 1.5px;
+}

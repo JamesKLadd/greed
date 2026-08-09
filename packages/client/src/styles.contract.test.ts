@@ -104,32 +104,27 @@ describe("stylesheet ↔ cosmetics contract", () => {
     }
   });
 
-  it("every cosmetic var is resolvable (a :root default, or a fallback at each use)", () => {
-    // A bare var() with no :root default renders as nothing when the inline
-    // cosmetic styles are absent — e.g. a die shown outside the themed `.game`
-    // subtree. Either mechanism is fine; having neither is a latent bug.
-    const rootBlock = css.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+  it("declares a :root default for every cosmetic var, matching cosmetics.ts", () => {
+    // Single source of truth: the defaults live in :root and must equal the
+    // free/default skin and theme, so an unthemed die (outside the inline-styled
+    // `.game` subtree) still renders as ivory-on-classic.
+    const rootBlock = css.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    const defaults: Record<string, string> = { ...DICE_SKINS[0].vars, ...TABLE_THEMES[0].vars };
     for (const name of known) {
-      const hasRootDefault = new RegExp(`^\\s*${name}\\s*:`, "m").test(rootBlock);
-      if (hasRootDefault) continue;
-      const bareUse = new RegExp(`var\\(\\s*${name}\\s*\\)`).test(css);
-      expect(
-        bareUse,
-        `${name} has no :root default, so every use needs a fallback (found a bare var(${name}))`,
-      ).toBe(false);
+      const declared = rootBlock.match(new RegExp(`^\\s*${name}\\s*:\\s*([^;]+);`, "m"))?.[1];
+      expect(declared, `${name} has no :root default`).toBeDefined();
+      expect(normalizeColor(declared!), `:root ${name} drifted from cosmetics.ts`).toBe(
+        normalizeColor(defaults[name]),
+      );
     }
   });
 
-  it("fallback literals match the default cosmetic values", () => {
-    // Until the vars get :root defaults, the ivory/classic values are duplicated
-    // as inline fallbacks. Any drift silently changes how unthemed dice render.
-    const defaults: Record<string, string> = { ...DICE_SKINS[0].vars, ...TABLE_THEMES[0].vars };
-    for (const { name, fallback } of varUsesWithFallback(css)) {
-      const expected = defaults[name];
-      if (!expected) continue;
-      expect(normalizeColor(fallback), `fallback for ${name} drifted from cosmetics.ts`).toBe(
-        normalizeColor(expected),
-      );
-    }
+  it("uses no fallback literals for cosmetic vars", () => {
+    // Fallbacks would re-duplicate the ivory/classic values across the sheet —
+    // exactly the drift the :root defaults exist to prevent.
+    const offenders = varUsesWithFallback(css)
+      .filter((u) => known.has(u.name))
+      .map((u) => `var(${u.name}, ${u.fallback.trim()})`);
+    expect(offenders, "use the :root default instead of an inline fallback").toEqual([]);
   });
 });

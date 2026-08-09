@@ -1,0 +1,45 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  /* Stop mobile browsers auto-inflating text in landscape / on rotation. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Clip any stray horizontal overflow at the root — `overflow-x:hidden` on the
+     body alone is often ignored on mobile (the viewport keeps panning). */
+  overflow-x: clip;
+}
+
+body {
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--text);
+  background: radial-gradient(
+    120% 120% at 50% 0%,
+    var(--felt-1) 0%,
+    var(--felt-2) 55%,
+    var(--felt-edge) 100%
+  );
+  -webkit-font-smoothing: antialiased;
+  /* A stray few px of horizontal overflow makes mobile browsers feel "zoomed
+     in"; clip it so the page can never scroll sideways. */
+  overflow-x: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  /* Remove the 300ms tap delay + double-tap-to-zoom on controls. */
+  touch-action: manipulation;
+}

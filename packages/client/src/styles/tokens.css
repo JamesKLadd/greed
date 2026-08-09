@@ -1,0 +1,108 @@
+/*
+ * Design tokens.
+ *
+ * Layout: (1) cosmetic custom properties — a public API shared with
+ * game/cosmetics.ts; (2) the raw scales; (3) semantic roles that the rest of the
+ * stylesheet should reference. Prefer a semantic role (--surface, --line,
+ * --accent) over a raw value so the "family game night" palette can be retuned
+ * in one place.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- cosmetics
+     Overridden INLINE per equipped skin/theme by cosmeticVars()/diceVarsById().
+     These defaults must match DICE_SKINS[0] / TABLE_THEMES[0]; the contract test
+     in styles.contract.test.ts fails the build if they drift.
+
+     Never alias these on :root (e.g. `--mat: var(--felt-1)`): custom-property
+     substitution resolves where the alias is DECLARED, so a :root alias would
+     freeze to this default and the inline vars on .game would stop applying —
+     silently breaking every table theme. Reference the cosmetic vars directly. */
+  --felt-1: #0f5132;
+  --felt-2: #0a3d26;
+  --felt-edge: #062a1a;
+  --rail-1: #7a5330;
+  --rail-2: #43301c;
+  --die-c1: #ffffff;
+  --die-c2: #f4ecd8;
+  --die-c3: #e4d8bd;
+  --die-pip: #201709;
+  --die-pip2: #6a5942;
+  --die-lip: rgba(120, 100, 60, 0.22);
+
+  /* ------------------------------------------------------------------- scales
+     Spacing is a 4px-based ramp; use it instead of magic numbers. */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+  /* Deliberately asymmetric: panels read as hand-cut card stock, not CSS boxes. */
+  --r-cut: 15px 17px 14px 18px / 17px 14px 18px 15px;
+
+  --fs-2xs: 0.688rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
+  --lh-tight: 1.15;
+  --lh-snug: 1.3;
+  --lh-body: 1.55;
+
+  /* Elevation. Shadows are warm brown, never black — black shadows are the
+     single strongest "digital casino" cue in the old palette. */
+  --e-flat: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --e-rest: 0 1px 2px rgba(72, 44, 18, 0.18), 0 8px 18px -8px rgba(72, 44, 18, 0.32);
+  --e-lift: 0 2px 4px rgba(72, 44, 18, 0.22), 0 18px 34px -14px rgba(72, 44, 18, 0.42);
+  --e-float: 0 4px 8px rgba(72, 44, 18, 0.24), 0 34px 60px -22px rgba(72, 44, 18, 0.5);
+
+  /* ------------------------------------------------------------- the room
+     Wood table + overhead lamp. Used from Phase 4 onward. */
+  --wood-1: #8f6039;
+  --wood-2: #734727;
+  --wood-3: #57331b;
+  --lamp: rgba(255, 228, 170, 0.22);
+
+  /* Card stock / paper for panels and tokens. */
+  --paper-1: #f8f1e2;
+  --paper-2: #f0e5cf;
+  --paper-3: #e6d8bc;
+  --paper-edge: #d3bf9c;
+  --paper-edge-deep: #bda781;
+
+  /* ---------------------------------------------------------- semantic roles
+     Still pointing at the current dark palette; Phase 4 flips these to light
+     without touching the call sites that reference them. */
+  --text: #eef3ee;
+  --text-dim: #a9c3b3;
+  --panel: rgba(6, 32, 20, 0.72);
+  --panel-line: rgba(245, 196, 81, 0.22);
+  --bad: #e5544b;
+  --good: #64d197;
+  --info: #6ab7ff;
+  --focus: 0 0 0 3px rgba(245, 196, 81, 0.45);
+
+  /* -------------------------------------------------------------- legacy
+     Kept (not deleted) because 30+ call sites reference them; retire
+     opportunistically rather than turning a restyle into a 30-file refactor. */
+  --gold: #f5c451;
+  --gold-deep: #c9971f;
+  --cream: #f6f1e4;
+  --ink: #2a2118;
+  /* Deliberately still 14px, not var(--r-lg): Phase 1 is visually neutral, so
+     the move onto the radius scale happens with the rest of the restyle. */
+  --radius: 14px;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}

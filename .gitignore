@@ -20,3 +20,7 @@ steam_appid.txt
 
 .vercel
 .env*
+
+# Tool-generated plugin skills (Vercel marketplace integrations)
+.agents/
+skills-lock.json
