@@ -72,7 +72,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   return (
     <div className="game" style={diceVars}>
       <header className="game__bar">
-        <button className="btn btn--ghost" onClick={net.leave}>
+        <button className="btn btn--ghost bar-btn bar-btn--menu" onClick={net.leave}>
           {t("bar.leave")}
         </button>
         <h1 className="game__logo">
@@ -81,13 +81,17 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
         <div className="game__bar-right">
           <VolumeControls />
           <button
-            className="btn btn--ghost"
+            className="btn btn--ghost bar-btn bar-btn--history"
             onClick={() => setShowHistory(true)}
             title={t("history.title")}
           >
             {t("bar.history")}
           </button>
-          <button className="btn btn--ghost" onClick={() => setShowRules(true)}>
+          <button
+            className="btn btn--ghost bar-btn bar-btn--rules"
+            onClick={() => setShowRules(true)}
+            title={t("bar.rules")}
+          >
             {t("bar.rules")}
           </button>
         </div>

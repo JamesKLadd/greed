@@ -82,13 +82,17 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
   return (
     <div className="game" style={cosmetics}>
       <header className="game__bar">
-        <button className="btn btn--ghost" onClick={onExit}>
+        <button className="btn btn--ghost bar-btn bar-btn--menu" onClick={onExit}>
           {t("bar.menu")}
         </button>
-        <h1 className="game__logo">GREED</h1>
+        <h1 className="game__logo game__logo--decor">GREED</h1>
         <div className="game__bar-right">
           <button
-            className={hints ? "btn btn--ghost btn--on" : "btn btn--ghost"}
+            className={
+              hints
+                ? "btn btn--ghost bar-btn bar-btn--hints btn--on"
+                : "btn btn--ghost bar-btn bar-btn--hints"
+            }
             onClick={() => setHints((h) => !h)}
             aria-pressed={hints}
           >
@@ -96,16 +100,24 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
           </button>
           <VolumeControls />
           <button
-            className="btn btn--ghost"
+            className="btn btn--ghost bar-btn bar-btn--history"
             onClick={() => setShowHistory(true)}
             title="Turn history (H)"
           >
             {t("bar.history")}
           </button>
-          <button className="btn btn--ghost" onClick={() => setShowRules(true)}>
+          <button
+            className="btn btn--ghost bar-btn bar-btn--rules"
+            onClick={() => setShowRules(true)}
+            title={t("bar.rules")}
+          >
             {t("bar.rules")}
           </button>
-          <button className="btn btn--ghost" onClick={() => ctl.restart()}>
+          <button
+            className="btn btn--ghost bar-btn bar-btn--restart"
+            onClick={() => ctl.restart()}
+            title={t("bar.restart")}
+          >
             {t("bar.restart")}
           </button>
         </div>

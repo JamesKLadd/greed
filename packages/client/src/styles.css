@@ -32,6 +32,9 @@ html {
   /* Stop mobile browsers auto-inflating text in landscape / on rotation. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Clip any stray horizontal overflow at the root — `overflow-x:hidden` on the
+     body alone is often ignored on mobile (the viewport keeps panning). */
+  overflow-x: clip;
 }
 
 body {
@@ -604,9 +607,10 @@ button {
   .felt__center .dice-tray {
     flex-wrap: wrap;
   }
-  /* Shrink the in-game dice so all five fit on one row on a phone. */
+  /* Shrink the in-game dice so all five comfortably fit one row on a phone
+     (14vw leaves slack past the exact-fit boundary so they never wrap). */
   .felt__center .dice-tray .die {
-    font-size: clamp(38px, 15vw, 62px);
+    font-size: clamp(36px, 14vw, 60px);
   }
 }
 
@@ -625,21 +629,62 @@ button {
     font-size: 16px;
   }
 
-  /* A more compact in-game top bar so the title + controls fit narrow screens. */
+  /* A more compact in-game top bar so all controls fit narrow screens without
+     sideways scrolling: the utility buttons collapse to icon-only. */
   .game__bar {
-    padding: 10px 12px;
-    padding-top: max(10px, env(safe-area-inset-top));
-    gap: 6px;
-  }
-  .game__logo {
-    font-size: 20px;
-    letter-spacing: 2px;
+    padding: 8px 10px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    gap: 5px;
   }
   .game__bar-right {
-    gap: 6px;
+    gap: 5px;
   }
-  .btn--icon {
-    padding: 9px 10px;
+  .game__logo {
+    font-size: 17px;
+    letter-spacing: 1px;
+  }
+  /* The plain in-game wordmark is decorative — drop it so the buttons fit.
+     (The online bar keeps its logo since it carries the room code.) */
+  .game__logo--decor {
+    display: none;
+  }
+
+  /* Icon-only utility buttons: hide the text label (still read by screen
+     readers) and show a glyph via ::before so each button is a compact square. */
+  .game__bar .bar-btn {
+    font-size: 0;
+    padding: 0;
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-grid;
+    place-items: center;
+  }
+  .game__bar .bar-btn::before {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .bar-btn--menu::before {
+    content: "\2190"; /* ← */
+    font-size: 20px;
+  }
+  .bar-btn--hints::before {
+    content: "💡";
+  }
+  .bar-btn--history::before {
+    content: "📜";
+  }
+  .bar-btn--rules::before {
+    content: "📖";
+  }
+  .bar-btn--restart::before {
+    content: "🔄";
+  }
+  .game__bar .btn--icon {
+    padding: 0;
+    min-width: 40px;
+    min-height: 40px;
   }
 
   /* Keep the setup panel comfortable and edge-to-edge on small screens. */
