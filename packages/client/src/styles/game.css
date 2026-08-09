@@ -4,13 +4,13 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  /* Themeable in-game backdrop (matches the equipped table theme). */
-  background: radial-gradient(
-    120% 120% at 50% 0%,
-    var(--felt-1) 0%,
-    var(--felt-2) 55%,
-    var(--felt-edge) 100%
-  );
+  /* The in-game surround is the WOODEN TABLE, not the felt. The equipped table
+     theme colours the play mat (.felt) that sits on it — so a crimson theme is
+     "a crimson mat on the table", not "the entire screen is crimson". */
+  background:
+    repeating-linear-gradient(93deg, rgba(48, 26, 8, 0.055) 0 2px, transparent 2px 9px),
+    radial-gradient(130% 80% at 50% -4%, var(--lamp), transparent 60%),
+    linear-gradient(180deg, var(--wood-1), var(--wood-2) 55%, var(--wood-3));
 }
 .game__bar {
   /* Three equal-weight columns keep the logo centered to the screen even though
@@ -67,36 +67,41 @@
   display: flex;
   justify-content: center;
 }
+/*
+ * The play mat: a round cloth laid on the wooden table, with a bound hem and a
+ * stitched edge. The equipped TABLE_THEME colours the cloth (--felt-*) and its
+ * binding (--rail-*), so all ten themes come through as different mats rather
+ * than as ten different casino rooms.
+ */
 .felt {
   position: relative;
   width: min(820px, 100%);
   aspect-ratio: 16 / 10;
   border-radius: 50%;
   background:
-    /* fine felt speckle */
-    radial-gradient(rgba(255, 255, 255, 0.028) 0.5px, transparent 0.6px) 0 0 / 5px 5px,
-    /* soft center sheen */
-    radial-gradient(58% 52% at 50% 42%, rgba(255, 255, 255, 0.06), transparent 72%),
-    /* base felt with an edge falloff */
-    radial-gradient(120% 130% at 50% 30%, var(--felt-1), var(--felt-2) 52%, var(--felt-edge) 100%);
+    /* woven crosshatch — a 3px period stays clear of hi-DPI moiré */
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 3px),
+    /* soft light across the middle of the cloth */
+    radial-gradient(58% 52% at 50% 40%, rgba(255, 255, 255, 0.07), transparent 72%),
+    radial-gradient(120% 130% at 50% 26%, var(--felt-1), var(--felt-2) 52%, var(--felt-edge) 100%);
   border: none;
   box-shadow:
-    inset 0 0 95px rgba(0, 0, 0, 0.62),
-    /* edge vignette */ inset 0 0 0 2px rgba(0, 0, 0, 0.28),
-    /* felt lip */ 0 0 0 7px var(--rail-1),
-    /* wood rail — light */ 0 0 0 15px var(--rail-2),
-    /* wood rail — dark */ 0 0 0 16px rgba(0, 0, 0, 0.45),
-    /* rail outline */ 0 26px 55px rgba(0, 0, 0, 0.55); /* drop shadow */
+    /* cloth, not a pit: the old 0.62 vignette read as a sunken card table */
+    inset 0 0 60px rgba(30, 16, 4, 0.34),
+    /* bound hem */ 0 0 0 10px var(--rail-1),
+    0 0 0 11px rgba(30, 16, 4, 0.22),
+    /* contact shadow on the wood */ 0 14px 26px -10px rgba(72, 44, 18, 0.5);
   margin: 16px 0 6px;
 }
-/* Inner betting-line ring for a table feel. */
-.felt::before {
+/* Stitching just inside the hem. */
+.felt::after {
   content: "";
   position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  border: 1px solid rgba(245, 196, 81, 0.14);
-  box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.28);
+  inset: -5px;
+  border-radius: inherit;
+  border: 2px dashed color-mix(in srgb, var(--rail-2) 65%, #fff8ea 35%);
+  opacity: 0.45;
   pointer-events: none;
 }
 
@@ -110,11 +115,16 @@
   top: var(--y, 50%);
   transform: translate(-50%, -50%);
   width: 152px;
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
+  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
+  border: 1px solid var(--paper-edge-deep);
   border-radius: 12px;
   padding: 8px 11px;
-  box-shadow: var(--shadow);
+  /* Separation comes from the contact shadow, not the fill, so seats stay
+     readable on every mat colour (including the light sand/sunset themes). */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 2px 0 var(--paper-edge-deep),
+    var(--e-lift);
   z-index: 2;
   transition:
     border-color 0.18s ease,
@@ -122,35 +132,46 @@
     box-shadow 0.18s ease;
 }
 .pseat--current {
-  border-color: var(--gold);
-  background: rgba(245, 196, 81, 0.12);
+  border-color: var(--gold-deep);
+  background: linear-gradient(178deg, #fffdf6, #f8ecd4);
   box-shadow:
-    0 0 18px rgba(245, 196, 81, 0.4),
-    var(--shadow);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 2px var(--gold),
+    0 3px 0 var(--gold-deep),
+    var(--e-lift);
+}
+/* The "it's your turn" pulse rides on a pseudo-element's opacity rather than the
+   seat's box-shadow: box-shadow animation repaints the card every frame (on up
+   to eight seats at once), opacity is composited. */
+.pseat--current::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  box-shadow: 0 0 12px 3px var(--gold);
+  pointer-events: none;
   animation: seat-breathe 2.4s ease-in-out infinite;
 }
 @keyframes seat-breathe {
   0%,
   100% {
-    box-shadow:
-      0 0 15px rgba(245, 196, 81, 0.3),
-      var(--shadow);
+    opacity: 0.35;
   }
   50% {
-    box-shadow:
-      0 0 27px rgba(245, 196, 81, 0.58),
-      var(--shadow);
+    opacity: 0.85;
   }
 }
 .pseat--winner {
   border-color: var(--good);
-  background: rgba(100, 209, 151, 0.14);
+  background: linear-gradient(178deg, #f3fbf5, #ddf0e4);
   box-shadow:
-    0 0 18px rgba(100, 209, 151, 0.35),
-    var(--shadow);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 2px var(--good),
+    0 3px 0 #1c5738,
+    var(--e-lift);
 }
 .pseat--you:not(.pseat--current):not(.pseat--winner) {
-  border-color: rgba(245, 196, 81, 0.4);
+  border-color: var(--gold);
 }
 .pseat__head {
   display: flex;
@@ -197,7 +218,7 @@
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--ink);
+  color: #fff6e6;
   background: var(--text-dim);
   border-radius: 5px;
   padding: 1px 5px;
@@ -218,8 +239,8 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #6b7f74;
-  border: 2px solid var(--panel);
+  background: #9a8b78;
+  border: 2px solid var(--paper-1);
 }
 .pseat__conn--on {
   background: var(--good);
@@ -235,7 +256,7 @@
   font-style: italic;
 }
 .pseat--current .pseat__status {
-  color: var(--gold);
+  color: var(--gold-deep);
   animation: pulse-fade 1.3s ease-in-out infinite;
 }
 @keyframes pulse-fade {
@@ -275,7 +296,7 @@
   margin-top: 7px;
   height: 5px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(88, 58, 26, 0.12);
   overflow: hidden;
 }
 .pseat__fill {
@@ -304,12 +325,23 @@
 .felt__center .dice-tray {
   flex-wrap: nowrap;
 }
+/* A little card chip rather than bare text: the mat underneath ranges from dark
+   green to pale sand across the ten themes, so no single ink colour is legible
+   on all of them. Printing it on stock sidesteps the problem entirely. */
 .felt__whose {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
+  color: var(--text);
+  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
+  border: 1px solid var(--paper-edge-deep);
+  border-radius: var(--r-pill);
+  padding: 5px 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    var(--e-rest);
 }
 .felt__whose--bot .table__dot {
   background: var(--info);
@@ -474,16 +506,16 @@
   border-bottom: 1px solid var(--panel-line);
 }
 .banner--final {
-  background: rgba(245, 196, 81, 0.14);
-  color: var(--gold);
+  background: rgba(181, 101, 29, 0.16);
+  color: var(--gold-deep);
 }
 .banner--sd {
-  background: rgba(229, 84, 75, 0.16);
-  color: #ffb3ad;
+  background: rgba(178, 59, 46, 0.16);
+  color: #8c2b20;
 }
 .banner--spectate {
-  background: rgba(120, 180, 255, 0.14);
-  color: #bcd8ff;
+  background: rgba(47, 111, 158, 0.14);
+  color: #235573;
 }
 
 /* Read-only watcher indicator that stands in for the action Controls. */
@@ -623,12 +655,20 @@
   font-size: 66px;
   width: 1em;
   height: 1em;
-  border-radius: 0.21em;
-  background: linear-gradient(155deg, var(--die-c1) 0%, var(--die-c2) 55%, var(--die-c3) 100%);
+  /* Chunkier corners read as a moulded resin die rather than a sharp icon. */
+  border-radius: 0.24em;
+  background:
+    radial-gradient(120% 100% at 30% 16%, rgba(255, 255, 255, 0.5), transparent 52%),
+    linear-gradient(155deg, var(--die-c1) 0%, var(--die-c2) 55%, var(--die-c3) 100%);
+  /* All in em, like every other die metric. These were previously in px, so a
+     <Die size={18}> in the turn history got a 14px-blur shadow and rendered as
+     a smudge; now the shadow scales with the die. */
   box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.55),
-    inset 0 -6px 8px var(--die-lip),
-    0 8px 14px rgba(0, 0, 0, 0.35);
+    inset 0 0 0 0.035em rgba(255, 255, 255, 0.3),
+    inset 0 0.03em 0.03em rgba(255, 255, 255, 0.5),
+    inset 0 -0.09em 0.12em var(--die-lip),
+    0 0.06em 0.04em rgba(72, 44, 18, 0.28),
+    0 0.14em 0.2em -0.05em rgba(72, 44, 18, 0.38);
   padding: 0.14em;
   transition:
     transform 0.15s ease,
@@ -636,15 +676,6 @@
     outline-color 0.15s ease;
   outline: 3px solid transparent;
   transform-style: preserve-3d;
-}
-/* Glossy highlight across the top-left corner. */
-.die::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.55), transparent 42%);
-  pointer-events: none;
 }
 .die__face {
   width: 100%;
@@ -664,19 +695,21 @@
   position: relative;
   z-index: 1;
 }
+/* Pips are DRILLED into the face — shadow inside the hole, a bright lip below —
+   rather than the raised dots of a printed/plastic die. */
 .pip--on {
-  background: radial-gradient(circle at 35% 28%, var(--die-pip2), var(--die-pip) 78%);
+  background: radial-gradient(circle at 38% 30%, var(--die-pip2), var(--die-pip) 76%);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.4),
-    0 1px 1px rgba(0, 0, 0, 0.35);
+    inset 0 0.015em 0.025em rgba(0, 0, 0, 0.55),
+    0 0.008em 0 rgba(255, 255, 255, 0.4);
 }
 .die--locked {
   outline-color: var(--gold);
   box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.55),
-    inset 0 -6px 8px var(--die-lip),
-    0 0 18px rgba(245, 196, 81, 0.6),
-    0 8px 14px rgba(0, 0, 0, 0.35);
+    inset 0 0.03em 0.03em rgba(255, 255, 255, 0.5),
+    inset 0 -0.09em 0.12em var(--die-lip),
+    0 0 0.28em rgba(181, 101, 29, 0.55),
+    0 0.14em 0.2em -0.05em rgba(72, 44, 18, 0.38);
   transform: translateY(-5px);
   animation: lock-pop 0.32s ease;
 }
@@ -726,7 +759,7 @@
 }
 .controls__status {
   font-size: 15px;
-  color: var(--text-dim);
+  color: var(--text-on-wood-dim);
   min-height: 20px;
 }
 .controls__meters {
@@ -736,11 +769,15 @@
 }
 .meter {
   flex: 1;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--panel-line);
+  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
+  border: 1px solid var(--paper-edge-deep);
   border-radius: 10px;
   padding: 10px;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 2px 0 var(--paper-edge-deep),
+    var(--e-rest);
 }
 .meter__label {
   display: block;

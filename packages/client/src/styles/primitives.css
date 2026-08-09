@@ -1,41 +1,74 @@
-/* ---------- Buttons ---------- */
+/* ---------- Buttons ----------
+   Punched card tokens: a printed face, a visible board edge underneath, and a
+   press that actually travels down onto the table. */
 .btn {
-  border: 1px solid var(--panel-line);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-strong, var(--paper-edge-deep));
+  background: linear-gradient(178deg, #fffdf7, var(--paper-2));
   color: var(--text);
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 2px 0 var(--paper-edge-deep),
+    var(--e-rest);
   transition:
     transform 0.06s ease,
     background 0.15s ease,
     box-shadow 0.15s ease;
 }
 .btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(178deg, #ffffff, var(--paper-1));
 }
 .btn:active:not(:disabled) {
-  transform: translateY(1px);
+  /* Press the token down: travel the same 2px the edge is tall. */
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 var(--paper-edge-deep),
+    var(--e-flat);
 }
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
+/* Ghost buttons appear both on card stock and directly on the table, so they
+   need to be a real (if lighter) paper token — a translucent white fill went
+   muddy over wood. */
 .btn--ghost {
-  background: transparent;
+  background: linear-gradient(178deg, #fdf8ec, var(--paper-2));
+  border-color: var(--paper-edge-deep);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: linear-gradient(178deg, #ffffff, var(--paper-1));
 }
 .btn--roll {
-  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-deep) 100%);
-  color: var(--ink);
-  border-color: var(--gold-deep);
-  box-shadow: 0 6px 16px rgba(201, 151, 31, 0.35);
+  background: linear-gradient(178deg, #d98b3c 0%, var(--gold) 55%, var(--gold-deep) 100%);
+  color: #fff8ec;
+  border-color: #7a3f0e;
+  text-shadow: 0 1px 0 rgba(80, 38, 4, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 0 #7a3f0e,
+    var(--e-rest);
+}
+.btn--roll:hover:not(:disabled) {
+  background: linear-gradient(178deg, #e59a4c 0%, #c07225 55%, #96520f 100%);
 }
 .btn--bank {
-  background: linear-gradient(180deg, #3fbf7f 0%, #1f8f57 100%);
-  color: #04120b;
-  border-color: #1f8f57;
-  box-shadow: 0 6px 16px rgba(31, 143, 87, 0.3);
+  background: linear-gradient(178deg, #4fa877 0%, #2f8f5b 55%, #226b45 100%);
+  color: #f2fff7;
+  border-color: #1c5738;
+  text-shadow: 0 1px 0 rgba(6, 40, 22, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 0 #1c5738,
+    var(--e-rest);
+}
+.btn--bank:hover:not(:disabled) {
+  background: linear-gradient(178deg, #5cb684 0%, #349b63 55%, #26764c 100%);
 }
 .btn--big {
   padding: 14px 28px;
@@ -47,9 +80,9 @@
   line-height: 1;
 }
 .btn--on {
-  background: rgba(245, 196, 81, 0.16);
-  border-color: var(--gold);
-  color: var(--gold);
+  background: linear-gradient(178deg, #f6e2c2, #eccfa4);
+  border-color: var(--gold-deep);
+  color: var(--gold-deep);
 }
 
 /* ---------- Setup ---------- */
@@ -76,28 +109,43 @@
   /* 6px tracking was the strongest "casino signage" cue; tight and chunky reads
      as a printed game-box wordmark instead. */
   letter-spacing: 2px;
-  color: var(--gold);
+  /* Painted on the table: a warm cream with a dark bevel under it, so it reads
+     as printed/branded onto the wood rather than as a neon casino sign. */
+  color: #f6dfae;
   text-shadow:
-    0 2px 0 var(--gold-deep),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    0 1px 0 rgba(59, 36, 19, 0.55),
+    0 3px 0 rgba(38, 22, 10, 0.45),
+    0 10px 22px rgba(24, 13, 5, 0.5);
   margin: 0;
 }
 .setup__logo {
   font-size: clamp(48px, 9vw, 96px);
 }
+/* The hero sits directly on the table, not on card stock, so it takes the
+   on-wood ink rather than --text-dim (which is tuned for cream). */
 .setup__tagline {
-  color: var(--text-dim);
+  color: var(--text-on-wood-dim);
   margin: 6px 0 0;
   font-size: 16px;
 }
+/* A slab of chipboard laid on the table: printed face, bevelled top edge, two
+   stacked shadows standing in for board thickness, then a contact shadow.
+   The asymmetric radius keeps it feeling hand-cut rather than CSS-perfect.
+   backdrop-filter is gone on purpose — card stock is opaque, and it was the
+   most expensive thing in the sheet on mobile GPUs. */
 .setup__panel {
+  position: relative;
   width: min(680px, 100%);
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  border-radius: var(--radius);
+  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--r-cut);
   padding: 22px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(88, 58, 26, 0.07),
+    0 2px 0 var(--paper-edge),
+    0 3px 0 var(--paper-edge-deep),
+    var(--e-lift);
 }
 .setup__row {
   display: flex;
@@ -137,14 +185,16 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* Fields read as ruled boxes on a score pad: slightly recessed into the card. */
 .seats-config__name,
 .seats-config__diff {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--panel-line);
+  background: #fffdf8;
+  border: 1px solid var(--paper-edge-deep);
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
+  box-shadow: inset 0 1px 2px rgba(88, 58, 26, 0.12);
 }
 .seats-config__diff:disabled {
   opacity: 0.4;

@@ -18,15 +18,25 @@ html {
   overflow-x: clip;
 }
 
+/*
+ * The table. Layered top-to-bottom: fine grain, a lighter counter-grain, plank
+ * seams, the warm pool of an overhead lamp, then the wood itself.
+ *
+ * This used to paint the felt gradient, which meant every screen in the app —
+ * menus, settings, stats — was green casino felt. Moving the felt onto the play
+ * mat alone (see .felt) is what makes the room read as a room.
+ */
 body {
   font-family: var(--ff-body);
   color: var(--text);
-  background: radial-gradient(
-    120% 120% at 50% 0%,
-    var(--felt-1) 0%,
-    var(--felt-2) 55%,
-    var(--felt-edge) 100%
-  );
+  background:
+    repeating-linear-gradient(93deg, rgba(48, 26, 8, 0.055) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(90deg, rgba(255, 240, 215, 0.035) 0 1px, transparent 1px 17px),
+    repeating-linear-gradient(0deg, transparent 0 132px, rgba(48, 26, 8, 0.15) 132px 135px),
+    radial-gradient(130% 85% at 50% -6%, var(--lamp), transparent 62%),
+    linear-gradient(180deg, var(--wood-1), var(--wood-2) 52%, var(--wood-3));
+  /* Deliberately NOT background-attachment: fixed — it janks badly on iOS. */
+  background-color: var(--wood-2);
   -webkit-font-smoothing: antialiased;
   /* A stray few px of horizontal overflow makes mobile browsers feel "zoomed
      in"; clip it so the page can never scroll sideways. */

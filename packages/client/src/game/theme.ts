@@ -4,28 +4,32 @@
  * regardless of where they end up seated.
  */
 
-// Eight distinct hues that all read clearly on the dark-green felt.
+// Eight distinct hues, mid-toned so they stay legible as text and avatar rings
+// on the cream card stock the seats are now printed on. (They were previously
+// tuned for dark-green felt, where much lighter values were needed; those
+// washed out completely once the surface went light.)
 const SEAT_COLORS = [
-  "#f0883e", // orange
-  "#6ab7ff", // blue
-  "#64d197", // green
-  "#b98cff", // purple
-  "#ff8fc7", // pink
-  "#f5c451", // gold
-  "#3fd0c9", // teal
-  "#e5544b", // red
+  "#c2571c", // orange
+  "#1f6f9e", // blue
+  "#1f7a4d", // green
+  "#6b46b0", // purple
+  "#b5407e", // pink
+  "#9a6a10", // ochre
+  "#0f7a75", // teal
+  "#b3372c", // red
 ];
 
-// Colorblind-safe palette (Okabe–Ito based), tuned to stay legible on dark felt.
+// Colorblind-safe palette (Okabe–Ito), darkened where needed for contrast on
+// cream — notably the yellow, which is unusable on a light background.
 const SEAT_COLORS_CB = [
-  "#e69f00", // orange
-  "#56b4e9", // sky blue
-  "#009e73", // bluish green
-  "#f0e442", // yellow
-  "#0072b2", // blue
-  "#d55e00", // vermillion
-  "#cc79a7", // reddish purple
-  "#bbbbbb", // light gray
+  "#a86a00", // orange
+  "#3782ab", // sky blue
+  "#007454", // bluish green
+  "#8a7b00", // dark yellow (Okabe–Ito yellow is invisible on cream)
+  "#0059a1", // blue
+  "#c1500a", // vermillion
+  "#a15a86", // reddish purple
+  "#6b6b6b", // gray
 ];
 
 let colorblind = false;

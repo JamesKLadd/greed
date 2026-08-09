@@ -90,6 +90,27 @@ describe("cosmetics shape", () => {
   });
 });
 
+describe("stylesheet sanity", () => {
+  const css = readStyles();
+
+  it("contains no malformed hex colours", () => {
+    // A mistyped hex (#54341q, #9a8straight) is silently dropped by the CSS
+    // parser: the declaration just disappears and the element renders unstyled,
+    // with nothing failing. Cheap to catch here.
+    const bad = [...css.matchAll(/#[0-9a-fA-F]*[g-zG-Z][0-9a-zA-Z]*/g)]
+      .map((m) => m[0])
+      // Ignore fragment-style matches inside url(...#id) and SVG references.
+      .filter((h) => !/^#[a-zA-Z-]+$/.test(h));
+    expect(bad, "malformed hex colour(s)").toEqual([]);
+  });
+
+  it("has balanced braces in every layer", () => {
+    const opens = (css.match(/\{/g) ?? []).length;
+    const closes = (css.match(/\}/g) ?? []).length;
+    expect(opens).toBe(closes);
+  });
+});
+
 describe("stylesheet ↔ cosmetics contract", () => {
   const css = readStyles();
   const known = new Set<string>([...DIE_VARS, ...TABLE_VARS]);

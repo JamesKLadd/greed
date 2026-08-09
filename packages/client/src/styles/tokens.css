@@ -98,10 +98,14 @@
 
   /* ------------------------------------------------------------- the room
      Wood table + overhead lamp. Used from Phase 4 onward. */
-  --wood-1: #8f6039;
-  --wood-2: #734727;
-  --wood-3: #57331b;
-  --lamp: rgba(255, 228, 170, 0.22);
+  --wood-1: #6b4526;
+  --wood-2: #54341c;
+  --wood-3: #3b2413;
+  --lamp: rgba(255, 226, 168, 0.16);
+  /* Text printed directly on the table (hero copy, version line) — the ink-brown
+     --text is for card stock and is invisible on wood. */
+  --text-on-wood: #f4e4cb;
+  --text-on-wood-dim: rgba(244, 228, 203, 0.72);
 
   /* Card stock / paper for panels and tokens. */
   --paper-1: #f8f1e2;
@@ -111,23 +115,26 @@
   --paper-edge-deep: #bda781;
 
   /* ---------------------------------------------------------- semantic roles
-     Still pointing at the current dark palette; Phase 4 flips these to light
-     without touching the call sites that reference them. */
-  --text: #eef3ee;
-  --text-dim: #a9c3b3;
-  --panel: rgba(6, 32, 20, 0.72);
-  --panel-line: rgba(245, 196, 81, 0.22);
-  --bad: #e5544b;
-  --good: #64d197;
-  --info: #6ab7ff;
-  --focus: 0 0 0 3px rgba(245, 196, 81, 0.45);
+     Light: ink-brown on cream card stock, sitting on a lit wooden table. */
+  --text: #3a2a19;
+  --text-dim: #7a6449;
+  /* "Panel" is now card stock: opaque, warm, with a printed edge. */
+  --panel: var(--paper-1);
+  --panel-line: var(--paper-edge);
+  --line-strong: var(--paper-edge-deep);
+  --bad: #b23b2e;
+  --good: #2f8f5b;
+  --info: #2f6f9e;
+  --focus: 0 0 0 3px rgba(181, 101, 29, 0.4);
 
   /* -------------------------------------------------------------- legacy
      Kept (not deleted) because 30+ call sites reference them; retire
-     opportunistically rather than turning a restyle into a 30-file refactor. */
-  --gold: #f5c451;
-  --gold-deep: #c9971f;
-  --cream: #f6f1e4;
+     opportunistically rather than turning a restyle into a 30-file refactor.
+     Repointed from casino gold to a warm terracotta/ink pairing that reads on
+     cream — the names are now historical, the values are not. */
+  --gold: #b5651d;
+  --gold-deep: #8e4a12;
+  --cream: #fffaf0;
   --ink: #2a2118;
   /* Deliberately still 14px, not var(--r-lg): Phase 1 is visually neutral, so
      the move onto the radius scale happens with the rest of the restyle. */

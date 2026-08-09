@@ -32,11 +32,21 @@
 :root[data-text-scale="large"] #root {
   zoom: 1.14;
 }
+/* High contrast pushes the LIGHT palette further apart — near-black ink on
+   near-white stock, with harder edges. (It previously drove the opposite
+   direction, toward white-on-darker, which the tabletop restyle inverted.) */
 :root[data-contrast="high"] {
-  --text: #ffffff;
-  --text-dim: #d7e6dc;
-  --panel: rgba(4, 22, 13, 0.92);
-  --panel-line: rgba(245, 196, 81, 0.6);
+  --text: #14100b;
+  --text-dim: #4a3d2c;
+  --paper-1: #fffdf7;
+  --paper-2: #fdf8ea;
+  --paper-edge: #8d7a5f;
+  --paper-edge-deep: #6b5a41;
+  --panel: var(--paper-1);
+  --panel-line: var(--paper-edge-deep);
+  --text-on-wood: #ffffff;
+  --text-on-wood-dim: #f6ecdb;
+  --gold-deep: #7a3f0e;
 }
 :root[data-contrast="high"] .btn {
   border-width: 1.5px;
