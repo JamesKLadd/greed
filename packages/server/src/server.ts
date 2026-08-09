@@ -9,9 +9,10 @@
 import { applyAction, determineOrder, getLegalActions, makeSeed, GOAL_DEFAULT } from "@greed/core";
 import type { GameAction } from "@greed/core";
 import { decide } from "@greed/bots";
-import { decode, encode } from "@greed/protocol";
+import { decode, encode, isEmoteId } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
 import { verifySession } from "./auth.js";
+import { markOffline, markOnline } from "./presence.js";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
   canStart,
@@ -41,6 +42,9 @@ export interface GreedServerOptions {
   /** Forfeit this many turns in one game and the player is kicked. */
   maxMissedTurns: number;
 }
+
+/** Minimum gap between one seat's emotes. */
+const EMOTE_COOLDOWN_MS = 1500;
 
 const DEFAULT_OPTIONS: GreedServerOptions = {
   interTurnMs: 1500,
@@ -80,6 +84,16 @@ export class GreedServer {
     ws.on("close", () => this.onClose(ws));
   }
 
+  /**
+   * Forget a socket's seat binding. Every path that drops a connection must go
+   * through here: doing conns.delete() directly leaks the presence count, and a
+   * player who was kicked would show as online to their friends forever.
+   */
+  private detach(ws: WebSocket, seat: Seat): void {
+    this.conns.delete(ws);
+    if (seat.userId) markOffline(seat.userId);
+  }
+
   private send(ws: WebSocket, msg: ServerMessage): void {
     if (ws.readyState === ws.OPEN) ws.send(encode(msg));
   }
@@ -116,6 +130,8 @@ export class GreedServer {
   private welcome(ws: WebSocket, room: Room, seat: Seat): void {
     this.conns.set(ws, { room, seat });
     seat.ws = ws;
+    // Signed-in players show as online to their friends while connected.
+    if (seat.userId) markOnline(seat.userId);
     this.send(ws, { type: "welcome", youId: seat.id, token: seat.token, code: room.code });
     if (room.phase === "in-game") this.broadcastGame(room);
     else this.broadcastLobby(room);
@@ -286,7 +302,7 @@ export class GreedServer {
         room.seats = room.seats.filter((s) => s.id !== target.id);
         if (target.ws) {
           this.send(target.ws, { type: "left" });
-          this.conns.delete(target.ws);
+          this.detach(target.ws, target);
         }
         return this.broadcastLobby(room);
       }
@@ -298,6 +314,20 @@ export class GreedServer {
 
       case "game-action":
         return this.onGameAction(room, seat, msg.action);
+
+      case "emote": {
+        // Spectators watch silently, and the id is validated so the fixed set
+        // stays fixed even if a client sends something else.
+        if (!isEmoteId(msg.emote)) return;
+        // A reaction should feel like a nudge, not a firehose: one per cooldown.
+        const now = Date.now();
+        if (seat.lastEmoteAt && now - seat.lastEmoteAt < EMOTE_COOLDOWN_MS) return;
+        seat.lastEmoteAt = now;
+        const out: ServerMessage = { type: "emote", playerId: seat.id, emote: msg.emote };
+        for (const s of room.seats) if (s.ws) this.send(s.ws, out);
+        for (const w of room.spectators) this.send(w, out);
+        return;
+      }
 
       case "rematch": {
         if (!isHost || room.phase !== "in-game") return;
@@ -443,7 +473,7 @@ export class GreedServer {
     room.seats = room.seats.filter((s) => s.id !== seat.id);
     if (seat.isHost) this.reassignHost(room);
     if (ws) {
-      this.conns.delete(ws);
+      this.detach(ws, seat);
       this.send(ws, { type: "left" });
     }
     // If no connected humans remain, tear the room (and its watchers) down.
@@ -470,8 +500,8 @@ export class GreedServer {
     if (this.spectators.has(ws)) return this.dropSpectator(ws);
     const conn = this.conns.get(ws);
     if (!conn) return;
-    this.conns.delete(ws);
     const { room, seat } = conn;
+    this.detach(ws, seat);
     seat.ws = null;
 
     if (room.phase === "lobby") {

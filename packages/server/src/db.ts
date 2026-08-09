@@ -89,4 +89,20 @@ export async function migrate(): Promise<void> {
   await query(
     `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,
   );
+  // One row per friendship, owned by whoever asked. A friendship is mutual only
+  // once accepted, so nobody can add themselves to someone else's list.
+  await query(`
+    CREATE TABLE IF NOT EXISTS friendships (
+      requester_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      addressee_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status       text NOT NULL DEFAULT 'pending',
+      created_at   timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (requester_id, addressee_id),
+      CHECK (requester_id <> addressee_id)
+    );
+  `);
+  // Both directions are queried ("my friends" spans either column).
+  await query(
+    `CREATE INDEX IF NOT EXISTS friendships_addressee_idx ON friendships (addressee_id, status);`,
+  );
 }

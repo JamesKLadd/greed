@@ -7,6 +7,7 @@ import { Toast } from "../components/Toast.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
 import { GameOver } from "../components/GameOver.js";
+import { EmoteBar } from "../components/EmoteBar.js";
 import { useGameSounds } from "../game/useGameSounds.js";
 import { useTurnCue } from "../game/useTurnCue.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
@@ -108,19 +109,23 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
           isRolling={net.isRolling}
           perspectiveId={net.youId}
           presence={net.presence}
+          emotes={net.emotes}
         />
 
         {net.isSpectator ? (
           <div className="spectator-bar">{t("spectate.watching")}</div>
         ) : (
-          <Controls
-            state={state}
-            legal={legal}
-            isRolling={net.isRolling}
-            canAct={canAct}
-            onRoll={net.roll}
-            onBank={net.bank}
-          />
+          <>
+            <Controls
+              state={state}
+              legal={legal}
+              isRolling={net.isRolling}
+              canAct={canAct}
+              onRoll={net.roll}
+              onBank={net.bank}
+            />
+            <EmoteBar onSend={net.sendEmote} />
+          </>
         )}
       </main>
 

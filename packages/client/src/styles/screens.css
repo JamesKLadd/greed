@@ -1251,3 +1251,154 @@
 .home-menu__daily:hover:not(:disabled) {
   background: linear-gradient(178deg, #fdf7ea, #f2e8d3);
 }
+
+/* ---------- Friends & profiles ---------- */
+.friends__add {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.friends__add .field {
+  flex: 1;
+  margin: 0;
+}
+.friends__head {
+  font-size: 0.9375rem;
+  margin: 18px 0 8px;
+}
+.friends {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.friend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(88, 58, 26, 0.07);
+  border-radius: var(--r-md);
+  padding: 6px 8px 6px 12px;
+}
+.friend__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.friend__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9a8b78;
+}
+.friend__dot--on {
+  background: var(--good);
+  box-shadow: 0 0 6px var(--good);
+}
+.friend__name {
+  font-weight: 700;
+}
+.friend__meta {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.friend__actions {
+  display: flex;
+  gap: 6px;
+}
+.profile {
+  text-align: center;
+}
+.profile__dice {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.profile__status {
+  color: var(--text-dim);
+  margin: 0 0 14px;
+}
+.profile__stats {
+  margin-bottom: 14px;
+}
+.profile__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+.profile__more {
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+/* ---------- Reactions ---------- */
+.emotes {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.emotes__btn {
+  width: 42px;
+  height: 42px;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid var(--paper-edge-deep);
+  background: linear-gradient(178deg, #fdf8ec, var(--paper-2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 2px 0 var(--paper-edge-deep),
+    var(--e-rest);
+  transition: transform 0.06s ease;
+}
+.emotes__btn:active {
+  transform: translateY(2px);
+  box-shadow: var(--e-flat);
+}
+/* A reaction pops above the seat that sent it, then fades. */
+.pseat__emote {
+  position: absolute;
+  top: -18px;
+  right: -6px;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: emote-pop 2.2s ease forwards;
+}
+@keyframes emote-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15);
+  }
+  30% {
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+  }
+}

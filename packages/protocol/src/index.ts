@@ -11,6 +11,20 @@ import type { BotDifficulty, BotPersonality, GameAction, GameState } from "@gree
 
 export const DEFAULT_SERVER_PORT = 8787;
 
+/**
+ * Reactions players can send during an online game.
+ *
+ * A FIXED set rather than free text, on purpose: it keeps the table sociable
+ * without opening a channel that would need moderation — which matters for a
+ * game meant to be played with family, including children.
+ */
+export const EMOTES = ["clap", "wow", "laugh", "think", "unlucky", "nice"] as const;
+export type EmoteId = (typeof EMOTES)[number];
+
+export function isEmoteId(value: unknown): value is EmoteId {
+  return typeof value === "string" && (EMOTES as readonly string[]).includes(value);
+}
+
 /** A seat in the pre-game lobby. */
 export interface LobbySeat {
   id: string;
@@ -58,6 +72,7 @@ export type ClientMessage =
   | { type: "remove-seat"; seatId: string }
   | { type: "start-game" }
   | { type: "game-action"; action: GameAction }
+  | { type: "emote"; emote: EmoteId }
   | { type: "rematch" }
   | { type: "leave" }
   | { type: "ping" };
@@ -97,6 +112,7 @@ export type ServerMessage =
       presence: PlayerPresence[];
       skins: PlayerSkin[];
     }
+  | { type: "emote"; playerId: string; emote: EmoteId }
   | { type: "error"; message: string }
   | { type: "left" }
   | { type: "pong" };

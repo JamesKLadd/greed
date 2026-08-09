@@ -10,6 +10,7 @@ import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
 import { clientKey, rateLimit } from "./rate-limit.js";
 import { dailyStatus, submitDailyRun } from "./daily.js";
+import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
 import {
   AccountError,
   getAccount,
@@ -131,6 +132,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
     // One legitimate run exists per day; this only stops replay hammering.
     "/api/daily/run": { limit: 20, windowMs: 60 * 60_000 },
+    // Friend requests are the one social action that reaches another person,
+    // so cap them; browsing profiles and lists is unrestricted.
+    "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
   };
   const rule = LIMITS[path];
   if (rule) {
@@ -188,6 +192,25 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
         alreadyPlayed,
         status: await dailyStatus(id),
       });
+    } else if (method === "GET" && path === "/api/friends") {
+      const { id } = await requireUser(req);
+      json(res, 200, await friendsView(id));
+    } else if (method === "POST" && path === "/api/friends/request") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      json(res, 200, await requestFriend(id, b.username));
+    } else if (method === "POST" && path === "/api/friends/accept") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      json(res, 200, await acceptFriend(id, b.username));
+    } else if (method === "POST" && path === "/api/friends/remove") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      json(res, 200, await removeFriend(id, b.username));
+    } else if (method === "GET" && path.startsWith("/api/users/")) {
+      const { id } = await requireUser(req);
+      const username = decodeURIComponent(path.slice("/api/users/".length));
+      json(res, 200, await publicProfile(id, username));
     } else if (method === "GET" && path === "/api/me") {
       const { id } = await requireUser(req);
       const account = await getAccount(id);

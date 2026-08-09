@@ -10,12 +10,22 @@ import { AuthScreen } from "./screens/AuthScreen.js";
 import { AccountScreen } from "./screens/AccountScreen.js";
 import { UiGallery } from "./screens/UiGallery.js";
 import { DailyScreen } from "./screens/DailyScreen.js";
+import { FriendsScreen } from "./screens/FriendsScreen.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
 import { useT } from "./i18n/i18n.js";
 
 type Mode =
-  "home" | "local" | "online" | "daily" | "stats" | "locker" | "settings" | "auth" | "account";
+  | "home"
+  | "local"
+  | "online"
+  | "daily"
+  | "friends"
+  | "stats"
+  | "locker"
+  | "settings"
+  | "auth"
+  | "account";
 
 export function App() {
   const t = useT();
@@ -105,6 +115,18 @@ export function App() {
     );
   }
 
+  if (mode === "friends") {
+    return (
+      <FriendsScreen
+        onBack={() => setMode("home")}
+        onSignIn={() => {
+          setAuthNext("friends");
+          setMode("auth");
+        }}
+      />
+    );
+  }
+
   if (mode === "account") {
     return <AccountScreen onBack={() => setMode("home")} />;
   }
@@ -148,6 +170,7 @@ export function App() {
       onLocal={() => setMode("local")}
       onOnline={() => setMode("online")}
       onPractice={startPractice}
+      onFriends={() => setMode("friends")}
       onStats={() => setMode("stats")}
       onLocker={() => setMode("locker")}
       onSettings={() => setMode("settings")}

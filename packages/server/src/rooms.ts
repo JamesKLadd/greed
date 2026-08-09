@@ -25,6 +25,8 @@ export interface Seat {
   dice: string;
   /** Turns this player let time out this game (kicked once it hits the cap). */
   missedTurns: number;
+  /** When this seat last sent an emote, for the anti-spam cooldown. */
+  lastEmoteAt?: number;
   /** Reconnection token (humans only). */
   token: string;
   /** Live socket, or null when a bot or a disconnected human. */

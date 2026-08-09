@@ -11,6 +11,7 @@ interface HomeScreenProps {
   onLocal: () => void;
   onOnline: () => void;
   onPractice: () => void;
+  onFriends: () => void;
   onStats: () => void;
   onLocker: () => void;
   onSettings: () => void;
@@ -28,6 +29,7 @@ export function HomeScreen({
   onLocal,
   onOnline,
   onPractice,
+  onFriends,
   onStats,
   onLocker,
   onSettings,
@@ -146,6 +148,10 @@ export function HomeScreen({
           >
             <Icon name="book" />
             {t("home.howToPlay")}
+          </button>
+          <button className="btn btn--ghost" onClick={onFriends}>
+            <Icon name="user" />
+            {t("social.home")}
           </button>
           <button className="btn btn--ghost" onClick={onStats}>
             <Icon name="chart" />

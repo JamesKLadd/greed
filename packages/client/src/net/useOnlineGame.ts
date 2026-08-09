@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BotDifficulty, BotPersonality, GameState } from "@greed/core";
+import type { EmoteId } from "@greed/protocol";
 import {
   decode,
   encode,
@@ -35,6 +36,9 @@ export interface OnlineController {
   skins: Record<string, string>;
   /** True when this client is a read-only watcher (no seat). */
   isSpectator: boolean;
+  /** Most recent reaction per player id, with a nonce so repeats re-animate. */
+  emotes: Record<string, { emote: EmoteId; at: number }>;
+  sendEmote: (emote: EmoteId) => void;
   createRoom: (name: string, opts?: { isPublic?: boolean; goal?: number }) => void;
   joinRoom: (code: string, name: string) => void;
   quickMatch: (name: string) => void;
@@ -69,6 +73,7 @@ export function useOnlineGame(): OnlineController {
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [skins, setSkins] = useState<Record<string, string>>({});
   const [isSpectator, setIsSpectator] = useState(false);
+  const [emotes, setEmotes] = useState<Record<string, { emote: EmoteId; at: number }>>({});
   const lastLogLen = useRef(0);
   const rollSeen = useRef(0);
   const prevGameRef = useRef<GameState | null>(null);
@@ -85,6 +90,7 @@ export function useOnlineGame(): OnlineController {
     setPresence({});
     setSkins({});
     setIsSpectator(false);
+    setEmotes({});
     prevPresenceRef.current = {};
   }, []);
 
@@ -148,6 +154,9 @@ export function useOnlineGame(): OnlineController {
           setStatus("in-game");
           break;
         }
+        case "emote":
+          setEmotes((prev) => ({ ...prev, [msg.playerId]: { emote: msg.emote, at: Date.now() } }));
+          break;
         case "error":
           setError(msg.message);
           setStatus((s) => (s === "connecting" ? "menu" : s));
@@ -281,6 +290,8 @@ export function useOnlineGame(): OnlineController {
     presence,
     skins,
     isSpectator,
+    emotes,
+    sendEmote: (emote) => send({ type: "emote", emote }),
     createRoom: (name, opts) =>
       send({
         type: "create-room",

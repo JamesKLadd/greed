@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 import type { GameState } from "@greed/core";
 import { DiceTray } from "./DiceTray.js";
 import { seatColor, initials } from "../game/theme.js";
+import type { EmoteId } from "@greed/protocol";
+import { EMOTE_GLYPH } from "./EmoteBar.js";
 import { useT } from "../i18n/i18n.js";
 
 interface TableViewProps {
@@ -12,6 +14,9 @@ interface TableViewProps {
   perspectiveId?: string | null;
   /** Live connection status per player id (online only); omit for offline play. */
   presence?: Record<string, boolean>;
+  /** Latest reaction per player id (online only). The timestamp is a nonce, so
+   *  sending the same emote twice restarts the animation. */
+  emotes?: Record<string, { emote: EmoteId; at: number }>;
 }
 
 /**
@@ -23,6 +28,7 @@ export function TableView({
   state,
   rollingIndices,
   isRolling,
+  emotes,
   perspectiveId,
   presence,
 }: TableViewProps) {
@@ -94,6 +100,13 @@ export function TableView({
                   .join(" ")}
                 style={style}
               >
+                {emotes?.[p.id] && (
+                  // Keyed by timestamp so re-sending the same reaction remounts
+                  // the element and replays the pop animation.
+                  <span key={emotes[p.id].at} className="pseat__emote" aria-hidden="true">
+                    {EMOTE_GLYPH[emotes[p.id].emote]}
+                  </span>
+                )}
                 <div className="pseat__head">
                   <span className="pseat__avatar" aria-hidden="true">
                     {initials(p.name)}
