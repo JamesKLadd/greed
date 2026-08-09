@@ -6,6 +6,7 @@ import { Controls } from "../components/Controls.js";
 import { Toast } from "../components/Toast.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
+import { GameOver } from "../components/GameOver.js";
 import { useGameSounds } from "../game/useGameSounds.js";
 import { useTurnCue } from "../game/useTurnCue.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
@@ -15,8 +16,8 @@ import { loadSettings } from "../game/settings.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
+import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
-import type { MsgKey } from "../i18n/i18n.js";
 
 export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const t = useT();
@@ -54,9 +55,6 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const canAct = current.id === net.youId && state.phase !== "game-over";
   const legal = getLegalActions(state);
   const isHost = net.lobby?.seats.find((s) => s.id === net.youId)?.isHost ?? false;
-  const winner = state.players.find((p) => p.id === state.winnerId);
-  const youWon = state.winnerId === net.youId;
-  const standings = [...state.players].sort((a, b) => b.total - a.total);
   // Online: the dice in the center belong to whoever's turn it is, so render the
   // CURRENT player's equipped skin (broadcast by the server) for every viewer.
   // Never a table theme — the felt stays shared/identical for everyone.
@@ -64,6 +62,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
 
   useKeyboardShortcuts({
     enabled: !showRules && !showHistory && state.phase !== "game-over",
+    blockedByDialog: showRules || state.phase === "game-over",
     canRoll: canAct && legal.canRoll,
     canBank: canAct && legal.canBank,
     onRoll: net.roll,
@@ -74,28 +73,20 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   return (
     <div className="game" style={diceVars}>
       <header className="game__bar">
-        <button className="btn btn--ghost bar-btn bar-btn--menu" onClick={net.leave}>
+        <BarButton name="menu" onClick={net.leave}>
           {t("bar.leave")}
-        </button>
+        </BarButton>
         <h1 className="game__logo">
           {loadSettings().hideRoomCode ? "GREED" : `GREED · ${net.code}`}
         </h1>
         <div className="game__bar-right">
           <VolumeControls />
-          <button
-            className="btn btn--ghost bar-btn bar-btn--history"
-            onClick={() => setShowHistory(true)}
-            title={t("history.title")}
-          >
+          <BarButton name="history" onClick={() => setShowHistory(true)} title={t("history.title")}>
             {t("bar.history")}
-          </button>
-          <button
-            className="btn btn--ghost bar-btn bar-btn--rules"
-            onClick={() => setShowRules(true)}
-            title={t("bar.rules")}
-          >
+          </BarButton>
+          <BarButton name="rules" onClick={() => setShowRules(true)} title={t("bar.rules")}>
             {t("bar.rules")}
-          </button>
+          </BarButton>
         </div>
       </header>
 
@@ -136,81 +127,17 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       <Toast toast={net.toast} />
 
       {state.phase === "game-over" && (
-        <div className="overlay">
-          <div className="overlay__card overlay__card--scroll">
-            <div className="overlay__crown">{youWon ? "🏆" : "🏁"}</div>
-            <h2 className="overlay__title">
-              {youWon ? t("gameOver.youWin") : t("gameOver.wins", { name: winner?.name ?? "" })}
-            </h2>
-            <ol className="standings">
-              {standings.map((p) => (
-                <li
-                  key={p.id}
-                  className={
-                    p.id === state.winnerId
-                      ? "standings__row standings__row--win"
-                      : "standings__row"
-                  }
-                >
-                  <span>
-                    {p.name}
-                    {p.id === net.youId ? ` ${t("common.youParen")}` : ""}
-                    {p.isBot ? ` (${t(`diff.${p.botDifficulty ?? "easy"}`)})` : ""}
-                  </span>
-                  <span>{p.total}</span>
-                </li>
-              ))}
-            </ol>
-
-            {summary && (
-              <div className="summary">
-                <div className="summary__stat">
-                  <span className="summary__label">{t("gameOver.bestTurn")}</span>
-                  <span className="summary__value">{summary.bestTurn}</span>
-                </div>
-                <div className="summary__stat">
-                  <span className="summary__label">{t("gameOver.hotDice")}</span>
-                  <span className="summary__value">{summary.hotDice}</span>
-                </div>
-                <div className="summary__stat">
-                  <span className="summary__label">{t("gameOver.busts")}</span>
-                  <span className="summary__value">{summary.busts}</span>
-                </div>
-              </div>
-            )}
-
-            {unlocked.length > 0 && (
-              <div className="unlocks">
-                <div className="unlocks__head">
-                  {unlocked.length > 1 ? t("gameOver.unlockedMany") : t("gameOver.unlockedOne")}
-                </div>
-                {unlocked.map((a) => (
-                  <div key={a.id} className="unlocks__row">
-                    <span className="unlocks__icon">{a.icon}</span>
-                    <span>
-                      <strong>{t(`ach.${a.id}.title` as MsgKey)}</strong> —{" "}
-                      {t(`ach.${a.id}.desc` as MsgKey)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="overlay__actions">
-              {!net.isSpectator &&
-                (isHost ? (
-                  <button className="btn btn--roll" onClick={net.rematch}>
-                    {t("gameOver.playAgain")}
-                  </button>
-                ) : (
-                  <span className="overlay__note">{t("gameOver.waitingRematch")}</span>
-                ))}
-              <button className="btn" onClick={net.leave}>
-                {t("common.leavePlain")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <GameOver
+          state={state}
+          youId={net.youId}
+          summary={summary}
+          unlocked={unlocked}
+          // Only the host can restart; other seats see a note, spectators neither.
+          onPlayAgain={!net.isSpectator && isHost ? net.rematch : undefined}
+          waitingNote={!net.isSpectator && !isHost ? t("gameOver.waitingRematch") : undefined}
+          onMenu={net.leave}
+          menuLabel={t("common.leavePlain")}
+        />
       )}
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}

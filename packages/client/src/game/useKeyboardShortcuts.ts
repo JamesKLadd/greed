@@ -3,6 +3,14 @@ import { useEffect } from "react";
 interface ShortcutHandlers {
   /** Whether shortcuts are live (false while overlays are open, game over, etc.). */
   enabled: boolean;
+  /**
+   * True when a dialog OTHER than the turn history owns the keyboard (rules,
+   * game over, the roll-off). Suppresses every shortcut, including the history
+   * toggle — without this, pressing H inside the rules dialog opened the history
+   * panel underneath it. The history dialog itself must not set this, so H still
+   * closes an open history.
+   */
+  blockedByDialog?: boolean;
   canRoll: boolean;
   canBank: boolean;
   onRoll: () => void;
@@ -32,6 +40,7 @@ function isTypingTarget(el: EventTarget | null): boolean {
  */
 export function useKeyboardShortcuts({
   enabled,
+  blockedByDialog = false,
   canRoll,
   canBank,
   onRoll,
@@ -42,10 +51,13 @@ export function useKeyboardShortcuts({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (isTypingTarget(e.target)) return;
+      // Another dialog has the keyboard — let it handle its own keys.
+      if (blockedByDialog) return;
 
       const key = e.key.toLowerCase();
 
-      // History toggle works whenever shortcuts are live, regardless of turn.
+      // The history toggle deliberately sits above the `enabled` check so it
+      // works when it isn't your turn, and so H can close an open history.
       if ((key === "h" || key === "?") && onToggleHistory) {
         e.preventDefault();
         onToggleHistory();
@@ -71,5 +83,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enabled, canRoll, canBank, onRoll, onBank, onToggleHistory]);
+  }, [enabled, blockedByDialog, canRoll, canBank, onRoll, onBank, onToggleHistory]);
 }

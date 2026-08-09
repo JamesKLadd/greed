@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DieValue } from "@greed/core";
 import { Die } from "./Die.js";
+import { Button, Modal } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 export interface RollOffDisplayEntry {
@@ -32,41 +33,42 @@ export function RollOffView({ entries, onContinue }: RollOffViewProps) {
   }, [onContinue]);
 
   return (
-    <div className="overlay">
-      <div className="overlay__card overlay__card--wide">
-        <h2 className="overlay__title">{t("rolloff.title")}</h2>
-        <p className="rolloff__hint">{t("rolloff.hint")}</p>
-        <ul className="rolloff">
-          {entries.map((e, i) => {
-            const first = i === 0;
-            const last = i === entries.length - 1;
-            return (
-              <li key={i} className="rolloff__row">
-                <span className="rolloff__name">
-                  {e.name}
-                  {first && <span className="seat__tag">{t("rolloff.goesFirst")}</span>}
-                  {last && <span className="seat__tag">{t("rolloff.playsLast")}</span>}
-                </span>
-                <span className="rolloff__dice">
-                  {e.dice.map((d, di) => (
-                    <Die key={di} value={d as DieValue} rolling={!revealed} size={34} />
-                  ))}
-                </span>
-                <span className="rolloff__sum">{revealed ? e.sum : "…"}</span>
-              </li>
-            );
-          })}
-        </ul>
-        {onContinue ? (
-          <div className="overlay__actions">
-            <button className="btn btn--roll" onClick={onContinue} disabled={!revealed}>
-              {t("common.startGame")}
-            </button>
-          </div>
+    // No onClose: the roll-off is a timed reveal, not something to dismiss.
+    <Modal
+      title={t("rolloff.title")}
+      size="wide"
+      actions={
+        onContinue ? (
+          <Button variant="roll" onClick={onContinue} disabled={!revealed}>
+            {t("common.startGame")}
+          </Button>
         ) : (
-          <p className="overlay__note">{t("lobby.starting")}</p>
-        )}
-      </div>
-    </div>
+          <span className="overlay__note">{t("lobby.starting")}</span>
+        )
+      }
+    >
+      <p className="rolloff__hint">{t("rolloff.hint")}</p>
+      <ul className="rolloff">
+        {entries.map((e, i) => {
+          const first = i === 0;
+          const last = i === entries.length - 1;
+          return (
+            <li key={i} className="rolloff__row">
+              <span className="rolloff__name">
+                {e.name}
+                {first && <span className="seat__tag">{t("rolloff.goesFirst")}</span>}
+                {last && <span className="seat__tag">{t("rolloff.playsLast")}</span>}
+              </span>
+              <span className="rolloff__dice">
+                {e.dice.map((d, di) => (
+                  <Die key={di} value={d as DieValue} rolling={!revealed} size={34} />
+                ))}
+              </span>
+              <span className="rolloff__sum">{revealed ? e.sum : "…"}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </Modal>
   );
 }

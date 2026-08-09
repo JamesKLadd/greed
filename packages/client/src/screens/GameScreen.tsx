@@ -23,6 +23,7 @@ import { CoachBar } from "../components/CoachBar.js";
 import { useGameSounds } from "../game/useGameSounds.js";
 import { useTurnCue } from "../game/useTurnCue.js";
 import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
+import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface GameScreenProps {
@@ -74,6 +75,7 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
 
   useKeyboardShortcuts({
     enabled: !showRules && !showHistory && !ctl.rollOffActive && state.phase !== "game-over",
+    blockedByDialog: showRules || ctl.rollOffActive || state.phase === "game-over",
     canRoll: canAct && ctl.legal.canRoll,
     canBank: canAct && ctl.legal.canBank,
     onRoll: ctl.roll,
@@ -84,44 +86,24 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
   return (
     <div className="game" style={cosmetics}>
       <header className="game__bar">
-        <button className="btn btn--ghost bar-btn bar-btn--menu" onClick={onExit}>
+        <BarButton name="menu" onClick={onExit}>
           {t("bar.menu")}
-        </button>
+        </BarButton>
         <h1 className="game__logo game__logo--decor">GREED</h1>
         <div className="game__bar-right">
-          <button
-            className={
-              hints
-                ? "btn btn--ghost bar-btn bar-btn--hints btn--on"
-                : "btn btn--ghost bar-btn bar-btn--hints"
-            }
-            onClick={() => setHints((h) => !h)}
-            aria-pressed={hints}
-          >
+          <BarButton name="hints" pressed={hints} onClick={() => setHints((h) => !h)}>
             {t("bar.hints")}
-          </button>
+          </BarButton>
           <VolumeControls />
-          <button
-            className="btn btn--ghost bar-btn bar-btn--history"
-            onClick={() => setShowHistory(true)}
-            title="Turn history (H)"
-          >
+          <BarButton name="history" onClick={() => setShowHistory(true)} title="Turn history (H)">
             {t("bar.history")}
-          </button>
-          <button
-            className="btn btn--ghost bar-btn bar-btn--rules"
-            onClick={() => setShowRules(true)}
-            title={t("bar.rules")}
-          >
+          </BarButton>
+          <BarButton name="rules" onClick={() => setShowRules(true)} title={t("bar.rules")}>
             {t("bar.rules")}
-          </button>
-          <button
-            className="btn btn--ghost bar-btn bar-btn--restart"
-            onClick={() => ctl.restart()}
-            title={t("bar.restart")}
-          >
+          </BarButton>
+          <BarButton name="restart" onClick={() => ctl.restart()} title={t("bar.restart")}>
             {t("bar.restart")}
-          </button>
+          </BarButton>
         </div>
       </header>
 
