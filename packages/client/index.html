@@ -16,7 +16,32 @@
     <meta property="og:description" content="Roll. Risk it. Bank it — before it all slips away." />
     <meta property="og:type" content="website" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Self-hosted type. Preloaded because the splash below paints the wordmark
+         before any JS runs; stable (versioned) filenames make this possible and
+         let the service worker precache them by name. -->
+    <link
+      rel="preload"
+      href="/fonts/fraunces-var-v1.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/nunito-sans-var-v1.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <style>
+      /* Must mirror @font-face in styles/tokens.css: the splash paints before
+         the stylesheet loads, so it needs its own declaration. */
+      @font-face {
+        font-family: "Fraunces";
+        src: url("/fonts/fraunces-var-v1.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-display: swap;
+      }
       /* Pre-React loading splash — replaced when the app mounts. */
       html,
       body {
@@ -37,9 +62,9 @@
         font-family: "Segoe UI", system-ui, sans-serif;
       }
       #splash .logo {
-        font-family: Georgia, serif;
-        font-weight: 800;
-        letter-spacing: 6px;
+        font-family: "Fraunces", Georgia, serif;
+        font-weight: 900;
+        letter-spacing: 2px;
         font-size: 64px;
         color: #f5c451;
         text-shadow:

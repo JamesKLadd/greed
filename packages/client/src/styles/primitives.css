@@ -71,9 +71,11 @@
 .setup__logo,
 .game__logo,
 .setup__logo {
-  font-family: "Georgia", serif;
-  font-weight: 800;
-  letter-spacing: 6px;
+  font-family: var(--ff-display);
+  font-weight: 900;
+  /* 6px tracking was the strongest "casino signage" cue; tight and chunky reads
+     as a printed game-box wordmark instead. */
+  letter-spacing: 2px;
   color: var(--gold);
   text-shadow:
     0 2px 0 var(--gold-deep),

@@ -545,7 +545,7 @@
   margin-left: 6px;
 }
 .room-code {
-  font-family: "Georgia", serif;
+  font-family: var(--ff-display);
   letter-spacing: 6px;
   color: var(--gold);
   font-weight: 800;

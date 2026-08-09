@@ -19,11 +19,7 @@ html {
 }
 
 body {
-  font-family:
-    "Segoe UI",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: var(--ff-body);
   color: var(--text);
   background: radial-gradient(
     120% 120% at 50% 0%,
@@ -42,4 +38,33 @@ button {
   cursor: pointer;
   /* Remove the 300ms tap delay + double-tap-to-zoom on controls. */
   touch-action: manipulation;
+}
+
+/* Headings had no base styling at all — every heading was an ad-hoc class. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--ff-display);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--sp-3);
+}
+h1 {
+  font-size: var(--fs-3xl);
+  font-weight: 900;
+}
+h2 {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+h3 {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+/* The app had no visible focus ring anywhere; the dialog focus trap makes one
+   essential. Keyboard only, so mouse users don't see rings on every click. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
 }

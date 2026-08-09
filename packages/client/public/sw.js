@@ -7,8 +7,19 @@
  * deliberately never intercept.
  */
 
-const CACHE = "greed-shell-v1";
-const SHELL = ["/", "/index.html", "/favicon.svg", "/icon-maskable.svg", "/manifest.webmanifest"];
+// Bump on every SHELL change, or the old cache keeps winning.
+const CACHE = "greed-shell-v2";
+const SHELL = [
+  "/",
+  "/index.html",
+  "/favicon.svg",
+  "/icon-maskable.svg",
+  "/manifest.webmanifest",
+  // Fonts are precached (not just cache-first) so the very first offline load
+  // renders in the real typeface instead of falling back to a system font.
+  "/fonts/fraunces-var-v1.woff2",
+  "/fonts/nunito-sans-var-v1.woff2",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
