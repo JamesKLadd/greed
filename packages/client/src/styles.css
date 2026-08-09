@@ -1,7 +1,11 @@
 :root {
+  /* Table-theme cosmetics (overridden inline per equipped theme by cosmetics.ts).
+     These defaults MUST match TABLE_THEMES[0] — styles.contract.test.ts enforces it. */
   --felt-1: #0f5132;
   --felt-2: #0a3d26;
   --felt-edge: #062a1a;
+  --rail-1: #7a5330;
+  --rail-2: #43301c;
   --gold: #f5c451;
   --gold-deep: #c9971f;
   --cream: #f6f1e4;

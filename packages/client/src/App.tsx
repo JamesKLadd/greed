@@ -8,6 +8,7 @@ import { LockerScreen } from "./screens/LockerScreen.js";
 import { SettingsScreen } from "./screens/SettingsScreen.js";
 import { AuthScreen } from "./screens/AuthScreen.js";
 import { AccountScreen } from "./screens/AccountScreen.js";
+import { UiGallery } from "./screens/UiGallery.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
 
@@ -50,6 +51,12 @@ export function App() {
     const qs = params.toString();
     window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
   }, []);
+
+  // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
+  // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui")) {
+    return <UiGallery />;
+  }
 
   const leaveGame = () => {
     setMatch(null);
