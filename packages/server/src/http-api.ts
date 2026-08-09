@@ -8,6 +8,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
+import { clientKey, rateLimit } from "./rate-limit.js";
 import {
   AccountError,
   getAccount,
@@ -114,6 +115,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
 
   const path = url.pathname;
   const method = req.method ?? "GET";
+
+  // Throttle the endpoints worth attacking: credential guessing on login, mass
+  // account creation on signup, and mail-flooding via the reset/resend flows.
+  // Generous enough that a real person retyping a password never notices.
+  const LIMITS: Record<string, { limit: number; windowMs: number }> = {
+    "/api/auth/login": { limit: 10, windowMs: 5 * 60_000 },
+    "/api/auth/signup": { limit: 5, windowMs: 60 * 60_000 },
+    "/api/auth/request-reset": { limit: 5, windowMs: 60 * 60_000 },
+    "/api/auth/resend-verification": { limit: 5, windowMs: 60 * 60_000 },
+    "/api/auth/reset": { limit: 10, windowMs: 60 * 60_000 },
+    // A GET, but still worth capping: it's the natural username-enumeration
+    // endpoint. High enough that the debounced check while typing never trips.
+    "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
+  };
+  const rule = LIMITS[path];
+  if (rule) {
+    const hit = rateLimit(
+      path,
+      clientKey(req.headers, req.socket.remoteAddress ?? ""),
+      rule.limit,
+      rule.windowMs,
+    );
+    if (!hit.allowed) {
+      res.setHeader("Retry-After", String(hit.retryAfter));
+      json(res, 429, { error: "Too many attempts. Please wait a moment and try again." });
+      return true;
+    }
+  }
 
   try {
     if (method === "POST" && path === "/api/auth/signup") {

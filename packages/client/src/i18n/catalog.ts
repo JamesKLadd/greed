@@ -64,6 +64,9 @@ export const en = {
   "home.settings": "Settings",
   "home.signIn": "Log in / Sign up",
   "home.install": "Install app",
+  "online.waking": "Waking up the game server…",
+  "online.wakingNote":
+    "It naps when nobody is playing, so the first connection of the day can take up to a minute. Hang tight.",
   // Account / auth screens.
   "auth.tagline": "Your stats, achievements & locker — on every device.",
   "auth.login": "Log in",
@@ -442,6 +445,9 @@ export const es: Record<MsgKey, string> = {
   "home.settings": "Ajustes",
   "home.signIn": "Entrar / Registrarse",
   "home.install": "Instalar app",
+  "online.waking": "Despertando el servidor…",
+  "online.wakingNote":
+    "Se duerme cuando nadie juega, así que la primera conexión del día puede tardar hasta un minuto. Un momento.",
   // Account / auth screens.
   "auth.tagline": "Tus estadísticas, logros y vestuario — en todos tus dispositivos.",
   "auth.login": "Iniciar sesión",

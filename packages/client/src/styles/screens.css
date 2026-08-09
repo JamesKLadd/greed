@@ -1135,3 +1135,33 @@
   line-height: 1.5;
   font-size: 0.92rem;
 }
+
+/* ---------- Cold-start notice (free-tier server waking) ---------- */
+.waking {
+  max-width: 24rem;
+  text-align: center;
+}
+.waking__spinner {
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid var(--paper-edge);
+  border-top-color: var(--gold);
+  animation: waking-spin 0.9s linear infinite;
+}
+@keyframes waking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.waking__title {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.waking__note {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  line-height: var(--lh-body);
+}
