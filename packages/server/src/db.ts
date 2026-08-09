@@ -1,0 +1,72 @@
+/**
+ * Postgres access for accounts. A single pooled connection (Neon serverless
+ * Postgres in production) shared by the auth/accounts logic. Everything here is a
+ * no-op when DATABASE_URL is unset, so the server still runs for guest online
+ * play without a database configured.
+ */
+
+import pg from "pg";
+import type { QueryResult, QueryResultRow } from "pg";
+
+const { Pool } = pg;
+
+let pool: pg.Pool | null = null;
+
+/** True when a database is configured (accounts features are available). */
+export function accountsEnabled(): boolean {
+  return Boolean(process.env.DATABASE_URL);
+}
+
+function makePool(): pg.Pool {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is not set");
+  // Neon (and most managed Postgres) require TLS. We don't ship a CA bundle, so
+  // accept the provider's certificate without local verification.
+  const ssl = /sslmode=require|neon\.tech|render\.com|amazonaws\.com/.test(connectionString)
+    ? { rejectUnauthorized: false }
+    : undefined;
+  return new Pool({ connectionString, ssl, max: 5, idleTimeoutMillis: 30_000 });
+}
+
+export function getPool(): pg.Pool {
+  if (!pool) pool = makePool();
+  return pool;
+}
+
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = [],
+): Promise<QueryResult<T>> {
+  return getPool().query<T>(text, params);
+}
+
+/** Create the accounts schema if it doesn't exist. Safe to run on every boot. */
+export async function migrate(): Promise<void> {
+  await query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      email          text NOT NULL,
+      username       text NOT NULL,
+      password_hash  text NOT NULL,
+      email_verified boolean NOT NULL DEFAULT false,
+      profile        jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at     timestamptz NOT NULL DEFAULT now(),
+      updated_at     timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  // Case-insensitive uniqueness for both email and username.
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (lower(email));`);
+  await query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (lower(username));`,
+  );
+  await query(`
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      token_hash text PRIMARY KEY,
+      user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      kind       text NOT NULL,
+      expires_at timestamptz NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS auth_tokens_user_idx ON auth_tokens (user_id, kind);`);
+}

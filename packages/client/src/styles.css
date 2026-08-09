@@ -2045,3 +2045,120 @@ button {
     flex-wrap: wrap;
   }
 }
+
+/* ---------------------------------------------------------------- Accounts */
+.home-account {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  z-index: 3;
+}
+.home-account__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel, rgba(0, 0, 0, 0.28));
+  border: 1px solid var(--panel-line, rgba(255, 255, 255, 0.14));
+  color: var(--text, #f4efe6);
+  border-radius: 999px;
+  padding: 5px 12px 5px 5px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.home-account__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e8c55a;
+  color: #1a1207;
+  font-size: 12px;
+  font-weight: 800;
+}
+.home-account__name {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-flash {
+  cursor: pointer;
+  margin: 0 auto 12px;
+  max-width: 22rem;
+}
+
+.auth__title {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+.auth__notice {
+  background: rgba(70, 130, 90, 0.28);
+  cursor: default;
+  margin-bottom: 4px;
+}
+.auth__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.auth__hint {
+  font-weight: 500;
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.auth__hint--ok {
+  color: #7fd8a0;
+}
+.auth__hint--bad {
+  color: #f0a3a3;
+}
+.field__hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #b9b2a3);
+}
+
+.account__id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.account__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e8c55a;
+  color: #1a1207;
+  font-size: 20px;
+  font-weight: 800;
+}
+.account__name {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.account__email {
+  color: var(--text-dim, #b9b2a3);
+  font-size: 0.9rem;
+}
+.account__verify {
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  background: rgba(200, 150, 60, 0.2);
+  font-size: 0.9rem;
+}
+.account__verify--ok {
+  background: rgba(70, 130, 90, 0.24);
+}
+.account__note {
+  color: var(--text-dim, #b9b2a3);
+  line-height: 1.5;
+  font-size: 0.92rem;
+}

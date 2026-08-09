@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { OnlineController } from "../net/useOnlineGame.js";
+import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
 interface OnlineMenuProps {
@@ -19,9 +20,12 @@ function createCooldownLeft(): number {
 
 export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
   const t = useT();
+  const { user } = useAuth();
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? "");
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(() => createCooldownLeft());
+  // Signed-in players always play under their account username.
+  const locked = Boolean(user);
 
   // Tick the create-room cooldown down to zero.
   useEffect(() => {
@@ -29,8 +33,12 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
     return () => window.clearInterval(id);
   }, []);
 
-  const rememberName = () => localStorage.setItem(NAME_KEY, name.trim());
-  const displayName = name.trim() || t("common.playerDefault");
+  const rememberName = () => {
+    if (!locked) localStorage.setItem(NAME_KEY, name.trim());
+  };
+  // When signed in, the server uses the account username regardless of this value,
+  // but we send it for a correct pre-connect display.
+  const displayName = locked ? user!.username : name.trim() || t("common.playerDefault");
 
   const createRoom = () => {
     if (createCooldownLeft() > 0) return; // rate-limit spam-creating rooms
@@ -58,12 +66,14 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
           <span className="field__label">{t("onlineMenu.yourName")}</span>
           <input
             className="seats-config__name"
-            value={name}
+            value={locked ? user!.username : name}
             maxLength={16}
             placeholder={t("common.playerDefault")}
+            readOnly={locked}
             onChange={(e) => setName(e.target.value)}
             onBlur={rememberName}
           />
+          {locked && <span className="field__hint">Playing as your account username.</span>}
         </label>
 
         <div className="online-actions">

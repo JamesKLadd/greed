@@ -3,6 +3,7 @@ import type { BotDifficulty, BotPersonality } from "@greed/core";
 import { GOAL_DEFAULT } from "@greed/core";
 import { defaultSetup, type MatchSetup, type SeatSetup } from "../game/setup.js";
 import { RulesModal } from "../components/RulesModal.js";
+import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
 const DIFFICULTIES: BotDifficulty[] = ["easy", "medium", "hard", "expert"];
@@ -26,7 +27,16 @@ interface SetupScreenProps {
 
 export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
   const t = useT();
-  const [setup, setSetup] = useState<MatchSetup>(() => defaultSetup());
+  const { user } = useAuth();
+  const [setup, setSetup] = useState<MatchSetup>(() => {
+    const s = defaultSetup();
+    // Signed-in players show up under their account username by default.
+    if (user) {
+      const i = s.seats.findIndex((seat) => !seat.isBot);
+      if (i >= 0) s.seats[i] = { ...s.seats[i], name: user.username };
+    }
+    return s;
+  });
   const [showRules, setShowRules] = useState(false);
   const [goalText, setGoalText] = useState(() => String(setup.goal));
 

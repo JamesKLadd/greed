@@ -19,6 +19,8 @@ export interface Seat {
   personality?: BotPersonality;
   ready: boolean;
   isHost: boolean;
+  /** Account id when this player is signed in, else undefined (guest). */
+  userId?: string;
   /** Equipped dice-skin id (cosmetic), broadcast so all clients render it. */
   dice: string;
   /** Turns this player let time out this game (kicked once it hits the cap). */
@@ -112,13 +114,19 @@ export function clearTimers(room: Room): void {
   room.timers.clear();
 }
 
-export function makeHumanSeat(name: string, isHost: boolean, dice = "ivory"): Seat {
+export function makeHumanSeat(
+  name: string,
+  isHost: boolean,
+  dice = "ivory",
+  userId?: string,
+): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
     name: cleanPlayerName(name),
     isBot: false,
     ready: isHost, // host starts ready
     isHost,
+    userId,
     dice: dice || "ivory",
     missedTurns: 0,
     token: randomBytes(16).toString("hex"),

@@ -10,6 +10,7 @@ import {
 } from "../game/profile.js";
 import { cosmeticVars } from "../game/cosmetics.js";
 import { syncSteamAchievements } from "../game/steam.js";
+import { syncProfileUp } from "../net/auth.js";
 import { TableView } from "../components/TableView.js";
 import { Controls } from "../components/Controls.js";
 import { Toast } from "../components/Toast.js";
@@ -62,6 +63,7 @@ export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
     setSummary(s);
     setUnlocked(result.unlocked);
     syncSteamAchievements(result.unlocked.map((a) => a.id));
+    void syncProfileUp(); // push updated stats to the account if signed in
   }, [state.phase, state]);
 
   const current = state.players[state.turn.playerIndex];

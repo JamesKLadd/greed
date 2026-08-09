@@ -38,9 +38,18 @@ export interface LobbyView {
 // ---------------------------------------------------------------------------
 
 export type ClientMessage =
-  | { type: "create-room"; name: string; isPublic?: boolean; goal?: number; dice?: string }
-  | { type: "join-room"; code: string; name: string; dice?: string }
-  | { type: "quick-match"; name: string; dice?: string }
+  // `auth` is an optional account session JWT. When present and valid, the server
+  // uses the account's username (ignoring `name`) and binds the seat to the user.
+  | {
+      type: "create-room";
+      name: string;
+      isPublic?: boolean;
+      goal?: number;
+      dice?: string;
+      auth?: string;
+    }
+  | { type: "join-room"; code: string; name: string; dice?: string; auth?: string }
+  | { type: "quick-match"; name: string; dice?: string; auth?: string }
   | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
   | { type: "set-ready"; ready: boolean }

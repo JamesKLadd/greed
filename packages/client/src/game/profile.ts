@@ -223,6 +223,35 @@ export function resetProfile(): void {
   }
 }
 
+/** Overwrite the whole saved profile (used when adopting a synced account profile). */
+export function replaceProfile(p: Profile): void {
+  saveProfile({ ...emptyProfile(), ...p });
+}
+
+/**
+ * Merge two profiles without losing progress — the same monotonic rule the server
+ * uses: cumulative counters and bests take the maximum, achievements union, and
+ * the live streak + equipped cosmetics take the second (more recent) profile.
+ * Used to reconcile local progress with an account on sign-in.
+ */
+export function mergeProfiles(a: Profile, b: Profile): Profile {
+  const max = (x: number, y: number) => Math.max(x || 0, y || 0);
+  return {
+    gamesPlayed: max(a.gamesPlayed, b.gamesPlayed),
+    wins: max(a.wins, b.wins),
+    currentStreak: b.currentStreak ?? a.currentStreak,
+    bestStreak: max(a.bestStreak, b.bestStreak),
+    bestTurn: max(a.bestTurn, b.bestTurn),
+    bestTotal: max(a.bestTotal, b.bestTotal),
+    totalBanks: max(a.totalBanks, b.totalBanks),
+    totalBankedPoints: max(a.totalBankedPoints, b.totalBankedPoints),
+    hotDiceTotal: max(a.hotDiceTotal, b.hotDiceTotal),
+    achievements: [...new Set([...a.achievements, ...b.achievements])],
+    dice: b.dice || a.dice,
+    table: b.table || a.table,
+  };
+}
+
 /** Equip a cosmetic (dice skin or table theme); returns the updated profile. */
 export function equipCosmetic(kind: "dice" | "table", id: string): Profile {
   const p = loadProfile();

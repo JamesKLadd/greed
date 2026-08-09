@@ -12,6 +12,7 @@ import { diceToRoll } from "@greed/core";
 import { toastFor, type ToastMessage } from "../game/toasts.js";
 import { SERVER_URL } from "../game/online.js";
 import { loadProfile } from "../game/profile.js";
+import { getToken } from "./auth.js";
 
 const TOKEN_KEY = "greed-token";
 
@@ -287,10 +288,18 @@ export function useOnlineGame(): OnlineController {
         isPublic: opts?.isPublic,
         goal: opts?.goal,
         dice: loadProfile().dice,
+        auth: getToken() ?? undefined,
       }),
     joinRoom: (roomCode, name) =>
-      send({ type: "join-room", code: roomCode, name, dice: loadProfile().dice }),
-    quickMatch: (name) => send({ type: "quick-match", name, dice: loadProfile().dice }),
+      send({
+        type: "join-room",
+        code: roomCode,
+        name,
+        dice: loadProfile().dice,
+        auth: getToken() ?? undefined,
+      }),
+    quickMatch: (name) =>
+      send({ type: "quick-match", name, dice: loadProfile().dice, auth: getToken() ?? undefined }),
     spectate: (roomCode) => {
       setIsSpectator(true);
       setStatus("connecting");

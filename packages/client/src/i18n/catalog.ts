@@ -61,6 +61,7 @@ export const en = {
   "home.stats": "📊 Stats",
   "home.locker": "🎨 Locker",
   "home.settings": "⚙️ Settings",
+  "home.signIn": "Log in / Sign up",
   "home.install": "📥 Install app",
 
   // Settings screen.
@@ -375,6 +376,7 @@ export const es: Record<MsgKey, string> = {
   "home.stats": "📊 Estadísticas",
   "home.locker": "🎨 Vestuario",
   "home.settings": "⚙️ Ajustes",
+  "home.signIn": "Entrar / Registrarse",
   "home.install": "📥 Instalar app",
 
   "settings.title": "AJUSTES",

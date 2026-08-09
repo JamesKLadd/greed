@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { Die } from "../components/Die.js";
 import { equipCosmetic, loadProfile } from "../game/profile.js";
+import { syncProfileUp } from "../net/auth.js";
 import { DICE_SKINS, TABLE_THEMES, isUnlocked, type Cosmetic } from "../game/cosmetics.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
@@ -38,7 +39,14 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              onClick={unlocked ? () => setProfile(equipCosmetic(kind, c.id)) : undefined}
+              onClick={
+                unlocked
+                  ? () => {
+                      setProfile(equipCosmetic(kind, c.id));
+                      void syncProfileUp();
+                    }
+                  : undefined
+              }
               role={unlocked ? "button" : undefined}
               aria-disabled={!unlocked}
             >

@@ -14,6 +14,7 @@ import { diceVarsById } from "../game/cosmetics.js";
 import { loadSettings } from "../game/settings.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { syncSteamAchievements } from "../game/steam.js";
+import { syncProfileUp } from "../net/auth.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -45,6 +46,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
     setSummary(s);
     setUnlocked(result.unlocked);
     syncSteamAchievements(result.unlocked.map((a) => a.id));
+    void syncProfileUp(); // push updated stats to the account if signed in
   }, [state.phase, state, net.youId]);
 
   const current = state.players[state.turn.playerIndex];

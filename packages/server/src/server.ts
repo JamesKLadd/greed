@@ -11,6 +11,7 @@ import type { GameAction } from "@greed/core";
 import { decide } from "@greed/bots";
 import { decode, encode } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
+import { verifySession } from "./auth.js";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
   canStart,
@@ -128,18 +129,34 @@ export class GreedServer {
     switch (msg.type) {
       case "ping":
         return this.send(ws, { type: "pong" });
-      case "create-room":
-        return this.onCreate(
-          ws,
-          msg.name,
-          msg.isPublic ?? false,
-          msg.goal ?? GOAL_DEFAULT,
-          msg.dice,
+      case "create-room": {
+        const m = msg;
+        this.withIdentity(ws, m.auth, (id) =>
+          this.onCreate(
+            ws,
+            id.name ?? m.name,
+            m.isPublic ?? false,
+            m.goal ?? GOAL_DEFAULT,
+            m.dice,
+            id.userId,
+          ),
         );
-      case "join-room":
-        return this.onJoin(ws, msg.code, msg.name, msg.dice);
-      case "quick-match":
-        return this.onQuickMatch(ws, msg.name, msg.dice);
+        return;
+      }
+      case "join-room": {
+        const m = msg;
+        this.withIdentity(ws, m.auth, (id) =>
+          this.onJoin(ws, m.code, id.name ?? m.name, m.dice, id.userId),
+        );
+        return;
+      }
+      case "quick-match": {
+        const m = msg;
+        this.withIdentity(ws, m.auth, (id) =>
+          this.onQuickMatch(ws, id.name ?? m.name, m.dice, id.userId),
+        );
+        return;
+      }
       case "spectate":
         return this.onSpectate(ws, msg.code);
       case "reconnect":
@@ -149,36 +166,57 @@ export class GreedServer {
     }
   }
 
+  /**
+   * Resolve a client's identity from an optional account session token, then run
+   * the given action. A valid token yields the account username (authoritative)
+   * and user id; anything else falls back to the guest name the client sent.
+   */
+  private withIdentity(
+    ws: WebSocket,
+    auth: string | undefined,
+    run: (id: { name?: string; userId?: string }) => void,
+  ): void {
+    const resolve = auth
+      ? verifySession(auth).then((claims) =>
+          claims ? { name: claims.username, userId: claims.sub } : {},
+        )
+      : Promise.resolve({});
+    resolve
+      .then(run)
+      .catch((err) => this.send(ws, { type: "error", message: (err as Error).message }));
+  }
+
   private onCreate(
     ws: WebSocket,
     name: string,
     isPublic: boolean,
     goal: number,
     dice?: string,
+    userId?: string,
   ): void {
     const room = this.store.create(isPublic, goal);
-    const seat = makeHumanSeat(name, true, dice);
+    const seat = makeHumanSeat(name, true, dice, userId);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
   }
 
-  private onJoin(ws: WebSocket, code: string, name: string, dice?: string): void {
+  private onJoin(ws: WebSocket, code: string, name: string, dice?: string, userId?: string): void {
     const room = this.store.get(code);
     if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
     if (room.phase !== "lobby")
       return this.send(ws, { type: "error", message: "That game has already started." });
     if (room.seats.length >= MAX_SEATS)
       return this.send(ws, { type: "error", message: "That room is full." });
-    const seat = makeHumanSeat(name, false, dice);
+    const seat = makeHumanSeat(name, false, dice, userId);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
   }
 
-  private onQuickMatch(ws: WebSocket, name: string, dice?: string): void {
+  private onQuickMatch(ws: WebSocket, name: string, dice?: string, userId?: string): void {
     const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
-    const seat = makeHumanSeat(name, isHost, dice);
+    const seat = makeHumanSeat(name, isHost, dice, userId);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
