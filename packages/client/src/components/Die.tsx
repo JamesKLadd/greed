@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { DieValue } from "@greed/core";
 
 // Pip positions on a 3x3 grid (index = row * 3 + col).
@@ -16,11 +16,15 @@ interface DieProps {
   locked?: boolean;
   rolling?: boolean;
   dim?: boolean;
-  /** Edge length in px (default 66). Pips scale with it. */
+  /**
+   * Edge length in px. Pips/padding scale with it. When omitted, the die's size
+   * is left to CSS (1em == edge length) so it can be made responsive per screen
+   * — the in-game tray uses this; fixed-size previews (rules, history) pass a px.
+   */
   size?: number;
 }
 
-export function Die({ value, locked = false, rolling = false, dim = false, size = 66 }: DieProps) {
+export function Die({ value, locked = false, rolling = false, dim = false, size }: DieProps) {
   const [shown, setShown] = useState<number>(value);
 
   useEffect(() => {
@@ -42,27 +46,20 @@ export function Die({ value, locked = false, rolling = false, dim = false, size 
     .filter(Boolean)
     .join(" ");
 
-  const pip = Math.round(size * 0.17);
+  // Everything scales off font-size (1em == the die's edge). Setting it fixes the
+  // size; leaving it unset lets CSS drive it (responsively) for the in-game tray.
+  const style: CSSProperties | undefined = size != null ? { fontSize: `${size}px` } : undefined;
 
   return (
     <div
       className={classes}
       role="img"
       aria-label={`die showing ${v}${locked ? ", locked" : ""}`}
-      style={{
-        width: size,
-        height: size,
-        padding: Math.round(size * 0.14),
-        borderRadius: Math.round(size * 0.21),
-      }}
+      style={style}
     >
       <div className="die__face">
         {Array.from({ length: 9 }, (_, i) => (
-          <span
-            key={i}
-            className={`pip${PIPS[v].includes(i) ? " pip--on" : ""}`}
-            style={{ width: pip, height: pip }}
-          />
+          <span key={i} className={`pip${PIPS[v].includes(i) ? " pip--on" : ""}`} />
         ))}
       </div>
     </div>
