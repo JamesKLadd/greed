@@ -36,7 +36,26 @@ export function createGame(playerConfigs: PlayerConfig[], config: GameConfig): G
   if (n < 2 || n > 8) {
     throw new Error(`Greed supports 2-8 players (got ${n}).`);
   }
+  return buildGame(playerConfigs, config);
+}
 
+/**
+ * A one-player game, for score-attack modes like the daily challenge where you
+ * play against the dice rather than an opponent.
+ *
+ * Separate from createGame so the 2–8 guard keeps protecting real matches: a
+ * one-seat multiplayer room is a bug, a one-seat solo run is the whole point.
+ * Callers are responsible for deciding when the run ends (e.g. after a fixed
+ * number of turns); pass an unreachable goal to keep the endgame from firing,
+ * since with a single seat that player is both first and last in the order and
+ * would instantly win on reaching it.
+ */
+export function createSoloGame(player: PlayerConfig, config: GameConfig): GameState {
+  return buildGame([player], config);
+}
+
+function buildGame(playerConfigs: PlayerConfig[], config: GameConfig): GameState {
+  const n = playerConfigs.length;
   let rng = config.seed >>> 0;
 
   let order: number[];

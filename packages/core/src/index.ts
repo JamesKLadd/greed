@@ -5,3 +5,4 @@ export * from "./scoring.js";
 export * from "./rolloff.js";
 export * from "./turn.js";
 export * from "./game.js";
+export * from "./daily.js";

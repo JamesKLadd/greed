@@ -9,6 +9,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
 import { clientKey, rateLimit } from "./rate-limit.js";
+import { dailyStatus, submitDailyRun } from "./daily.js";
 import {
   AccountError,
   getAccount,
@@ -128,6 +129,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     // A GET, but still worth capping: it's the natural username-enumeration
     // endpoint. High enough that the debounced check while typing never trips.
     "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
+    // One legitimate run exists per day; this only stops replay hammering.
+    "/api/daily/run": { limit: 20, windowMs: 60 * 60_000 },
   };
   const rule = LIMITS[path];
   if (rule) {
@@ -172,6 +175,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     } else if (method === "POST" && path === "/api/auth/resend-verification") {
       const { id } = await requireUser(req);
       json(res, 200, await resendVerification(id));
+    } else if (method === "GET" && path === "/api/daily") {
+      const { id } = await requireUser(req);
+      json(res, 200, await dailyStatus(id));
+    } else if (method === "POST" && path === "/api/daily/run") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      // The score is derived from the moves here, never read from the body.
+      const { result, alreadyPlayed } = await submitDailyRun(id, b.moves);
+      json(res, alreadyPlayed ? 409 : 201, {
+        result,
+        alreadyPlayed,
+        status: await dailyStatus(id),
+      });
     } else if (method === "GET" && path === "/api/me") {
       const { id } = await requireUser(req);
       const account = await getAccount(id);

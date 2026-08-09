@@ -69,4 +69,24 @@ export async function migrate(): Promise<void> {
     );
   `);
   await query(`CREATE INDEX IF NOT EXISTS auth_tokens_user_idx ON auth_tokens (user_id, kind);`);
+  await query(`
+    CREATE TABLE IF NOT EXISTS daily_runs (
+      user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day        date NOT NULL,
+      score      integer NOT NULL,
+      turns      integer NOT NULL,
+      banks      integer NOT NULL,
+      busts      integer NOT NULL,
+      hot_dice   integer NOT NULL,
+      best_turn  integer NOT NULL,
+      /** The submitted moves, kept so a score can always be re-verified. */
+      moves      text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (user_id, day)
+    );
+  `);
+  // Leaderboard reads are "top N for a day", so order within the day.
+  await query(
+    `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,
+  );
 }
