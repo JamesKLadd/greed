@@ -7,7 +7,7 @@
   color: var(--text);
   padding: 10px 16px;
   border-radius: var(--r-md);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -72,11 +72,11 @@
 }
 .btn--big {
   padding: 14px 28px;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 .btn--icon {
   padding: 10px 12px;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1;
 }
 .btn--on {
@@ -126,7 +126,7 @@
 .setup__tagline {
   color: var(--text-on-wood-dim);
   margin: 6px 0 0;
-  font-size: 16px;
+  font-size: 1rem;
 }
 /* A slab of chipboard laid on the table: printed face, bevelled top edge, two
    stacked shadows standing in for board thickness, then a contact shadow.
@@ -157,7 +157,7 @@
 .setup__row--head h2,
 .setup__label {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 .setup__actions {
   display: flex;
@@ -193,7 +193,7 @@
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   box-shadow: inset 0 1px 2px rgba(88, 58, 26, 0.12);
 }
 .seats-config__diff:disabled {
@@ -203,7 +203,7 @@
   background: transparent;
   border: none;
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .seats-config__remove:hover:not(:disabled) {
   color: var(--bad);
@@ -223,7 +223,7 @@
   border: none;
   color: var(--text-dim);
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 .segmented__btn--on {

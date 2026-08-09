@@ -1,11 +1,11 @@
 /**
  * Account entry: sign up, log in, request a password reset, or set a new password
  * from a reset link. One screen with a few modes to keep the flows together.
- * (English-only for now; i18n of these strings is a follow-up.)
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../game/auth.js";
+import { useT } from "../i18n/i18n.js";
 import {
   ApiError,
   checkUsername,
@@ -25,6 +25,7 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }: AuthScreenProps) {
+  const t = useT();
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>(resetToken ? "reset" : initialMode);
   const [email, setEmail] = useState("");
@@ -69,7 +70,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof ApiError ? err.message : t("auth.errorGeneric"));
     } finally {
       setBusy(false);
     }
@@ -83,7 +84,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
 
   const submitSignup = () =>
     run(async () => {
-      if (nameFree === "taken") throw new ApiError(409, "That username is taken.");
+      if (nameFree === "taken") throw new ApiError(409, t("auth.usernameTaken"));
       await auth.signup({ email: email.trim(), username: username.trim(), password });
       onDone();
     });
@@ -91,11 +92,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
   const submitForgot = () =>
     run(async () => {
       const { emailSent } = await requestReset(email.trim());
-      setNotice(
-        emailSent
-          ? "If that email has an account, a reset link is on its way. Check your inbox."
-          : "Reset requested. (Email delivery isn't configured yet on this server.)",
-      );
+      setNotice(emailSent ? t("auth.resetSent") : t("auth.resetNoEmail"));
     });
 
   const submitReset = () =>
@@ -107,18 +104,18 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
 
   const title =
     mode === "login"
-      ? "Log in"
+      ? t("auth.login")
       : mode === "signup"
-        ? "Create account"
+        ? t("auth.signup")
         : mode === "forgot"
-          ? "Reset password"
-          : "Set a new password";
+          ? t("auth.forgot")
+          : t("auth.reset");
 
   return (
     <div className="setup">
       <div className="setup__hero">
         <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">Your stats, achievements & locker — on every device.</p>
+        <p className="setup__tagline">{t("auth.tagline")}</p>
       </div>
 
       <div className="setup__panel auth">
@@ -134,7 +131,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
         {mode === "login" && (
           <>
             <label className="field">
-              <span className="field__label">Email or username</span>
+              <span className="field__label">{t("auth.loginId")}</span>
               <input
                 className="seats-config__name"
                 value={loginId}
@@ -143,7 +140,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
               />
             </label>
             <label className="field">
-              <span className="field__label">Password</span>
+              <span className="field__label">{t("auth.password")}</span>
               <input
                 className="seats-config__name"
                 type="password"
@@ -158,14 +155,14 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
               disabled={busy || !loginId.trim() || !password}
               onClick={submitLogin}
             >
-              {busy ? "…" : "Log in"}
+              {busy ? t("auth.working") : t("auth.login")}
             </button>
             <div className="auth__links">
               <button className="btn btn--ghost" onClick={() => switchMode("forgot")}>
-                Forgot password?
+                {t("auth.forgotLink")}
               </button>
               <button className="btn btn--ghost" onClick={() => switchMode("signup")}>
-                Create an account
+                {t("auth.createLink")}
               </button>
             </div>
           </>
@@ -174,7 +171,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
         {mode === "signup" && (
           <>
             <label className="field">
-              <span className="field__label">Email</span>
+              <span className="field__label">{t("auth.email")}</span>
               <input
                 className="seats-config__name"
                 type="email"
@@ -185,13 +182,15 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
             </label>
             <label className="field">
               <span className="field__label">
-                Username
-                {nameFree === "checking" && <span className="auth__hint"> checking…</span>}
+                {t("auth.username")}
+                {nameFree === "checking" && (
+                  <span className="auth__hint"> {t("auth.checking")}</span>
+                )}
                 {nameFree === "free" && (
-                  <span className="auth__hint auth__hint--ok"> ✓ available</span>
+                  <span className="auth__hint auth__hint--ok"> ✓ {t("auth.available")}</span>
                 )}
                 {nameFree === "taken" && (
-                  <span className="auth__hint auth__hint--bad"> ✕ taken</span>
+                  <span className="auth__hint auth__hint--bad"> ✕ {t("auth.taken")}</span>
                 )}
               </span>
               <input
@@ -199,18 +198,18 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
                 value={username}
                 maxLength={16}
                 autoComplete="off"
-                placeholder="3–16 characters"
+                placeholder={t("auth.usernameHint")}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </label>
             <label className="field">
-              <span className="field__label">Password</span>
+              <span className="field__label">{t("auth.password")}</span>
               <input
                 className="seats-config__name"
                 type="password"
                 value={password}
                 autoComplete="new-password"
-                placeholder="at least 8 characters"
+                placeholder={t("auth.passwordHint")}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
@@ -219,11 +218,11 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
               disabled={busy || !email.trim() || username.trim().length < 3 || password.length < 8}
               onClick={submitSignup}
             >
-              {busy ? "…" : "Create account"}
+              {busy ? t("auth.working") : t("auth.signup")}
             </button>
             <div className="auth__links">
               <button className="btn btn--ghost" onClick={() => switchMode("login")}>
-                I already have an account
+                {t("auth.haveAccount")}
               </button>
             </div>
           </>
@@ -232,7 +231,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
         {mode === "forgot" && (
           <>
             <label className="field">
-              <span className="field__label">Email</span>
+              <span className="field__label">{t("auth.email")}</span>
               <input
                 className="seats-config__name"
                 type="email"
@@ -247,11 +246,11 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
               disabled={busy || !email.trim()}
               onClick={submitForgot}
             >
-              {busy ? "…" : "Send reset link"}
+              {busy ? t("auth.working") : t("auth.sendReset")}
             </button>
             <div className="auth__links">
               <button className="btn btn--ghost" onClick={() => switchMode("login")}>
-                Back to log in
+                {t("auth.backToLogin")}
               </button>
             </div>
           </>
@@ -260,13 +259,13 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
         {mode === "reset" && (
           <>
             <label className="field">
-              <span className="field__label">New password</span>
+              <span className="field__label">{t("auth.newPassword")}</span>
               <input
                 className="seats-config__name"
                 type="password"
                 value={password}
                 autoComplete="new-password"
-                placeholder="at least 8 characters"
+                placeholder={t("auth.passwordHint")}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submitReset()}
               />
@@ -276,14 +275,14 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
               disabled={busy || password.length < 8}
               onClick={submitReset}
             >
-              {busy ? "…" : "Set password & log in"}
+              {busy ? t("auth.working") : t("auth.setPassword")}
             </button>
           </>
         )}
 
         <div className="setup__actions">
           <button className="btn btn--ghost" onClick={onBack}>
-            ← Back
+            {t("auth.back")}
           </button>
         </div>
       </div>

@@ -73,7 +73,7 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
             onChange={(e) => setName(e.target.value)}
             onBlur={rememberName}
           />
-          {locked && <span className="field__hint">Playing as your account username.</span>}
+          {locked && <span className="field__hint">{t("onlineMenu.lockedName")}</span>}
         </label>
 
         <div className="online-actions">

@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { DieValue } from "@greed/core";
+import { useT } from "../i18n/i18n.js";
 
 // Pip positions on a 3x3 grid (index = row * 3 + col).
 const PIPS: Record<number, number[]> = {
@@ -25,6 +26,7 @@ interface DieProps {
 }
 
 export function Die({ value, locked = false, rolling = false, dim = false, size }: DieProps) {
+  const t = useT();
   const [shown, setShown] = useState<number>(value);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function Die({ value, locked = false, rolling = false, dim = false, size 
     <div
       className={classes}
       role="img"
-      aria-label={`die showing ${v}${locked ? ", locked" : ""}`}
+      aria-label={locked ? t("aria.dieLocked", { value: v }) : t("aria.die", { value: v })}
       style={style}
     >
       <div className="die__face">

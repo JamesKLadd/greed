@@ -29,8 +29,22 @@
 }
 
 /* ---------- Accessibility: text scale & high contrast ---------- */
-:root[data-text-scale="large"] #root {
-  zoom: 1.14;
+/*
+ * Text scale. `zoom` scaled everything including graphics and fought with fixed
+ * positioning and env() safe-area maths; scaling the root font size grows type
+ * and rem-based spacing while leaving layout geometry alone.
+ *
+ * The dice are deliberately exempt (see .die, which stays in px/clamp): they are
+ * a graphic sized to fit five-across on a phone, and growing them would break
+ * that. The 16px minimum on mobile inputs still holds, since the base is 16px
+ * and this only ever scales up.
+ */
+:root {
+  --text-scale: 1;
+  font-size: calc(100% * var(--text-scale));
+}
+:root[data-text-scale="large"] {
+  --text-scale: 1.125;
 }
 /* High contrast pushes the LIGHT palette further apart — near-black ink on
    near-white stock, with harder edges. (It previously drove the opposite

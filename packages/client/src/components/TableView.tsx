@@ -103,7 +103,7 @@ export function TableView({
                   </span>
                   <span className="pseat__name">
                     {isLeader && (
-                      <span className="pseat__crown" aria-label="leader">
+                      <span className="pseat__crown" aria-label={t("aria.leader")}>
                         👑
                       </span>
                     )}

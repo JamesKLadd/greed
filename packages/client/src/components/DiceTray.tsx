@@ -1,5 +1,6 @@
 import type { TurnState } from "@greed/core";
 import { Die } from "./Die.js";
+import { useT } from "../i18n/i18n.js";
 
 interface DiceTrayProps {
   turn: TurnState;
@@ -8,6 +9,7 @@ interface DiceTrayProps {
 }
 
 export function DiceTray({ turn, rollingIndices, isRolling }: DiceTrayProps) {
+  const t = useT();
   const hasRolled = turn.lastRoll !== null || isRolling;
   const hot = turn.hotDice && !isRolling && turn.outcome === null;
   return (
@@ -19,7 +21,7 @@ export function DiceTray({ turn, rollingIndices, isRolling }: DiceTrayProps) {
       ]
         .filter(Boolean)
         .join(" ")}
-      aria-label="dice"
+      aria-label={t("aria.dice")}
     >
       {turn.dice.map((value, i) => {
         const rolling = isRolling && rollingIndices.includes(i);

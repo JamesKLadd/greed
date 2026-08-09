@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../game/auth.js";
 import { ApiError, resendVerification } from "../net/auth.js";
+import { useT } from "../i18n/i18n.js";
 
 interface AccountScreenProps {
   onBack: () => void;
@@ -24,6 +25,7 @@ function formatCountdown(secs: number): string {
 }
 
 export function AccountScreen({ onBack }: AccountScreenProps) {
+  const t = useT();
   const { user, logout } = useAuth();
   const [cooldown, setCooldown] = useState(() => resendCooldownLeft());
   const [busy, setBusy] = useState(false);
@@ -40,10 +42,10 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
     return (
       <div className="setup">
         <div className="setup__panel">
-          <p>You're not signed in.</p>
+          <p>{t("account.notSignedIn")}</p>
           <div className="setup__actions">
             <button className="btn btn--ghost" onClick={onBack}>
-              ← Back
+              {t("bar.home")}
             </button>
           </div>
         </div>
@@ -58,13 +60,11 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
     try {
       const { emailSent, alreadyVerified } = await resendVerification();
       if (alreadyVerified) {
-        setNotice("Your email is already verified. 🎉");
+        setNotice(t("account.alreadyVerified"));
       } else if (emailSent) {
-        setNotice("Verification email sent — check your inbox (and spam folder).");
+        setNotice(t("account.resendSent"));
       } else {
-        setNotice(
-          "A new link was generated, but email delivery isn't set up on the server yet, so nothing was sent.",
-        );
+        setNotice(t("account.resendNoEmail"));
       }
       // Start the cooldown whenever a real attempt was made.
       if (!alreadyVerified) {
@@ -72,7 +72,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
         setCooldown(resendCooldownLeft());
       }
     } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : "Couldn't resend right now. Try again.");
+      setNotice(err instanceof ApiError ? err.message : t("account.resendFailed"));
     } finally {
       setBusy(false);
     }
@@ -82,7 +82,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
     <div className="setup">
       <div className="setup__hero">
         <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">Account</p>
+        <p className="setup__tagline">{t("account.title")}</p>
       </div>
 
       <div className="setup__panel account">
@@ -95,35 +95,30 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
         </div>
 
         <div className={`account__verify${user.emailVerified ? " account__verify--ok" : ""}`}>
-          {user.emailVerified
-            ? "✓ Email verified"
-            : "⚠ Email not verified — check your inbox for the verification link."}
+          {user.emailVerified ? t("account.verified") : t("account.unverified")}
         </div>
 
         {!user.emailVerified && (
           <div className="account__resend">
             <button className="btn" disabled={busy || cooldown > 0} onClick={resend}>
               {busy
-                ? "Sending…"
+                ? t("account.sending")
                 : cooldown > 0
-                  ? `Resend in ${formatCountdown(cooldown)}`
-                  : "Resend verification email"}
+                  ? t("account.resendIn", { time: formatCountdown(cooldown) })
+                  : t("account.resend")}
             </button>
             {notice && <p className="account__resend-note">{notice}</p>}
           </div>
         )}
 
-        <p className="account__note">
-          Your stats, achievements and locker are saved to this account and sync across every device
-          you sign in on. You play as <strong>{user.username}</strong> in local and online games.
-        </p>
+        <p className="account__note">{t("account.note", { name: user.username })}</p>
 
         <div className="setup__actions">
           <button className="btn btn--ghost" onClick={onBack}>
-            ← Back
+            {t("bar.home")}
           </button>
           <button className="btn btn--bank" onClick={logout}>
-            Log out
+            {t("account.logout")}
           </button>
         </div>
       </div>

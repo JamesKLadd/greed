@@ -29,7 +29,7 @@
   justify-self: start;
 }
 .game__logo {
-  font-size: 26px;
+  font-size: 1.625rem;
   letter-spacing: 4px;
   justify-self: center;
   text-align: center;
@@ -185,7 +185,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: 0.3px;
   color: var(--seat, var(--gold));
@@ -196,7 +196,7 @@
 .pseat__name {
   flex: 1;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 0.875rem;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -206,16 +206,16 @@
   white-space: nowrap;
 }
 .pseat__crown {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .pseat__you {
   color: var(--text-dim);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .pseat__tag {
   flex: none;
-  font-size: 9px;
+  font-size: 0.5625rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #fff6e6;
@@ -225,7 +225,7 @@
 }
 .pseat__pers {
   flex: none;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1;
 }
 .pseat__avatar {
@@ -251,7 +251,7 @@
 }
 .pseat__status {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--text-dim);
   font-style: italic;
 }
@@ -285,11 +285,11 @@
 .pseat__total {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 .pseat__turn {
   color: var(--good);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 .pseat__bar {
@@ -332,7 +332,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: var(--text);
   background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
@@ -404,7 +404,9 @@
 @media (max-width: 760px) {
   /* iOS Safari zooms the whole page in when you focus a control whose text is
      under 16px, and never zooms back out — the #1 cause of "zoomed in weird".
-     Keeping form text at 16px avoids the auto-zoom entirely. */
+     Keeping form text at 16px avoids the auto-zoom entirely. 1rem is 16px at
+     the default text scale and only ever grows from there, so the guard holds
+     at the large-text setting too. */
   input,
   select,
   textarea,
@@ -412,7 +414,7 @@
   .seats-config__diff,
   .setup__goal-input,
   .join-row__code {
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   /* A more compact in-game top bar so all controls fit narrow screens without
@@ -428,7 +430,7 @@
     gap: 5px;
   }
   .game__logo {
-    font-size: 17px;
+    font-size: 1.0625rem;
     letter-spacing: 1px;
   }
   /* The plain in-game wordmark is decorative — drop it so the buttons fit.
@@ -446,7 +448,7 @@
     min-height: 40px;
     display: inline-grid;
     place-items: center;
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .game__bar .bar-btn .bar-btn__label {
     position: absolute;
@@ -529,14 +531,14 @@
   width: min(720px, calc(100% - 36px));
   padding: 11px 16px;
   border-radius: 12px;
-  font-size: 14.5px;
+  font-size: 0.9062rem;
   line-height: 1.4;
   border: 1px solid var(--panel-line);
   background: rgba(6, 32, 20, 0.72);
   box-shadow: var(--shadow);
 }
 .coach__icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   flex: none;
 }
 .coach__text {
@@ -572,7 +574,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 .table__dot {
@@ -641,6 +643,10 @@
   position: relative;
   /* font-size == the die's edge length; width/padding/pips are all in em so the
      whole die scales by changing this one value (see the mobile media query). */
+  /* Deliberately px, not rem: the die is a graphic whose size is constrained by
+     the mat's geometry and by fitting five across a phone. The large-text
+     setting scales rem-based type; letting it scale the dice too would break
+     the one-row invariant the mobile clamp() protects. */
   font-size: 66px;
   width: 1em;
   height: 1em;
@@ -747,7 +753,7 @@
   align-items: center;
 }
 .controls__status {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: var(--text-on-wood-dim);
   min-height: 20px;
 }
@@ -770,14 +776,14 @@
 }
 .meter__label {
   display: block;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-dim);
 }
 .meter__value {
   display: block;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--gold);
@@ -790,5 +796,5 @@
 .controls__buttons .btn {
   flex: 1;
   padding: 14px;
-  font-size: 17px;
+  font-size: 1.0625rem;
 }

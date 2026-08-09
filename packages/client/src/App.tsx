@@ -11,10 +11,12 @@ import { AccountScreen } from "./screens/AccountScreen.js";
 import { UiGallery } from "./screens/UiGallery.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
+import { useT } from "./i18n/i18n.js";
 
 type Mode = "home" | "local" | "online" | "stats" | "locker" | "settings" | "auth" | "account";
 
 export function App() {
+  const t = useT();
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
   // Coaching hints for a guided practice game (the "Learn to play" flow).
@@ -39,17 +41,15 @@ export function App() {
       setMode("auth");
     } else if (verify) {
       verifyEmail(verify)
-        .then(({ verified }) =>
-          setFlash(
-            verified ? "✓ Email verified — you're all set!" : "That verification link has expired.",
-          ),
-        )
-        .catch(() => setFlash("Couldn't verify that link. Please try again."));
+        .then(({ verified }) => setFlash(verified ? t("auth.verifiedOk") : t("auth.verifyExpired")))
+        .catch(() => setFlash(t("auth.verifyFailed")));
     }
     params.delete("verify");
     params.delete("reset");
     const qs = params.toString();
     window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    // Runs once on mount; `t` is only read for the one-off flash message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
