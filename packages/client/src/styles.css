@@ -2009,3 +2009,39 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ---------- Mobile: popovers & roll-off ---------- */
+@media (max-width: 760px) {
+  /* The volume button sits mid-bar on a phone, so a popover anchored to its
+     right edge spills off the left of the screen. Pin it to the viewport as a
+     full-width dropdown under the bar instead. */
+  .volume__pop {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 56px);
+    left: 8px;
+    right: 8px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  /* Roll-off rows (name · five dice · sum) are too wide for a narrow card, so
+     wrap the dice onto their own line under the name + sum. */
+  .rolloff__row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name sum"
+      "dice dice";
+    row-gap: 8px;
+  }
+  .rolloff__name {
+    grid-area: name;
+  }
+  .rolloff__sum {
+    grid-area: sum;
+  }
+  .rolloff__dice {
+    grid-area: dice;
+    flex-wrap: wrap;
+  }
+}
