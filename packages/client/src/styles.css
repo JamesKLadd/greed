@@ -2161,6 +2161,15 @@ button {
 .account__verify--ok {
   background: rgba(70, 130, 90, 0.24);
 }
+.account__resend {
+  margin-bottom: 14px;
+}
+.account__resend-note {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-dim, #b9b2a3);
+  line-height: 1.45;
+}
 .account__note {
   color: var(--text-dim, #b9b2a3);
   line-height: 1.5;

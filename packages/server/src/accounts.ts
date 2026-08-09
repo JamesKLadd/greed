@@ -285,6 +285,22 @@ export async function verifyEmail(rawToken: unknown): Promise<boolean> {
   return true;
 }
 
+/** Re-issue and send a verification email for the signed-in user. No-op (with a
+ * flag) if the account is already verified. */
+export async function resendVerification(
+  userId: string,
+): Promise<{ emailSent: boolean; alreadyVerified: boolean }> {
+  const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
+  const user = rows[0];
+  if (!user) throw new AccountError(404, "Account not found.");
+  if (user.email_verified) return { emailSent: false, alreadyVerified: true };
+  // Drop any outstanding verify tokens so only the newest link works.
+  await query(`DELETE FROM auth_tokens WHERE user_id = $1 AND kind = 'verify'`, [user.id]);
+  const raw = await issueVerifyToken(user.id);
+  await sendVerifyEmail(user.email, user.username, `${appUrl()}/?verify=${raw}`);
+  return { emailSent: emailEnabled(), alreadyVerified: false };
+}
+
 /** Start a password reset. Always resolves (never reveals whether the email
  * exists); sends a reset link only when the account is real. */
 export async function requestReset(email: unknown): Promise<{ emailSent: boolean }> {

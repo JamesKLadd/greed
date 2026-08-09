@@ -13,6 +13,7 @@ import {
   getAccount,
   login,
   requestReset,
+  resendVerification,
   resetPassword,
   saveProfile,
   signup,
@@ -139,6 +140,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
         available = false; // invalid usernames simply aren't "available"
       }
       json(res, 200, { available });
+    } else if (method === "POST" && path === "/api/auth/resend-verification") {
+      const { id } = await requireUser(req);
+      json(res, 200, await resendVerification(id));
     } else if (method === "GET" && path === "/api/me") {
       const { id } = await requireUser(req);
       const account = await getAccount(id);

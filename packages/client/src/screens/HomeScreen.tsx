@@ -13,6 +13,7 @@ interface HomeScreenProps {
   onLocker: () => void;
   onSettings: () => void;
   onAuth: () => void;
+  onAuthForOnline: () => void;
   onAccount: () => void;
   flash?: string | null;
   onDismissFlash?: () => void;
@@ -28,6 +29,7 @@ export function HomeScreen({
   onLocker,
   onSettings,
   onAuth,
+  onAuthForOnline,
   onAccount,
   flash,
   onDismissFlash,
@@ -105,8 +107,9 @@ export function HomeScreen({
             className={`btn btn--bank btn--big home-menu__btn${
               status === "authed" ? "" : " home-menu__btn--locked"
             }`}
-            // Online play requires an account: signed-out clicks go to sign-in.
-            onClick={status === "authed" ? onOnline : onAuth}
+            // Online play requires an account: signed-out clicks go to sign-in,
+            // then drop the player straight into online once they're in.
+            onClick={status === "authed" ? onOnline : onAuthForOnline}
           >
             {t("home.online")}
             <span className="home-menu__sub">

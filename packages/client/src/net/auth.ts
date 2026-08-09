@@ -127,6 +127,10 @@ export function fetchMe(): Promise<{ user: AccountUser; profile: Profile }> {
   return api("/api/me", { auth: true });
 }
 
+export function resendVerification(): Promise<{ emailSent: boolean; alreadyVerified: boolean }> {
+  return api("/api/auth/resend-verification", { method: "POST", auth: true });
+}
+
 export function pushProfile(profile: Profile): Promise<{ profile: Profile }> {
   return api("/api/me/profile", { method: "PUT", body: { profile }, auth: true });
 }

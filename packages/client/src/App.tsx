@@ -20,6 +20,9 @@ export function App() {
   const [coach, setCoach] = useState(false);
   // A password-reset token pulled from the email link (?reset=…).
   const [resetToken, setResetToken] = useState<string | undefined>(undefined);
+  // Where to land after a successful sign-in (e.g. straight into online play when
+  // the user signed in from the gated Online button).
+  const [authNext, setAuthNext] = useState<Mode | null>(null);
   // A one-line banner shown on Home after handling a verify link.
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -61,13 +64,19 @@ export function App() {
 
   const backHome = () => {
     setResetToken(undefined);
+    setAuthNext(null);
     setMode("home");
   };
 
   if (mode === "auth") {
     return (
       <AuthScreen
-        onDone={backHome}
+        onDone={() => {
+          const next = authNext;
+          setResetToken(undefined);
+          setAuthNext(null);
+          setMode(next ?? "home");
+        }}
         onBack={backHome}
         initialMode={resetToken ? "reset" : "login"}
         resetToken={resetToken}
@@ -120,7 +129,14 @@ export function App() {
       onStats={() => setMode("stats")}
       onLocker={() => setMode("locker")}
       onSettings={() => setMode("settings")}
-      onAuth={() => setMode("auth")}
+      onAuth={() => {
+        setAuthNext(null);
+        setMode("auth");
+      }}
+      onAuthForOnline={() => {
+        setAuthNext("online");
+        setMode("auth");
+      }}
       onAccount={() => setMode("account")}
     />
   );
