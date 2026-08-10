@@ -356,7 +356,9 @@
   align-items: center;
   justify-content: center;
   min-height: 30px;
-  margin: -8px 0 -10px;
+  /* Tightened against the whose-turn chip above, but with clear air below: a
+     scoring die lifts 5px on its lock-pop, so a snug gap gets clipped into. */
+  margin: -8px 0 2px;
 }
 /* Printed on card stock like the whose-turn chip, and for the same reason: the
    ten mats run from dark green to pale sand, so no single ink colour is legible
@@ -419,8 +421,11 @@
     gap: 8px;
     justify-content: center;
   }
+  /* `relative` rather than `static`: the seat must stay a containing block, or
+     the absolutely-positioned emote bubble escapes it and lands in the corner
+     of the page. Off the ellipse the offsets are all auto, so it doesn't move. */
   .pseat {
-    position: static;
+    position: relative;
     transform: none;
     left: auto;
     top: auto;

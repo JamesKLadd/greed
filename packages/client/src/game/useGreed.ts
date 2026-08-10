@@ -7,7 +7,9 @@ import { toastFor, type ToastMessage } from "./toasts.js";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
 
 const ROLL_ANIM_MS = 650;
-const BOT_THINK_MS = 800;
+/** A bot's pause before it acts. Long enough that a run of bot rolls reads as a
+ *  turn being played rather than a flicker of dice. */
+const BOT_THINK_MS = 1300;
 /** How long a finished turn (bust or bank) stays on screen before play moves on. */
 const INTER_TURN_MS = 1600;
 

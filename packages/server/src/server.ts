@@ -73,7 +73,9 @@ interface Notifier {
 
 const DEFAULT_OPTIONS: GreedServerOptions = {
   interTurnMs: 1500,
-  botThinkMs: 800,
+  // Long enough that a bot's run of rolls reads as a turn being played out
+  // rather than dice flickering past.
+  botThinkMs: 1300,
   disconnectAutoplayMs: 1200,
   rollOffMs: 4200,
   turnIdleMs: 10000,
