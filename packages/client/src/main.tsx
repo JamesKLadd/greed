@@ -4,6 +4,7 @@ import { App } from "./App.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { I18nProvider } from "./i18n/i18n.js";
 import { AuthProvider } from "./game/auth.js";
+import { ChallengeProvider } from "./net/challenges.js";
 import { primeAudioOnFirstGesture, installUiClicks } from "./game/sfx.js";
 import { applySettings, loadSettings } from "./game/settings.js";
 import { registerServiceWorker, initInstallPrompt } from "./game/pwa.js";
@@ -26,7 +27,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <I18nProvider>
         <AuthProvider>
-          <App />
+          <ChallengeProvider>
+            <App />
+          </ChallengeProvider>
         </AuthProvider>
       </I18nProvider>
     </ErrorBoundary>

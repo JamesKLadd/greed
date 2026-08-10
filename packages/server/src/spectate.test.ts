@@ -104,7 +104,7 @@ describe("spectator mode", () => {
     expect((snap as Extract<ServerMessage, { type: "lobby" }>).lobby.seats).toHaveLength(1);
 
     // Host adds a bot → the watcher sees the updated lobby too.
-    host.send({ type: "add-bot", difficulty: "easy" });
+    host.send({ type: "add-bot" });
     const updated = await spec.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
     expect((updated as Extract<ServerMessage, { type: "lobby" }>).lobby.seats).toHaveLength(2);
 
@@ -114,7 +114,7 @@ describe("spectator mode", () => {
 
   it("a watcher receives the roll-off and the live game state, holding no seat", async () => {
     const { host, code } = await hostRoom();
-    host.send({ type: "add-bot", difficulty: "easy" });
+    host.send({ type: "add-bot" });
 
     const spec = await connect(url);
     spec.send({ type: "spectate", code });

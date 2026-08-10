@@ -1,12 +1,20 @@
 import { createGame, determineOrder, makeSeed, cleanPlayerName, GOAL_DEFAULT } from "@greed/core";
-import type { BotDifficulty, BotPersonality, GameState, PlayerConfig } from "@greed/core";
+import type { BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
 
 export interface SeatSetup {
   name: string;
   isBot: boolean;
-  difficulty: BotDifficulty;
+  /** Bots all play at one standard level; this is what makes them differ. */
   personality: BotPersonality;
+}
+
+/** The temperaments a bot can be given, in order of nerve. */
+export const PERSONALITIES: BotPersonality[] = ["cautious", "balanced", "reckless"];
+
+/** A temperament picked at random, for the "add random bots" shortcut. */
+export function randomPersonality(): BotPersonality {
+  return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
 }
 
 export interface MatchSetup {
@@ -21,20 +29,20 @@ export function defaultSetup(): MatchSetup {
   return {
     goal: GOAL_DEFAULT,
     seats: [
-      { name: "You", isBot: false, difficulty: "medium", personality: "balanced" },
-      { name: "Robo 1", isBot: true, difficulty: "medium", personality: "balanced" },
-      { name: "Robo 2", isBot: true, difficulty: "hard", personality: "balanced" },
+      { name: "You", isBot: false, personality: "balanced" },
+      { name: "Robo 1", isBot: true, personality: "cautious" },
+      { name: "Robo 2", isBot: true, personality: "reckless" },
     ],
   };
 }
 
-/** A gentle first game: you vs one easy bot, to a shorter goal, for the tutorial. */
+/** A gentle first game: you vs one careful bot, to a shorter goal, for the tutorial. */
 export function practiceSetup(): MatchSetup {
   return {
     goal: 1000,
     seats: [
-      { name: "You", isBot: false, difficulty: "medium", personality: "balanced" },
-      { name: "Rookie", isBot: true, difficulty: "easy", personality: "balanced" },
+      { name: "You", isBot: false, personality: "balanced" },
+      { name: "Rookie", isBot: true, personality: "cautious" },
     ],
   };
 }
@@ -52,7 +60,6 @@ export function buildGame(setup: MatchSetup): BuiltGame {
     id: `p${i}`,
     name: cleanPlayerName(s.name, `Player ${i + 1}`),
     isBot: s.isBot,
-    botDifficulty: s.isBot ? s.difficulty : undefined,
     botPersonality: s.isBot ? s.personality : undefined,
   }));
 

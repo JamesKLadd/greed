@@ -2,108 +2,81 @@ import { describe, it, expect } from "vitest";
 import {
   applyAction,
   createGame,
-  type BotDifficulty,
+  getLegalActions,
   type BotPersonality,
+  type GameAction,
   type GameState,
 } from "@greed/core";
 import { rollModel, rollStats } from "./probabilities.js";
 import { decide } from "./strategies.js";
 
-/** Deterministic PRNG so bot "mistakes" are reproducible in tests. */
-function seededRandom(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (Math.imul(s ^ (s >>> 15), s | 1) + 0x6d2b79f5) >>> 0;
-    return s / 4294967296;
+type Policy = (state: GameState) => GameAction;
+
+/** A naive human-ish policy: roll until the turn is worth `bankAt`, then stop. */
+function threshold(bankAt: number): Policy {
+  return (g) => {
+    const legal = getLegalActions(g);
+    if (!legal.canBank) return { type: "ROLL" };
+    return g.turn.turnScore >= bankAt ? { type: "BANK" } : { type: "ROLL" };
   };
 }
 
-function playMatch(seed: number, difficulties: BotDifficulty[]): GameState {
-  const rand = seededRandom(seed * 2654435761);
-  let g = createGame(
-    difficulties.map((d, i) => ({
-      id: String.fromCharCode(65 + i),
-      name: d,
-      isBot: true,
-      botDifficulty: d,
-    })),
-    { goal: 2000, seed },
-  );
-  let guard = 0;
-  while (g.phase !== "game-over" && guard++ < 200000) {
-    if (g.turn.outcome) {
-      g = applyAction(g, { type: "ADVANCE" });
-      continue;
-    }
-    const d = g.players[g.turn.playerIndex].botDifficulty!;
-    g = applyAction(g, decide(g, d, { random: rand }));
-  }
-  return g;
-}
-
 /**
- * Head-to-head win rate of difficulty `a` vs `b`. Each seed is played twice —
- * once with each bot going first — to cancel the first-player advantage, so a
- * result near 50% means "equal skill" and >50% means `a` is genuinely stronger.
+ * Play `turnsPerSeed` turns per seed with the given policy against an
+ * unreachable goal, so the endgame never fires and what's measured is pure
+ * turn behaviour.
  */
-function duelWinRate(a: BotDifficulty, b: BotDifficulty, seeds: number): number {
-  let aWins = 0;
-  let games = 0;
-  for (let seed = 1; seed <= seeds; seed++) {
-    for (const aFirst of [true, false]) {
-      const rand = seededRandom(seed * 2654435761 + (aFirst ? 1 : 2));
-      let g = createGame(
-        [
-          { id: "A", name: "a", isBot: true, botDifficulty: a },
-          { id: "B", name: "b", isBot: true, botDifficulty: b },
-        ],
-        { goal: 2000, seed, order: aFirst ? [0, 1] : [1, 0] },
-      );
-      let guard = 0;
-      while (g.phase !== "game-over" && guard++ < 200000) {
-        if (g.turn.outcome) {
-          g = applyAction(g, { type: "ADVANCE" });
-          continue;
-        }
-        const d = g.players[g.turn.playerIndex].botDifficulty!;
-        g = applyAction(g, decide(g, d, { random: rand }));
-      }
-      if (g.winnerId === "A") aWins++;
-      games++;
-    }
-  }
-  return aWins / games;
-}
-
-/** Solo push profile: average banked turn size and bust rate for a personality. */
-function pushProfile(personality: BotPersonality, seeds: number) {
+function turnProfile(policy: Policy, personality: BotPersonality, seeds: number, turns = 40) {
   let banks = 0;
   let busts = 0;
   let banked = 0;
   for (let seed = 1; seed <= seeds; seed++) {
     let g = createGame(
       [
-        { id: "A", name: "a", isBot: true, botDifficulty: "expert", botPersonality: personality },
-        { id: "B", name: "b", isBot: true, botDifficulty: "expert", botPersonality: personality },
+        { id: "A", name: "a", isBot: true, botPersonality: personality },
+        { id: "B", name: "b", isBot: true, botPersonality: personality },
       ],
-      { goal: 1_000_000, seed, order: [0, 1] }, // unreachable goal: pure turn behavior
+      { goal: 1_000_000, seed, order: [0, 1] },
     );
-    let turns = 0;
-    while (turns < 40) {
+    let played = 0;
+    while (played < turns) {
       if (g.turn.outcome) {
         if (g.turn.outcome === "banked") banks++;
         else busts++;
-        turns++;
+        played++;
         g = applyAction(g, { type: "ADVANCE" });
         continue;
       }
       const before = g.turn.turnScore;
-      const act = decide(g, "expert");
+      const act = policy(g);
       if (act.type === "BANK") banked += before;
       g = applyAction(g, act);
     }
   }
-  return { bustRate: busts / (banks + busts), avgBank: banked / Math.max(1, banks) };
+  return {
+    bustRate: busts / (banks + busts),
+    avgBank: banked / Math.max(1, banks),
+    /** Points earned per turn attempted — busts included, so this is the honest one. */
+    pointsPerTurn: banked / Math.max(1, banks + busts),
+  };
+}
+
+/** A full game of mixed personalities, played to completion. */
+function playMatch(seed: number, personalities: BotPersonality[]): GameState {
+  let g = createGame(
+    personalities.map((p, i) => ({
+      id: String.fromCharCode(65 + i),
+      name: p,
+      isBot: true,
+      botPersonality: p,
+    })),
+    { goal: 2000, seed },
+  );
+  let guard = 0;
+  while (g.phase !== "game-over" && guard++ < 200000) {
+    g = applyAction(g, g.turn.outcome ? { type: "ADVANCE" } : decide(g));
+  }
+  return g;
 }
 
 describe("roll statistics", () => {
@@ -143,45 +116,68 @@ describe("roll transition model", () => {
 });
 
 describe("bots always produce terminating games", () => {
-  it("every difficulty (incl. expert) finishes with a valid winner", () => {
+  it("any mix of personalities finishes with a valid winner", () => {
     for (let seed = 1; seed <= 40; seed++) {
-      const g = playMatch(seed, ["easy", "medium", "hard", "expert"]);
+      const g = playMatch(seed, ["cautious", "balanced", "reckless"]);
       expect(g.phase).toBe("game-over");
       expect(g.winnerId).not.toBeNull();
     }
   });
 });
 
-describe("difficulty forms a strength ladder", () => {
-  // Symmetric duels, so ~50% is a tie and >50% is a real edge.
-  it("medium clearly beats easy", () => {
-    expect(duelWinRate("medium", "easy", 150)).toBeGreaterThan(0.55);
-  });
-  it("hard beats medium", () => {
-    expect(duelWinRate("hard", "medium", 150)).toBeGreaterThan(0.52);
-  });
-  it("expert beats medium and is at least hard's equal", () => {
-    expect(duelWinRate("expert", "medium", 150)).toBeGreaterThan(0.52);
-    // Expert and hard are both near-optimal; expert must not be worse than hard.
-    expect(duelWinRate("expert", "hard", 150)).toBeGreaterThan(0.44);
-  });
-  it("the strong bots dominate easy", () => {
-    expect(duelWinRate("hard", "easy", 150)).toBeGreaterThan(0.58);
-    expect(duelWinRate("expert", "easy", 150)).toBeGreaterThan(0.58);
+describe("the standard skill level is genuinely strong", () => {
+  // Measured as points per turn attempted (busts included) over thousands of
+  // turns — far more stable than a head-to-head win rate, and it is the
+  // quantity a bot is actually trying to maximise.
+  it("out-earns naive threshold play, timid or greedy", () => {
+    const standard = turnProfile((g) => decide(g), "balanced", 60);
+    const timid = turnProfile(threshold(150), "balanced", 60);
+    const greedy = turnProfile(threshold(1200), "balanced", 60);
+
+    expect(standard.pointsPerTurn).toBeGreaterThan(timid.pointsPerTurn);
+    expect(standard.pointsPerTurn).toBeGreaterThan(greedy.pointsPerTurn);
   });
 });
 
-describe("personalities change how far a bot pushes", () => {
-  it("reckless pushes further and busts more than cautious", () => {
-    const cautious = pushProfile("cautious", 120);
-    const balanced = pushProfile("balanced", 120);
-    const reckless = pushProfile("reckless", 120);
+describe("personality is what distinguishes one bot from another", () => {
+  it("cautious protects a turn, reckless chases it", () => {
+    const cautious = turnProfile((g) => decide(g), "cautious", 120);
+    const balanced = turnProfile((g) => decide(g), "balanced", 120);
+    const reckless = turnProfile((g) => decide(g), "reckless", 120);
 
     // Average banked turn grows from cautious -> balanced -> reckless.
     expect(balanced.avgBank).toBeGreaterThan(cautious.avgBank);
     expect(reckless.avgBank).toBeGreaterThan(balanced.avgBank);
 
     // And the extra greed shows up as a higher bust rate.
-    expect(reckless.bustRate).toBeGreaterThan(cautious.bustRate + 0.1);
+    expect(cautious.bustRate).toBeLessThan(balanced.bustRate);
+    expect(reckless.bustRate).toBeGreaterThan(cautious.bustRate + 0.15);
+  });
+
+  it("splits on the same position: cautious banks it, reckless rolls on", () => {
+    const base = createGame(
+      [
+        { id: "A", name: "a", isBot: true, botPersonality: "balanced" },
+        { id: "B", name: "b", isBot: true, botPersonality: "balanced" },
+      ],
+      { goal: 1_000_000, seed: 7, order: [0, 1] },
+    );
+    // A turn worth 300 with two dice left to throw — the classic hard call.
+    const position: GameState = {
+      ...base,
+      turn: {
+        ...base.turn,
+        turnScore: 300,
+        rollCount: 2,
+        locked: [true, true, true, false, false],
+        awaitingDecision: true,
+      },
+    };
+    // The seat itself is balanced, and takes the money at this size.
+    expect(decide(position)).toEqual({ type: "BANK" });
+    expect(decide(position, { personality: "cautious" })).toEqual({ type: "BANK" });
+    // Reckless is still under its floor, so the context personality overrides
+    // the seat's and it rolls into the risk.
+    expect(decide(position, { personality: "reckless" })).toEqual({ type: "ROLL" });
   });
 });

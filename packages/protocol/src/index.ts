@@ -7,7 +7,7 @@
  * player's id to decide whether it may act.
  */
 
-import type { BotDifficulty, BotPersonality, GameAction, GameState } from "@greed/core";
+import type { BotPersonality, GameAction, GameState } from "@greed/core";
 
 export const DEFAULT_SERVER_PORT = 8787;
 
@@ -30,7 +30,7 @@ export interface LobbySeat {
   id: string;
   name: string;
   isBot: boolean;
-  difficulty?: BotDifficulty;
+  /** Bots have one standard skill level; the personality is what varies. */
   personality?: BotPersonality;
   ready: boolean;
   connected: boolean;
@@ -66,9 +66,16 @@ export type ClientMessage =
   | { type: "quick-match"; name: string; dice?: string; auth?: string }
   | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
+  // A notification-only connection: no seat, no room. It exists so a signed-in
+  // player shows as online to their friends and can be reached by a challenge
+  // wherever they are in the app.
+  | { type: "hello"; auth: string }
+  /** Invite a friend (by username) to a private room. */
+  | { type: "challenge"; username: string }
+  | { type: "challenge-decline"; id: string }
   | { type: "set-ready"; ready: boolean }
   | { type: "set-goal"; goal: number }
-  | { type: "add-bot"; difficulty: BotDifficulty; personality?: BotPersonality }
+  | { type: "add-bot"; personality?: BotPersonality }
   | { type: "remove-seat"; seatId: string }
   | { type: "start-game" }
   | { type: "game-action"; action: GameAction }
@@ -113,6 +120,13 @@ export type ServerMessage =
       skins: PlayerSkin[];
     }
   | { type: "emote"; playerId: string; emote: EmoteId }
+  /** The notification connection is up; `username` is who the server thinks you are. */
+  | { type: "hello-ok"; username: string }
+  /** A friend wants to play: join `code` to accept. */
+  | { type: "challenge-invite"; id: string; from: string; code: string }
+  /** Your challenge was delivered; the room is waiting for you at `code`. */
+  | { type: "challenge-sent"; id: string; to: string; code: string }
+  | { type: "challenge-declined"; id: string; from: string }
   | { type: "error"; message: string }
   | { type: "left" }
   | { type: "pong" };

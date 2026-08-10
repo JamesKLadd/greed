@@ -1,19 +1,19 @@
 /**
  * Thin convenience wrapper around `decide` for callers that prefer an object
- * bound to a difficulty (e.g. the client's per-seat bot).
+ * bound to a personality (e.g. the client's per-seat bot).
  */
 
-import type { BotDifficulty, GameAction, GameState } from "@greed/core";
-import { decide, type BotContext } from "./strategies.js";
+import type { BotPersonality, GameAction, GameState } from "@greed/core";
+import { decide } from "./strategies.js";
 
 export interface Bot {
-  readonly difficulty: BotDifficulty;
+  readonly personality: BotPersonality;
   act(state: GameState): GameAction;
 }
 
-export function createBot(difficulty: BotDifficulty, ctx: BotContext = {}): Bot {
+export function createBot(personality: BotPersonality = "balanced"): Bot {
   return {
-    difficulty,
-    act: (state) => decide(state, difficulty, ctx),
+    personality,
+    act: (state) => decide(state, { personality }),
   };
 }

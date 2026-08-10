@@ -90,7 +90,7 @@ export function GameOver({
             <span>
               {p.name}
               {youId && p.id === youId ? ` ${t("common.youParen")}` : ""}
-              {p.isBot ? ` (${t(`diff.${p.botDifficulty ?? "easy"}`)})` : ""}
+              {p.isBot ? ` (${t(`pers.${p.botPersonality ?? "balanced"}`)})` : ""}
             </span>
             <span>{p.total}</span>
           </li>

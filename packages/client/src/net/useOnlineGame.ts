@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BotDifficulty, BotPersonality, GameState } from "@greed/core";
+import type { BotPersonality, GameState } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
 import {
   decode,
@@ -45,7 +45,7 @@ export interface OnlineController {
   spectate: (code: string) => void;
   setReady: (ready: boolean) => void;
   setGoal: (goal: number) => void;
-  addBot: (difficulty: BotDifficulty, personality?: BotPersonality) => void;
+  addBot: (personality?: BotPersonality) => void;
   removeSeat: (seatId: string) => void;
   startGame: () => void;
   roll: () => void;
@@ -55,9 +55,16 @@ export interface OnlineController {
   dismissError: () => void;
 }
 
-export function useOnlineGame(): OnlineController {
+/**
+ * `autoJoin` sends the client straight into a room on mount — accepting a
+ * friend's challenge. It deliberately takes precedence over (and discards) any
+ * stored reconnect token: going to the room you were just invited to is an
+ * explicit choice, and rejoining an old game as well would seat you twice.
+ */
+export function useOnlineGame(autoJoin?: { code: string; name: string }): OnlineController {
   const wsRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<ClientMessage[]>([]);
+  const autoJoinRef = useRef(autoJoin);
 
   const [status, setStatus] = useState<OnlineStatus>("menu");
   const [lobby, setLobby] = useState<LobbyView | null>(null);
@@ -206,14 +213,38 @@ export function useOnlineGame(): OnlineController {
     [ensureSocket],
   );
 
-  // Attempt to rejoin an in-progress game after a refresh.
+  // Join an invited room, or else attempt to rejoin an in-progress game after
+  // a refresh.
+  //
+  // Deferred by a tick on purpose: React's development mode mounts, unmounts and
+  // remounts a component immediately, and sending the entry message straight
+  // from the effect body opened two sockets and seated the player twice. A
+  // timeout the cleanup can cancel means only the surviving mount connects.
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      setStatus("connecting");
-      send({ type: "reconnect", token });
-    }
-    return () => wsRef.current?.close();
+    const timer = window.setTimeout(() => {
+      const invited = autoJoinRef.current;
+      if (invited) {
+        localStorage.removeItem(TOKEN_KEY);
+        setStatus("connecting");
+        send({
+          type: "join-room",
+          code: invited.code,
+          name: invited.name,
+          dice: loadProfile().dice,
+          auth: getToken() ?? undefined,
+        });
+        return;
+      }
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        setStatus("connecting");
+        send({ type: "reconnect", token });
+      }
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      wsRef.current?.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -318,7 +349,7 @@ export function useOnlineGame(): OnlineController {
     },
     setReady: (ready) => send({ type: "set-ready", ready }),
     setGoal: (goal) => send({ type: "set-goal", goal }),
-    addBot: (difficulty, personality) => send({ type: "add-bot", difficulty, personality }),
+    addBot: (personality) => send({ type: "add-bot", personality }),
     removeSeat: (seatId) => send({ type: "remove-seat", seatId }),
     startGame: () => send({ type: "start-game" }),
     roll: () => send({ type: "game-action", action: { type: "ROLL" } }),

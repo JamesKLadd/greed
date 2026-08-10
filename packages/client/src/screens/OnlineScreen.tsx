@@ -4,15 +4,26 @@ import { OnlineMenu } from "./OnlineMenu.js";
 import { LobbyScreen } from "./LobbyScreen.js";
 import { OnlineGameScreen } from "./OnlineGameScreen.js";
 import { RollOffView } from "../components/RollOffView.js";
+import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
 /** After this long, a slow connect is almost certainly a sleeping free-tier
  *  server waking up rather than a network problem — say so instead of hanging. */
 const COLD_START_HINT_MS = 4000;
 
-export function OnlineScreen({ onExit }: { onExit: () => void }) {
+interface OnlineScreenProps {
+  onExit: () => void;
+  /** Room code to join straight away (a friend's challenge). */
+  autoJoin?: string | null;
+}
+
+export function OnlineScreen({ onExit, autoJoin }: OnlineScreenProps) {
   const t = useT();
-  const net = useOnlineGame();
+  const { user } = useAuth();
+  // Only a signed-in player can be challenged, so the account name is the name.
+  const net = useOnlineGame(
+    autoJoin ? { code: autoJoin, name: user?.username ?? t("common.playerDefault") } : undefined,
+  );
   const connecting = net.status === "connecting";
   const [slow, setSlow] = useState(false);
 

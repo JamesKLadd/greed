@@ -135,6 +135,30 @@ export async function removeFriend(userId: string, username: unknown): Promise<F
   return friendsView(userId);
 }
 
+/**
+ * Resolve a username to an accepted friend of `userId`.
+ *
+ * Used by the challenge flow: an invite is a message that pops up on someone
+ * else's screen, so only a confirmed friend may send one — the same rule that
+ * governs every other channel between players here.
+ */
+export async function requireFriend(
+  userId: string,
+  username: unknown,
+): Promise<{ id: string; username: string }> {
+  const target = await findByUsername(username);
+  if (target.id === userId) throw new AccountError(400, "You can't challenge yourself.");
+  const { rows } = await query<{ status: string }>(
+    `SELECT status FROM friendships
+      WHERE ((requester_id = $1 AND addressee_id = $2)
+          OR (requester_id = $2 AND addressee_id = $1))
+        AND status = 'accepted'`,
+    [userId, target.id],
+  );
+  if (rows.length === 0) throw new AccountError(403, "You can only challenge friends.");
+  return { id: target.id, username: target.username };
+}
+
 export interface PublicProfile {
   username: string;
   online: boolean;

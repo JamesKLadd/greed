@@ -1,4 +1,4 @@
-import type { BotDifficulty, GameState } from "@greed/core";
+import type { BotPersonality, GameState } from "@greed/core";
 
 /**
  * Local, single-player progression: lifetime stats and achievements persisted to
@@ -39,7 +39,8 @@ export interface GameSummary {
   turns: number;
   bankedPoints: number;
   opponents: number;
-  hardestOpponent?: BotDifficulty;
+  /** The nerviest temperament at the table, for the Giant Slayer badge. */
+  boldestOpponent?: BotPersonality;
 }
 
 export interface Achievement {
@@ -98,8 +99,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "giant-slayer",
     icon: "🐉",
     title: "Giant Slayer",
-    desc: "Beat an expert bot.",
-    earned: (s) => s.won && s.hardestOpponent === "expert",
+    desc: "Beat a reckless bot.",
+    earned: (s) => s.won && s.boldestOpponent === "reckless",
   },
   {
     id: "veteran",
@@ -168,8 +169,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "untouchable",
     icon: "🛡️",
     title: "Untouchable",
-    desc: "Beat an expert bot without busting once.",
-    earned: (s) => s.won && s.busts === 0 && s.hardestOpponent === "expert",
+    desc: "Beat a reckless bot without busting once.",
+    earned: (s) => s.won && s.busts === 0 && s.boldestOpponent === "reckless",
   },
   {
     id: "big-banker",
@@ -265,7 +266,8 @@ export function averageBank(p: Profile): number {
   return p.totalBanks > 0 ? Math.round(p.totalBankedPoints / p.totalBanks) : 0;
 }
 
-const DIFF_ORDER: BotDifficulty[] = ["easy", "medium", "hard", "expert"];
+/** Nerve order, so "the boldest bot at the table" is well defined. */
+const NERVE_ORDER: BotPersonality[] = ["cautious", "balanced", "reckless"];
 
 /** Build this game's summary for the given human player from the event log. */
 export function summarize(state: GameState, youId: string): GameSummary {
@@ -289,11 +291,11 @@ export function summarize(state: GameState, youId: string): GameSummary {
 
   const you = state.players.find((p) => p.id === youId);
   const bots = state.players.filter((p) => p.isBot);
-  let hardest: BotDifficulty | undefined;
+  let boldest: BotPersonality | undefined;
   for (const b of bots) {
-    if (!b.botDifficulty) continue;
-    if (!hardest || DIFF_ORDER.indexOf(b.botDifficulty) > DIFF_ORDER.indexOf(hardest)) {
-      hardest = b.botDifficulty;
+    if (!b.botPersonality) continue;
+    if (!boldest || NERVE_ORDER.indexOf(b.botPersonality) > NERVE_ORDER.indexOf(boldest)) {
+      boldest = b.botPersonality;
     }
   }
 
@@ -307,7 +309,7 @@ export function summarize(state: GameState, youId: string): GameSummary {
     turns: banks + busts,
     bankedPoints,
     opponents: bots.length,
-    hardestOpponent: hardest,
+    boldestOpponent: boldest,
   };
 }
 

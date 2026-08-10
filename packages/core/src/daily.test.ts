@@ -10,8 +10,8 @@ import {
 import { applyAction, getLegalActions } from "./game.js";
 
 /** Play a run with a simple policy, recording the moves as a client would. */
-function playRun(day: string, bankAt: number): DailyMove[] {
-  let state = createDailyGame(day);
+function playRun(day: string, bankAt: number, playerKey = ""): DailyMove[] {
+  let state = createDailyGame(day, playerKey);
   const moves: DailyMove[] = [];
   let turns = 0;
   while (turns < DAILY_TURNS) {
@@ -29,19 +29,30 @@ function playRun(day: string, bankAt: number): DailyMove[] {
 }
 
 describe("daily seed", () => {
-  it("is stable for a day and different across days", () => {
-    expect(dailySeed("2026-08-09")).toBe(dailySeed("2026-08-09"));
-    expect(dailySeed("2026-08-09")).not.toBe(dailySeed("2026-08-10"));
-    expect(dailySeed("2026-08-09")).not.toBe(dailySeed("2025-08-09"));
+  it("is stable for a day and player, and different across days", () => {
+    expect(dailySeed("2026-08-09", "u1")).toBe(dailySeed("2026-08-09", "u1"));
+    expect(dailySeed("2026-08-09", "u1")).not.toBe(dailySeed("2026-08-10", "u1"));
+    expect(dailySeed("2026-08-09", "u1")).not.toBe(dailySeed("2025-08-09", "u1"));
   });
 
   it("keys a date as a UTC ISO day", () => {
     expect(dailyKey(new Date("2026-08-09T23:30:00Z"))).toBe("2026-08-09");
   });
 
-  it("deals identical opening dice to everyone on the same day", () => {
-    const a = createDailyGame("2026-08-09");
-    const b = createDailyGame("2026-08-09");
+  it("gives different players different dice on the same day", () => {
+    // The whole point of the per-player seed: nobody can look up someone else's
+    // ideal line, because nobody else is throwing their dice.
+    expect(dailySeed("2026-08-09", "u1")).not.toBe(dailySeed("2026-08-09", "u2"));
+    const a = createDailyGame("2026-08-09", "u1");
+    const b = createDailyGame("2026-08-09", "u2");
+    expect(applyAction(a, { type: "ROLL" }).turn.dice).not.toEqual(
+      applyAction(b, { type: "ROLL" }).turn.dice,
+    );
+  });
+
+  it("deals one player the same dice every time they open the run", () => {
+    const a = createDailyGame("2026-08-09", "u1");
+    const b = createDailyGame("2026-08-09", "u1");
     expect(applyAction(a, { type: "ROLL" }).turn.dice).toEqual(
       applyAction(b, { type: "ROLL" }).turn.dice,
     );
@@ -57,6 +68,16 @@ describe("scoreDailyRun", () => {
     expect(first.complete).toBe(true);
     expect(first.turns).toBe(DAILY_TURNS);
     expect(first.banks + first.busts).toBe(DAILY_TURNS);
+  });
+
+  it("scores one player's moves against their own dice, not another's", () => {
+    // Copying someone's winning line is worthless: replayed under a different
+    // player key it meets different dice, so it scores differently.
+    const moves = playRun("2026-08-09", 300, "u1");
+    const mine = scoreDailyRun("2026-08-09", moves, "u1");
+    const stolen = scoreDailyRun("2026-08-09", moves, "u2");
+    expect(stolen.score).not.toBe(mine.score);
+    expect(scoreDailyRun("2026-08-09", moves, "u1")).toEqual(mine);
   });
 
   it("scores the same moves differently on a different day", () => {

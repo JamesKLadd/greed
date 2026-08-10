@@ -1,13 +1,18 @@
 import { useState } from "react";
-import type { BotDifficulty, BotPersonality } from "@greed/core";
+import type { BotPersonality } from "@greed/core";
 import { GOAL_DEFAULT } from "@greed/core";
-import { defaultSetup, type MatchSetup, type SeatSetup } from "../game/setup.js";
+import {
+  PERSONALITIES,
+  defaultSetup,
+  randomPersonality,
+  type MatchSetup,
+  type SeatSetup,
+} from "../game/setup.js";
 import { RulesModal } from "../components/RulesModal.js";
+import { Button, Modal } from "../ui/index.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
-const DIFFICULTIES: BotDifficulty[] = ["easy", "medium", "hard", "expert"];
-const PERSONALITIES: BotPersonality[] = ["cautious", "balanced", "reckless"];
 const GOALS = [1000, 2000, 3000, 5000];
 const MIN_GOAL = 500;
 const MAX_GOAL = 100000;
@@ -38,6 +43,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
     return s;
   });
   const [showRules, setShowRules] = useState(false);
+  const [showRandomBots, setShowRandomBots] = useState(false);
   const [goalText, setGoalText] = useState(() => String(setup.goal));
 
   const setGoal = (g: number) => {
@@ -52,23 +58,24 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
     }));
   };
 
-  const addSeat = () => {
-    setSetup((s) =>
-      s.seats.length >= MAX_SEATS
-        ? s
-        : {
-            ...s,
-            seats: [
-              ...s.seats,
-              {
-                name: `Robo ${s.seats.filter((x) => x.isBot).length + 1}`,
-                isBot: true,
-                difficulty: "medium",
-                personality: "balanced",
-              },
-            ],
-          },
-    );
+  /** Append `count` bot seats, each built by `make` from its bot number. */
+  const addBots = (count: number, make: (botNumber: number) => SeatSetup) => {
+    setSetup((s) => {
+      const room = MAX_SEATS - s.seats.length;
+      const n = Math.min(count, room);
+      if (n <= 0) return s;
+      let botNumber = s.seats.filter((x) => x.isBot).length;
+      const added = Array.from({ length: n }, () => make(++botNumber));
+      return { ...s, seats: [...s.seats, ...added] };
+    });
+  };
+
+  const addSeat = () =>
+    addBots(1, (n) => ({ name: `Robo ${n}`, isBot: true, personality: "balanced" }));
+
+  const addRandomBots = (count: number) => {
+    addBots(count, (n) => ({ name: `Robo ${n}`, isBot: true, personality: randomPersonality() }));
+    setShowRandomBots(false);
   };
 
   const removeSeat = (index: number) => {
@@ -78,6 +85,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
   };
 
   const humanCount = setup.seats.filter((s) => !s.isBot).length;
+  const freeSeats = MAX_SEATS - setup.seats.length;
 
   return (
     <div className="setup">
@@ -89,18 +97,23 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
       <div className="setup__panel">
         <div className="setup__row setup__row--head">
           <h2>{t("setup.table", { count: setup.seats.length })}</h2>
-          <button
-            className="btn btn--ghost"
-            onClick={addSeat}
-            disabled={setup.seats.length >= MAX_SEATS}
-          >
-            {t("setup.addPlayer")}
-          </button>
+          <div className="setup__add">
+            <button className="btn btn--ghost" onClick={addSeat} disabled={freeSeats <= 0}>
+              {t("setup.addPlayer")}
+            </button>
+            <button
+              className="btn btn--ghost"
+              onClick={() => setShowRandomBots(true)}
+              disabled={freeSeats <= 0}
+            >
+              {t("setup.addRandomBots")}
+            </button>
+          </div>
         </div>
 
         <ul className="seats-config">
           {setup.seats.map((seat, i) => (
-            <li key={i} className="seats-config__row">
+            <li key={i} className="seats-config__row seats-config__row--edit">
               <span className="seats-config__num">{i + 1}</span>
               <input
                 className="seats-config__name"
@@ -123,19 +136,6 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
                   {t("common.bot")}
                 </button>
               </div>
-              <select
-                className="seats-config__diff"
-                value={seat.difficulty}
-                disabled={!seat.isBot}
-                onChange={(e) => updateSeat(i, { difficulty: e.target.value as BotDifficulty })}
-                aria-label={t("setup.aria.seatDifficulty", { n: i + 1 })}
-              >
-                {DIFFICULTIES.map((d) => (
-                  <option key={d} value={d}>
-                    {t(`diff.${d}`)}
-                  </option>
-                ))}
-              </select>
               <select
                 className="seats-config__diff"
                 value={seat.personality}
@@ -211,6 +211,27 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
       </div>
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+
+      {showRandomBots && (
+        <Modal
+          onClose={() => setShowRandomBots(false)}
+          title={t("setup.randomBotsTitle")}
+          actions={
+            <Button variant="ghost" onClick={() => setShowRandomBots(false)}>
+              {t("common.cancel")}
+            </Button>
+          }
+        >
+          <p className="setup__random-note">{t("setup.randomBotsNote", { free: freeSeats })}</p>
+          <div className="setup__random-counts">
+            {Array.from({ length: freeSeats }, (_, i) => i + 1).map((n) => (
+              <Button key={n} variant="roll" size="lg" onClick={() => addRandomBots(n)}>
+                {n}
+              </Button>
+            ))}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

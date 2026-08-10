@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { SetupScreen } from "./screens/SetupScreen.js";
 import { GameScreen } from "./screens/GameScreen.js";
@@ -11,8 +11,12 @@ import { AccountScreen } from "./screens/AccountScreen.js";
 import { UiGallery } from "./screens/UiGallery.js";
 import { DailyScreen } from "./screens/DailyScreen.js";
 import { FriendsScreen } from "./screens/FriendsScreen.js";
+import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
+import { useChallenges } from "./net/challenges.js";
+import { Toast } from "./components/Toast.js";
+import type { ToastMessage } from "./game/useGreed.js";
 import { useT } from "./i18n/i18n.js";
 
 type Mode =
@@ -29,6 +33,7 @@ type Mode =
 
 export function App() {
   const t = useT();
+  const challenges = useChallenges();
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
   // Coaching hints for a guided practice game (the "Learn to play" flow).
@@ -64,6 +69,35 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A challenge (sent or accepted) names a private room to go to: switch to
+  // online play and let OnlineScreen join it.
+  const joinCode = challenges.joinCode;
+  useEffect(() => {
+    if (joinCode) setMode("online");
+  }, [joinCode]);
+
+  // Challenge feedback ("waiting for X", "X declined", connection trouble) as a
+  // toast, since it can arrive on any screen.
+  const { notice, error: challengeError, dismissNotice, dismissError } = challenges;
+  const challengeToast = useMemo<ToastMessage | null>(() => {
+    if (challengeError) return { id: Date.now(), text: challengeError, tone: "bad" };
+    if (!notice) return null;
+    return {
+      id: Date.now(),
+      text: t(`challenge.${notice.kind}`, { name: notice.name }),
+      tone: notice.kind === "waiting" ? "good" : "bad",
+    };
+  }, [notice, challengeError, t]);
+
+  useEffect(() => {
+    if (!challengeToast) return;
+    const id = window.setTimeout(() => {
+      dismissNotice();
+      dismissError();
+    }, 3500);
+    return () => window.clearTimeout(id);
+  }, [challengeToast, dismissNotice, dismissError]);
+
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui")) {
@@ -87,102 +121,121 @@ export function App() {
     setMode("home");
   };
 
-  if (mode === "auth") {
-    return (
-      <AuthScreen
-        onDone={() => {
-          const next = authNext;
-          setResetToken(undefined);
-          setAuthNext(null);
-          setMode(next ?? "home");
-        }}
-        onBack={backHome}
-        initialMode={resetToken ? "reset" : "login"}
-        resetToken={resetToken}
-      />
-    );
-  }
-
-  if (mode === "daily") {
-    return (
-      <DailyScreen
-        onBack={() => setMode("home")}
-        onSignIn={() => {
-          setAuthNext("daily");
-          setMode("auth");
-        }}
-      />
-    );
-  }
-
-  if (mode === "friends") {
-    return (
-      <FriendsScreen
-        onBack={() => setMode("home")}
-        onSignIn={() => {
-          setAuthNext("friends");
-          setMode("auth");
-        }}
-      />
-    );
-  }
-
-  if (mode === "account") {
-    return <AccountScreen onBack={() => setMode("home")} />;
-  }
-
-  if (mode === "online") {
-    return <OnlineScreen onExit={() => setMode("home")} />;
-  }
-
-  if (mode === "stats") {
-    return <StatsScreen onBack={() => setMode("home")} />;
-  }
-
-  if (mode === "locker") {
-    return <LockerScreen onBack={() => setMode("home")} />;
-  }
-
-  if (mode === "settings") {
-    return <SettingsScreen onBack={() => setMode("home")} />;
-  }
-
-  if (mode === "local") {
-    if (!match) {
+  // Every screen renders inside the same shell so a friend's challenge can
+  // interrupt whatever the player is doing, wherever they are.
+  const screen = (() => {
+    if (mode === "auth") {
       return (
-        <SetupScreen
-          onStart={(s) => {
-            setCoach(false);
-            setMatch(s);
+        <AuthScreen
+          onDone={() => {
+            const next = authNext;
+            setResetToken(undefined);
+            setAuthNext(null);
+            setMode(next ?? "home");
           }}
-          onBack={() => setMode("home")}
+          onBack={backHome}
+          initialMode={resetToken ? "reset" : "login"}
+          resetToken={resetToken}
         />
       );
     }
-    return <GameScreen setup={match} coach={coach} onExit={leaveGame} />;
-  }
+
+    if (mode === "daily") {
+      return (
+        <DailyScreen
+          onBack={() => setMode("home")}
+          onSignIn={() => {
+            setAuthNext("daily");
+            setMode("auth");
+          }}
+        />
+      );
+    }
+
+    if (mode === "friends") {
+      return (
+        <FriendsScreen
+          onBack={() => setMode("home")}
+          onSignIn={() => {
+            setAuthNext("friends");
+            setMode("auth");
+          }}
+        />
+      );
+    }
+
+    if (mode === "account") return <AccountScreen onBack={() => setMode("home")} />;
+
+    if (mode === "online") {
+      return (
+        // Keyed by the invited room: accepting a challenge while already online
+        // remounts the screen so it leaves the old room and joins the new one.
+        <OnlineScreen
+          key={joinCode ?? "online"}
+          autoJoin={joinCode}
+          onExit={() => {
+            challenges.clearJoin();
+            setMode("home");
+          }}
+        />
+      );
+    }
+
+    if (mode === "stats") return <StatsScreen onBack={() => setMode("home")} />;
+    if (mode === "locker") return <LockerScreen onBack={() => setMode("home")} />;
+    if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
+
+    if (mode === "local") {
+      if (!match) {
+        return (
+          <SetupScreen
+            onStart={(s) => {
+              setCoach(false);
+              setMatch(s);
+            }}
+            onBack={() => setMode("home")}
+          />
+        );
+      }
+      return <GameScreen setup={match} coach={coach} onExit={leaveGame} />;
+    }
+
+    return (
+      <HomeScreen
+        flash={flash}
+        onDismissFlash={() => setFlash(null)}
+        onDaily={() => setMode("daily")}
+        onLocal={() => setMode("local")}
+        onOnline={() => setMode("online")}
+        onPractice={startPractice}
+        onFriends={() => setMode("friends")}
+        onStats={() => setMode("stats")}
+        onLocker={() => setMode("locker")}
+        onSettings={() => setMode("settings")}
+        onAuth={() => {
+          setAuthNext(null);
+          setMode("auth");
+        }}
+        onAuthForOnline={() => {
+          setAuthNext("online");
+          setMode("auth");
+        }}
+        onAccount={() => setMode("account")}
+      />
+    );
+  })();
 
   return (
-    <HomeScreen
-      flash={flash}
-      onDismissFlash={() => setFlash(null)}
-      onDaily={() => setMode("daily")}
-      onLocal={() => setMode("local")}
-      onOnline={() => setMode("online")}
-      onPractice={startPractice}
-      onFriends={() => setMode("friends")}
-      onStats={() => setMode("stats")}
-      onLocker={() => setMode("locker")}
-      onSettings={() => setMode("settings")}
-      onAuth={() => {
-        setAuthNext(null);
-        setMode("auth");
-      }}
-      onAuthForOnline={() => {
-        setAuthNext("online");
-        setMode("auth");
-      }}
-      onAccount={() => setMode("account")}
-    />
+    <>
+      {screen}
+      {challenges.invite && (
+        <ChallengeInvite
+          invite={challenges.invite}
+          onAccept={challenges.accept}
+          onDecline={challenges.decline}
+        />
+      )}
+      <Toast toast={challengeToast} />
+    </>
   );
 }

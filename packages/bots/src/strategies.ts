@@ -2,37 +2,69 @@
  * Bot decision-making. A strategy answers one question each time it is the bot's
  * turn to act: given the current game state, do I ROLL again or BANK?
  *
- *  - easy:   simple point threshold with deliberate mistakes.
- *  - medium: expected-value math from the exact roll statistics, plus correct
- *            endgame play.
- *  - hard:   expected value with positional awareness (push when behind, protect
- *            a lead), plus correct endgame play.
- *  - expert: solves the turn as a dynamic program over the exact roll model —
- *            the risk-neutral optimal continue/stop policy (it naturally chases
- *            low-risk hot-dice re-rolls) — with positional awareness and endgame.
+ * There is ONE standard skill level. Every bot solves the turn the same way — as
+ * a dynamic program over the exact roll model, i.e. the risk-neutral optimal
+ * continue/stop policy (it naturally chases low-risk hot-dice re-rolls) — with
+ * positional awareness and correct endgame play.
  *
- * A bot also has a **personality** layered on difficulty: cautious banks earlier,
- * reckless pushes further, balanced is neutral. It shifts the roll/bank threshold
- * for every expected-value bot, and is read from the player's `botPersonality`.
+ * What makes one bot feel different from another is its **personality**, read
+ * from the player's `botPersonality`:
  *
- * Endgame rule for the smart bots (medium/hard/expert): in the final round there
- * is no point banking a total that would still be behind first place — you can
- * only win by at least tying the leader, so keep rolling until you do (or bust).
- * The last seat, if it can reach the goal first, banks immediately for the win.
+ *  - cautious: banks a good turn rather than pressing it. Needs a clear edge to
+ *              keep rolling, and stops outright once a turn is worth protecting.
+ *  - balanced: plays the optimal line, no temperament either way.
+ *  - reckless: pushes every turn to a big number before it will even consider
+ *              banking, then keeps rolling on a thinner edge than the odds like.
+ *
+ * The floor is the important half. Fine-tuning the expected-value threshold
+ * barely moves how a bot behaves; over-rolling with few dice left is what
+ * actually changes a game, so that is the lever the personalities pull hardest.
+ *
+ * Endgame rule (all bots): in the final round there is no point banking a total
+ * that would still be behind first place — you can only win by at least tying
+ * the leader, so keep rolling until you do (or bust). The last seat, if it can
+ * reach the goal first, banks immediately for the win.
  */
 
 import { diceRemaining, getLegalActions } from "@greed/core";
-import type { BotDifficulty, BotPersonality, GameAction, GameState } from "@greed/core";
-import { rollModel, rollStats } from "./probabilities.js";
-
-export type RandomFn = () => number;
+import type { BotPersonality, GameAction, GameState } from "@greed/core";
+import { rollModel } from "./probabilities.js";
 
 export interface BotContext {
-  /** Randomness source (defaults to Math.random). Injectable for tests. */
-  random?: RandomFn;
   /** Overrides the player's own `botPersonality` (defaults to "balanced"). */
   personality?: BotPersonality;
 }
+
+/** How a temperament plays a turn. */
+interface Temperament {
+  /**
+   * Multiplier on the bank threshold. >1 makes a bot bank sooner (it needs a
+   * bigger edge to keep rolling); <1 makes it push its luck.
+   */
+  bias: number;
+  /** Roll on regardless of the odds until the turn is worth at least this. */
+  floor: number;
+  /** Never roll a turn already worth this much (0 = no ceiling). */
+  ceiling: number;
+}
+
+/**
+ * Measured over ~9,600 turns each (points per turn attempted in brackets, with
+ * the optimal line worth ~262): cautious banks ~275 a turn and busts 14% [237],
+ * balanced banks ~363 and busts 28% [262], reckless banks ~570 and busts 60%
+ * [230]. So the temperaments are plainly different to play against without any
+ * of them being a pushover.
+ */
+const TEMPERAMENTS: Record<BotPersonality, Temperament> = {
+  // Takes the money: a high bar to continue, and a hard stop once the turn is
+  // worth protecting.
+  cautious: { bias: 1.3, floor: 0, ceiling: 600 },
+  // The house line — pure optimal play.
+  balanced: { bias: 1, floor: 0, ceiling: 0 },
+  // Chases the big turn: rolls to a properly greedy number before it will even
+  // look at the odds, then keeps going on a thinner edge than they justify.
+  reckless: { bias: 0.75, floor: 350, ceiling: 0 },
+};
 
 function othersMaxTotal(state: GameState, playerIndex: number): number {
   let max = 0;
@@ -40,27 +72,6 @@ function othersMaxTotal(state: GameState, playerIndex: number): number {
     if (i !== playerIndex && p.total > max) max = p.total;
   });
   return max;
-}
-
-/**
- * How strongly a personality tilts toward banking. >1 makes a bot bank sooner
- * (needs a bigger edge to keep rolling); <1 makes it push its luck.
- */
-function personalityBias(p: BotPersonality): number {
-  switch (p) {
-    case "cautious":
-      return 1.3;
-    case "reckless":
-      return 0.72;
-    default:
-      return 1;
-  }
-}
-
-/** EV of rolling vs. banking: roll while expected gain outweighs expected loss. */
-function rollIsPositiveEV(turnScore: number, k: number, greed = 1): boolean {
-  const { bustProb: p, expectedGainIfScored: g } = rollStats(k);
-  return g * (1 - p) > p * turnScore * greed;
 }
 
 /**
@@ -97,8 +108,8 @@ function expectedValueOfRolling(score: number, k: number): number {
 }
 
 /**
- * Guaranteed-win and final-round logic shared by the smart bots. Returns an
- * action, or null when normal play should decide.
+ * Guaranteed-win and final-round logic. Returns an action, or null when normal
+ * play should decide.
  */
 function endgameAwareDecision(state: GameState): GameAction | null {
   const turn = state.turn;
@@ -120,12 +131,7 @@ function endgameAwareDecision(state: GameState): GameAction | null {
   return null;
 }
 
-export function decide(
-  state: GameState,
-  difficulty: BotDifficulty,
-  ctx: BotContext = {},
-): GameAction {
-  const random = ctx.random ?? Math.random;
+export function decide(state: GameState, ctx: BotContext = {}): GameAction {
   const turn = state.turn;
   const legal = getLegalActions(state);
 
@@ -133,69 +139,24 @@ export function decide(
   if (!legal.canBank) return { type: "ROLL" };
   if (!legal.canRoll) return { type: "BANK" };
 
-  const k = diceRemaining(turn);
-
-  // Smart bots apply guaranteed-win / final-round logic first.
-  if (difficulty !== "easy") {
-    const smart = endgameAwareDecision(state);
-    if (smart) return smart;
-  }
+  // Guaranteed-win / final-round logic outranks temperament: no personality is
+  // worth losing a game you had already won.
+  const smart = endgameAwareDecision(state);
+  if (smart) return smart;
 
   const personality =
     ctx.personality ?? state.players[turn.playerIndex].botPersonality ?? "balanced";
-  const bias = personalityBias(personality);
+  const { bias, floor, ceiling } = TEMPERAMENTS[personality];
 
-  switch (difficulty) {
-    case "easy":
-      return decideEasy(turn.turnScore, k, random);
-    case "medium":
-      return decideMedium(turn.turnScore, k, bias);
-    case "hard":
-      return decideHardNormal(state, k, bias);
-    case "expert":
-      return decideExpert(state, k, bias);
-    default:
-      return { type: "BANK" };
-  }
-}
+  if (turn.turnScore < floor) return { type: "ROLL" };
+  if (ceiling > 0 && turn.turnScore >= ceiling) return { type: "BANK" };
 
-/**
- * Medium plays the expected-value odds, but with a common human habit: it pushes
- * for a decent turn (~300) before it starts weighing the risk of busting. That
- * mild over-greed is what a disciplined hard/expert bot punishes.
- */
-function decideMedium(turnScore: number, k: number, bias: number): GameAction {
-  const floor = Math.round(300 / bias); // cautious lowers it, reckless raises it
-  if (turnScore < floor) return { type: "ROLL" };
-  return rollIsPositiveEV(turnScore, k, bias) ? { type: "ROLL" } : { type: "BANK" };
-}
-
-function decideEasy(turnScore: number, k: number, random: RandomFn): GameAction {
-  // Baseline: keep going until ~300, then stop. With plenty of dice, push on.
-  let wantRoll = turnScore < 300 || k >= 4;
-  // Deliberate mistakes ~20% of the time to feel beatable.
-  if (random() < 0.2) wantRoll = !wantRoll;
-  return wantRoll ? { type: "ROLL" } : { type: "BANK" };
-}
-
-function decideHardNormal(state: GameState, k: number, bias: number): GameAction {
-  const turn = state.turn;
   const player = state.players[turn.playerIndex];
   const leader = Math.max(...state.players.map((p) => p.total));
   const behind = player.total < leader;
-  // Push harder when trailing, protect points when ahead; then apply personality.
-  const greed = (behind ? 0.8 : 1.2) * bias;
-  return rollIsPositiveEV(turn.turnScore, k, greed) ? { type: "ROLL" } : { type: "BANK" };
-}
-
-function decideExpert(state: GameState, k: number, bias: number): GameAction {
-  const turn = state.turn;
-  const player = state.players[turn.playerIndex];
-  const leader = Math.max(...state.players.map((p) => p.total));
-  const behind = player.total < leader;
-  // Mild positional tilt on top of the optimal policy, then personality.
+  // Push harder when trailing, protect points when ahead, then apply temperament.
   const threshold = turn.turnScore * (behind ? 0.85 : 1.15) * bias;
-  return expectedValueOfRolling(turn.turnScore, k) > threshold
+  return expectedValueOfRolling(turn.turnScore, diceRemaining(turn)) > threshold
     ? { type: "ROLL" }
     : { type: "BANK" };
 }

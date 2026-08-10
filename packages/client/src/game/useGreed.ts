@@ -125,7 +125,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
       if (s.phase === "game-over") return;
       const cur = s.players[s.turn.playerIndex];
       if (!cur.isBot) return;
-      const action = decide(s, cur.botDifficulty ?? "medium");
+      const action = decide(s, { personality: cur.botPersonality });
       if (action.type === "ROLL") roll();
       else bank();
     }, BOT_THINK_MS);

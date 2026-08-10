@@ -6,7 +6,7 @@
  */
 
 import { createGame, makeSeed, cleanPlayerName, GOAL_DEFAULT } from "@greed/core";
-import type { BotDifficulty, BotPersonality, GameState, PlayerConfig } from "@greed/core";
+import type { BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { LobbySeat, LobbyView } from "@greed/protocol";
 import { randomBytes, randomUUID } from "node:crypto";
 import type { WebSocket } from "ws";
@@ -15,7 +15,7 @@ export interface Seat {
   id: string;
   name: string;
   isBot: boolean;
-  difficulty?: BotDifficulty;
+  /** Bots all play at one standard level; the personality is what differs. */
   personality?: BotPersonality;
   ready: boolean;
   isHost: boolean;
@@ -136,16 +136,11 @@ export function makeHumanSeat(
   };
 }
 
-export function makeBotSeat(
-  difficulty: BotDifficulty,
-  index: number,
-  personality: BotPersonality = "balanced",
-): Seat {
+export function makeBotSeat(index: number, personality: BotPersonality = "balanced"): Seat {
   return {
     id: `bot_${randomUUID().slice(0, 8)}`,
     name: `Bot ${index}`,
     isBot: true,
-    difficulty,
     personality,
     ready: true,
     isHost: false,
@@ -166,7 +161,6 @@ export function lobbyView(room: Room): LobbyView {
     id: s.id,
     name: s.name,
     isBot: s.isBot,
-    difficulty: s.difficulty,
     personality: s.personality,
     ready: s.ready,
     connected: s.isBot || s.ws !== null,
@@ -187,7 +181,6 @@ export function startGame(room: Room, order?: number[]): GameState {
     id: s.id,
     name: s.name,
     isBot: s.isBot,
-    botDifficulty: s.isBot ? s.difficulty : undefined,
     botPersonality: s.isBot ? s.personality : undefined,
   }));
   const seed = makeSeed(Date.now() ^ Math.floor(Math.random() * 2 ** 31));

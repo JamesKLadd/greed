@@ -37,6 +37,20 @@ export function Controls({ state, legal, isRolling, canAct, onRoll, onBank }: Co
         ? t("controls.rollAll5")
         : t("controls.rollAgain");
 
+  // Not your turn: there is nothing here you can use, and the meters describe
+  // someone else's turn — so the whole panel collapses to the one line that
+  // says who you're waiting on. (The turn's running total is on the table, over
+  // the dice, where everyone can watch it.)
+  if (!canAct) {
+    return (
+      <div className="controls controls--waiting">
+        <div className="controls__status" aria-live="polite">
+          {status}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="controls">
       <div className="controls__status" aria-live="polite">

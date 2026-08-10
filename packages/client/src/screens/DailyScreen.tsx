@@ -1,9 +1,10 @@
 /**
  * The daily challenge: one seeded run a day, ten turns, highest total.
  *
- * Everyone gets the same starting dice, so the board measures nerve rather than
- * luck. The run plays locally; on completion the recorded MOVES are submitted
- * and the server replays them to derive the score (see net/daily.ts).
+ * Your dice are yours: the seed comes from the day AND your account, so nobody
+ * can play a route somebody else worked out. The run plays locally; on
+ * completion the recorded MOVES are submitted and the server replays them
+ * against your seed to derive the score (see net/daily.ts).
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -24,7 +25,7 @@ interface DailyScreenProps {
 
 export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const t = useT();
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   const [day] = useState(() => dailyKey());
   const [status, setStatus] = useState<DailyStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,9 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const [playing, setPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const run = useDailyRun(day);
+  // The account id seeds the dice, so this must be the same id the server
+  // replays the run with.
+  const run = useDailyRun(day, user?.id ?? "");
   useGameSounds(run.state);
 
   const load = useCallback(async () => {

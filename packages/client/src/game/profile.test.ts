@@ -30,8 +30,8 @@ function fakeState(): GameState {
     config: { goal: 2000 },
     players: [
       { id: "you", name: "You", isBot: false, total: 2100 },
-      { id: "b1", name: "Bot 1", isBot: true, botDifficulty: "medium", total: 900 },
-      { id: "b2", name: "Bot 2", isBot: true, botDifficulty: "expert", total: 1500 },
+      { id: "b1", name: "Bot 1", isBot: true, botPersonality: "cautious", total: 900 },
+      { id: "b2", name: "Bot 2", isBot: true, botPersonality: "reckless", total: 1500 },
     ],
     log: [
       { type: "bank", playerId: "you", gained: 300, total: 300 },
@@ -55,7 +55,7 @@ describe("summarize", () => {
     expect(s.bestTurn).toBe(1200);
     expect(s.bankedPoints).toBe(2100);
     expect(s.opponents).toBe(2);
-    expect(s.hardestOpponent).toBe("expert"); // hardest of medium/expert
+    expect(s.boldestOpponent).toBe("reckless"); // boldest of cautious/reckless
   });
 
   it("marks a loss when someone else won", () => {
@@ -102,11 +102,11 @@ describe("recordGame + achievements", () => {
     expect(loss.profile.currentStreak).toBe(0);
   });
 
-  it("unlocks Giant Slayer only when beating an expert", () => {
-    const notExpert = recordGame(summaryOf({ won: true, hardestOpponent: "hard" }));
-    expect(notExpert.unlocked.map((a) => a.id)).not.toContain("giant-slayer");
-    const expert = recordGame(summaryOf({ won: true, hardestOpponent: "expert" }));
-    expect(expert.unlocked.map((a) => a.id)).toContain("giant-slayer");
+  it("unlocks Giant Slayer only when beating a reckless bot", () => {
+    const tame = recordGame(summaryOf({ won: true, boldestOpponent: "balanced" }));
+    expect(tame.unlocked.map((a) => a.id)).not.toContain("giant-slayer");
+    const reckless = recordGame(summaryOf({ won: true, boldestOpponent: "reckless" }));
+    expect(reckless.unlocked.map((a) => a.id)).toContain("giant-slayer");
   });
 
   it("does not award the same achievement twice", () => {

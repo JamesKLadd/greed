@@ -854,6 +854,27 @@
   margin-top: 2px;
 }
 
+/* ---------- Adding players / random bots (setup) ---------- */
+.setup__add {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.setup__random-note {
+  color: var(--text-dim);
+  margin: 0 0 14px;
+}
+/* Count buttons, big enough to be a comfortable tap target on a phone. */
+.setup__random-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  gap: 8px;
+}
+.setup__random-counts .btn {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Custom goal input (setup) ---------- */
 .setup__goal-custom {
   display: inline-flex;
@@ -981,6 +1002,67 @@
     left: 8px;
     right: 8px;
     min-width: 0;
+  }
+}
+
+/* ---------- Mobile: setup rows ---------- */
+@media (max-width: 620px) {
+  /* Label + four goal presets + a custom field do not fit a phone on one line:
+     the last preset (3000) was being pushed off the edge of the card. Let the
+     row wrap and give the presets the full width, split evenly, so every goal
+     is a proper tap target. */
+  .setup__row {
+    flex-wrap: wrap;
+  }
+  .setup__row .segmented {
+    flex: 1 1 100%;
+    display: flex;
+  }
+  .setup__row .segmented__btn {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+  }
+  .setup__goal-custom {
+    flex: 1 1 100%;
+  }
+  /* Both add-buttons share the line under the heading rather than stacking. */
+  .setup__add {
+    flex: 1 1 100%;
+  }
+  .setup__add .btn {
+    flex: 1;
+  }
+  .setup__goal-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+  /* Setup's seat rows carry a name field, a human/bot switch and a temperament
+     dropdown — too much for one phone-width line, so the two controls drop to a
+     second line and share it. (Lobby rows are a different shape; hence the
+     --edit scope.) */
+  .seats-config__row--edit {
+    grid-template-columns: 22px 1fr 1fr 30px;
+    grid-template-areas:
+      "num  name name remove"
+      "kind kind pers pers";
+    row-gap: 6px;
+  }
+  .seats-config__row--edit .seats-config__num {
+    grid-area: num;
+  }
+  .seats-config__row--edit .seats-config__name {
+    grid-area: name;
+  }
+  .seats-config__row--edit .segmented {
+    grid-area: kind;
+  }
+  .seats-config__row--edit .seats-config__diff {
+    grid-area: pers;
+  }
+  .seats-config__row--edit .seats-config__remove {
+    grid-area: remove;
   }
 }
 

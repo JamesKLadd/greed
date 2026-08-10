@@ -13,6 +13,8 @@ import { decode, encode, isEmoteId } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
 import { verifySession } from "./auth.js";
 import { markOffline, markOnline } from "./presence.js";
+import { requireFriend } from "./social.js";
+import { randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
   canStart,
@@ -46,6 +48,29 @@ export interface GreedServerOptions {
 /** Minimum gap between one seat's emotes. */
 const EMOTE_COOLDOWN_MS = 1500;
 
+/** How long a challenge (and the empty room held for it) stays open. */
+const CHALLENGE_TTL_MS = 120_000;
+
+/** Minimum gap between one player's challenges, so an invite can't be spammed. */
+const CHALLENGE_COOLDOWN_MS = 5000;
+
+/** A pending friend challenge: a private room held open for two players. */
+interface Challenge {
+  id: string;
+  code: string;
+  fromUserId: string;
+  fromName: string;
+  toUserId: string;
+  timer: NodeJS.Timeout;
+}
+
+/** A notification-only socket: a signed-in player with no seat. */
+interface Notifier {
+  userId: string;
+  username: string;
+  lastChallengeAt?: number;
+}
+
 const DEFAULT_OPTIONS: GreedServerOptions = {
   interTurnMs: 1500,
   botThinkMs: 800,
@@ -60,6 +85,12 @@ export class GreedServer {
   private conns = new Map<WebSocket, { room: Room; seat: Seat }>();
   /** Spectator sockets → the room they're watching (they hold no seat). */
   private spectators = new Map<WebSocket, Room>();
+  /** Notification sockets → the signed-in player behind them (no seat, no room). */
+  private notifiers = new Map<WebSocket, Notifier>();
+  /** Reverse index of the above: a player may have several tabs open. */
+  private byUser = new Map<string, Set<WebSocket>>();
+  /** Open challenges, keyed by id. */
+  private challenges = new Map<string, Challenge>();
   private readonly cfg: GreedServerOptions;
 
   constructor(wss: WebSocketServer, options: Partial<GreedServerOptions> = {}) {
@@ -177,9 +208,123 @@ export class GreedServer {
         return this.onSpectate(ws, msg.code);
       case "reconnect":
         return this.onReconnect(ws, msg.token);
+      case "hello":
+        return this.onHello(ws, msg.auth);
+      case "challenge":
+        return this.onChallenge(ws, msg.username);
+      case "challenge-decline":
+        return this.onChallengeDecline(ws, msg.id);
       default:
         return this.handleInRoom(ws, msg);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Notifications: presence and friend challenges
+  // -------------------------------------------------------------------------
+
+  /**
+   * Register a notification-only socket. This is what makes "online" in the
+   * friends list mean "has the game open" rather than "is sitting in a room",
+   * and it is the channel a challenge arrives on.
+   */
+  private onHello(ws: WebSocket, auth: string): void {
+    if (this.notifiers.has(ws)) return;
+    verifySession(auth)
+      .then((claims) => {
+        if (!claims) return this.send(ws, { type: "error", message: "Please log in again." });
+        // The socket may have closed while the token was being verified.
+        if (ws.readyState !== ws.OPEN) return;
+        this.notifiers.set(ws, { userId: claims.sub, username: claims.username });
+        let set = this.byUser.get(claims.sub);
+        if (!set) this.byUser.set(claims.sub, (set = new Set()));
+        set.add(ws);
+        markOnline(claims.sub);
+        this.send(ws, { type: "hello-ok", username: claims.username });
+      })
+      .catch((err) => this.send(ws, { type: "error", message: (err as Error).message }));
+  }
+
+  /** Send a message to every socket a player currently has open. */
+  private sendToUser(userId: string, msg: ServerMessage): number {
+    const set = this.byUser.get(userId);
+    if (!set || set.size === 0) return 0;
+    for (const ws of set) this.send(ws, msg);
+    return set.size;
+  }
+
+  /**
+   * Invite a friend to a private room. The room is created up front and both
+   * players simply join it by code, so accepting is nothing more than a join —
+   * no separate handshake to get out of step with.
+   */
+  private onChallenge(ws: WebSocket, username: string): void {
+    const me = this.notifiers.get(ws);
+    if (!me) return this.send(ws, { type: "error", message: "Please log in again." });
+
+    const now = Date.now();
+    if (me.lastChallengeAt && now - me.lastChallengeAt < CHALLENGE_COOLDOWN_MS) {
+      return this.send(ws, { type: "error", message: "Give them a moment to answer." });
+    }
+
+    requireFriend(me.userId, username)
+      .then((friend) => {
+        if (!this.byUser.get(friend.id)?.size) {
+          return this.send(ws, {
+            type: "error",
+            message: `${friend.username} isn't online right now.`,
+          });
+        }
+        me.lastChallengeAt = Date.now();
+
+        const room = this.store.create(false, GOAL_DEFAULT);
+        const id = `c_${randomUUID().slice(0, 8)}`;
+        // Nobody may ever join, so the room can't be left to leak: drop both it
+        // and the invite once the offer goes stale. Unref'd so a pending invite
+        // never holds the process open.
+        const timer = setTimeout(() => this.expireChallenge(id), CHALLENGE_TTL_MS);
+        timer.unref?.();
+        const challenge: Challenge = {
+          id,
+          code: room.code,
+          fromUserId: me.userId,
+          fromName: me.username,
+          toUserId: friend.id,
+          timer,
+        };
+        this.challenges.set(id, challenge);
+
+        this.sendToUser(friend.id, {
+          type: "challenge-invite",
+          id,
+          from: me.username,
+          code: room.code,
+        });
+        this.send(ws, { type: "challenge-sent", id, to: friend.username, code: room.code });
+      })
+      .catch((err) => this.send(ws, { type: "error", message: (err as Error).message }));
+  }
+
+  private onChallengeDecline(ws: WebSocket, id: string): void {
+    const me = this.notifiers.get(ws);
+    const challenge = this.challenges.get(id);
+    if (!me || !challenge || challenge.toUserId !== me.userId) return;
+    this.sendToUser(challenge.fromUserId, {
+      type: "challenge-declined",
+      id,
+      from: me.username,
+    });
+    this.expireChallenge(id);
+  }
+
+  /** Drop an invite, and the room held for it if nobody ever sat down. */
+  private expireChallenge(id: string): void {
+    const challenge = this.challenges.get(id);
+    if (!challenge) return;
+    clearTimeout(challenge.timer);
+    this.challenges.delete(id);
+    const room = this.store.get(challenge.code);
+    if (room && room.seats.length === 0) this.store.delete(room);
   }
 
   /**
@@ -221,9 +366,29 @@ export class GreedServer {
     if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
     if (room.phase !== "lobby")
       return this.send(ws, { type: "error", message: "That game has already started." });
+
+    // A room held open for a challenge has no seats yet: whoever arrives first
+    // (normally the challenger) hosts it.
+    let isHost = room.seats.length === 0;
+
+    // One account, one seat. A second join from the same player — a double-tap,
+    // a re-opened tab — takes their seat over instead of sitting them at the
+    // table twice.
+    if (userId) {
+      const twin = room.seats.find((s) => s.userId === userId);
+      if (twin) {
+        isHost = isHost || twin.isHost;
+        room.seats = room.seats.filter((s) => s.id !== twin.id);
+        if (twin.ws && twin.ws !== ws) {
+          this.send(twin.ws, { type: "left" });
+          this.detach(twin.ws, twin);
+        }
+      }
+    }
+
     if (room.seats.length >= MAX_SEATS)
       return this.send(ws, { type: "error", message: "That room is full." });
-    const seat = makeHumanSeat(name, false, dice, userId);
+    const seat = makeHumanSeat(name, isHost, dice, userId);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
@@ -291,7 +456,7 @@ export class GreedServer {
         if (!isHost || room.phase !== "lobby") return;
         if (room.seats.length >= MAX_SEATS) return;
         const botCount = room.seats.filter((s) => s.isBot).length + 1;
-        room.seats.push(makeBotSeat(msg.difficulty, botCount, msg.personality));
+        room.seats.push(makeBotSeat(botCount, msg.personality));
         return this.broadcastLobby(room);
       }
 
@@ -421,11 +586,12 @@ export class GreedServer {
     const disconnected = !isBot && seat?.ws == null;
 
     if (isBot || disconnected) {
-      const difficulty = seat?.difficulty ?? "medium";
+      // A dropped human is played by a standard, level-headed bot.
+      const personality = seat?.isBot ? seat.personality : "balanced";
       const delay = disconnected ? this.cfg.disconnectAutoplayMs : this.cfg.botThinkMs;
       this.schedule(room, delay, () => {
         if (!room.game) return;
-        this.applyAndBroadcast(room, decide(room.game, difficulty));
+        this.applyAndBroadcast(room, decide(room.game, { personality }));
       });
       return;
     }
@@ -496,7 +662,21 @@ export class GreedServer {
     room.spectators.delete(ws);
   }
 
+  /** Forget a notification socket and release its share of the presence count. */
+  private dropNotifier(ws: WebSocket): void {
+    const me = this.notifiers.get(ws);
+    if (!me) return;
+    this.notifiers.delete(ws);
+    const set = this.byUser.get(me.userId);
+    if (set) {
+      set.delete(ws);
+      if (set.size === 0) this.byUser.delete(me.userId);
+    }
+    markOffline(me.userId);
+  }
+
   private onClose(ws: WebSocket): void {
+    if (this.notifiers.has(ws)) return this.dropNotifier(ws);
     if (this.spectators.has(ws)) return this.dropSpectator(ws);
     const conn = this.conns.get(ws);
     if (!conn) return;

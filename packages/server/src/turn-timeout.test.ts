@@ -87,7 +87,7 @@ describe("turn timeout", () => {
     // High goal so the bot can't win before the idler is kicked.
     idler.send({ type: "create-room", name: "Idler", goal: 50000 });
     await idler.waitFor((m) => m.type === "welcome");
-    idler.send({ type: "add-bot", difficulty: "easy" });
+    idler.send({ type: "add-bot" });
     await idler.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
 
     idler.send({ type: "start-game" });
@@ -109,7 +109,7 @@ describe("turn timeout", () => {
     host.send({ type: "create-room", name: "Active", goal: 50000 });
     const welcome = await host.waitFor((m) => m.type === "welcome");
     const youId = (welcome as Extract<ServerMessage, { type: "welcome" }>).youId;
-    host.send({ type: "add-bot", difficulty: "easy" });
+    host.send({ type: "add-bot" });
     await host.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
 
     // React to every broadcast: roll as soon as it's our turn (before the idle

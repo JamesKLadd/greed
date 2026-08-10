@@ -14,9 +14,11 @@ export const DICE_COUNT = 5;
 /** Default banked-total needed to trigger the endgame. */
 export const GOAL_DEFAULT = 3000;
 
-export type BotDifficulty = "easy" | "medium" | "hard" | "expert";
-
-/** A bot's risk temperament, layered on top of its difficulty. */
+/**
+ * A bot's risk temperament — the ONE thing that distinguishes one bot from
+ * another. Every bot plays at the same standard skill level (there is no
+ * difficulty setting); what changes is how far it pushes a turn before banking.
+ */
 export type BotPersonality = "cautious" | "balanced" | "reckless";
 
 /** How a chunk of a roll scored, for UI display / logs. */
@@ -46,7 +48,6 @@ export interface PlayerConfig {
   id: string;
   name: string;
   isBot: boolean;
-  botDifficulty?: BotDifficulty;
   /** Optional risk temperament for a bot (defaults to "balanced"). */
   botPersonality?: BotPersonality;
 }

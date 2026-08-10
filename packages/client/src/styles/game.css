@@ -348,6 +348,51 @@
   box-shadow: 0 0 10px var(--info);
 }
 
+/* What the turn is worth so far, printed over the dice carrying it. The slot
+   keeps its height whether or not there's a number in it, so the tray doesn't
+   jump the instant a roll scores. */
+.felt__pot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin: -8px 0 -10px;
+}
+/* Printed on card stock like the whose-turn chip, and for the same reason: the
+   ten mats run from dark green to pale sand, so no single ink colour is legible
+   on all of them. On stock it reads everywhere. */
+.felt__pot-value {
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--good);
+  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
+  border: 1px solid var(--paper-edge-deep);
+  border-radius: var(--r-pill);
+  padding: 2px 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    var(--e-rest);
+  animation: pot-pop 0.28s ease-out;
+}
+@keyframes pot-pop {
+  from {
+    transform: scale(0.86);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Not your turn: the controls collapse to the one line that says who you're
+   waiting on, so the table itself is what's on screen. */
+.controls--waiting {
+  min-height: 44px;
+  justify-content: center;
+}
+
 /* Narrow screens: drop the oval, stack the dice above a wrapped seat list. */
 @media (max-width: 760px) {
   .felt {

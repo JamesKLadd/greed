@@ -1,10 +1,9 @@
 import { useState } from "react";
-import type { BotDifficulty, BotPersonality } from "@greed/core";
+import type { BotPersonality } from "@greed/core";
 import type { OnlineController } from "../net/useOnlineGame.js";
+import { PERSONALITIES } from "../game/setup.js";
 import { useT } from "../i18n/i18n.js";
 
-const DIFFICULTIES: BotDifficulty[] = ["easy", "medium", "hard", "expert"];
-const PERSONALITIES: BotPersonality[] = ["cautious", "balanced", "reckless"];
 const GOALS = [1000, 2000, 3000, 5000];
 
 export function LobbyScreen({ net }: { net: OnlineController }) {
@@ -12,7 +11,6 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
   const lobby = net.lobby!;
   const me = lobby.seats.find((s) => s.id === net.youId);
   const isHost = me?.isHost ?? false;
-  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
   const [botPers, setBotPers] = useState<BotPersonality>("balanced");
 
   return (
@@ -49,18 +47,6 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
             <div className="segmented">
               <select
                 className="seats-config__diff"
-                value={botDiff}
-                onChange={(e) => setBotDiff(e.target.value as BotDifficulty)}
-                aria-label={t("lobby.aria.botDifficulty")}
-              >
-                {DIFFICULTIES.map((d) => (
-                  <option key={d} value={d}>
-                    {t(`diff.${d}`)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="seats-config__diff"
                 value={botPers}
                 onChange={(e) => setBotPers(e.target.value as BotPersonality)}
                 aria-label={t("lobby.aria.botPersonality")}
@@ -71,7 +57,7 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
                   </option>
                 ))}
               </select>
-              <button className="btn btn--ghost" onClick={() => net.addBot(botDiff, botPers)}>
+              <button className="btn btn--ghost" onClick={() => net.addBot(botPers)}>
                 {t("lobby.addBot")}
               </button>
             </div>
@@ -87,10 +73,7 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
                 {s.id === net.youId && ` ${t("common.youParen")}`}
                 {s.isHost && <span className="seat__tag">{t("lobby.host")}</span>}
                 {s.isBot && (
-                  <span className="seat__tag">{t(`diff.${s.difficulty ?? "easy"}`)}</span>
-                )}
-                {s.isBot && s.personality && s.personality !== "balanced" && (
-                  <span className="seat__tag">{t(`pers.${s.personality}`)}</span>
+                  <span className="seat__tag">{t(`pers.${s.personality ?? "balanced"}`)}</span>
                 )}
               </span>
               <span className={`lobby-seat__ready${s.ready ? " is-ready" : ""}`}>

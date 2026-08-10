@@ -6,6 +6,10 @@
  * the score itself. A client that posts a made-up number gets whatever its moves
  * are actually worth. The moves are stored too, so any run can be re-verified
  * later without asking the player for anything.
+ *
+ * The replay uses the id we authenticated as the seed key, so a run is scored
+ * against the dice that player was dealt — nobody can submit somebody else's
+ * moves, or shop for a friendlier seed.
  */
 
 import { dailyKey, scoreDailyRun, type DailyMove, type DailyResult } from "@greed/core";
@@ -60,7 +64,7 @@ export async function submitDailyRun(
   day = dailyKey(),
 ): Promise<{ result: DailyResult; alreadyPlayed: boolean }> {
   const moves = parseMoves(rawMoves);
-  const result = scoreDailyRun(day, moves);
+  const result = scoreDailyRun(day, moves, userId);
 
   const { rows } = await query<{ score: number }>(
     `INSERT INTO daily_runs (user_id, day, score, turns, banks, busts, hot_dice, best_turn, moves)

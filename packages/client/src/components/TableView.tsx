@@ -135,8 +135,12 @@ export function TableView({
                     {turnScore > 0 && <span className="pseat__turn"> +{turnScore}</span>}
                   </span>
                   {p.isBot && (
+                    // Every bot plays at the same standard level, so the badge
+                    // shows the one thing that actually differs: its nerve.
                     <span className="pseat__badges">
-                      <span className="pseat__tag">{t(`diff.${p.botDifficulty ?? "easy"}`)}</span>
+                      <span className="pseat__tag">
+                        {t(`pers.${p.botPersonality ?? "balanced"}`)}
+                      </span>
                       {p.botPersonality === "reckless" && (
                         <span className="pseat__pers" title={t("pers.reckless")}>
                           🔥
@@ -162,6 +166,17 @@ export function TableView({
           <div className={`felt__whose${current.isBot ? " felt__whose--bot" : ""}`}>
             <span className="table__dot" />
             {whose}
+          </div>
+          {/* What the turn is worth right now, over the dice it is riding on —
+              the number you are deciding whether to bank or gamble. Bust zeroes
+              the turn score, so this simply disappears when the run ends. */}
+          <div className="felt__pot" aria-live="polite">
+            {state.turn.turnScore > 0 && state.phase !== "game-over" && (
+              // Keyed by the value so each gain replays the little pop.
+              <span key={state.turn.turnScore} className="felt__pot-value">
+                +{state.turn.turnScore}
+              </span>
+            )}
           </div>
           <DiceTray turn={state.turn} rollingIndices={rollingIndices} isRolling={isRolling} />
         </div>

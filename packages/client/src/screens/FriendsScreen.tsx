@@ -1,8 +1,11 @@
 /**
- * Friends: add by username, answer requests, see who's online.
+ * Friends: add by username, answer requests, see who's online, challenge them
+ * to a game.
  *
  * Adding someone is a request they must accept, so nobody ends up on a stranger's
- * list without agreeing to it.
+ * list without agreeing to it. A challenge only reaches a friend who currently
+ * has the game open (the green dot), because it is delivered over their live
+ * notification socket rather than stored and pushed at them later.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -17,6 +20,8 @@ import {
   type FriendSummary,
   type FriendsView,
 } from "../net/social.js";
+import { useChallenges } from "../net/challenges.js";
+import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
@@ -28,6 +33,7 @@ interface FriendsScreenProps {
 export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   const t = useT();
   const { status: authStatus } = useAuth();
+  const challenges = useChallenges();
   const [view, setView] = useState<FriendsView | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -168,15 +174,30 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
         {view?.friends.map((f) =>
           row(
             f,
-            <Button
-              size="md"
-              variant="ghost"
-              disabled={busy}
-              title={t("social.remove")}
-              onClick={() => void run(() => removeFriend(f.username))}
-            >
-              <Icon name="minus" />
-            </Button>,
+            <>
+              {ONLINE_ENABLED && (
+                // Only a friend who has the game open can be reached, so the
+                // button is offered exactly when it can actually work.
+                <Button
+                  size="md"
+                  variant="roll"
+                  disabled={busy || !f.online || !challenges.connected}
+                  title={f.online ? t("challenge.send") : t("challenge.offline")}
+                  onClick={() => challenges.challenge(f.username)}
+                >
+                  {t("challenge.play")}
+                </Button>
+              )}
+              <Button
+                size="md"
+                variant="ghost"
+                disabled={busy}
+                title={t("social.remove")}
+                onClick={() => void run(() => removeFriend(f.username))}
+              >
+                <Icon name="minus" />
+              </Button>
+            </>,
           ),
         )}
       </ul>

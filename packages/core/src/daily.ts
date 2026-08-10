@@ -9,10 +9,13 @@
  * score can't survive it, and the only way to submit a bigger number is to
  * actually play better.
  *
- * Note that two players making different choices will see different dice after
- * the first divergence, since the number of dice thrown determines how much of
- * the seeded stream is consumed. That's the same bargain as any seeded daily
- * run: the starting conditions are identical, the outcomes are yours.
+ * The seed is derived from the day AND the player, so no two people play the
+ * same dice. A single shared seed would eventually be solved: once the day's
+ * throws are known, the best line through them is a fixed sequence anyone can
+ * copy, and the board would rank who read the spoiler rather than who played
+ * well. Per-player dice come from the same distribution — everyone faces ten
+ * turns of the same odds — so scores stay comparable while the route to a good
+ * one has to be found live, every time.
  */
 
 import { applyAction, createSoloGame, getLegalActions } from "./game.js";
@@ -51,24 +54,31 @@ export function dailyKey(date: Date = new Date()): string {
 }
 
 /**
- * Seed for a given day. Derived from the date alone, so every client and the
- * server compute the same value with nothing to store or distribute.
+ * Seed for one player's run on a given day. Derived from the day and a stable
+ * per-player key (the account id), so client and server compute the same value
+ * with nothing to store or distribute — but two players never share dice.
+ *
+ * `playerKey` defaults to empty, which reproduces the old day-only seed. Pass
+ * the real key everywhere a run is played or replayed; the server uses the id
+ * it authenticated, so a client cannot shop for a friendlier seed.
  */
-export function dailySeed(day: string): number {
-  // FNV-1a over the day string, which spreads adjacent days far apart.
+export function dailySeed(day: string, playerKey = ""): number {
+  // FNV-1a over "day|player", which spreads adjacent days (and neighbouring
+  // ids) far apart.
+  const input = `${day}|${playerKey}`;
   let h = 0x811c9dc5;
-  for (let i = 0; i < day.length; i++) {
-    h ^= day.charCodeAt(i);
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
   return h >>> 0;
 }
 
-/** A fresh daily run for the given day. */
-export function createDailyGame(day: string): GameState {
+/** A fresh daily run for the given day and player. */
+export function createDailyGame(day: string, playerKey = ""): GameState {
   return createSoloGame(
     { id: DAILY_PLAYER_ID, name: "You", isBot: false },
-    { seed: dailySeed(day), goal: DAILY_GOAL },
+    { seed: dailySeed(day, playerKey), goal: DAILY_GOAL },
   );
 }
 
@@ -85,8 +95,8 @@ export function dailyComplete(state: GameState, turnsTaken: number): boolean {
  * couldn't have been made is exactly the behaviour that makes a forged
  * submission score no better than an honest one.
  */
-export function scoreDailyRun(day: string, moves: DailyMove[]): DailyResult {
-  let state = createDailyGame(day);
+export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): DailyResult {
+  let state = createDailyGame(day, playerKey);
   let turns = 0;
   let banks = 0;
   let busts = 0;

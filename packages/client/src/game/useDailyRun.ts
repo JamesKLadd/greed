@@ -18,6 +18,10 @@ import {
  * needs to be trusted. Turn resolution mirrors the main game: a finished turn
  * stays visible until an explicit advance, so the player sees the roll that
  * busted them.
+ *
+ * `playerKey` (the account id) seeds the dice along with the day, so each player
+ * gets their own throws. It MUST match what the server replays with, which is
+ * the id it authenticated — pass the signed-in user's id and nothing else.
  */
 
 const RESOLVE_MS = 1400;
@@ -38,13 +42,29 @@ export interface DailyRunController {
   bank: () => void;
 }
 
-export function useDailyRun(day: string = dailyKey()): DailyRunController {
-  const [state, setState] = useState<GameState>(() => createDailyGame(day));
+export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunController {
+  const [state, setState] = useState<GameState>(() => createDailyGame(day, playerKey));
   const [turn, setTurn] = useState(0);
   const [moves, setMoves] = useState<DailyMove[]>([]);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const busy = useRef(false);
+
+  // The account id arrives a moment after mount (the session is still being
+  // restored), and it changes the dice — so start the run over when the seed
+  // it is built from changes. Without this the run would be played against the
+  // signed-out seed and then scored by the server against the real one.
+  const seedKey = `${day}|${playerKey}`;
+  const seedRef = useRef(seedKey);
+  if (seedRef.current !== seedKey) {
+    seedRef.current = seedKey;
+    busy.current = false;
+    setState(createDailyGame(day, playerKey));
+    setTurn(0);
+    setMoves([]);
+    setIsRolling(false);
+    setRollingIndices([]);
+  }
 
   const legal = useMemo(() => getLegalActions(state), [state]);
   const finished = turn >= DAILY_TURNS;
