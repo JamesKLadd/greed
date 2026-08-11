@@ -11,7 +11,13 @@
 
 import { Resend } from "resend";
 
-const FROM = process.env.EMAIL_FROM || "Greed <onboarding@resend.dev>";
+/**
+ * Resend's shared sandbox sender. It works without owning a domain, but it will
+ * ONLY deliver to the address that owns the Resend account — every other
+ * recipient is rejected. Fine for a smoke test, useless for real signups.
+ */
+const SANDBOX_FROM = "Greed <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM || SANDBOX_FROM;
 
 let client: Resend | null = null;
 function resend(): Resend | null {
@@ -25,6 +31,26 @@ export function emailEnabled(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
+/**
+ * One line for the boot log describing what email will actually do. The
+ * half-configured case is the dangerous one and the reason this exists: with a
+ * key but no verified sender, signup still reports success to the player while
+ * every message bounces inside Resend, so nothing on the outside looks wrong.
+ */
+export function emailStatus(): string {
+  if (!process.env.RESEND_API_KEY) {
+    return "Email: disabled (no RESEND_API_KEY) — verification links are logged to this console.";
+  }
+  if (!process.env.EMAIL_FROM) {
+    return (
+      "Email: MISCONFIGURED — RESEND_API_KEY is set but EMAIL_FROM is not, so mail goes out as " +
+      `${SANDBOX_FROM}, which Resend only delivers to your own account address. ` +
+      "Verify a domain in Resend and set EMAIL_FROM to send to real players."
+    );
+  }
+  return `Email: enabled (from ${FROM}).`;
+}
+
 async function send(to: string, subject: string, html: string, text: string): Promise<void> {
   const r = resend();
   if (!r) {
@@ -32,21 +58,30 @@ async function send(to: string, subject: string, html: string, text: string): Pr
     return;
   }
   try {
-    await r.emails.send({ from: FROM, to, subject, html, text });
+    const { error } = await r.emails.send({ from: FROM, to, subject, html, text });
+    // The SDK reports a rejected send in the RESULT, not by throwing — an
+    // unverified sender domain lands here, not in the catch below.
+    if (error) console.error(`[email] rejected (from=${FROM} to=${to}):`, error.message);
   } catch (err) {
     console.error("[email] send failed:", (err as Error).message);
   }
 }
 
+/**
+ * Matches the app's dark tabletop palette (see styles/tokens.css) — a charcoal
+ * room, a raised slab, and the same green that means "go" on the Roll button.
+ * All styling is inline and table-free on purpose: email clients strip <style>
+ * blocks, and several still don't do flex or custom properties.
+ */
 function layout(title: string, body: string, cta: { href: string; label: string }): string {
-  return `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#0a3d26;padding:32px">
-  <div style="max-width:480px;margin:0 auto;background:#0f4a30;border-radius:14px;padding:28px;color:#f4efe6">
-    <h1 style="margin:0 0 12px;font-size:20px">🎲 Greed</h1>
-    <h2 style="margin:0 0 8px;font-size:16px">${title}</h2>
-    <p style="margin:0 0 20px;color:#cfc7b8;line-height:1.5">${body}</p>
-    <a href="${cta.href}" style="display:inline-block;background:#e8c55a;color:#1a1207;text-decoration:none;
-      font-weight:700;padding:11px 20px;border-radius:9px">${cta.label}</a>
-    <p style="margin:20px 0 0;color:#8a8577;font-size:12px">If the button doesn't work, paste this link:<br>${cta.href}</p>
+  return `<!doctype html><html><body style="margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#12161e;padding:32px">
+  <div style="max-width:480px;margin:0 auto;background:#232a35;border:1px solid #333d4b;border-radius:14px;padding:28px;color:#eef2f8">
+    <h1 style="margin:0 0 12px;font-size:20px;letter-spacing:1px">🎲 GREED</h1>
+    <h2 style="margin:0 0 8px;font-size:16px;font-weight:700">${title}</h2>
+    <p style="margin:0 0 20px;color:#99a4b4;line-height:1.5">${body}</p>
+    <a href="${cta.href}" style="display:inline-block;background:#35c07a;color:#04150c;text-decoration:none;
+      font-weight:700;padding:12px 22px;border-radius:9px">${cta.label}</a>
+    <p style="margin:20px 0 0;color:#6b7583;font-size:12px">If the button doesn't work, paste this link:<br>${cta.href}</p>
   </div></body></html>`;
 }
 
