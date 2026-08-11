@@ -135,6 +135,7 @@ export function TableView({
                   isYou ? "pseat--you" : "",
                   offline ? "pseat--offline" : "",
                   badged.has(p.id) ? "pseat--rich" : "",
+                  playsLast === i ? "pseat--last" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -163,6 +164,15 @@ export function TableView({
                     ))}
                   </span>
                 )}
+                {/* Whoever's turn closes the round — the best seat at the table,
+                    since you act last knowing everyone else's score. It was only
+                    ever named in the endgame banner, by which point it's too
+                    late to be worth knowing. */}
+                {playsLast === i && (
+                  <span className="pseat__last" role="img" aria-label={t("aria.playsLast")}>
+                    🏁
+                  </span>
+                )}
                 {emotes?.[p.id] && (
                   // Keyed by timestamp so re-sending the same reaction remounts
                   // the element and replays the pop animation.
@@ -175,21 +185,6 @@ export function TableView({
                     {resolveAvatar(p.name, p.isBot, avatars?.[p.id])}
                     {showPresence && (
                       <span className={`pseat__conn${online ? " pseat__conn--on" : ""}`} />
-                    )}
-                    {/* Whoever's turn closes the round — the best seat at the
-                        table, since you act last knowing everyone else's score.
-                        It was only ever named in the endgame banner, by which
-                        point it's too late to be worth knowing.
-
-                        Pinned to the avatar rather than sitting beside the name:
-                        a compact pod is ~74px wide and the name row is already
-                        sharing space with the crown, which squeezed the flag
-                        down to an unreadable smudge. Here it has its own corner
-                        and can stay big enough to actually read. */}
-                    {playsLast === i && (
-                      <span className="pseat__last" role="img" aria-label={t("aria.playsLast")}>
-                        🏁
-                      </span>
                     )}
                     {isCurrent && turnTimer !== undefined && <TurnRing timer={turnTimer} />}
                   </span>
