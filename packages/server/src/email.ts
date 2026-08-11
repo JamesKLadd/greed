@@ -17,7 +17,11 @@ import { Resend } from "resend";
  * recipient is rejected. Fine for a smoke test, useless for real signups.
  */
 const SANDBOX_FROM = "Greed <onboarding@resend.dev>";
-const FROM = process.env.EMAIL_FROM || SANDBOX_FROM;
+// Trimmed, because a variable that exists with an empty (or whitespace) value is
+// how hosting dashboards represent "I added the key but haven't filled it in" —
+// and that has to behave the same as not setting it at all.
+const CONFIGURED_FROM = (process.env.EMAIL_FROM || "").trim();
+const FROM = CONFIGURED_FROM || SANDBOX_FROM;
 
 let client: Resend | null = null;
 function resend(): Resend | null {
@@ -32,23 +36,27 @@ export function emailEnabled(): boolean {
 }
 
 /**
- * One line for the boot log describing what email will actually do. The
- * half-configured case is the dangerous one and the reason this exists: with a
- * key but no verified sender, signup still reports success to the player while
- * every message bounces inside Resend, so nothing on the outside looks wrong.
+ * One line for the boot log describing what email will actually do.
+ *
+ * Three states, not two, because the middle one is a legitimate place to stop:
+ * a key with no sender is the sandbox, which is exactly how you prove the
+ * plumbing works before owning a verified domain. It is only a problem if you
+ * thought you were live — so it reads as a limitation, not an error. (Calling
+ * it MISCONFIGURED, as this once did, sends people off debugging a setup that
+ * is working.)
  */
 export function emailStatus(): string {
   if (!process.env.RESEND_API_KEY) {
     return "Email: disabled (no RESEND_API_KEY) — verification links are logged to this console.";
   }
-  if (!process.env.EMAIL_FROM) {
+  if (!CONFIGURED_FROM) {
     return (
-      "Email: MISCONFIGURED — RESEND_API_KEY is set but EMAIL_FROM is not, so mail goes out as " +
-      `${SANDBOX_FROM}, which Resend only delivers to your own account address. ` +
-      "Verify a domain in Resend and set EMAIL_FROM to send to real players."
+      `Email: SANDBOX — sending as ${SANDBOX_FROM}, which Resend delivers ONLY to your own ` +
+      "account address. Good for testing the flow. To reach real players, verify a domain in " +
+      "Resend and set EMAIL_FROM."
     );
   }
-  return `Email: enabled (from ${FROM}).`;
+  return `Email: enabled (from ${FROM}) — sending to any address.`;
 }
 
 async function send(to: string, subject: string, html: string, text: string): Promise<void> {
