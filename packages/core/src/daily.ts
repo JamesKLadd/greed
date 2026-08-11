@@ -54,6 +54,20 @@ export function dailyKey(date: Date = new Date()): string {
 }
 
 /**
+ * Milliseconds until the next challenge begins — i.e. until the next UTC
+ * midnight, the instant `dailyKey` starts naming a new day.
+ *
+ * It lives here beside `dailyKey` so the countdown a player watches and the key
+ * that decides which run they get can never disagree about when the day turns
+ * over. Always positive: at the stroke of midnight the current day is already
+ * the new one and a full day remains on it.
+ */
+export function msUntilNextDaily(now: Date = new Date()): number {
+  const nextMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  return nextMidnight - now.getTime();
+}
+
+/**
  * Seed for one player's run on a given day. Derived from the day and a stable
  * per-player key (the account id), so client and server compute the same value
  * with nothing to store or distribute — but two players never share dice.

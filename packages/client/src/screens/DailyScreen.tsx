@@ -7,8 +7,8 @@
  * against your seed to derive the score (see net/daily.ts).
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { DAILY_TURNS, dailyKey } from "@greed/core";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
 import { useDailyRun } from "../game/useDailyRun.js";
 import { fetchDaily, submitDaily, type DailyStatus } from "../net/daily.js";
 import { ApiError } from "../net/auth.js";
@@ -26,7 +26,7 @@ interface DailyScreenProps {
 export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const t = useT();
   const { status: authStatus, user } = useAuth();
-  const [day] = useState(() => dailyKey());
+  const [day, setDay] = useState(() => dailyKey());
   const [status, setStatus] = useState<DailyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +68,16 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       .finally(() => setSubmitting(false));
   }, [playing, run.finished, run.moves, submitting, t]);
 
+  const played = status?.run != null;
+
+  // Once today's run is in, there is nothing to do but wait — so show how long
+  // the wait is, and when it's over pick the new challenge up in place rather
+  // than leaving a spent screen behind.
+  const nextIn = useDailyCountdown(day, played, () => {
+    setDay(dailyKey());
+    void load();
+  });
+
   // Accounts are what make the board meaningful, so signed-out players see a
   // prompt rather than a run they couldn't submit.
   if (authStatus !== "authed") {
@@ -91,8 +101,6 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       </div>
     );
   }
-
-  const played = status?.run != null;
 
   return (
     <div className="setup">
@@ -206,6 +214,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 <span className="summary__value">{status.run.hotDice}</span>
               </div>
             </div>
+            {nextIn !== null && (
+              <p className="daily__next">
+                <span className="daily__nextLabel">{t("daily.nextIn")}</span>
+                <span className="daily__nextClock">{formatCountdown(nextIn)}</span>
+              </p>
+            )}
           </div>
         )}
 
@@ -247,4 +261,42 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * Time left on `day`, ticking once a second while `active`; null when there is
+ * nothing to wait for.
+ *
+ * Rollover is detected by re-deriving the day key rather than by watching the
+ * countdown reach zero: `msUntilNextDaily` jumps straight from ~1s back up to a
+ * full day at midnight, and the key is the thing that actually decides which
+ * challenge you get. A tab left open overnight therefore lands on the new day
+ * instead of on a stale one.
+ */
+function useDailyCountdown(day: string, active: boolean, onRollover: () => void): number | null {
+  const [remaining, setRemaining] = useState(() => msUntilNextDaily());
+  const rollover = useRef(onRollover);
+  rollover.current = onRollover;
+
+  useEffect(() => {
+    if (!active) return;
+    setRemaining(msUntilNextDaily());
+    const id = window.setInterval(() => {
+      if (dailyKey() !== day) rollover.current();
+      else setRemaining(msUntilNextDaily());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [active, day]);
+
+  return active ? remaining : null;
+}
+
+/** Remaining time as h:mm:ss. Rounded up, so the clock only reads 0:00:00 when
+ *  the wait is genuinely over. */
+function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }

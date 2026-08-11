@@ -1,7 +1,7 @@
 {
   "name": "greed",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "Greed - a push-your-luck 5-dice game (web, offline v1).",
   "workspaces": [

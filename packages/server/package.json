@@ -1,15 +1,15 @@
 {
   "name": "@greed/server",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@greed/bots": "0.1.0",
-    "@greed/core": "0.1.0",
-    "@greed/protocol": "0.1.0",
+    "@greed/bots": "0.5.0",
+    "@greed/core": "0.5.0",
+    "@greed/protocol": "0.5.0",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.8",
     "pg": "^8.23.0",

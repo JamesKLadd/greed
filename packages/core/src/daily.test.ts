@@ -4,6 +4,7 @@ import {
   createDailyGame,
   dailyKey,
   dailySeed,
+  msUntilNextDaily,
   scoreDailyRun,
   type DailyMove,
 } from "./daily.js";
@@ -37,6 +38,26 @@ describe("daily seed", () => {
 
   it("keys a date as a UTC ISO day", () => {
     expect(dailyKey(new Date("2026-08-09T23:30:00Z"))).toBe("2026-08-09");
+  });
+
+  it("counts down to the UTC midnight that starts the next challenge", () => {
+    expect(msUntilNextDaily(new Date("2026-08-09T23:30:00Z"))).toBe(30 * 60 * 1000);
+    expect(msUntilNextDaily(new Date("2026-08-09T00:00:00Z"))).toBe(24 * 60 * 60 * 1000);
+    // Month and year ends are just the next day like any other.
+    expect(msUntilNextDaily(new Date("2026-08-31T23:59:59Z"))).toBe(1000);
+    expect(msUntilNextDaily(new Date("2026-12-31T23:59:59Z"))).toBe(1000);
+  });
+
+  it("never runs out while the day it belongs to is still current", () => {
+    // The countdown drives the "come back tomorrow" clock, so a zero or
+    // negative reading would mean showing a finished timer on a live day.
+    for (const iso of ["2026-08-09T00:00:00.000Z", "2026-08-09T12:34:56.789Z"]) {
+      const now = new Date(iso);
+      const ms = msUntilNextDaily(now);
+      expect(ms).toBeGreaterThan(0);
+      expect(dailyKey(new Date(now.getTime() + ms))).not.toBe(dailyKey(now));
+      expect(dailyKey(new Date(now.getTime() + ms - 1))).toBe(dailyKey(now));
+    }
   });
 
   it("gives different players different dice on the same day", () => {

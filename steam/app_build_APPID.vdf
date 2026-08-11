@@ -12,7 +12,7 @@
 "appbuild"
 {
 	"appid"        "APPID"
-	"desc"         "Greed 0.1.0"            // shown in the Builds list; bump per release
+	"desc"         "Greed 0.5.0"            // shown in the Builds list; bump per release
 	"buildoutput"  "..\\output\\"           // steamcmd logs + chunk cache (git-ignored)
 	"contentroot"  "..\\content\\"          // the folder holding your built app
 	"setlive"      ""                       // "" = don't auto-set live; or a branch name

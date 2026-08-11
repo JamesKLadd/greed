@@ -1319,6 +1319,28 @@
   line-height: 1;
   margin-bottom: 6px;
 }
+/* Countdown to the next challenge, shown once today's run is in. */
+.daily__next {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.daily__nextLabel {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+.daily__nextClock {
+  font-family: var(--ff-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  /* Tabular figures so the seconds ticking down don't shuffle the label. */
+  font-variant-numeric: tabular-nums;
+  color: var(--warn);
+}
 .daily__board {
   margin-top: 22px;
 }
