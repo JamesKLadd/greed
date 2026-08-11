@@ -76,6 +76,22 @@
 .btn--bank:hover:not(:disabled) {
   background: linear-gradient(178deg, #ffcf72 0%, #f8b640 55%, #d18d16 100%);
 }
+/* Destructive. Deliberately NOT the same red as a bust — a bust is something
+   the game did to you, this is something you are about to do to yourself, and
+   it should look like a decision rather than an outcome. */
+.btn--danger {
+  background: linear-gradient(178deg, #b8483c 0%, #9a3229 55%, #7a241d 100%);
+  color: #fff1ef;
+  border-color: #5e1a14;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 0 #5e1a14,
+    var(--e-rest);
+}
+.btn--danger:hover:not(:disabled) {
+  background: linear-gradient(178deg, #c85448 0%, #ad3a30 55%, #8c2b22 100%);
+}
 .btn--big {
   padding: 14px 28px;
   font-size: 1.125rem;

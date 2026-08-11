@@ -22,7 +22,9 @@ import {
   signup,
   usernameAvailable,
   verifyEmail,
+  deleteAccount,
 } from "./accounts.js";
+import { verificationRequired } from "./email.js";
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
 
@@ -215,7 +217,14 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const { id } = await requireUser(req);
       const account = await getAccount(id);
       if (!account) throw new AccountError(404, "Account not found.");
-      json(res, 200, account);
+      // The client can't infer this from the account alone, and it decides
+      // whether any verification UI is worth showing at all.
+      json(res, 200, { ...account, verificationRequired: verificationRequired() });
+    } else if (method === "POST" && path === "/api/me/delete") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      await deleteAccount(id, b.password);
+      json(res, 200, { deleted: true });
     } else if (method === "PUT" && path === "/api/me/profile") {
       const { id } = await requireUser(req);
       const b = (await readBody(req)) as Record<string, unknown>;

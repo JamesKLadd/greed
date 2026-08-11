@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../game/auth.js";
-import { ApiError, resendVerification } from "../net/auth.js";
+import { ApiError, deleteAccount, resendVerification } from "../net/auth.js";
+import { TextField } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface AccountScreenProps {
@@ -26,10 +27,14 @@ function formatCountdown(secs: number): string {
 
 export function AccountScreen({ onBack }: AccountScreenProps) {
   const t = useT();
-  const { user, logout } = useAuth();
+  const { user, logout, verificationRequired } = useAuth();
   const [cooldown, setCooldown] = useState(() => resendCooldownLeft());
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Deletion is two deliberate steps: arm it, then confirm with the password.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Tick the resend cooldown down to zero.
   useEffect(() => {
@@ -78,6 +83,22 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
     }
   };
 
+  const confirmDelete = async () => {
+    setBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount(deletePassword);
+      // The account is gone; drop the session so nothing tries to use it again.
+      // Local device stats stay — they were never the account's to delete.
+      logout();
+      onBack();
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : t("account.deleteFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="setup">
       <div className="setup__hero">
@@ -94,11 +115,15 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
           </div>
         </div>
 
-        <div className={`account__verify${user.emailVerified ? " account__verify--ok" : ""}`}>
-          {user.emailVerified ? t("account.verified") : t("account.unverified")}
-        </div>
+        {/* Only worth showing when this server actually asks for verification —
+            otherwise it's a status about a step that doesn't exist. */}
+        {verificationRequired && (
+          <div className={`account__verify${user.emailVerified ? " account__verify--ok" : ""}`}>
+            {user.emailVerified ? t("account.verified") : t("account.unverified")}
+          </div>
+        )}
 
-        {!user.emailVerified && (
+        {verificationRequired && !user.emailVerified && (
           <div className="account__resend">
             <button className="btn" disabled={busy || cooldown > 0} onClick={resend}>
               {busy
@@ -120,6 +145,51 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
           <button className="btn btn--bank" onClick={logout}>
             {t("account.logout")}
           </button>
+        </div>
+
+        {/* Kept apart from the ordinary actions above, and behind a second step:
+            there is nothing that undoes it. */}
+        <div className="danger-zone">
+          {!confirmingDelete ? (
+            <>
+              <p className="danger-zone__note">{t("account.deleteNote")}</p>
+              <button className="btn btn--danger" onClick={() => setConfirmingDelete(true)}>
+                {t("account.delete")}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="danger-zone__warn">{t("account.deleteConfirm")}</p>
+              <TextField
+                label={t("account.deletePassword")}
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
+              {deleteError && <p className="danger-zone__error">{deleteError}</p>}
+              <div className="danger-zone__actions">
+                <button
+                  className="btn btn--ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    setDeletePassword("");
+                    setDeleteError(null);
+                  }}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  className="btn btn--danger"
+                  disabled={busy || deletePassword.length === 0}
+                  onClick={confirmDelete}
+                >
+                  {busy ? t("account.deleting") : t("account.deleteForever")}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@
 import { hasProfanity } from "@greed/core";
 import { query } from "./db.js";
 import { hashPassword, hashToken, newSingleUseToken, signSession, verifyPassword } from "./auth.js";
-import { sendResetEmail, sendVerifyEmail, emailEnabled } from "./email.js";
+import { sendResetEmail, sendVerifyEmail, emailEnabled, verificationRequired } from "./email.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -230,12 +230,16 @@ export async function signup(input: {
   }
 
   const passwordHash = await hashPassword(password);
+  // With verification switched off there is no way for anyone to ever confirm an
+  // address, so accounts start verified rather than stranded in a state that
+  // can't be left. Turning verification back on only affects accounts made after.
+  const startsVerified = !verificationRequired();
   let rows: UserRow[];
   try {
     ({ rows } = await query<UserRow>(
-      `INSERT INTO users (email, username, password_hash, profile)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-      [email, username, passwordHash, JSON.stringify(emptyProfile())],
+      `INSERT INTO users (email, username, password_hash, profile, email_verified)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [email, username, passwordHash, JSON.stringify(emptyProfile()), startsVerified],
     ));
   } catch (err) {
     // Lost a race against a concurrent signup on the unique index.
@@ -246,14 +250,16 @@ export async function signup(input: {
   }
   const user = rows[0];
 
-  const rawToken = await issueVerifyToken(user.id);
-  await sendVerifyEmail(user.email, user.username, `${appUrl()}/?verify=${rawToken}`);
+  if (verificationRequired()) {
+    const rawToken = await issueVerifyToken(user.id);
+    await sendVerifyEmail(user.email, user.username, `${appUrl()}/?verify=${rawToken}`);
+  }
 
   return {
     token: await signSession({ sub: user.id, username: user.username }),
     user: publicUser(user),
     profile: normalizeProfile(user.profile),
-    emailSent: emailEnabled(),
+    emailSent: verificationRequired() && emailEnabled(),
   };
 }
 
@@ -297,6 +303,8 @@ export async function resendVerification(
   const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
   const user = rows[0];
   if (!user) throw new AccountError(404, "Account not found.");
+  // Nothing to confirm when verification is switched off.
+  if (!verificationRequired()) return { emailSent: false, alreadyVerified: true };
   if (user.email_verified) return { emailSent: false, alreadyVerified: true };
   // Drop any outstanding verify tokens so only the newest link works.
   await query(`DELETE FROM auth_tokens WHERE user_id = $1 AND kind = 'verify'`, [user.id]);
@@ -368,6 +376,32 @@ export async function getAccount(
   const user = rows[0];
   if (!user) return null;
   return { user: publicUser(user), profile: normalizeProfile(user.profile) };
+}
+
+/**
+ * Permanently delete an account.
+ *
+ * The password is re-checked even though the caller already holds a valid
+ * session: a session can be a borrowed phone or a tab left open, and this is
+ * the one action with nothing to undo it. Everything the account owns goes with
+ * it — every table referencing users(id) does so ON DELETE CASCADE, so the
+ * single statement below also takes the auth tokens, daily-challenge runs and
+ * friendships (in both directions).
+ *
+ * Local device stats are deliberately NOT touched: they live in the browser,
+ * they predate the account, and destroying them was not what was asked for.
+ */
+export async function deleteAccount(userId: string, password: unknown): Promise<void> {
+  if (typeof password !== "string" || password.length === 0) {
+    throw new AccountError(400, "Enter your password to delete your account.");
+  }
+  const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
+  const user = rows[0];
+  if (!user) throw new AccountError(404, "Account not found.");
+  if (!(await verifyPassword(password, user.password_hash))) {
+    throw new AccountError(401, "That password is incorrect.");
+  }
+  await query(`DELETE FROM users WHERE id = $1`, [userId]);
 }
 
 /** Store a profile snapshot for a user, merged monotonically with what's saved. */

@@ -1134,6 +1134,34 @@
   font-size: 1.25rem;
   font-weight: 800;
 }
+/* Irreversible actions, fenced off below the ordinary ones so nobody arrives
+   here by drifting down the page. */
+.danger-zone {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.danger-zone__note {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.danger-zone__warn {
+  margin: 0 0 12px;
+  font-weight: 700;
+  color: var(--bad);
+}
+.danger-zone__error {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  color: var(--bad);
+}
+.danger-zone__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
 .account__name {
   font-size: 1.2rem;
   font-weight: 700;

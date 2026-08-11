@@ -36,7 +36,15 @@ services:
         sync: false
       # Optional email delivery (verification + reset). Leave unset to keep email
       # disabled (links are logged server-side). Needs a verified sender domain.
+      # NOTE a key WITHOUT a verified EMAIL_FROM is Resend's sandbox, which only
+      # delivers to your own account address — the boot log says so.
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Whether new accounts must confirm their email before they count as
+      # verified. OFF unless this is exactly "true" AND mail is configured: a
+      # confirmation step that can't be delivered strands every new account
+      # unverified with no way out. Turn on once a sender domain is verified.
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "false"

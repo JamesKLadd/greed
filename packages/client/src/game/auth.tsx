@@ -24,6 +24,8 @@ type Status = "loading" | "anon" | "authed";
 interface AuthContextValue {
   status: Status;
   user: AccountUser | null;
+  /** Whether this server asks new accounts to confirm their email address. */
+  verificationRequired: boolean;
   signup: (input: { email: string; username: string; password: string }) => Promise<void>;
   login: (input: { login: string; password: string }) => Promise<void>;
   logout: () => void;
@@ -49,6 +51,10 @@ async function reconcileProfile(serverProfile: Profile): Promise<void> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>(() => (getToken() ? "loading" : "anon"));
   const [user, setUser] = useState<AccountUser | null>(null);
+  // Defaults to false so no verification UI appears until the server says it
+  // wants any — the wrong guess in that direction is harmless, the other way
+  // round shows people a step that doesn't exist.
+  const [verificationRequired, setVerificationRequired] = useState(false);
 
   // Restore a session on load: validate the token and reconcile the profile.
   useEffect(() => {
@@ -59,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const me = await fetchMe();
         if (cancelled) return;
         setUser(me.user);
+        setVerificationRequired(me.verificationRequired ?? false);
         setStatus("authed");
         await reconcileProfile(me.profile);
       } catch {
@@ -101,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, signup, login, logout, adopt }),
-    [status, user, signup, login, logout, adopt],
+    () => ({ status, user, verificationRequired, signup, login, logout, adopt }),
+    [status, user, verificationRequired, signup, login, logout, adopt],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

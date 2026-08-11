@@ -6,7 +6,7 @@ import { DEFAULT_SERVER_PORT } from "@greed/protocol";
 import { GreedServer } from "./server.js";
 import { accountsEnabled, migrate } from "./db.js";
 import { handleApi } from "./http-api.js";
-import { emailStatus } from "./email.js";
+import { emailStatus, verificationStatus } from "./email.js";
 
 // Load local dev secrets (Vercel `env pull` writes .env.local at the repo root).
 // In production the host injects env vars, so a missing file is fine.
@@ -62,6 +62,7 @@ async function start(): Promise<void> {
   // obvious at boot instead of at the first signup.
   console.log(`App URL: ${process.env.APP_URL || "http://localhost:5173 (default)"}`);
   console.log(emailStatus());
+  console.log(verificationStatus());
   httpServer.listen(port, () => {
     console.log(`Greed server listening on :${port} (ws + http)`);
   });

@@ -174,6 +174,14 @@ export const en = {
   "account.note":
     "Your stats, achievements and locker are saved to this account and sync across every device you sign in on. You play as {name} in local and online games.",
   "account.logout": "Log out",
+  "account.delete": "Delete account",
+  "account.deleteNote":
+    "Permanently deletes your account, your synced stats and achievements, your daily challenge scores and your friends list. This cannot be undone.",
+  "account.deleteConfirm": "This is permanent. Enter your password to confirm.",
+  "account.deletePassword": "Password",
+  "account.deleteForever": "Delete forever",
+  "account.deleting": "Deleting…",
+  "account.deleteFailed": "Couldn't delete the account. Try again.",
   "onlineMenu.lockedName": "Playing as your account username.",
 
   // Crash screen.
@@ -649,6 +657,14 @@ export const es: Record<MsgKey, string> = {
   "account.note":
     "Tus estadísticas, logros y vestuario se guardan en esta cuenta y se sincronizan en todos los dispositivos donde inicies sesión. Juegas como {name} en partidas locales y en línea.",
   "account.logout": "Cerrar sesión",
+  "account.delete": "Eliminar cuenta",
+  "account.deleteNote":
+    "Elimina permanentemente tu cuenta, tus estadísticas y logros sincronizados, tus puntuaciones del desafío diario y tu lista de amigos. Esto no se puede deshacer.",
+  "account.deleteConfirm": "Esto es permanente. Introduce tu contraseña para confirmar.",
+  "account.deletePassword": "Contraseña",
+  "account.deleteForever": "Eliminar para siempre",
+  "account.deleting": "Eliminando…",
+  "account.deleteFailed": "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
   "onlineMenu.lockedName": "Juegas con el usuario de tu cuenta.",
 
   // Crash screen.

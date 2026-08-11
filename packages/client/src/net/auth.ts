@@ -125,8 +125,18 @@ export function checkUsername(u: string): Promise<{ available: boolean }> {
   return api(`/api/auth/username-available?u=${encodeURIComponent(u)}`);
 }
 
-export function fetchMe(): Promise<{ user: AccountUser; profile: Profile }> {
+export function fetchMe(): Promise<{
+  user: AccountUser;
+  profile: Profile;
+  /** Whether the server asks new accounts to confirm their email at all. */
+  verificationRequired?: boolean;
+}> {
   return api("/api/me", { auth: true });
+}
+
+/** Permanently delete the signed-in account. Irreversible; needs the password. */
+export function deleteAccount(password: string): Promise<{ deleted: boolean }> {
+  return api("/api/me/delete", { method: "POST", auth: true, body: { password } });
 }
 
 export function resendVerification(): Promise<{ emailSent: boolean; alreadyVerified: boolean }> {

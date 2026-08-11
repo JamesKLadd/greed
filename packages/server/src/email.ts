@@ -36,6 +36,24 @@ export function emailEnabled(): boolean {
 }
 
 /**
+ * Whether new accounts must confirm their email address before they're
+ * considered verified.
+ *
+ * OFF unless explicitly switched on, and deliberately so: a verification step
+ * you cannot complete is worse than none at all — it leaves every account
+ * permanently marked unverified with no way to fix it. So this stays off until
+ * someone asserts that mail really does reach strangers, which is a stronger
+ * claim than "an API key is present". A key alone can mean the sandbox sender,
+ * which only ever delivers to the account owner.
+ *
+ * Turn it on with REQUIRE_EMAIL_VERIFICATION=true once a domain is verified
+ * with the provider. Nothing else needs changing — the whole flow is still here.
+ */
+export function verificationRequired(): boolean {
+  return process.env.REQUIRE_EMAIL_VERIFICATION === "true" && emailEnabled();
+}
+
+/**
  * One line for the boot log describing what email will actually do.
  *
  * Three states, not two, because the middle one is a legitimate place to stop:
@@ -57,6 +75,14 @@ export function emailStatus(): string {
     );
   }
   return `Email: enabled (from ${FROM}) — sending to any address.`;
+}
+
+/** Companion line for the boot log: whether signups have to confirm an address. */
+export function verificationStatus(): string {
+  return verificationRequired()
+    ? "Email verification: REQUIRED — new accounts must confirm their address."
+    : "Email verification: off — new accounts are created ready to play. " +
+        "(Set REQUIRE_EMAIL_VERIFICATION=true, with a verified sender, to turn it on.)";
 }
 
 async function send(to: string, subject: string, html: string, text: string): Promise<void> {
