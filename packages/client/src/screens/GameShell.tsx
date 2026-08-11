@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { GameState, LegalActions } from "@greed/core";
+import type { DieValue, GameState, LegalActions } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
 import { TableView } from "../components/TableView.js";
 import { ActionBar } from "../components/ActionBar.js";
@@ -24,6 +24,7 @@ interface GameShellProps {
   legal: LegalActions;
   isRolling: boolean;
   rollingIndices: number[];
+  rollingDice?: DieValue[] | null;
   canAct: boolean;
   onRoll: () => void;
   onBank: () => void;
@@ -56,6 +57,7 @@ export function GameShell({
   legal,
   isRolling,
   rollingIndices,
+  rollingDice,
   canAct,
   onRoll,
   onBank,
@@ -77,7 +79,7 @@ export function GameShell({
   const lastPlayer = state.players[state.order[state.order.length - 1]];
   // Read per render rather than once on mount, so coming back from Settings
   // takes effect immediately instead of on the next game.
-  const showGuidance = loadSettings().showGuidance;
+  const { showGuidance, showTurnScore } = loadSettings();
 
   return (
     <div className="game" style={cosmetics}>
@@ -103,11 +105,13 @@ export function GameShell({
           state={state}
           rollingIndices={rollingIndices}
           isRolling={isRolling}
+          rollingDice={rollingDice}
           perspectiveId={perspectiveId}
           presence={presence}
           emotes={emotes}
           avatars={avatars}
           turnTimer={turnTimer}
+          showTurnScore={showTurnScore}
         />
 
         <GuidanceLine state={state} canAct={canAct} muted={!showGuidance} />

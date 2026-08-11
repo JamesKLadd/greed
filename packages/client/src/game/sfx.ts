@@ -189,9 +189,29 @@ function uiClick(): void {
 }
 
 type Sound =
-  "roll" | "bank" | "bust" | "hotDice" | "endgame" | "suddenDeath" | "win" | "yourTurn" | "click";
+  | "roll"
+  | "bank"
+  | "bust"
+  | "hotDice"
+  | "endgame"
+  | "suddenDeath"
+  | "win"
+  | "yourTurn"
+  | "click"
+  | "streak"
+  | "awww"
+  | "cash";
 
-export function play(sound: Sound): void {
+export interface PlayOptions {
+  /**
+   * Escalation for "streak": 0 is the first cue (the 4th roll), 1 the next, and
+   * so on. Each step lifts the pitch a whole tone, so a turn that keeps rolling
+   * keeps climbing. Ignored by every other sound.
+   */
+  step?: number;
+}
+
+export function play(sound: Sound, opts: PlayOptions = {}): void {
   if (muted) return;
   const c = ensureContext();
   if (!c || !sfxBus) return;
@@ -240,6 +260,40 @@ export function play(sound: Sound): void {
       tone(880 * v, t, 0.22, { type: "sine", gain: 0.22 });
       tone(1174.66 * v, t + 0.12, 0.34, { type: "sine", gain: 0.2 });
       tone(587.33 * v, t + 0.12, 0.34, { type: "triangle", gain: 0.08 });
+      break;
+    }
+    case "streak": {
+      // A rising three-note flourish for a turn that keeps rolling. Each further
+      // roll transposes the whole figure up a whole tone (capped, so a very long
+      // turn doesn't climb into a shriek) and adds a touch of sizzle.
+      const step = Math.min(opts.step ?? 0, 7);
+      const shift = Math.pow(2, (step * 2) / 12);
+      const notes = [587.33, 739.99, 987.77];
+      notes.forEach((f, i) =>
+        tone(f * shift * v, t + i * 0.055, 0.2, { type: "triangle", gain: 0.19 }),
+      );
+      // The crackle under it — brighter as the streak climbs.
+      noiseBurst(t + 0.02, 0.16, { freq: 3200 * shift, q: 0.9, gain: 0.05 + step * 0.012 });
+      break;
+    }
+    case "awww": {
+      // Sympathy, not punishment: a soft two-voice sigh that sags in pitch. This
+      // replaces the harsh "bust" when a turn dies on its opening roll, where
+      // nothing was actually lost.
+      tone(392 * v, t, 0.44, { type: "sine", gain: 0.2, glideTo: 262 });
+      tone(311.13 * v, t + 0.05, 0.42, { type: "triangle", gain: 0.12, glideTo: 208 });
+      tone(196 * v, t + 0.09, 0.38, { type: "sine", gain: 0.07, glideTo: 131 });
+      break;
+    }
+    case "cash": {
+      // A register ka-ching for a big bank: drawer clack, then two bright bells
+      // ringing together, then the coin shimmer on top.
+      noiseBurst(t, 0.05, { freq: 1800 * vary(0.1), q: 1.4, gain: 0.16 });
+      tone(110 * v, t, 0.1, { type: "square", gain: 0.1, glideTo: 70 });
+      tone(1567.98 * v, t + 0.03, 0.5, { type: "triangle", gain: 0.2 });
+      tone(2093.0 * v, t + 0.045, 0.46, { type: "triangle", gain: 0.15 });
+      tone(3135.96 * v, t + 0.06, 0.3, { type: "sine", gain: 0.07 });
+      noiseBurst(t + 0.12, 0.22, { freq: 6000 * vary(0.2), q: 0.5, gain: 0.05 });
       break;
     }
     case "win": {

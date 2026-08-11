@@ -112,6 +112,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           onChange={(v) => patch({ showGuidance: v })}
         />
         <Toggle
+          label={t("settings.turnScore")}
+          hint={t("settings.turnScore.hint")}
+          value={settings.showTurnScore}
+          onChange={(v) => patch({ showTurnScore: v })}
+        />
+        <Toggle
           label={t("settings.hideCode")}
           hint={t("settings.hideCode.hint")}
           value={settings.hideRoomCode}

@@ -67,6 +67,27 @@
   --die-pip2: #6a5942;
   --die-lip: rgba(120, 100, 60, 0.22);
 
+  /* ---------------------------------------------------------------- 3D dice
+     How the cube is posed and how long a throw takes. The tilt is deliberately
+     shallow: the face that's up stays ~90% of the die's footprint so five of
+     them are still countable at a glance on a phone, while the rim of the two
+     neighbouring faces is enough to read the die as a solid object.
+     --cube-roll-ms should track the ROLL_ANIM_MS the game controllers use to
+     hold back a throw's result: a throw is ONE continuous arc that ends on the
+     rolled face, because the die is told where it is landing before it leaves
+     the felt. --cube-settle-ms is only the fallback for a die whose value
+     changes without a throw (a new turn, a rematch), so it eases instead of
+     snapping.
+
+     The X tilt is NEGATIVE: that is what tips the die's far edge away from you
+     so you look DOWN onto the face that's up. Positive puts the camera under
+     the table — the neighbouring faces then turn away from you and get culled,
+     leaving a flat-looking square. */
+  --cube-tilt-x: -18deg;
+  --cube-tilt-y: -16deg;
+  --cube-roll-ms: 600ms;
+  --cube-settle-ms: 300ms;
+
   /* ------------------------------------------------------------------- scales
      Spacing is a 4px-based ramp; use it instead of magic numbers. */
   --sp-1: 0.25rem;

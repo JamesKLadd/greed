@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BotPersonality, GameState } from "@greed/core";
+import type { BotPersonality, DieValue, GameState } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
 import {
   decode,
@@ -17,6 +17,18 @@ import { getToken } from "./auth.js";
 
 const TOKEN_KEY = "greed-token";
 
+/** How long the dice tumble before their result is revealed. */
+const ROLL_ANIM_MS = 600;
+
+/**
+ * Minimum time a finished turn stays on screen before the next snapshot may
+ * replace it. The server schedules its ADVANCE on the same interval, but it
+ * measures from the moment it BROADCAST the outcome, whereas a client only
+ * displays that outcome once the dice have finished tumbling. Enforcing the hold
+ * here too is what stops that animation time from being eaten out of the pause.
+ */
+const OUTCOME_HOLD_MS = 2100;
+
 export type OnlineStatus = "menu" | "connecting" | "lobby" | "roll-off" | "in-game";
 
 export interface OnlineController {
@@ -30,6 +42,8 @@ export interface OnlineController {
   rollOff: RollOffRow[] | null;
   isRolling: boolean;
   rollingIndices: number[];
+  /** Faces the throw in flight will land on — see the same field on useGreed. */
+  rollingDice: DieValue[] | null;
   /** Live connection status per player id (bots always true). */
   presence: Record<string, boolean>;
   /** Equipped dice-skin id per player id (for rendering the current player's dice). */
@@ -84,7 +98,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const [rollOff, setRollOff] = useState<RollOffRow[] | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
-  const [rollTick, setRollTick] = useState(0);
+  const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [skins, setSkins] = useState<Record<string, string>>({});
   const [avatars, setAvatars] = useState<Record<string, string>>({});
@@ -92,12 +106,108 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const [isSpectator, setIsSpectator] = useState(false);
   const [emotes, setEmotes] = useState<Record<string, { emote: EmoteId; at: number }>>({});
   const lastLogLen = useRef(0);
-  const rollSeen = useRef(0);
-  const prevGameRef = useRef<GameState | null>(null);
   const prevPresenceRef = useRef<Record<string, boolean>>({});
   const youIdRef = useRef<string | null>(null);
 
+  // ---- display queue -------------------------------------------------------
+  // Snapshots arrive from the server the instant they happen, but showing them
+  // that way meant a roll's RESULT — the newly locked dice, the higher turn
+  // score — appeared while the dice were still tumbling. So arrivals are queued
+  // and released on a schedule instead: a roll's snapshot is held back until its
+  // animation has run, and a finished turn is guaranteed its full time on screen.
+  // Everything downstream (sounds, toasts, the table) reads the displayed state,
+  // so they all stay in step with what the player is actually looking at.
+  const displayQueueRef = useRef<{ state: GameState; showAt: number }[]>([]);
+  const drainTimerRef = useRef<number | null>(null);
+  /** Earliest the currently displayed snapshot may be replaced. */
+  const holdUntilRef = useRef(0);
+  /** Last snapshot ACCEPTED (not necessarily shown) — the queue's own tail. */
+  const lastQueuedRef = useRef<GameState | null>(null);
+  const queuedLogLen = useRef(0);
+
+  /** Show a queued snapshot and decide how long it must stay up. */
+  const showSnapshot = useCallback((next: GameState) => {
+    setIsRolling(false);
+    setRollingIndices([]);
+    setRollingDice(null);
+    setGame(next);
+    // A finished turn (bust or bank) earns a pause; anything else may be
+    // replaced as soon as the next snapshot is due.
+    holdUntilRef.current = performance.now() + (next.turn.outcome ? OUTCOME_HOLD_MS : 0);
+  }, []);
+
+  const drain = useCallback(() => {
+    if (drainTimerRef.current != null) return;
+    const head = displayQueueRef.current[0];
+    if (!head) return;
+    const wait = Math.max(head.showAt, holdUntilRef.current) - performance.now();
+    if (wait > 0) {
+      drainTimerRef.current = window.setTimeout(() => {
+        drainTimerRef.current = null;
+        drain();
+      }, wait);
+      return;
+    }
+    displayQueueRef.current.shift();
+    showSnapshot(head.state);
+    drain();
+  }, [showSnapshot]);
+
+  /**
+   * Accept a snapshot for display. A snapshot carrying a fresh roll starts the
+   * dice tumbling straight away but is itself withheld until the tumble ends —
+   * that gap is the whole point, and it's why the queue exists.
+   */
+  const enqueueGame = useCallback(
+    (next: GameState) => {
+      const prev = lastQueuedRef.current;
+      // A shorter log than last time means a new game (rematch) — resync and
+      // drop anything still waiting, which belongs to the game just ended.
+      if (next.log.length < queuedLogLen.current) {
+        displayQueueRef.current = [];
+        queuedLogLen.current = 0;
+        holdUntilRef.current = 0;
+      }
+      const fresh = next.log.slice(queuedLogLen.current);
+      queuedLogLen.current = next.log.length;
+
+      let showAt = performance.now();
+      if (fresh.some((e) => e.type === "roll")) {
+        // Tumble the dice this throw actually put in the air: the ones that were
+        // unlocked before it, or all five after hot dice.
+        const indices =
+          prev && prev.turn.playerIndex === next.turn.playerIndex && !prev.turn.hotDice
+            ? prev.turn.locked.map((locked, i) => (locked ? -1 : i)).filter((i) => i >= 0)
+            : diceToRoll(next.turn);
+        setRollingIndices(indices);
+        // The snapshot being withheld already holds the thrown faces, so the
+        // dice can turn straight to them while the rest of it waits.
+        setRollingDice(next.turn.dice);
+        setIsRolling(true);
+        showAt += ROLL_ANIM_MS;
+      }
+      lastQueuedRef.current = next;
+      displayQueueRef.current.push({ state: next, showAt });
+      drain();
+    },
+    [drain],
+  );
+
+  /** Drop anything waiting to be shown — the game it belonged to is gone. */
+  const clearQueue = useCallback(() => {
+    displayQueueRef.current = [];
+    if (drainTimerRef.current != null) window.clearTimeout(drainTimerRef.current);
+    drainTimerRef.current = null;
+    holdUntilRef.current = 0;
+    lastQueuedRef.current = null;
+    queuedLogLen.current = 0;
+    setIsRolling(false);
+    setRollingIndices([]);
+    setRollingDice(null);
+  }, []);
+
   const resetToMenu = useCallback(() => {
+    clearQueue();
     setStatus("menu");
     setLobby(null);
     setGame(null);
@@ -109,7 +219,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setIsSpectator(false);
     setEmotes({});
     prevPresenceRef.current = {};
-  }, []);
+  }, [clearQueue]);
 
   const handleMessage = useCallback(
     (raw: string) => {
@@ -134,6 +244,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           setCode(msg.code);
           break;
         case "lobby":
+          clearQueue();
           setLobby(msg.lobby);
           setGame(null);
           setRollOff(null);
@@ -179,7 +290,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
               ? null
               : { endsAt: performance.now() + msg.turnTimerMs, total: msg.turnTimerMs },
           );
-          setGame(msg.state);
+          enqueueGame(msg.state);
           setStatus("in-game");
           break;
         }
@@ -198,7 +309,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           break;
       }
     },
-    [resetToMenu],
+    [resetToMenu, clearQueue, enqueueGame],
   );
 
   const ensureSocket = useCallback(() => {
@@ -285,38 +396,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     }
   }, [game]);
 
-  // Detect a new roll in the broadcast state and briefly tumble the thrown dice.
-  useEffect(() => {
-    const prev = prevGameRef.current;
-    if (!game) {
-      rollSeen.current = 0;
-      prevGameRef.current = null;
-      return;
-    }
-    const fresh = game.log.slice(rollSeen.current);
-    rollSeen.current = game.log.length;
-    if (fresh.some((e) => e.type === "roll")) {
-      let indices: number[];
-      if (prev && prev.turn.playerIndex === game.turn.playerIndex && !prev.turn.hotDice) {
-        indices = prev.turn.locked.map((locked, i) => (locked ? -1 : i)).filter((i) => i >= 0);
-      } else {
-        indices = diceToRoll(game.turn);
-      }
-      setRollingIndices(indices);
-      setRollTick((t) => t + 1);
-    }
-    prevGameRef.current = game;
-  }, [game]);
-
-  useEffect(() => {
-    if (rollTick === 0) return;
-    setIsRolling(true);
-    const t = window.setTimeout(() => {
-      setIsRolling(false);
-      setRollingIndices([]);
-    }, 600);
-    return () => clearTimeout(t);
-  }, [rollTick]);
+  // Stop the drain timer if the component goes away mid-animation.
+  useEffect(() => () => clearQueue(), [clearQueue]);
 
   useEffect(() => {
     if (!toast) return;
@@ -341,6 +422,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     rollOff,
     isRolling,
     rollingIndices,
+    rollingDice,
     presence,
     skins,
     avatars,

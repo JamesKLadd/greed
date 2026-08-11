@@ -1,4 +1,4 @@
-import type { TurnState } from "@greed/core";
+import type { DieValue, TurnState } from "@greed/core";
 import { Die } from "./Die.js";
 import { useT } from "../i18n/i18n.js";
 
@@ -6,9 +6,11 @@ interface DiceTrayProps {
   turn: TurnState;
   rollingIndices: number[];
   isRolling: boolean;
+  /** Faces the throw in flight lands on; the dice turn to these as they tumble. */
+  rollingDice?: DieValue[] | null;
 }
 
-export function DiceTray({ turn, rollingIndices, isRolling }: DiceTrayProps) {
+export function DiceTray({ turn, rollingIndices, isRolling, rollingDice }: DiceTrayProps) {
   const t = useT();
   const hasRolled = turn.lastRoll !== null || isRolling;
   const hot = turn.hotDice && !isRolling && turn.outcome === null;
@@ -32,6 +34,8 @@ export function DiceTray({ turn, rollingIndices, isRolling }: DiceTrayProps) {
             locked={turn.locked[i] && !turn.hotDice}
             rolling={rolling}
             dim={!hasRolled}
+            dimensional
+            landing={rolling ? rollingDice?.[i] : undefined}
           />
         );
       })}

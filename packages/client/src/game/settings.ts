@@ -14,11 +14,18 @@ export interface Settings {
   reduceMotion: boolean;
   /**
    * Show the plain-English line under the table that says what's happening and
-   * what you can do about it. On by default — it's the most useful thing on
-   * screen for someone new — but it repeats itself once you know the game, so
-   * it can be turned off.
+   * what you can do about it. OFF by default: it repeats itself constantly once
+   * you know the game, and the table already says whose turn it is. Anyone
+   * learning can turn it on.
    */
   showGuidance: boolean;
+  /**
+   * Show the big turn-score number above the dice — the running total you are
+   * deciding whether to bank or gamble. On by default; turning it off is a
+   * harder, more committed way to play (the per-seat totals still show what
+   * everyone has actually banked).
+   */
+  showTurnScore: boolean;
   /** Hide the room code in the in-game header (e.g. while streaming). */
   hideRoomCode: boolean;
   /** Sound-effects volume, 0..1. */
@@ -35,7 +42,8 @@ function defaults(): Settings {
     highContrast: false,
     colorblind: false,
     reduceMotion: false,
-    showGuidance: true,
+    showGuidance: false,
+    showTurnScore: true,
     hideRoomCode: false,
     sfxVolume: 1,
     musicVolume: 0.5,

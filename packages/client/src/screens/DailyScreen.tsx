@@ -165,6 +165,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                   locked={run.state.turn.locked[i] && !run.state.turn.hotDice}
                   rolling={run.isRolling && run.rollingIndices.includes(i)}
                   dim={run.state.turn.lastRoll === null && !run.isRolling}
+                  dimensional
+                  landing={
+                    run.isRolling && run.rollingIndices.includes(i)
+                      ? run.rollingDice?.[i]
+                      : undefined
+                  }
                 />
               ))}
             </div>

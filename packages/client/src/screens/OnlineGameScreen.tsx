@@ -40,6 +40,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       legal={legal}
       isRolling={net.isRolling}
       rollingIndices={net.rollingIndices}
+      rollingDice={net.rollingDice}
       canAct={canAct}
       onRoll={net.roll}
       onBank={net.bank}

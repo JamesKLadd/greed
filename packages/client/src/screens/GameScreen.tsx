@@ -55,6 +55,7 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
       legal={ctl.legal}
       isRolling={ctl.isRolling}
       rollingIndices={ctl.rollingIndices}
+      rollingDice={ctl.rollingDice}
       canAct={canAct}
       onRoll={ctl.roll}
       onBank={ctl.bank}

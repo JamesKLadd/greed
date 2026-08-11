@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import type { GameState } from "@greed/core";
+import type { DieValue, GameState } from "@greed/core";
 import { DiceTray } from "./DiceTray.js";
 import { seatColor } from "../game/theme.js";
 import { resolveAvatar } from "../game/avatars.js";
 import { seatSlots, usesCompactSeats } from "./tableGeometry.js";
+import { bigBankers, streakFlames } from "../game/flourishes.js";
 import { TurnRing } from "./TurnRing.js";
 import { useLayoutMode } from "../game/useLayoutMode.js";
 import type { EmoteId } from "@greed/protocol";
@@ -14,6 +15,8 @@ interface TableViewProps {
   state: GameState;
   rollingIndices: number[];
   isRolling: boolean;
+  /** Faces the throw in flight lands on (see useGreed.rollingDice). */
+  rollingDice?: DieValue[] | null;
   /** Player id to seat at the bottom-center (the local viewer). Defaults to seat 0. */
   perspectiveId?: string | null;
   /** Live connection status per player id (online only); omit for offline play. */
@@ -25,6 +28,8 @@ interface TableViewProps {
   avatars?: Record<string, string>;
   /** Countdown for the active seat to start their turn (online only). */
   turnTimer?: { endsAt: number; total: number } | null;
+  /** Show the running turn score above the dice (a display setting). */
+  showTurnScore?: boolean;
 }
 
 /**
@@ -39,11 +44,13 @@ export function TableView({
   state,
   rollingIndices,
   isRolling,
+  rollingDice,
   emotes,
   perspectiveId,
   presence,
   avatars,
   turnTimer,
+  showTurnScore = true,
 }: TableViewProps) {
   const showPresence = presence != null;
   const t = useT();
@@ -53,6 +60,10 @@ export function TableView({
   const n = state.players.length;
   const leadTotal = Math.max(...state.players.map((p) => p.total));
   const currentIndex = state.turn.playerIndex;
+  // Both flourishes are derived from the state, so every client and spectator
+  // in an online game shows the same ones (see flourishes.ts).
+  const flames = streakFlames(state.turn);
+  const badged = bigBankers(state);
 
   const slots = seatSlots(n, landscape);
   // On a phone every opponent is a disc over a name over a score — that's what
@@ -118,11 +129,23 @@ export function TableView({
                   p.isBot ? "pseat--bot" : "",
                   isYou ? "pseat--you" : "",
                   offline ? "pseat--offline" : "",
+                  badged.has(p.id) ? "pseat--rich" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
                 style={style}
               >
+                {/* Banked a thousand or more last turn: the seat wears dollar
+                    signs at its corners until they're back on the clock. */}
+                {badged.has(p.id) && (
+                  <span className="pseat__rich" aria-label={t("aria.bigBank", { name: p.name })}>
+                    {["tl", "tr", "bl", "br"].map((corner) => (
+                      <span key={corner} className={`pseat__cash pseat__cash--${corner}`}>
+                        💲
+                      </span>
+                    ))}
+                  </span>
+                )}
                 {emotes?.[p.id] && (
                   // Keyed by timestamp so re-sending the same reaction remounts
                   // the element and replays the pop animation.
@@ -172,14 +195,34 @@ export function TableView({
               the number you are deciding whether to bank or gamble. Bust zeroes
               the turn score, so this simply disappears when the run ends. */}
           <div className="felt__pot" aria-live="polite">
-            {state.turn.turnScore > 0 && state.phase !== "game-over" && (
+            {showTurnScore && state.turn.turnScore > 0 && state.phase !== "game-over" && (
               // Keyed by the value so each gain replays the little pop.
               <span key={state.turn.turnScore} className="felt__pot-value">
+                {/* Four rolls into a turn and still going: the number catches
+                    fire, and gains a flame for every roll after that. */}
+                {flames > 0 && (
+                  <span
+                    className="felt__pot-fire felt__pot-fire--left"
+                    aria-label={t("aria.streak", { n: state.turn.rollCount })}
+                  >
+                    {"🔥".repeat(flames)}
+                  </span>
+                )}
                 +{state.turn.turnScore}
+                {flames > 0 && (
+                  <span className="felt__pot-fire" aria-hidden="true">
+                    {"🔥".repeat(flames)}
+                  </span>
+                )}
               </span>
             )}
           </div>
-          <DiceTray turn={state.turn} rollingIndices={rollingIndices} isRolling={isRolling} />
+          <DiceTray
+            turn={state.turn}
+            rollingIndices={rollingIndices}
+            isRolling={isRolling}
+            rollingDice={rollingDice}
+          />
         </div>
       </div>
     </div>

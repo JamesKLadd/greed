@@ -197,6 +197,8 @@ export const en = {
   "aria.dieLocked": "die showing {value}, locked",
   "aria.dice": "dice",
   "aria.leader": "leader",
+  "aria.streak": "on a streak — {n} rolls this turn",
+  "aria.bigBank": "{name} banked over a thousand",
 
   // Settings screen.
   "settings.title": "SETTINGS",
@@ -213,7 +215,10 @@ export const en = {
   "settings.motion.hint": "Minimize dice tumbling and other animation.",
   "settings.guidance": "Show tips during play",
   "settings.guidance.hint":
-    "The line under the table explaining what's happening and what you can do. Turn it off once you know the game.",
+    "The line under the table explaining what's happening and what you can do. Turn it on while you're learning the game.",
+  "settings.turnScore": "Show turn score",
+  "settings.turnScore.hint":
+    "The running total above the dice. Turn it off to play by feel — banked scores still show.",
   "settings.hideCode": "Hide room code",
   "settings.hideCode.hint": "Keep your game code off-screen during play (good for streaming).",
   "settings.sfx": "Sound effects",
@@ -681,6 +686,8 @@ export const es: Record<MsgKey, string> = {
   "aria.dieLocked": "dado mostrando {value}, bloqueado",
   "aria.dice": "dados",
   "aria.leader": "líder",
+  "aria.streak": "en racha: {n} tiradas este turno",
+  "aria.bigBank": "{name} guardó más de mil",
 
   "settings.title": "AJUSTES",
   "settings.tagline": "Haz que Greed sea cómodo de jugar.",
@@ -696,7 +703,10 @@ export const es: Record<MsgKey, string> = {
   "settings.motion.hint": "Minimiza el volteo de dados y otras animaciones.",
   "settings.guidance": "Mostrar consejos durante la partida",
   "settings.guidance.hint":
-    "La línea bajo la mesa que explica qué pasa y qué puedes hacer. Desactívala cuando ya domines el juego.",
+    "La línea bajo la mesa que explica qué pasa y qué puedes hacer. Actívala mientras aprendes el juego.",
+  "settings.turnScore": "Mostrar puntos del turno",
+  "settings.turnScore.hint":
+    "El total acumulado sobre los dados. Desactívalo para jugar a ciegas; los puntos guardados siguen visibles.",
   "settings.hideCode": "Ocultar código de sala",
   "settings.hideCode.hint": "Mantén oculto el código durante la partida (ideal para streaming).",
   "settings.sfx": "Efectos de sonido",

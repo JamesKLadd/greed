@@ -72,7 +72,11 @@ interface Notifier {
 }
 
 const DEFAULT_OPTIONS: GreedServerOptions = {
-  interTurnMs: 1500,
+  // An unhurried hold, matching the offline game. A bust especially needs a beat
+  // to land; being swept straight into the next turn reads as the game skipping
+  // past what just happened. Clients enforce this as a MINIMUM on their side too
+  // (see the display queue in useOnlineGame), so a slow link can't cut it short.
+  interTurnMs: 2100,
   // Long enough that a bot's run of rolls reads as a turn being played out
   // rather than dice flickering past.
   botThinkMs: 1300,

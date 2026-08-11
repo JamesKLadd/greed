@@ -7,6 +7,7 @@ import {
   diceToRoll,
   getLegalActions,
   type DailyMove,
+  type DieValue,
   type GameState,
 } from "@greed/core";
 
@@ -24,7 +25,10 @@ import {
  * the id it authenticated — pass the signed-in user's id and nothing else.
  */
 
-const RESOLVE_MS = 1400;
+/** How long a finished turn stays on screen before the run moves on. Matches the
+ *  unhurried inter-turn hold the main game uses, less the roll settle already
+ *  spent above. */
+const RESOLVE_MS = 1900;
 const ROLL_ANIM_MS = 600;
 
 export interface DailyRunController {
@@ -36,6 +40,8 @@ export interface DailyRunController {
   finished: boolean;
   isRolling: boolean;
   rollingIndices: number[];
+  /** Faces the throw in flight will land on — see the same field on useGreed. */
+  rollingDice: DieValue[] | null;
   canRoll: boolean;
   canBank: boolean;
   roll: () => void;
@@ -48,6 +54,7 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
   const [moves, setMoves] = useState<DailyMove[]>([]);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
+  const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const busy = useRef(false);
 
   // The account id arrives a moment after mount (the session is still being
@@ -64,6 +71,7 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
     setMoves([]);
     setIsRolling(false);
     setRollingIndices([]);
+    setRollingDice(null);
   }
 
   const legal = useMemo(() => getLegalActions(state), [state]);
@@ -79,18 +87,23 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
       busy.current = true;
       setMoves((m) => [...m, move]);
 
+      const next = applyAction(state, { type: move });
+
       if (move === "ROLL") {
-        // Tumble only the dice actually being thrown.
+        // Tumble only the dice actually being thrown, and tell them which face
+        // they are turning to — the result is otherwise held back until the
+        // animation ends.
         setRollingIndices(state.turn.hotDice ? [0, 1, 2, 3, 4] : diceToRoll(state.turn));
+        setRollingDice(next.turn.dice);
         setIsRolling(true);
       }
 
-      const next = applyAction(state, { type: move });
       const settle = move === "ROLL" ? ROLL_ANIM_MS : 0;
 
       window.setTimeout(() => {
         setIsRolling(false);
         setRollingIndices([]);
+        setRollingDice(null);
         setState(next);
 
         if (next.turn.outcome) {
@@ -119,6 +132,7 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
     finished,
     isRolling,
     rollingIndices,
+    rollingDice,
     canRoll: !finished && !isRolling && legal.canRoll,
     canBank: !finished && !isRolling && legal.canBank,
     roll: () => act("ROLL"),
