@@ -23,7 +23,11 @@ services:
       # restarts or everyone gets logged out. Generate e.g. `openssl rand -hex 32`.
       - key: JWT_SECRET
         sync: false
-      # Public site URL, used to build email verification / reset links.
+      # Public site URL. Used for BOTH the email verification/reset links and the
+      # CORS allowlist, so it must be the origin players actually load the site
+      # from. Change it here as well as in the dashboard when you move domains —
+      # a `value:` in this blueprint OVERWRITES the dashboard on the next sync,
+      # so a dashboard-only edit silently reverts and links start 404ing.
       - key: APP_URL
         value: https://playgreed.vercel.app
       # Extra browser origins allowed to call the API (comma-separated). The app's
