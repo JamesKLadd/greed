@@ -106,6 +106,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           onChange={(v) => patch({ reduceMotion: v })}
         />
         <Toggle
+          label={t("settings.guidance")}
+          hint={t("settings.guidance.hint")}
+          value={settings.showGuidance}
+          onChange={(v) => patch({ showGuidance: v })}
+        />
+        <Toggle
           label={t("settings.hideCode")}
           hint={t("settings.hideCode.hint")}
           value={settings.hideRoomCode}

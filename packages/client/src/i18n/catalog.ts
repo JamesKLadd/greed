@@ -202,6 +202,9 @@ export const en = {
   "settings.colorblind.hint": "Use a color-vision-friendly seat palette.",
   "settings.motion": "Reduce motion",
   "settings.motion.hint": "Minimize dice tumbling and other animation.",
+  "settings.guidance": "Show tips during play",
+  "settings.guidance.hint":
+    "The line under the table explaining what's happening and what you can do. Turn it off once you know the game.",
   "settings.hideCode": "Hide room code",
   "settings.hideCode.hint": "Keep your game code off-screen during play (good for streaming).",
   "settings.sfx": "Sound effects",
@@ -673,6 +676,9 @@ export const es: Record<MsgKey, string> = {
   "settings.colorblind.hint": "Usa una paleta de asientos apta para daltónicos.",
   "settings.motion": "Reducir movimiento",
   "settings.motion.hint": "Minimiza el volteo de dados y otras animaciones.",
+  "settings.guidance": "Mostrar consejos durante la partida",
+  "settings.guidance.hint":
+    "La línea bajo la mesa que explica qué pasa y qué puedes hacer. Desactívala cuando ya domines el juego.",
   "settings.hideCode": "Ocultar código de sala",
   "settings.hideCode.hint": "Mantén oculto el código durante la partida (ideal para streaming).",
   "settings.sfx": "Efectos de sonido",

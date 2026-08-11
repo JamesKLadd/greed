@@ -757,6 +757,20 @@
   color: var(--warn);
   font-weight: 700;
 }
+/* "Show tips during play" off. Clipped rather than display:none so it stays in
+   the accessibility tree — it's the live region that announces the result of
+   every turn, and a screen reader has nothing else to go on. The table takes
+   back the space it was using. */
+.guide--muted {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* ---------- Action bar ----------
    The two verbs, as the last row of the game column — so it's pinned to the

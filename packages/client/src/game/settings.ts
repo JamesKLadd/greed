@@ -12,6 +12,13 @@ export interface Settings {
   highContrast: boolean;
   colorblind: boolean;
   reduceMotion: boolean;
+  /**
+   * Show the plain-English line under the table that says what's happening and
+   * what you can do about it. On by default — it's the most useful thing on
+   * screen for someone new — but it repeats itself once you know the game, so
+   * it can be turned off.
+   */
+  showGuidance: boolean;
   /** Hide the room code in the in-game header (e.g. while streaming). */
   hideRoomCode: boolean;
   /** Sound-effects volume, 0..1. */
@@ -28,6 +35,7 @@ function defaults(): Settings {
     highContrast: false,
     colorblind: false,
     reduceMotion: false,
+    showGuidance: true,
     hideRoomCode: false,
     sfxVolume: 1,
     musicVolume: 0.5,

@@ -15,12 +15,30 @@ import { useT } from "../i18n/i18n.js";
  *
  * The wording comes from `coachHint`, which already derives the right sentence
  * from game state for every situation and returns it as a translatable key.
+ *
+ * `muted` is the "show tips during play" setting turned off. It hides the line
+ * from SIGHT but keeps it in the accessibility tree, because this is also the
+ * live region that announces "busted", "banked" and "your turn" — for a screen
+ * reader it isn't a tip, it's the only running commentary there is. The setting
+ * is about visual noise; it shouldn't cost anyone information.
  */
-export function GuidanceLine({ state, canAct }: { state: GameState; canAct: boolean }) {
+export function GuidanceLine({
+  state,
+  canAct,
+  muted = false,
+}: {
+  state: GameState;
+  canAct: boolean;
+  muted?: boolean;
+}) {
   const t = useT();
   const hint = coachHint(state, canAct);
   return (
-    <p className={`guide guide--${hint?.tone ?? "info"}`} role="status" aria-live="polite">
+    <p
+      className={muted ? "guide guide--muted" : `guide guide--${hint?.tone ?? "info"}`}
+      role="status"
+      aria-live="polite"
+    >
       {hint ? t(hint.key, hint.params) : ""}
     </p>
   );

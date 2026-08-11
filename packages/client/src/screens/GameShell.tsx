@@ -6,6 +6,7 @@ import { ActionBar } from "../components/ActionBar.js";
 import { GuidanceLine } from "../components/GuidanceLine.js";
 import { Toast } from "../components/Toast.js";
 import type { ToastMessage } from "../game/toasts.js";
+import { loadSettings } from "../game/settings.js";
 import { useT } from "../i18n/i18n.js";
 
 /**
@@ -74,6 +75,9 @@ export function GameShell({
 }: GameShellProps) {
   const t = useT();
   const lastPlayer = state.players[state.order[state.order.length - 1]];
+  // Read per render rather than once on mount, so coming back from Settings
+  // takes effect immediately instead of on the next game.
+  const showGuidance = loadSettings().showGuidance;
 
   return (
     <div className="game" style={cosmetics}>
@@ -106,7 +110,7 @@ export function GameShell({
           turnTimer={turnTimer}
         />
 
-        <GuidanceLine state={state} canAct={canAct} />
+        <GuidanceLine state={state} canAct={canAct} muted={!showGuidance} />
 
         {spectating ? (
           <div className="spectator-bar">{t("spectate.watching")}</div>
