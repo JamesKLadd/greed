@@ -16,7 +16,7 @@ import { Die } from "../components/Die.js";
 import { Button, Icon } from "../ui/index.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
-import { useGameSounds } from "../game/useGameSounds.js";
+import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { useT } from "../i18n/i18n.js";
 
 interface DailyScreenProps {
@@ -41,6 +41,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   // replays the run with.
   const run = useDailyRun(day, user?.id ?? "");
   useGameSounds(run.state);
+  useRollSound(run.isRolling);
 
   const load = useCallback(async () => {
     setLoading(true);

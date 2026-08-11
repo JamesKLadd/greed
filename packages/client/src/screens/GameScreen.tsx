@@ -43,6 +43,7 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
     state,
     legal: ctl.legal,
     canAct,
+    isRolling: ctl.isRolling,
     youId: viewerId,
     rollOffActive: ctl.rollOffActive,
     onRoll: ctl.roll,

@@ -3,7 +3,7 @@ import type { GameState, LegalActions } from "@greed/core";
 import { recordGame, summarize, type Achievement, type GameSummary } from "./profile.js";
 import { syncSteamAchievements } from "./steam.js";
 import { syncProfileUp } from "../net/auth.js";
-import { useGameSounds } from "./useGameSounds.js";
+import { useGameSounds, useRollSound } from "./useGameSounds.js";
 import { useTurnCue } from "./useTurnCue.js";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts.js";
 
@@ -22,6 +22,8 @@ interface GameChromeOptions {
   legal: LegalActions;
   /** Whether the local user may act right now. */
   canAct: boolean;
+  /** True while dice are in the air — drives the tumble sound. */
+  isRolling?: boolean;
   /** The seat progression is recorded against, or null to record nothing. */
   youId: string | null;
   /** True while the opening roll-off overlay is up (suppresses the turn chime). */
@@ -46,6 +48,7 @@ export function useGameChrome({
   legal,
   canAct,
   youId,
+  isRolling = false,
   rollOffActive = false,
   onRoll,
   onBank,
@@ -57,6 +60,7 @@ export function useGameChrome({
   const recordedRef = useRef(false);
 
   useGameSounds(state);
+  useRollSound(isRolling);
   // Chime when it becomes the local player's turn — but not while the roll-off
   // is still on screen, where it would fire for a turn that hasn't begun.
   useTurnCue(state, canAct && !rollOffActive);

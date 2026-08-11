@@ -181,6 +181,8 @@ function vary(amount = 0.03): number {
   return 1 + (Math.random() - 0.5) * amount;
 }
 
+const rand = (n: number) => Math.floor(Math.random() * n);
+
 function uiClick(): void {
   if (muted || sfxVolume <= 0) return;
   const c = ensureContext();
@@ -200,7 +202,8 @@ type Sound =
   | "click"
   | "streak"
   | "awww"
-  | "cash";
+  | "cash"
+  | "tumble";
 
 export interface PlayOptions {
   /**
@@ -277,12 +280,38 @@ export function play(sound: Sound, opts: PlayOptions = {}): void {
       break;
     }
     case "awww": {
-      // Sympathy, not punishment: a soft two-voice sigh that sags in pitch. This
-      // replaces the harsh "bust" when a turn dies on its opening roll, where
-      // nothing was actually lost.
-      tone(392 * v, t, 0.44, { type: "sine", gain: 0.2, glideTo: 262 });
-      tone(311.13 * v, t + 0.05, 0.42, { type: "triangle", gain: 0.12, glideTo: 208 });
-      tone(196 * v, t + 0.09, 0.38, { type: "sine", gain: 0.07, glideTo: 131 });
+      // Sympathy, not punishment: a soft three-voice sigh that sags in pitch.
+      // This replaces the harsh "bust" when a turn dies on its opening roll,
+      // where nothing was actually lost.
+      //
+      // The lead is a TRIANGLE, not a sine. A pure sine has no harmonics above
+      // its fundamental, so it sits underneath the music instead of in front of
+      // it and the cue was getting lost — the extra partials are what let this
+      // carry without simply being louder than everything else.
+      tone(392 * v, t, 0.5, { type: "triangle", gain: 0.34, glideTo: 262 });
+      tone(311.13 * v, t + 0.05, 0.46, { type: "triangle", gain: 0.2, glideTo: 208 });
+      tone(196 * v, t + 0.09, 0.42, { type: "sine", gain: 0.12, glideTo: 131 });
+      break;
+    }
+    case "tumble": {
+      // The throw itself — dice bouncing across the felt while they're in the
+      // air, under the clatter that lands with them. Knocks are scattered at
+      // random and thin out as the dice lose energy, so no two throws sound
+      // alike and the sound reads as settling rather than as a loop.
+      const span = 0.58;
+      const knocks = 9 + rand(4);
+      for (let i = 0; i < knocks; i++) {
+        // Bunched early: dice are liveliest just after they leave the hand.
+        const p = Math.pow(i / knocks, 0.72);
+        const at = t + p * span + Math.random() * 0.025;
+        const energy = 1 - p * 0.7;
+        noiseBurst(at, 0.028 + Math.random() * 0.022, {
+          freq: (1500 + Math.random() * 1900) * vary(0.2),
+          q: 1.7,
+          gain: 0.11 * energy,
+        });
+        tone(88 + Math.random() * 74, at, 0.045, { type: "triangle", gain: 0.05 * energy });
+      }
       break;
     }
     case "cash": {

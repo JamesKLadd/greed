@@ -29,6 +29,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
     state,
     legal,
     canAct,
+    isRolling: net.isRolling,
     youId: net.youId,
     onRoll: net.roll,
     onBank: net.bank,

@@ -371,13 +371,37 @@
    The marks sit just INSIDE the corners on purpose: .pseat clips its overflow to
    protect the fixed pod height tableGeometry.ts stacks rows by, so anything hung
    outside the frame would simply be cut off. */
+/*
+ * On a phone an opponent's pod is about 62px wide, and four small glyphs in its
+ * corners were far too quiet to notice. So the badge doesn't rely on the glyphs
+ * alone: the whole pod goes gold and BREATHES. Movement is what actually catches
+ * the eye at that size — a static border just reads as another seat colour.
+ */
 .pseat--rich {
   border-color: var(--gold);
-  box-shadow:
-    var(--sheen),
-    0 2px 0 rgba(0, 0, 0, 0.5),
-    0 0 12px rgba(245, 196, 81, 0.4),
-    var(--e-lift);
+  /* A warm wash over the slab, so the seat is obviously "the rich one" even
+     before you read anything on it. */
+  background:
+    linear-gradient(178deg, rgba(245, 196, 81, 0.2), rgba(245, 196, 81, 0.07)),
+    linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  animation: rich-pulse 1.7s ease-in-out infinite;
+}
+@keyframes rich-pulse {
+  0%,
+  100% {
+    box-shadow:
+      var(--sheen),
+      0 2px 0 rgba(0, 0, 0, 0.5),
+      0 0 9px rgba(245, 196, 81, 0.35),
+      var(--e-lift);
+  }
+  50% {
+    box-shadow:
+      var(--sheen),
+      0 2px 0 rgba(0, 0, 0, 0.5),
+      0 0 22px 2px rgba(245, 196, 81, 0.8),
+      var(--e-lift);
+  }
 }
 .pseat__rich {
   position: absolute;
@@ -387,37 +411,45 @@
 }
 .pseat__cash {
   position: absolute;
-  font-size: 0.72rem;
+  font-size: 1.05rem;
   line-height: 1;
+  /* The emoji is a flat green glyph; a dark halo keeps it legible against the
+     gold wash behind it, at any size. */
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.85));
   animation: cash-bob 1.8s ease-in-out infinite;
 }
 .pseat__cash--tl {
-  top: 2px;
-  left: 3px;
+  top: 1px;
+  left: 2px;
 }
 .pseat__cash--tr {
-  top: 2px;
-  right: 3px;
+  top: 1px;
+  right: 2px;
   animation-delay: -0.45s;
 }
 .pseat__cash--bl {
-  bottom: 2px;
-  left: 3px;
+  bottom: 1px;
+  left: 2px;
   animation-delay: -0.9s;
 }
 .pseat__cash--br {
-  bottom: 2px;
-  right: 3px;
+  bottom: 1px;
+  right: 2px;
   animation-delay: -1.35s;
+}
+/* A compact pod is the smallest thing this has to work on, so the glyphs sit at
+   nearly the same size on a much smaller frame — proportionally much louder. */
+.pseat--compact .pseat__cash {
+  font-size: 0.95rem;
 }
 @keyframes cash-bob {
   0%,
   100% {
     transform: translateY(0) scale(1);
-    opacity: 0.72;
+    opacity: 0.85;
   }
   50% {
-    transform: translateY(-2px) scale(1.14);
+    transform: translateY(-2px) scale(1.22);
     opacity: 1;
   }
 }
@@ -580,13 +612,36 @@
    change when a banner appears (a banner costs height, not width). */
 .felt__center .dice-tray {
   flex-wrap: nowrap;
-  gap: clamp(4px, 1.4cqw, 12px);
+  /* Named, because the die size below has to subtract exactly these gaps to
+     know what's left for the dice themselves. */
+  --dice-gap: clamp(4px, 1.4cqw, 12px);
+  gap: var(--dice-gap);
 }
-/* The 36px covers the four gaps between the dice plus a little air either side,
-   so the outermost die never ends up touching the seat next to it. Kept in step
-   with POD.minDiePx / POD.diceRowOverheadPx in tableGeometry.ts. */
+/*
+ * Portrait dice are a tenth larger than the corridor arithmetic alone would
+ * give them — they're the thing you actually look at, and on a phone they were
+ * smaller than they needed to be.
+ *
+ * It can't be a flat 1.1x, though, because the row was already spending most of
+ * the corridor: past a certain mat width, 10% more die is more than the space
+ * between the seat pods. So the size is the SMALLER of what we want and what
+ * fits — the second term measures the row exactly (five dice plus their four
+ * real gaps, leaving 6px of air so the outermost die never touches a seat).
+ * Phones get the full 10%; only very wide portrait mats, where the dice are
+ * already 55px+, taper below it.
+ *
+ * The 22px floor is unchanged and is still the number POD.minDiePx mirrors in
+ * tableGeometry.ts, whose test proves five dice fit even there.
+ */
 .felt[data-layout="portrait"] .felt__center .dice-tray .die {
-  font-size: clamp(22px, calc((var(--corridor) - 36px) / 5), 56px);
+  font-size: clamp(
+    22px,
+    min(
+      calc((var(--corridor) - 36px) / 5 * 1.1),
+      calc((var(--corridor) - 4 * var(--dice-gap) - 6px) / 5)
+    ),
+    60px
+  );
 }
 .felt[data-layout="wide"] .felt__center .dice-tray .die {
   font-size: clamp(26px, 15cqw, 60px);

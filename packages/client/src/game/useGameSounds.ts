@@ -4,6 +4,24 @@ import { play } from "./sfx.js";
 import { BIG_BANK, STREAK_ROLLS, streakStep } from "./flourishes.js";
 
 /**
+ * Plays the dice tumbling for the length of a throw.
+ *
+ * Separate from useGameSounds because it is not driven by the log: a roll only
+ * reaches the log when it LANDS, which is the whole point — the result is held
+ * back until the animation finishes. The time the dice are actually in the air
+ * is animation state, so it is keyed on `isRolling` instead, and fires on the
+ * edge where a throw begins.
+ */
+export function useRollSound(isRolling: boolean): void {
+  const wasRolling = useRef(isRolling);
+
+  useEffect(() => {
+    if (isRolling && !wasRolling.current) play("tumble");
+    wasRolling.current = isRolling;
+  }, [isRolling]);
+}
+
+/**
  * Plays a sound effect for each fresh event appended to the game log.
  * Shared by offline and online play — both drive the same GameState log.
  */
