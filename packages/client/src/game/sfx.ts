@@ -304,13 +304,16 @@ export function play(sound: Sound, opts: PlayOptions = {}): void {
         // Bunched early: dice are liveliest just after they leave the hand.
         const p = Math.pow(i / knocks, 0.72);
         const at = t + p * span + Math.random() * 0.025;
-        const energy = 1 - p * 0.7;
+        // Knocks fade as the dice slow, but not to nothing: the tail is the part
+        // that overlaps the music, so dropping it too far is what made the whole
+        // throw read as quiet even when the first knocks were loud enough.
+        const energy = 1 - p * 0.55;
         noiseBurst(at, 0.028 + Math.random() * 0.022, {
           freq: (1500 + Math.random() * 1900) * vary(0.2),
           q: 1.7,
-          gain: 0.11 * energy,
+          gain: 0.19 * energy,
         });
-        tone(88 + Math.random() * 74, at, 0.045, { type: "triangle", gain: 0.05 * energy });
+        tone(88 + Math.random() * 74, at, 0.045, { type: "triangle", gain: 0.085 * energy });
       }
       break;
     }
