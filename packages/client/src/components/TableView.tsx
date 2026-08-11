@@ -30,6 +30,8 @@ interface TableViewProps {
   turnTimer?: { endsAt: number; total: number } | null;
   /** Show the running turn score above the dice (a display setting). */
   showTurnScore?: boolean;
+  /** Draw the dice as 3D cubes (a display setting). */
+  dice3d?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ export function TableView({
   avatars,
   turnTimer,
   showTurnScore = true,
+  dice3d = true,
 }: TableViewProps) {
   const showPresence = presence != null;
   const t = useT();
@@ -222,6 +225,7 @@ export function TableView({
             rollingIndices={rollingIndices}
             isRolling={isRolling}
             rollingDice={rollingDice}
+            dice3d={dice3d}
           />
         </div>
       </div>

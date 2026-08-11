@@ -216,6 +216,9 @@ export const en = {
   "settings.guidance": "Show tips during play",
   "settings.guidance.hint":
     "The line under the table explaining what's happening and what you can do. Turn it on while you're learning the game.",
+  "settings.dice3d": "3D dice",
+  "settings.dice3d.hint":
+    "Dice are solid cubes that tumble when thrown. Turn it off for flat, easier-to-read faces.",
   "settings.turnScore": "Show turn score",
   "settings.turnScore.hint":
     "The running total above the dice. Turn it off to play by feel — banked scores still show.",
@@ -704,6 +707,9 @@ export const es: Record<MsgKey, string> = {
   "settings.guidance": "Mostrar consejos durante la partida",
   "settings.guidance.hint":
     "La línea bajo la mesa que explica qué pasa y qué puedes hacer. Actívala mientras aprendes el juego.",
+  "settings.dice3d": "Dados en 3D",
+  "settings.dice3d.hint":
+    "Los dados son cubos sólidos que ruedan al lanzarlos. Desactívalo para caras planas más fáciles de leer.",
   "settings.turnScore": "Mostrar puntos del turno",
   "settings.turnScore.hint":
     "El total acumulado sobre los dados. Desactívalo para jugar a ciegas; los puntos guardados siguen visibles.",

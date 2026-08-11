@@ -8,9 +8,17 @@ interface DiceTrayProps {
   isRolling: boolean;
   /** Faces the throw in flight lands on; the dice turn to these as they tumble. */
   rollingDice?: DieValue[] | null;
+  /** Draw the dice as 3D cubes (a display setting). */
+  dice3d?: boolean;
 }
 
-export function DiceTray({ turn, rollingIndices, isRolling, rollingDice }: DiceTrayProps) {
+export function DiceTray({
+  turn,
+  rollingIndices,
+  isRolling,
+  rollingDice,
+  dice3d = true,
+}: DiceTrayProps) {
   const t = useT();
   const hasRolled = turn.lastRoll !== null || isRolling;
   const hot = turn.hotDice && !isRolling && turn.outcome === null;
@@ -34,7 +42,7 @@ export function DiceTray({ turn, rollingIndices, isRolling, rollingDice }: DiceT
             locked={turn.locked[i] && !turn.hotDice}
             rolling={rolling}
             dim={!hasRolled}
-            dimensional
+            dimensional={dice3d}
             landing={rolling ? rollingDice?.[i] : undefined}
           />
         );

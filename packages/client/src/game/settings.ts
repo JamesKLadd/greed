@@ -26,6 +26,16 @@ export interface Settings {
    * everyone has actually banked).
    */
   showTurnScore: boolean;
+  /**
+   * Render the dice on the table as 3D cubes that tumble, rather than flat
+   * faces. On by default. Separate from `reduceMotion`, which already shortens
+   * the throw: this is about the look of the die itself, and a flat face is
+   * easier to read at a glance (and cheaper to draw on a weak device).
+   *
+   * Only affects the dice you WATCH — the in-game tray and the daily run. The
+   * small inline dice in turn history and the rules modal are always flat.
+   */
+  dice3d: boolean;
   /** Hide the room code in the in-game header (e.g. while streaming). */
   hideRoomCode: boolean;
   /** Sound-effects volume, 0..1. */
@@ -44,6 +54,7 @@ function defaults(): Settings {
     reduceMotion: false,
     showGuidance: false,
     showTurnScore: true,
+    dice3d: true,
     hideRoomCode: false,
     sfxVolume: 1,
     musicVolume: 0.5,

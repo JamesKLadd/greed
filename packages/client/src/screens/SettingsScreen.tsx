@@ -112,6 +112,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           onChange={(v) => patch({ showGuidance: v })}
         />
         <Toggle
+          label={t("settings.dice3d")}
+          hint={t("settings.dice3d.hint")}
+          value={settings.dice3d}
+          onChange={(v) => patch({ dice3d: v })}
+        />
+        <Toggle
           label={t("settings.turnScore")}
           hint={t("settings.turnScore.hint")}
           value={settings.showTurnScore}

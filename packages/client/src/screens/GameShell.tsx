@@ -79,7 +79,7 @@ export function GameShell({
   const lastPlayer = state.players[state.order[state.order.length - 1]];
   // Read per render rather than once on mount, so coming back from Settings
   // takes effect immediately instead of on the next game.
-  const { showGuidance, showTurnScore } = loadSettings();
+  const { showGuidance, showTurnScore, dice3d } = loadSettings();
 
   return (
     <div className="game" style={cosmetics}>
@@ -112,6 +112,7 @@ export function GameShell({
           avatars={avatars}
           turnTimer={turnTimer}
           showTurnScore={showTurnScore}
+          dice3d={dice3d}
         />
 
         <GuidanceLine state={state} canAct={canAct} muted={!showGuidance} />
