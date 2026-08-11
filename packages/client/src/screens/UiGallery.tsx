@@ -81,7 +81,7 @@ export function UiGallery() {
             <button className="btn btn--ghost bar-btn bar-btn--menu">Menu</button>
             <h1 className="game__logo">GREED</h1>
             <div className="game__bar-right">
-              {["hints", "history", "rules", "restart"].map((k) => (
+              {["history", "rules", "restart"].map((k) => (
                 <button key={k} className={`btn btn--ghost bar-btn bar-btn--${k}`}>
                   {k}
                 </button>

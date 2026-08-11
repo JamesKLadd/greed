@@ -16,6 +16,7 @@ function profile(over: Partial<Profile> = {}): Profile {
     achievements: [],
     dice: "ivory",
     table: "classic",
+    avatar: "",
     ...over,
   };
 }

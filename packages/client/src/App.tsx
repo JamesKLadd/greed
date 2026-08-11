@@ -36,8 +36,6 @@ export function App() {
   const challenges = useChallenges();
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
-  // Coaching hints for a guided practice game (the "Learn to play" flow).
-  const [coach, setCoach] = useState(false);
   // A password-reset token pulled from the email link (?reset=…).
   const [resetToken, setResetToken] = useState<string | undefined>(undefined);
   // Where to land after a successful sign-in (e.g. straight into online play when
@@ -106,12 +104,12 @@ export function App() {
 
   const leaveGame = () => {
     setMatch(null);
-    setCoach(false);
   };
 
+  // "Learn to play" is now just a gentle table (one easy bot). It used to also
+  // switch on a coaching hint bar; that guidance is on in every game now.
   const startPractice = () => {
     setMatch(practiceSetup());
-    setCoach(true);
     setMode("local");
   };
 
@@ -187,17 +185,9 @@ export function App() {
 
     if (mode === "local") {
       if (!match) {
-        return (
-          <SetupScreen
-            onStart={(s) => {
-              setCoach(false);
-              setMatch(s);
-            }}
-            onBack={() => setMode("home")}
-          />
-        );
+        return <SetupScreen onStart={setMatch} onBack={() => setMode("home")} />;
       }
-      return <GameScreen setup={match} coach={coach} onExit={leaveGame} />;
+      return <GameScreen setup={match} onExit={leaveGame} />;
     }
 
     return (

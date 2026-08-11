@@ -16,24 +16,24 @@ describe("seatColor", () => {
     expect(seatColor(0)).not.toBe(normal);
   });
 
-  it("stays legible on the cream card stock seats are printed on", () => {
-    // Seat colours are used as avatar rings, names and progress fills on
-    // --paper-1. They were originally picked for dark-green felt, where light
-    // values were required — exactly the values that vanish on a light surface.
-    // Assert the contrast property rather than specific hexes so the palette can
-    // be retuned without breaking, but never back to unreadable.
+  it("stays legible on the dark slab seat pods are made of", () => {
+    // Seat colours are used as avatar rings and progress fills on --surface-2.
+    // This palette has been retuned twice — once for dark felt, once for cream
+    // card stock, now for a dark room — so assert the contrast PROPERTY rather
+    // than specific hexes. It can be retuned again freely; it just can't go
+    // back to unreadable.
     for (const colorblind of [false, true]) {
       setColorblindPalette(colorblind);
       for (let i = 0; i < 8; i++) {
-        const ratio = contrast(seatColor(i), PAPER_1);
-        expect(ratio, `seat ${i} (colorblind=${colorblind}) on cream`).toBeGreaterThanOrEqual(3);
+        const ratio = contrast(seatColor(i), SURFACE_2);
+        expect(ratio, `seat ${i} (colorblind=${colorblind}) on a pod`).toBeGreaterThanOrEqual(3);
       }
     }
   });
 });
 
-/** --paper-1 in styles/tokens.css: the surface seat colours are drawn on. */
-const PAPER_1 = "#f8f1e2";
+/** --surface-2 in styles/tokens.css: the surface seat colours are drawn on. */
+const SURFACE_2 = "#1a202a";
 
 function relativeLuminance(hex: string): number {
   const n = parseInt(hex.replace("#", ""), 16);

@@ -34,6 +34,14 @@ export interface OnlineController {
   presence: Record<string, boolean>;
   /** Equipped dice-skin id per player id (for rendering the current player's dice). */
   skins: Record<string, string>;
+  /** Equipped avatar id per player id. Missing/empty means "derive from name". */
+  avatars: Record<string, string>;
+  /**
+   * The active seat's countdown to START their turn, or null when no clock is
+   * running. `endsAt` is on performance.now()'s monotonic clock, not the wall
+   * clock, so a device with the wrong time still counts down correctly.
+   */
+  turnTimer: { endsAt: number; total: number } | null;
   /** True when this client is a read-only watcher (no seat). */
   isSpectator: boolean;
   /** Most recent reaction per player id, with a nonce so repeats re-animate. */
@@ -79,6 +87,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const [rollTick, setRollTick] = useState(0);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [skins, setSkins] = useState<Record<string, string>>({});
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [turnTimer, setTurnTimer] = useState<{ endsAt: number; total: number } | null>(null);
   const [isSpectator, setIsSpectator] = useState(false);
   const [emotes, setEmotes] = useState<Record<string, { emote: EmoteId; at: number }>>({});
   const lastLogLen = useRef(0);
@@ -155,8 +165,20 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           prevPresenceRef.current = next;
           setPresence(next);
           const nextSkins: Record<string, string> = {};
-          for (const s of msg.skins ?? []) nextSkins[s.id] = s.dice;
+          const nextAvatars: Record<string, string> = {};
+          for (const s of msg.skins ?? []) {
+            nextSkins[s.id] = s.dice;
+            // A server that predates avatars sends none; clients then fall back
+            // to deriving a face from the name, which is identical everywhere.
+            nextAvatars[s.id] = s.avatar ?? "";
+          }
           setSkins(nextSkins);
+          setAvatars(nextAvatars);
+          setTurnTimer(
+            msg.turnTimerMs == null
+              ? null
+              : { endsAt: performance.now() + msg.turnTimerMs, total: msg.turnTimerMs },
+          );
           setGame(msg.state);
           setStatus("in-game");
           break;
@@ -231,6 +253,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           code: invited.code,
           name: invited.name,
           dice: loadProfile().dice,
+          avatar: loadProfile().avatar,
           auth: getToken() ?? undefined,
         });
         return;
@@ -320,6 +343,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     rollingIndices,
     presence,
     skins,
+    avatars,
+    turnTimer,
     isSpectator,
     emotes,
     sendEmote: (emote) => send({ type: "emote", emote }),
@@ -330,6 +355,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         isPublic: opts?.isPublic,
         goal: opts?.goal,
         dice: loadProfile().dice,
+        avatar: loadProfile().avatar,
         auth: getToken() ?? undefined,
       }),
     joinRoom: (roomCode, name) =>
@@ -338,10 +364,17 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         code: roomCode,
         name,
         dice: loadProfile().dice,
+        avatar: loadProfile().avatar,
         auth: getToken() ?? undefined,
       }),
     quickMatch: (name) =>
-      send({ type: "quick-match", name, dice: loadProfile().dice, auth: getToken() ?? undefined }),
+      send({
+        type: "quick-match",
+        name,
+        dice: loadProfile().dice,
+        avatar: loadProfile().avatar,
+        auth: getToken() ?? undefined,
+      }),
     spectate: (roomCode) => {
       setIsSpectator(true);
       setStatus("connecting");

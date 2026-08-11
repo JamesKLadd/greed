@@ -30,6 +30,8 @@ export interface StoredProfile {
   achievements: string[];
   dice: string;
   table: string;
+  /** Optional so profiles stored before avatars existed still normalize. */
+  avatar?: string;
 }
 
 export interface PublicUser {
@@ -87,6 +89,7 @@ export function emptyProfile(): StoredProfile {
     achievements: [],
     dice: "ivory",
     table: "classic",
+    avatar: "",
   };
 }
 
@@ -120,6 +123,7 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
     achievements: [...new Set([...existing.achievements, ...incoming.achievements])],
     dice: incoming.dice || existing.dice,
     table: incoming.table || existing.table,
+    avatar: incoming.avatar || existing.avatar || "",
   };
 }
 

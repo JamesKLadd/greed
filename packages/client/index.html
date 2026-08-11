@@ -6,7 +6,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icon-maskable.svg" />
-    <meta name="theme-color" content="#0a3d26" />
+    <meta name="theme-color" content="#12161e" />
     <title>Greed — the push-your-luck dice game</title>
     <meta
       name="description"
@@ -48,8 +48,13 @@
         margin: 0;
         height: 100%;
       }
+      /* Must mirror --room-* and --lamp in styles/tokens.css. This paints before
+         the stylesheet exists, so a mismatch here is a visible colour flash on
+         every cold load. */
       body {
-        background: radial-gradient(120% 120% at 50% 0%, #0f5132 0%, #0a3d26 55%, #062a1a 100%);
+        background:
+          radial-gradient(120% 70% at 50% -8%, rgba(255, 214, 150, 0.1), transparent 64%),
+          linear-gradient(180deg, #1c212b, #12161e 46%, #0a0d13);
       }
       #splash {
         position: fixed;
@@ -66,17 +71,18 @@
         font-weight: 900;
         letter-spacing: 2px;
         font-size: 64px;
-        color: #f5c451;
+        color: #f6dfae;
         text-shadow:
-          0 2px 0 #c9971f,
-          0 8px 24px rgba(0, 0, 0, 0.4);
+          0 1px 0 rgba(0, 0, 0, 0.5),
+          0 3px 0 rgba(0, 0, 0, 0.4),
+          0 10px 26px rgba(0, 0, 0, 0.7);
       }
       #splash .spin {
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        border: 3px solid rgba(245, 196, 81, 0.25);
-        border-top-color: #f5c451;
+        border: 3px solid rgba(246, 223, 174, 0.22);
+        border-top-color: #f6dfae;
         animation: splash-spin 0.8s linear infinite;
       }
       @keyframes splash-spin {

@@ -11,11 +11,10 @@ import { Icon, type IconName } from "./Icon.js";
  * hand-written and the online screen's leave button lost its modifier class.
  */
 
-export type BarButtonName = "menu" | "hints" | "history" | "rules" | "restart";
+export type BarButtonName = "menu" | "history" | "rules" | "restart";
 
 const ICONS: Record<BarButtonName, IconName> = {
   menu: "back",
-  hints: "bulb",
   history: "scroll",
   rules: "book",
   restart: "refresh",

@@ -2,7 +2,9 @@ import { useState, type CSSProperties } from "react";
 import { Die } from "../components/Die.js";
 import { equipCosmetic, loadProfile } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
-import { DICE_SKINS, TABLE_THEMES, isUnlocked, type Cosmetic } from "../game/cosmetics.js";
+import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
+import { AVATARS, isUnlocked as avatarUnlocked } from "../game/avatars.js";
+import { seatColor } from "../game/theme.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -10,24 +12,31 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
   const t = useT();
   const [profile, setProfile] = useState(() => loadProfile());
 
-  const unlockedCount = [...DICE_SKINS, ...TABLE_THEMES].filter((c) =>
-    isUnlocked(c, profile),
-  ).length;
-  const total = DICE_SKINS.length + TABLE_THEMES.length;
+  const unlockedCount =
+    [...DICE_SKINS, ...TABLE_THEMES].filter((c) => isUnlocked(c, profile)).length +
+    AVATARS.filter((a) => avatarUnlocked(a, profile)).length;
+  const total = DICE_SKINS.length + TABLE_THEMES.length + AVATARS.length;
 
-  const section = (
+  // Structural, not `Cosmetic`: avatars are emoji rather than CSS-variable
+  // bundles, so they satisfy this shape without pretending to be cosmetics.
+  interface Equippable {
+    id: string;
+    unlock?: (p: typeof profile) => boolean;
+  }
+
+  const section = <T extends Equippable>(
     title: string,
-    kind: "dice" | "table",
-    items: Cosmetic[],
-    preview: (c: Cosmetic) => JSX.Element,
+    kind: "dice" | "table" | "avatar",
+    items: T[],
+    preview: (c: T, index: number) => JSX.Element,
   ) => (
     <>
       <div className="setup__row setup__row--head">
         <h2>{title}</h2>
       </div>
       <ul className="locker-grid">
-        {items.map((c) => {
-          const unlocked = isUnlocked(c, profile);
+        {items.map((c, i) => {
+          const unlocked = !c.unlock || c.unlock(profile);
           const equipped = profile[kind] === c.id;
           return (
             <li
@@ -50,7 +59,7 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
               role={unlocked ? "button" : undefined}
               aria-disabled={!unlocked}
             >
-              {preview(c)}
+              {preview(c, i)}
               <span className="locker-name">{t(`cosmetic.${c.id}.name` as MsgKey)}</span>
               {equipped ? (
                 <span className="locker-tag locker-tag--on">{t("locker.equipped")}</span>
@@ -83,6 +92,18 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
 
         {section(t("locker.table"), "table", TABLE_THEMES, (c) => (
           <div className="locker-preview locker-preview--table" style={c.vars as CSSProperties} />
+        ))}
+
+        {section(t("locker.avatars"), "avatar", AVATARS, (a, i) => (
+          <div className="locker-preview locker-preview--avatar">
+            <span
+              className="avatar-disc"
+              style={{ "--seat": seatColor(i) } as CSSProperties}
+              aria-hidden="true"
+            >
+              {a.emoji}
+            </span>
+          </div>
         ))}
 
         <div className="setup__actions">

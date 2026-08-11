@@ -1,17 +1,18 @@
 /* ---------- Buttons ----------
-   Punched card tokens: a printed face, a visible board edge underneath, and a
-   press that actually travels down onto the table. */
+   Physical tokens: a lit top face, a visible board edge underneath, and a press
+   that actually travels down onto the table. In the dark room the "lit face" is
+   the top-edge sheen rather than a lighter fill. */
 .btn {
-  border: 1px solid var(--line-strong, var(--paper-edge-deep));
-  background: linear-gradient(178deg, #fffdf7, var(--paper-2));
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(178deg, var(--surface-3), var(--surface-1));
   color: var(--text);
   padding: 10px 16px;
   border-radius: var(--r-md);
   font-size: 0.9375rem;
   font-weight: 700;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 2px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 2px 0 var(--room-3),
     var(--e-rest);
   transition:
     transform 0.06s ease,
@@ -19,56 +20,61 @@
     box-shadow 0.15s ease;
 }
 .btn:hover:not(:disabled) {
-  background: linear-gradient(178deg, #ffffff, var(--paper-1));
+  background: linear-gradient(178deg, #3a4557, var(--surface-3));
 }
 .btn:active:not(:disabled) {
   /* Press the token down: travel the same 2px the edge is tall. */
   transform: translateY(2px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 0 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 0 0 var(--room-3),
     var(--e-flat);
 }
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
   box-shadow: none;
 }
-/* Ghost buttons appear both on card stock and directly on the table, so they
-   need to be a real (if lighter) paper token — a translucent white fill went
-   muddy over wood. */
+/* Ghost buttons appear both on panels and directly on the room, so they stay a
+   real (if quieter) slab — a translucent fill goes muddy over the lamp pool. */
 .btn--ghost {
-  background: linear-gradient(178deg, #fdf8ec, var(--paper-2));
-  border-color: var(--paper-edge-deep);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border-color: var(--line);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: linear-gradient(178deg, #ffffff, var(--paper-1));
+  background: linear-gradient(178deg, var(--surface-3), var(--surface-1));
 }
+/*
+ * The two in-game verbs. GREEN = keep going, AMBER = stop and keep it — the
+ * pairing every traffic light has already taught, which is most of why it needs
+ * no explanation. (These were the other way round under the light palette,
+ * where amber-on-cream was the only strong accent available.)
+ */
 .btn--roll {
-  background: linear-gradient(178deg, #d98b3c 0%, var(--gold) 55%, var(--gold-deep) 100%);
-  color: #fff8ec;
-  border-color: #7a3f0e;
-  text-shadow: 0 1px 0 rgba(80, 38, 4, 0.5);
+  background: linear-gradient(178deg, #4ad48d 0%, var(--accent) 55%, var(--accent-deep) 100%);
+  color: #04150c;
+  border-color: #135e37;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 2px 0 #7a3f0e,
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 0 #135e37,
     var(--e-rest);
 }
 .btn--roll:hover:not(:disabled) {
-  background: linear-gradient(178deg, #e59a4c 0%, #c07225 55%, #96520f 100%);
+  background: linear-gradient(178deg, #5ce09b 0%, #3ccd85 55%, #249a5f 100%);
 }
 .btn--bank {
-  background: linear-gradient(178deg, #4fa877 0%, #2f8f5b 55%, #226b45 100%);
-  color: #f2fff7;
-  border-color: #1c5738;
-  text-shadow: 0 1px 0 rgba(6, 40, 22, 0.45);
+  background: linear-gradient(178deg, #ffc255 0%, var(--warn) 55%, var(--warn-deep) 100%);
+  color: #1e1201;
+  border-color: #8a5a09;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 0 #1c5738,
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 2px 0 #8a5a09,
     var(--e-rest);
 }
 .btn--bank:hover:not(:disabled) {
-  background: linear-gradient(178deg, #5cb684 0%, #349b63 55%, #26764c 100%);
+  background: linear-gradient(178deg, #ffcf72 0%, #f8b640 55%, #d18d16 100%);
 }
 .btn--big {
   padding: 14px 28px;
@@ -80,7 +86,7 @@
   line-height: 1;
 }
 .btn--on {
-  background: linear-gradient(178deg, #f6e2c2, #eccfa4);
+  background: linear-gradient(178deg, #3b3016, #2c2411);
   border-color: var(--gold-deep);
   color: var(--gold-deep);
 }
@@ -109,13 +115,14 @@
   /* 6px tracking was the strongest "casino signage" cue; tight and chunky reads
      as a printed game-box wordmark instead. */
   letter-spacing: 2px;
-  /* Painted on the table: a warm cream with a dark bevel under it, so it reads
-     as printed/branded onto the wood rather than as a neon casino sign. */
+  /* Lit from the lamp overhead: a warm cream face with the letterform's own
+     shadow falling below it, so the wordmark reads as a solid object standing
+     in the room rather than as a flat neon sign. */
   color: #f6dfae;
   text-shadow:
-    0 1px 0 rgba(59, 36, 19, 0.55),
-    0 3px 0 rgba(38, 22, 10, 0.45),
-    0 10px 22px rgba(24, 13, 5, 0.5);
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    0 10px 26px rgba(0, 0, 0, 0.7);
   margin: 0;
 }
 .setup__logo {
@@ -128,23 +135,22 @@
   margin: 6px 0 0;
   font-size: 1rem;
 }
-/* A slab of chipboard laid on the table: printed face, bevelled top edge, two
-   stacked shadows standing in for board thickness, then a contact shadow.
-   The asymmetric radius keeps it feeling hand-cut rather than CSS-perfect.
-   backdrop-filter is gone on purpose — card stock is opaque, and it was the
-   most expensive thing in the sheet on mobile GPUs. */
+/* A slab laid on the table: a lit top edge, two stacked shadows standing in for
+   board thickness, then a contact shadow. The asymmetric radius keeps it
+   feeling hand-cut rather than CSS-perfect. backdrop-filter is gone on purpose
+   — the slab is opaque, and it was the most expensive thing in the sheet on
+   mobile GPUs. */
 .setup__panel {
   position: relative;
   width: min(680px, 100%);
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line);
   border-radius: var(--r-cut);
   padding: 22px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 -1px 0 rgba(88, 58, 26, 0.07),
-    0 2px 0 var(--paper-edge),
-    0 3px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 2px 0 var(--room-3),
+    0 3px 0 rgba(0, 0, 0, 0.5),
     var(--e-lift);
 }
 .setup__row {
@@ -185,16 +191,17 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-/* Fields read as ruled boxes on a score pad: slightly recessed into the card. */
+/* Fields read as wells cut into the slab: darker than the surface they sit on,
+   with the shadow of the near edge falling into them. */
 .seats-config__name,
 .seats-config__diff {
-  background: #fffdf8;
-  border: 1px solid var(--paper-edge-deep);
+  background: var(--room-2);
+  border: 1px solid var(--line-strong);
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.875rem;
-  box-shadow: inset 0 1px 2px rgba(88, 58, 26, 0.12);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
 }
 .seats-config__diff:disabled {
   opacity: 0.4;
@@ -227,6 +234,6 @@
   font-weight: 600;
 }
 .segmented__btn--on {
-  background: var(--gold);
+  background: var(--warn);
   color: var(--ink);
 }

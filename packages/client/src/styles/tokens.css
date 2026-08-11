@@ -29,9 +29,18 @@
  *
  * Layout: (1) cosmetic custom properties — a public API shared with
  * game/cosmetics.ts; (2) the raw scales; (3) semantic roles that the rest of the
- * stylesheet should reference. Prefer a semantic role (--surface, --line,
- * --accent) over a raw value so the "family game night" palette can be retuned
- * in one place.
+ * stylesheet should reference; (4) legacy aliases kept so old call sites keep
+ * working. Prefer a semantic role (--surface-1, --line, --accent) over a raw
+ * value, and prefer it over a legacy alias in new code.
+ *
+ * THE ROOM IS DARK. The felt oval is the single bright object on screen; every
+ * other surface is a raised slab of charcoal, and the light comes from one lamp
+ * hanging over the table. Two consequences worth remembering:
+ *   - Elevation shadows are BLACK, not the warm brown the light palette used.
+ *     Brown shadows are invisible on charcoal.
+ *   - A raised surface reads as raised because of a 1px top SHEEN, not because
+ *     it is lighter overall. Use var(--sheen); a 0.8-alpha white inset (what the
+ *     light palette used) is blinding here.
  */
 
 :root {
@@ -43,7 +52,9 @@
      Never alias these on :root (e.g. `--mat: var(--felt-1)`): custom-property
      substitution resolves where the alias is DECLARED, so a :root alias would
      freeze to this default and the inline vars on .game would stop applying —
-     silently breaking every table theme. Reference the cosmetic vars directly. */
+     silently breaking every table theme. Reference the cosmetic vars directly.
+     (Everything else in this file is safe to alias — nothing else is ever
+     overridden further down the tree.) */
   --felt-1: #0f5132;
   --felt-2: #0a3d26;
   --felt-edge: #062a1a;
@@ -89,55 +100,84 @@
   --ff-display: "Fraunces", Georgia, "Times New Roman", serif;
   --ff-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 
-  /* Elevation. Shadows are warm brown, never black — black shadows are the
-     single strongest "digital casino" cue in the old palette. */
-  --e-flat: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  --e-rest: 0 1px 2px rgba(72, 44, 18, 0.18), 0 8px 18px -8px rgba(72, 44, 18, 0.32);
-  --e-lift: 0 2px 4px rgba(72, 44, 18, 0.22), 0 18px 34px -14px rgba(72, 44, 18, 0.42);
-  --e-float: 0 4px 8px rgba(72, 44, 18, 0.24), 0 34px 60px -22px rgba(72, 44, 18, 0.5);
+  /* ----------------------------------------------------------------- the room
+     A dark room with one lamp over the table. --room-1 is the lit end (top),
+     --room-3 the far end. Kept deliberately close together so the backdrop
+     stays quiet and the felt is unambiguously the brightest thing on screen. */
+  --room-1: #1c212b;
+  --room-2: #12161e;
+  --room-3: #0a0d13;
+  /* The pool of light from the lamp overhead. */
+  --lamp: rgba(255, 214, 150, 0.1);
 
-  /* ------------------------------------------------------------- the room
-     Wood table + overhead lamp. Used from Phase 4 onward. */
-  --wood-1: #6b4526;
-  --wood-2: #54341c;
-  --wood-3: #3b2413;
-  --lamp: rgba(255, 226, 168, 0.16);
-  /* Text printed directly on the table (hero copy, version line) — the ink-brown
-     --text is for card stock and is invisible on wood. */
-  --text-on-wood: #f4e4cb;
-  --text-on-wood-dim: rgba(244, 228, 203, 0.72);
+  /* ---------------------------------------------------------------- surfaces
+     Raised slabs: panels, seat pods, chips, buttons. --surface-1 is the lit top
+     of a slab and --surface-2 its shaded bottom, so the two together make the
+     `linear-gradient(178deg, var(--surface-1), var(--surface-2))` that runs
+     through the whole sheet. --surface-3 is the hover/active step up. */
+  --surface-1: #232a35;
+  --surface-2: #1a202a;
+  --surface-3: #2d3644;
+  --line: #333d4b;
+  --line-strong: #46515f;
+  /* The top-edge catchlight that makes a slab read as raised. On dark this is a
+     whisper — the light palette's 0.8 alpha would be a white bar. */
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 
-  /* Card stock / paper for panels and tokens. */
-  --paper-1: #f8f1e2;
-  --paper-2: #f0e5cf;
-  --paper-3: #e6d8bc;
-  --paper-edge: #d3bf9c;
-  --paper-edge-deep: #bda781;
+  /* Elevation. Black, not brown: a warm shadow is invisible on charcoal. */
+  --e-flat: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --e-rest: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 18px -8px rgba(0, 0, 0, 0.55);
+  --e-lift: 0 2px 4px rgba(0, 0, 0, 0.5), 0 18px 34px -14px rgba(0, 0, 0, 0.68);
+  --e-float: 0 4px 8px rgba(0, 0, 0, 0.55), 0 34px 60px -22px rgba(0, 0, 0, 0.8);
 
-  /* ---------------------------------------------------------- semantic roles
-     Light: ink-brown on cream card stock, sitting on a lit wooden table. */
-  --text: #3a2a19;
-  --text-dim: #7a6449;
-  /* "Panel" is now card stock: opaque, warm, with a printed edge. */
-  --panel: var(--paper-1);
-  --panel-line: var(--paper-edge);
-  --line-strong: var(--paper-edge-deep);
-  --bad: #b23b2e;
-  --good: #2f8f5b;
-  --info: #2f6f9e;
-  --focus: 0 0 0 3px rgba(181, 101, 29, 0.4);
+  /* ---------------------------------------------------------- semantic roles */
+  --text: #eef2f8;
+  --text-dim: #99a4b4;
+  --text-mute: #6b7583;
+
+  /* The two in-game verbs, colour-coded and used nowhere else, so the pairing
+     stays unambiguous: green means keep going, amber means stop and keep it. */
+  --accent: #35c07a;
+  --accent-deep: #1f8f56;
+  --warn: #f0a92b;
+  --warn-deep: #c07d10;
+
+  --bad: #ef5a4e;
+  --good: #35c07a;
+  --info: #55a8e6;
+  --focus: 0 0 0 3px rgba(53, 192, 122, 0.5);
 
   /* -------------------------------------------------------------- legacy
-     Kept (not deleted) because 30+ call sites reference them; retire
-     opportunistically rather than turning a restyle into a 30-file refactor.
-     Repointed from casino gold to a warm terracotta/ink pairing that reads on
-     cream — the names are now historical, the values are not. */
-  --gold: #b5651d;
-  --gold-deep: #8e4a12;
-  --cream: #fffaf0;
-  --ink: #2a2118;
-  /* Deliberately still 14px, not var(--r-lg): Phase 1 is visually neutral, so
-     the move onto the radius scale happens with the rest of the restyle. */
+     Aliases, not values: ~50 call sites still reference these names, and
+     pointing them at the semantic roles above flips the whole app in one file
+     instead of turning a restyle into a 50-site refactor. Retire them
+     opportunistically; write new rules against the semantic names.
+
+     (Safe to alias — unlike the cosmetic block at the top, none of these is
+     ever overridden further down the tree.) */
+  --wood-1: var(--room-1);
+  --wood-2: var(--room-2);
+  --wood-3: var(--room-3);
+  --paper-1: var(--surface-1);
+  --paper-2: var(--surface-2);
+  --paper-3: var(--surface-3);
+  --paper-edge: var(--line);
+  --paper-edge-deep: var(--line-strong);
+  --panel: var(--surface-1);
+  --panel-line: var(--line);
+  /* "On wood" vs "on paper" was a real distinction in the light palette (brown
+     ink on cream, cream ink on wood). In a dark room everything is light-on-
+     dark, so both collapse onto the ordinary text roles. */
+  --text-on-wood: var(--text);
+  --text-on-wood-dim: var(--text-dim);
+  /* Historically casino gold, then terracotta; now the BANK amber. A single
+     mid-amber has to serve both as text on charcoal (needs to be bright) and as
+     the dropped edge under an amber button (needs to be darker than --warn),
+     which is why --gold-deep is not simply --warn-deep. */
+  --gold: var(--warn);
+  --gold-deep: #d99420;
+  --cream: #ffffff;
+  --ink: #0f1319;
   --radius: 14px;
-  --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
 }

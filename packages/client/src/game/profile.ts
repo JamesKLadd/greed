@@ -26,6 +26,8 @@ export interface Profile {
   /** Equipped cosmetic ids. */
   dice: string;
   table: string;
+  /** Equipped avatar id, or "" to let it be derived from the player's name. */
+  avatar: string;
 }
 
 /** One completed solo game, from the human's perspective. */
@@ -195,6 +197,7 @@ function emptyProfile(): Profile {
     achievements: [],
     dice: "ivory",
     table: "classic",
+    avatar: "",
   };
 }
 
@@ -250,11 +253,12 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     achievements: [...new Set([...a.achievements, ...b.achievements])],
     dice: b.dice || a.dice,
     table: b.table || a.table,
+    avatar: b.avatar || a.avatar,
   };
 }
 
-/** Equip a cosmetic (dice skin or table theme); returns the updated profile. */
-export function equipCosmetic(kind: "dice" | "table", id: string): Profile {
+/** Equip a cosmetic (dice skin, table theme or avatar); returns the updated profile. */
+export function equipCosmetic(kind: "dice" | "table" | "avatar", id: string): Profile {
   const p = loadProfile();
   p[kind] = id;
   saveProfile(p);

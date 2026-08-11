@@ -23,6 +23,8 @@ export interface Seat {
   userId?: string;
   /** Equipped dice-skin id (cosmetic), broadcast so all clients render it. */
   dice: string;
+  /** Equipped avatar id, or "" to let clients derive one from the name. */
+  avatar: string;
   /** Turns this player let time out this game (kicked once it hits the cap). */
   missedTurns: number;
   /** When this seat last sent an emote, for the anti-spam cooldown. */
@@ -42,6 +44,12 @@ export interface Room {
   game: GameState | null;
   /** Pending scheduled follow-ups (bot moves / inter-turn advances). */
   timers: Set<NodeJS.Timeout>;
+  /**
+   * When the current seat's grace period to START their turn runs out, or null
+   * when no clock is running. Only ever set for a connected human who hasn't
+   * rolled yet — that is the only thing the server actually puts a limit on.
+   */
+  turnDeadline: number | null;
   /** Read-only watchers: sockets that receive broadcasts but hold no seat. */
   spectators: Set<WebSocket>;
 }
@@ -72,6 +80,7 @@ export class RoomStore {
       phase: "lobby",
       game: null,
       timers: new Set(),
+      turnDeadline: null,
       spectators: new Set(),
     };
     this.rooms.set(room.code, room);
@@ -114,6 +123,9 @@ export class RoomStore {
 export function clearTimers(room: Room): void {
   for (const t of room.timers) clearTimeout(t);
   room.timers.clear();
+  // The turn clock is one of those timers, so it stops with them. Whoever
+  // re-arms it sets this again.
+  room.turnDeadline = null;
 }
 
 export function makeHumanSeat(
@@ -121,6 +133,7 @@ export function makeHumanSeat(
   isHost: boolean,
   dice = "ivory",
   userId?: string,
+  avatar = "",
 ): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
@@ -130,6 +143,7 @@ export function makeHumanSeat(
     isHost,
     userId,
     dice: dice || "ivory",
+    avatar,
     missedTurns: 0,
     token: randomBytes(16).toString("hex"),
     ws: null,
@@ -145,6 +159,8 @@ export function makeBotSeat(index: number, personality: BotPersonality = "balanc
     ready: true,
     isHost: false,
     dice: "ivory",
+    // Bots never pick: every client derives a machine face from the bot's name.
+    avatar: "",
     missedTurns: 0,
     token: "",
     ws: null,

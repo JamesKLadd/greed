@@ -148,9 +148,20 @@ export class GreedServer {
     // Equipped dice skins, so every client can render the current player's dice.
     const skins = room.game.players.map((p) => {
       const seat = room.seats.find((s) => s.id === p.id);
-      return { id: p.id, dice: seat?.dice ?? "ivory" };
+      return { id: p.id, dice: seat?.dice ?? "ivory", avatar: seat?.avatar ?? "" };
     });
-    return { type: "game", code: room.code, state: room.game, presence, skins };
+    // Recomputed at send time, so the incidental re-broadcasts (a reconnect, a
+    // disconnect) carry a correctly SHORTENED remainder rather than restarting
+    // the countdown on everyone's screen.
+    const left = room.turnDeadline ? room.turnDeadline - Date.now() : 0;
+    return {
+      type: "game",
+      code: room.code,
+      state: room.game,
+      presence,
+      skins,
+      turnTimerMs: left > 0 ? left : undefined,
+    };
   }
 
   private broadcastGame(room: Room): void {
@@ -188,6 +199,7 @@ export class GreedServer {
             m.goal ?? GOAL_DEFAULT,
             m.dice,
             id.userId,
+            m.avatar,
           ),
         );
         return;
@@ -195,14 +207,14 @@ export class GreedServer {
       case "join-room": {
         const m = msg;
         this.withIdentity(ws, m.auth, (id) =>
-          this.onJoin(ws, m.code, id.name ?? m.name, m.dice, id.userId),
+          this.onJoin(ws, m.code, id.name ?? m.name, m.dice, id.userId, m.avatar),
         );
         return;
       }
       case "quick-match": {
         const m = msg;
         this.withIdentity(ws, m.auth, (id) =>
-          this.onQuickMatch(ws, id.name ?? m.name, m.dice, id.userId),
+          this.onQuickMatch(ws, id.name ?? m.name, m.dice, id.userId, m.avatar),
         );
         return;
       }
@@ -356,14 +368,22 @@ export class GreedServer {
     goal: number,
     dice?: string,
     userId?: string,
+    avatar?: string,
   ): void {
     const room = this.store.create(isPublic, goal);
-    const seat = makeHumanSeat(name, true, dice, userId);
+    const seat = makeHumanSeat(name, true, dice, userId, avatar);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
   }
 
-  private onJoin(ws: WebSocket, code: string, name: string, dice?: string, userId?: string): void {
+  private onJoin(
+    ws: WebSocket,
+    code: string,
+    name: string,
+    dice?: string,
+    userId?: string,
+    avatar?: string,
+  ): void {
     const room = this.store.get(code);
     if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
     if (room.phase !== "lobby")
@@ -390,16 +410,22 @@ export class GreedServer {
 
     if (room.seats.length >= MAX_SEATS)
       return this.send(ws, { type: "error", message: "That room is full." });
-    const seat = makeHumanSeat(name, isHost, dice, userId);
+    const seat = makeHumanSeat(name, isHost, dice, userId, avatar);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
   }
 
-  private onQuickMatch(ws: WebSocket, name: string, dice?: string, userId?: string): void {
+  private onQuickMatch(
+    ws: WebSocket,
+    name: string,
+    dice?: string,
+    userId?: string,
+    avatar?: string,
+  ): void {
     const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
-    const seat = makeHumanSeat(name, isHost, dice, userId);
+    const seat = makeHumanSeat(name, isHost, dice, userId, avatar);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
@@ -546,16 +572,20 @@ export class GreedServer {
 
     this.schedule(room, this.cfg.rollOffMs, () => {
       startGame(room, order);
-      this.broadcastGame(room);
       this.scheduleFollowups(room);
+      this.broadcastGame(room);
     });
   }
 
+  // Follow-ups are scheduled BEFORE the broadcast, not after: arming the turn
+  // clock is what sets room.turnDeadline, and the broadcast is what carries it
+  // to the clients. The other way round, every snapshot would describe the
+  // previous turn's clock.
   private applyAndBroadcast(room: Room, action: Parameters<typeof applyAction>[1]): void {
     if (!room.game) return;
     room.game = applyAction(room.game, action);
-    this.broadcastGame(room);
     this.scheduleFollowups(room);
+    this.broadcastGame(room);
   }
 
   private schedule(room: Room, ms: number, fn: () => void): void {
@@ -601,6 +631,10 @@ export class GreedServer {
     // A connected human. If they haven't STARTED their turn (no roll yet), give
     // them a grace period; a time-out forfeits the turn and counts against them.
     if (seat && g.turn.rollCount === 0) {
+      // The only clock the server actually keeps. Recorded on the room so the
+      // next broadcast can tell clients how long is left, which is what the
+      // countdown ring on the active seat draws.
+      room.turnDeadline = Date.now() + this.cfg.turnIdleMs;
       this.schedule(room, this.cfg.turnIdleMs, () => this.onTurnTimeout(room, seat));
     }
     // Otherwise (they've already rolled) wait for their ROLL/BANK.
@@ -626,8 +660,8 @@ export class GreedServer {
       if (!this.store.get(room.code)) return;
     }
 
-    this.broadcastGame(room);
     this.scheduleFollowups(room);
+    this.broadcastGame(room);
   }
 
   /**

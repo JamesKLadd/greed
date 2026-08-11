@@ -1,20 +1,27 @@
-/* ---------- Game layout ---------- */
+/* ---------- Game layout ----------
+   A fixed-height flex column: bar, banners, table, controls. Nothing in here
+   scrolls — the board is the whole screen and every row either has a fixed
+   height or is the one row that absorbs what's left (.table-stage). */
 .game {
-  min-height: 100%;
-  min-height: 100dvh;
+  position: relative; /* anchors the floating reactions button */
+  height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  /* The in-game surround is the WOODEN TABLE, not the felt. The equipped table
-     theme colours the play mat (.felt) that sits on it — so a crimson theme is
-     "a crimson mat on the table", not "the entire screen is crimson". */
+  overflow: hidden;
+  /* The in-game surround is the ROOM, not the felt. The equipped table theme
+     colours the play mat (.felt) that sits in it — so a crimson theme is "a
+     crimson mat on the table", not "the entire screen is crimson". Keeping the
+     room constant across all ten themes is also what keeps text contrast
+     predictable, which is a bug this palette has hit before. */
   background:
-    repeating-linear-gradient(93deg, rgba(48, 26, 8, 0.055) 0 2px, transparent 2px 9px),
-    radial-gradient(130% 80% at 50% -4%, var(--lamp), transparent 60%),
-    linear-gradient(180deg, var(--wood-1), var(--wood-2) 55%, var(--wood-3));
+    radial-gradient(120% 62% at 50% -6%, var(--lamp), transparent 66%),
+    linear-gradient(180deg, var(--room-1), var(--room-2) 48%, var(--room-3));
 }
 .game__bar {
   /* Three equal-weight columns keep the logo centered to the screen even though
      the left (Leave) and right (controls) groups are different widths. */
+  flex: none;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -40,59 +47,77 @@
   gap: 8px;
   justify-self: end;
 }
-.game__main {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 18px;
-  padding: 18px;
-  align-items: start;
-}
-@media (max-width: 820px) {
-  .game__main {
-    grid-template-columns: 1fr;
-  }
-}
-/* Seat-around-the-table layout: stack the oval and the controls. */
+/* The table and the controls, stacked. `min-height: 0` is load-bearing: a flex
+   item defaults to min-height:auto and refuses to shrink below its content, so
+   without it a tall table pushes the Roll/Bank buttons off the bottom of the
+   screen — on exactly the small phones this layout exists for. */
 .game__main--table {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 12px;
+  padding: 10px;
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
 }
 
-/* ---------- Oval table with seats around it ---------- */
+/* ---------- The table ---------- */
+/* The stage absorbs whatever vertical room the bar, banners and controls leave.
+   `min-height: 0` for the same reason as .game__main--table above. */
 .table-stage {
+  flex: 1;
+  min-height: 0;
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 /*
- * The play mat: a round cloth laid on the wooden table, with a bound hem and a
- * stitched edge. The equipped TABLE_THEME colours the cloth (--felt-*) and its
- * binding (--rail-*), so all ten themes come through as different mats rather
- * than as ten different casino rooms.
+ * The play mat: a cloth laid on the table, with a bound hem and a stitched edge.
+ * The equipped TABLE_THEME colours the cloth (--felt-*) and its binding
+ * (--rail-*), so all ten themes come through as different mats in the same room
+ * rather than as ten different rooms.
+ *
+ * `container-type: inline-size` is LOAD-BEARING, not decorative: the seat pods
+ * and the dice are both sized in cqw off this element, so that five dice on one
+ * row is a derived guarantee rather than a hand-tuned vw clamp that silently
+ * wraps the moment a pod changes width. If this declaration goes missing every
+ * cqw below quietly falls back to the small-viewport size — which still looks
+ * about right on a phone and is badly wrong on a desktop, with nothing erroring.
  */
 .felt {
   position: relative;
-  width: min(820px, 100%);
-  aspect-ratio: 16 / 10;
-  border-radius: 50%;
+  container-type: inline-size;
+  /*
+   * A rounded rectangle, not a true ellipse. An ellipse pulls away from its
+   * bounding box fastest exactly where the seats are — the corners — so pods
+   * near the ends end up floating in the room with no table under them. A
+   * generous corner radius keeps straight rails down both sides and across the
+   * top for the pods to sit on, which is also what the real card tables in the
+   * reference shots are.
+   */
+  border-radius: clamp(64px, 24cqw, 150px);
   background:
     /* woven crosshatch — a 3px period stays clear of hi-DPI moiré */
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px),
     /* soft light across the middle of the cloth */
-    radial-gradient(58% 52% at 50% 40%, rgba(255, 255, 255, 0.07), transparent 72%),
-    radial-gradient(120% 130% at 50% 26%, var(--felt-1), var(--felt-2) 52%, var(--felt-edge) 100%);
+    radial-gradient(58% 52% at 50% 38%, rgba(255, 255, 255, 0.09), transparent 72%),
+    radial-gradient(120% 130% at 50% 24%, var(--felt-1), var(--felt-2) 52%, var(--felt-edge) 100%);
   border: none;
   box-shadow:
-    /* cloth, not a pit: the old 0.62 vignette read as a sunken card table */
-    inset 0 0 60px rgba(30, 16, 4, 0.34),
+    inset 0 0 70px rgba(0, 0, 0, 0.42),
     /* bound hem */ 0 0 0 10px var(--rail-1),
-    0 0 0 11px rgba(30, 16, 4, 0.22),
-    /* contact shadow on the wood */ 0 14px 26px -10px rgba(72, 44, 18, 0.5);
-  margin: 16px 0 6px;
+    0 0 0 12px rgba(0, 0, 0, 0.55),
+    /* The lamp catching the cloth. In a dark room the felt is the only lit
+       object, and this bloom is most of what sells that — it's mixed from the
+       equipped theme so a crimson mat glows crimson. color-mix on a bare var()
+       rather than a --felt-glow token: the contract test rejects any --felt-*
+       name that isn't one of the eleven cosmetics. */
+    0 0 64px -8px color-mix(in srgb, var(--felt-1) 55%, transparent),
+    0 22px 44px -14px rgba(0, 0, 0, 0.8);
 }
 /* Stitching just inside the hem. */
 .felt::after {
@@ -100,30 +125,86 @@
   position: absolute;
   inset: -5px;
   border-radius: inherit;
-  border: 2px dashed color-mix(in srgb, var(--rail-2) 65%, #fff8ea 35%);
-  opacity: 0.45;
+  border: 2px dashed color-mix(in srgb, var(--rail-2) 55%, #e8dcc4 45%);
+  opacity: 0.32;
   pointer-events: none;
+}
+
+/*
+ * PORTRAIT. Deliberately no aspect-ratio: a fixed aspect fights the flexible
+ * height and produces either overflow or a letterboxed gap, so the table just
+ * takes the box it's given.
+ *
+ * It is also NARROWER THAN THE SCREEN, and that is the whole trick:
+ * seat pods straddle the rail, half on the cloth and half in the margin either
+ * side, which is what makes room for players down both sides of a phone.
+ * Mirrors POD.portraitFeltFraction in tableGeometry.ts.
+ */
+.felt[data-layout="portrait"] {
+  width: 80%;
+  /* Short of the stage by the amount your own seat hangs off the near rail —
+     40% of its height, per POD.selfOverhang. Pinned to the top so all that
+     slack lands at the bottom, where the overhang actually is. */
+  height: calc(100% - 32px);
+  align-self: flex-start;
+  max-width: 440px;
+  /* --pod-w/--pod-h describe an OPPONENT pod; the geometry module needs the
+     same numbers to prove the seats don't collide, so if you change one, change
+     both. Widths are a share of the MAT (cqw), not the viewport, so they stay
+     correct when the mat is capped on a tablet. */
+  --pod-w: clamp(62px, 30cqw, 92px);
+  --pod-h: 66px;
+  --pod-w-self: clamp(104px, 42cqw, 132px);
+  --pod-h-self: 80px;
+  /* The clear width down the middle, once the pods on each rail have taken
+     their bite: a pod is centred on the ring, so it reaches (50 - rx)% + half
+     its own width in from each edge. With rx = 46 that's 4% + --pod-w/2 a side.
+     Kept in step with diceCorridor() in tableGeometry.ts. */
+  --corridor: calc(92cqw - var(--pod-w));
+}
+/* WIDE — the classic horizontal oval, seats all the way round the rail. */
+.felt[data-layout="wide"] {
+  width: min(820px, 100%);
+  aspect-ratio: 16 / 10;
+  max-height: 100%;
+  --pod-w: 152px;
+  --pod-h: 92px;
+  --pod-w-self: 152px;
+  --pod-h-self: 92px;
 }
 
 .felt__seats {
   position: absolute;
   inset: 0;
 }
+/*
+ * A seat pod sits ON the rail, straddling the mat's edge.
+ *
+ * --ax is the anchor: rail seats pin their outer edge to the slot instead of
+ * centring on it, so a pod at x:98% cannot hang half its width off the screen.
+ * See tableGeometry.ts — the value is "0%", "-50%" or "-100%".
+ */
 .pseat {
   position: absolute;
   left: var(--x, 50%);
   top: var(--y, 50%);
-  transform: translate(-50%, -50%);
-  width: 152px;
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
+  transform: translate(var(--ax, -50%), var(--ay, -50%));
+  width: var(--pod-w);
+  /* Fixed, and the same number tableGeometry.ts stacks rows by. A pod that
+     grows with its content (a long name wrapping, the "thinking…" line
+     appearing) would push itself into the pod above — which is a layout bug
+     that only shows up on a full table, on a short screen, mid-turn. */
+  height: var(--pod-h);
+  overflow: hidden;
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  padding: 8px 11px;
+  padding: 7px 10px;
   /* Separation comes from the contact shadow, not the fill, so seats stay
      readable on every mat colour (including the light sand/sunset themes). */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 2px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 2px 0 rgba(0, 0, 0, 0.5),
     var(--e-lift);
   z-index: 2;
   transition:
@@ -131,14 +212,85 @@
     background 0.18s ease,
     box-shadow 0.18s ease;
 }
+/* Amber, not the roll button's green: this is a spotlight on whose turn it is,
+   not an action, and keeping the two colours apart keeps green meaning "go". */
 .pseat--current {
-  border-color: var(--gold-deep);
-  background: linear-gradient(178deg, #fffdf6, #f8ecd4);
+  border-color: var(--warn);
+  background: linear-gradient(178deg, #38301d, #241f13);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 0 0 2px var(--gold),
-    0 3px 0 var(--gold-deep),
+    var(--sheen),
+    0 0 0 2px var(--warn),
+    0 3px 0 var(--warn-deep),
     var(--e-lift);
+}
+
+/*
+ * Compact rail pods. Six or more players means three pods across the top of a
+ * portrait oval, which only fits if they drop to a disc over a score.
+ */
+/* The bottom seat keeps the full pod even on a crowded table: it's the one
+   seat you actually read numbers off.
+   It is also the one pod allowed to size to its content, because it isn't part
+   of the stacked rows — it's anchored to the mat's near edge, so growing a few
+   pixels pushes nothing. (Its overhang is a percentage of its own height, so
+   that stays correct too.) */
+.pseat--bottom {
+  width: var(--pod-w-self);
+  height: auto;
+  min-height: var(--pod-h-self);
+  overflow: visible;
+}
+/*
+ * Compact pods run to a tight budget: --pod-h is 66px and tableGeometry.ts
+ * proves the seats don't collide using that same number, so every line height
+ * here is deliberate. Grow the content past it and the pod silently clips its
+ * own score; grow the BOX and seats start overlapping on a small phone.
+ *
+ * Budget: padding 6 + disc 20 + 2 + name 10 + score 16 + 2 + bar 3 + 2 = 61.
+ */
+.pseat--compact {
+  padding: 2px 3px;
+  text-align: center;
+}
+.pseat--compact .pseat__avatar {
+  width: 20px;
+  height: 20px;
+  font-size: 0.6875rem;
+}
+.pseat--compact .pseat__head {
+  flex-direction: column;
+  gap: 1px;
+}
+.pseat--compact .pseat__name {
+  font-size: 0.5625rem;
+  line-height: 1.15;
+  max-width: 100%;
+  justify-content: center;
+}
+.pseat--compact .pseat__crown {
+  font-size: 0.5rem;
+}
+.pseat--compact .pseat__you {
+  display: none;
+}
+.pseat--compact .pseat__meta {
+  justify-content: center;
+  margin-top: 1px;
+}
+.pseat--compact .pseat__total {
+  font-size: 0.9375rem;
+  line-height: 1.05;
+}
+.pseat--compact .pseat__turn {
+  font-size: 0.625rem;
+}
+.pseat--compact .pseat__bar {
+  height: 3px;
+  margin-top: 2px;
+}
+.pseat--compact .pseat__status {
+  font-size: 0.5rem;
+  margin-top: 0;
 }
 /* The "it's your turn" pulse rides on a pseudo-element's opacity rather than the
    seat's box-shadow: box-shadow animation repaints the card every frame (on up
@@ -148,7 +300,7 @@
   position: absolute;
   inset: -3px;
   border-radius: inherit;
-  box-shadow: 0 0 12px 3px var(--gold);
+  box-shadow: 0 0 14px 3px var(--warn);
   pointer-events: none;
   animation: seat-breathe 2.4s ease-in-out infinite;
 }
@@ -163,21 +315,24 @@
 }
 .pseat--winner {
   border-color: var(--good);
-  background: linear-gradient(178deg, #f3fbf5, #ddf0e4);
+  background: linear-gradient(178deg, #1d3a2a, #14281e);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    var(--sheen),
     0 0 0 2px var(--good),
-    0 3px 0 #1c5738,
+    0 3px 0 #14512f,
     var(--e-lift);
 }
 .pseat--you:not(.pseat--current):not(.pseat--winner) {
-  border-color: var(--gold);
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--line-strong));
 }
 .pseat__head {
   display: flex;
   align-items: center;
   gap: 7px;
 }
+/* An emoji face on a disc tinted with the player's seat colour. The colour is
+   what keeps eight seats apart when two players pick similar animals — and it's
+   the same hue as their progress bar, so a glance ties the two together. */
 .pseat__avatar {
   flex: none;
   width: 26px;
@@ -185,18 +340,17 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  color: var(--seat, var(--gold));
-  background: color-mix(in srgb, var(--seat, #ffffff) 22%, transparent);
-  border: 1.5px solid var(--seat, var(--gold));
-  box-shadow: 0 0 8px color-mix(in srgb, var(--seat, #ffffff) 30%, transparent);
+  font-size: 0.875rem;
+  line-height: 1;
+  background: color-mix(in srgb, var(--seat, #ffffff) 26%, var(--room-3));
+  border: 1.5px solid var(--seat, var(--warn));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--seat, #ffffff) 35%, transparent);
 }
 .pseat__name {
   flex: 1;
   font-weight: 600;
   font-size: 0.875rem;
+  line-height: 1.2;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -213,21 +367,6 @@
   font-weight: 500;
   font-size: 0.75rem;
 }
-.pseat__tag {
-  flex: none;
-  font-size: 0.5625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #fff6e6;
-  background: var(--text-dim);
-  border-radius: 5px;
-  padding: 1px 5px;
-}
-.pseat__pers {
-  flex: none;
-  font-size: 0.6875rem;
-  line-height: 1;
-}
 .pseat__avatar {
   position: relative;
 }
@@ -239,12 +378,63 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #9a8b78;
-  border: 2px solid var(--paper-1);
+  background: var(--text-mute);
+  border: 2px solid var(--surface-1);
 }
 .pseat__conn--on {
   background: var(--good);
   box-shadow: 0 0 6px var(--good);
+}
+
+/* ---------- Turn countdown ring ----------
+   Wrapped round the active seat's avatar. Drawn as an SVG stroke rather than a
+   conic-gradient because stroke-dashoffset animates natively everywhere, with
+   no @property registration and no fallback needed for older Safari. */
+.turn-ring {
+  position: absolute;
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+  pointer-events: none;
+  /* Start at 12 o'clock and drain clockwise, like every clock face. */
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.turn-ring circle {
+  fill: none;
+  stroke-width: 7;
+}
+.turn-ring__track {
+  stroke: rgba(0, 0, 0, 0.45);
+}
+.turn-ring__drain {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke 0.3s ease;
+}
+.turn-ring--warn .turn-ring__drain {
+  stroke: var(--warn);
+}
+.turn-ring--bad .turn-ring__drain {
+  stroke: var(--bad);
+}
+/* The clock stopped because the player started their turn in time. Complete the
+   ring and fade it out, so it reads as "made it" rather than as a glitch. */
+.turn-ring--settling {
+  animation: ring-settle 0.42s ease-out forwards;
+}
+.turn-ring--settling .turn-ring__drain {
+  stroke: var(--accent);
+}
+@keyframes ring-settle {
+  0% {
+    opacity: 1;
+    transform: rotate(-90deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(-90deg) scale(1.15);
+  }
 }
 .pseat--offline {
   opacity: 0.6;
@@ -255,8 +445,15 @@
   color: var(--text-dim);
   font-style: italic;
 }
+/* Pods are a fixed height (the row stacking depends on it), so "thinking…" has
+   to take the place of something rather than add to the stack. It takes the
+   progress bar's row: while a seat is mid-turn, what it's doing right now
+   matters more than how close it is to the goal. */
+.pseat:has(.pseat__status) .pseat__bar {
+  display: none;
+}
 .pseat--current .pseat__status {
-  color: var(--gold-deep);
+  color: var(--warn);
   animation: pulse-fade 1.3s ease-in-out infinite;
 }
 @keyframes pulse-fade {
@@ -268,43 +465,45 @@
     opacity: 1;
   }
 }
-/* Score + badges share a row below the name, freeing the name's full width. */
 .pseat__meta {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 6px;
   margin-top: 3px;
-}
-.pseat__badges {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 .pseat__total {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   font-size: 1.3125rem;
+  /* Explicit: the inherited body line-height adds ~10px of air per pod, which
+     on a fixed-height pod is the difference between fitting and clipping. */
+  line-height: 1.1;
 }
 .pseat__turn {
   color: var(--good);
   font-size: 0.8125rem;
   font-weight: 700;
 }
+/* How close this player is to the goal — the only thing on a pod that answers
+   "am I winning?" without arithmetic, which is most of why it survives on a
+   pod that has otherwise been stripped back to a name and a number. */
 .pseat__bar {
   margin-top: 7px;
   height: 5px;
   border-radius: 4px;
-  background: rgba(88, 58, 26, 0.12);
+  background: rgba(0, 0, 0, 0.45);
   overflow: hidden;
+}
+.pseat--compact .pseat__bar {
+  height: 4px;
+  margin-top: 5px;
 }
 .pseat__fill {
   height: 100%;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--seat, var(--gold)) 70%, transparent),
-    var(--seat, var(--gold))
+    color-mix(in srgb, var(--seat, var(--warn)) 55%, transparent),
+    var(--seat, var(--warn))
   );
   transition: width 0.4s ease;
 }
@@ -317,35 +516,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  max-width: 82%;
+  gap: 14px;
+  width: 92%;
   z-index: 1;
 }
-/* Keep all five dice on one row inside the oval (mobile re-enables wrapping). */
+/* Five dice, one row, always. The size is DERIVED from the corridor the seat
+   pods leave down the middle of the mat, rather than hand-tuned against the
+   viewport — so it can't silently wrap the day a pod gets wider, and it doesn't
+   change when a banner appears (a banner costs height, not width). */
 .felt__center .dice-tray {
   flex-wrap: nowrap;
+  gap: clamp(4px, 1.4cqw, 12px);
 }
-/* A little card chip rather than bare text: the mat underneath ranges from dark
-   green to pale sand across the ten themes, so no single ink colour is legible
-   on all of them. Printing it on stock sidesteps the problem entirely. */
-.felt__whose {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--text);
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
-  border-radius: var(--r-pill);
-  padding: 5px 14px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    var(--e-rest);
+/* The 36px covers the four gaps between the dice plus a little air either side,
+   so the outermost die never ends up touching the seat next to it. Kept in step
+   with POD.minDiePx / POD.diceRowOverheadPx in tableGeometry.ts. */
+.felt[data-layout="portrait"] .felt__center .dice-tray .die {
+  font-size: clamp(22px, calc((var(--corridor) - 36px) / 5), 56px);
 }
-.felt__whose--bot .table__dot {
-  background: var(--info);
-  box-shadow: 0 0 10px var(--info);
+.felt[data-layout="wide"] .felt__center .dice-tray .die {
+  font-size: clamp(26px, 15cqw, 60px);
 }
 
 /* What the turn is worth so far, printed over the dice carrying it. The slot
@@ -355,26 +545,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
+  /* The slot keeps its height whether or not there's a number in it, so the
+     dice don't jump the instant a roll scores. */
+  min-height: clamp(46px, 11cqw, 62px);
   /* Tightened against the whose-turn chip above, but with clear air below: a
      scoring die lifts 5px on its lock-pop, so a snug gap gets clipped into. */
-  margin: -8px 0 2px;
+  margin: -6px 0 2px;
 }
-/* Printed on card stock like the whose-turn chip, and for the same reason: the
-   ten mats run from dark green to pale sand, so no single ink colour is legible
-   on all of them. On stock it reads everywhere. */
+/* The biggest number on the screen. This is what the whole turn is about — the
+   amount you're deciding whether to keep or gamble — so it outranks every other
+   figure on the board, including the scores on the pods. On a slab for the same
+   reason as the whose-turn chip: no single ink colour reads on all ten mats. */
 .felt__pot-value {
-  font-size: 1.375rem;
-  font-weight: 800;
+  font-size: clamp(1.75rem, 9cqw, 2.75rem);
+  line-height: 1;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: var(--good);
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
-  padding: 2px 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    var(--e-rest);
+  padding: 6px 18px;
+  box-shadow: var(--sheen), var(--e-rest);
   animation: pot-pop 0.28s ease-out;
 }
 @keyframes pot-pop {
@@ -395,60 +587,12 @@
   justify-content: center;
 }
 
-/* Narrow screens: drop the oval, stack the dice above a wrapped seat list. */
-@media (max-width: 760px) {
-  .felt {
-    position: static;
-    aspect-ratio: auto;
-    width: 100%;
-    border-radius: var(--radius);
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    box-shadow:
-      inset 0 0 60px rgba(0, 0, 0, 0.5),
-      0 0 0 5px var(--rail-2),
-      var(--shadow);
-  }
-  .felt::before {
-    display: none;
-  }
-  .felt__seats {
-    position: static;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-  }
-  /* `relative` rather than `static`: the seat must stay a containing block, or
-     the absolutely-positioned emote bubble escapes it and lands in the corner
-     of the page. Off the ellipse the offsets are all auto, so it doesn't move. */
-  .pseat {
-    position: relative;
-    transform: none;
-    left: auto;
-    top: auto;
-    width: calc(50% - 4px);
-    min-width: 132px;
-  }
-  .felt__center {
-    position: static;
-    transform: none;
-    left: auto;
-    top: auto;
-    max-width: 100%;
-    order: -1;
-  }
-  .felt__center .dice-tray {
-    flex-wrap: wrap;
-  }
-  /* Shrink the in-game dice so all five comfortably fit one row on a phone
-     (14vw leaves slack past the exact-fit boundary so they never wrap). */
-  .felt__center .dice-tray .die {
-    font-size: clamp(36px, 14vw, 60px);
-  }
-}
+/*
+ * (The block that used to live here threw the oval away below 760px and stacked
+ * the dice above a wrapped list of seat cards — so the "sitting at a table"
+ * metaphor only existed on desktop, which is the opposite of where the game is
+ * played. Portrait is now a first-class geometry; see tableGeometry.ts.)
+ */
 
 /* ---------- Mobile refinements ---------- */
 @media (max-width: 760px) {
@@ -522,15 +666,6 @@
   .setup__panel {
     padding: 18px 14px;
   }
-
-  /* Reclaim horizontal room so all five dice fit on a single row on phones. */
-  .game__main {
-    padding: 10px;
-    gap: 14px;
-  }
-  .felt {
-    padding: 12px;
-  }
 }
 
 /* Give tappable controls a comfortable minimum touch target on touch devices. */
@@ -540,115 +675,127 @@
   }
 }
 
+/* Banners are flex:none rows in the game column, so when one appears only the
+   table shrinks. The dice don't resize with it — they're sized off the mat's
+   WIDTH (cqw), and a banner costs height. */
 .banner {
+  flex: none;
   text-align: center;
-  padding: 10px 16px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--panel-line);
+  padding: 7px 16px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
 }
 .banner--final {
-  background: rgba(181, 101, 29, 0.16);
-  color: var(--gold-deep);
+  background: rgba(240, 169, 43, 0.14);
+  color: var(--warn);
 }
 .banner--sd {
-  background: rgba(178, 59, 46, 0.16);
-  color: #8c2b20;
+  background: rgba(239, 90, 78, 0.16);
+  color: var(--bad);
 }
 .banner--spectate {
-  background: rgba(47, 111, 158, 0.14);
-  color: #235573;
+  background: rgba(85, 168, 230, 0.14);
+  color: var(--info);
 }
 
-/* Read-only watcher indicator that stands in for the action Controls. */
+/* Read-only watcher indicator that stands in for the action bar. */
 .spectator-bar {
-  margin: 12px auto 0;
+  flex: none;
+  margin: 0 auto;
   max-width: 520px;
   padding: 12px 18px;
   text-align: center;
   font-weight: 700;
-  /* Sits on the wooden table, so it needs to be a card in its own right — the
-     old pale-blue-on-translucent was written for the dark theme. */
   color: var(--info);
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    var(--e-rest);
+  box-shadow: var(--sheen), var(--e-rest);
 }
 
-/* ---------- Coach hint bar (practice / tutorial) ---------- */
-/* A tip torn off a notepad and dropped on the table. The base used to be the
-   old dark-green panel colour, which left the (now ink-brown) text unreadable
-   once the palette went light. */
-.coach {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 12px auto 0;
-  width: min(720px, calc(100% - 36px));
-  padding: 11px 16px;
-  border-radius: 12px;
-  font-size: 0.9062rem;
-  line-height: 1.4;
-  border: 1px solid var(--paper-edge-deep);
-  background: linear-gradient(178deg, #fdf6e4, #f4e9d0);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 2px 0 var(--paper-edge-deep),
-    var(--e-rest);
+/* In a game the bottom of the screen belongs to the action buttons, so the
+   toast has to sit above them — at its default it lands squarely on top of
+   Roll and Bank. Scoped to .game because the same component also announces
+   friend challenges on menu screens, where the bottom edge is free. */
+.game .toast {
+  /* Enough to clear the buttons at the LARGE text setting, where the bar grows
+     — at 88px it cleared by a single pixel there. */
+  bottom: calc(108px + max(2px, env(safe-area-inset-bottom)));
 }
-.coach__icon {
-  font-size: 1.125rem;
+
+/* ---------- Guidance line ----------
+   One plain sentence saying what's happening and what you can do about it,
+   sitting directly above the buttons it's talking about.
+
+   Deliberately NOT a card. It used to be one (an opt-in "coach hint" panel),
+   but a bordered, tinted, icon-bearing box in the middle of the stack reads as
+   an interruption — something that has appeared and might go away. As bare
+   text it reads as the screen's own voice, which is what it now is. Tone shows
+   in the colour of the words alone. */
+.guide {
   flex: none;
+  margin: 0;
+  min-height: 1.4em;
+  padding: 0 12px;
+  max-width: 34rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+  text-wrap: balance;
 }
-.coach__text {
-  color: var(--text);
+.guide--good {
+  color: var(--good);
+  font-weight: 700;
 }
-/* Tones tint the paper rather than replacing it, so the ink stays readable. */
-.coach--good {
-  border-color: #7fae90;
-  background: linear-gradient(178deg, #f1faf2, #e2f0e5);
+.guide--bad {
+  color: var(--bad);
+  font-weight: 700;
 }
-.coach--bad {
-  border-color: #c99a90;
-  background: linear-gradient(178deg, #fdf1ef, #f6e2de);
-}
-.coach--warn {
-  border-color: #d0ae74;
-  background: linear-gradient(178deg, #fdf5e2, #f6e8ca);
+.guide--warn {
+  color: var(--warn);
+  font-weight: 700;
 }
 
-/* ---------- Table ---------- */
-.table {
-  background: radial-gradient(120% 140% at 50% 10%, rgba(255, 255, 255, 0.05), transparent 60%);
-  border: 1px solid var(--panel-line);
-  border-radius: var(--radius);
-  padding: 28px 20px 24px;
+/* ---------- Action bar ----------
+   The two verbs, as the last row of the game column — so it's pinned to the
+   bottom of the screen for free. Deliberately not `position: fixed`: fixed
+   positioning plus 100dvh plus iOS's collapsing URL bar is the classic recipe
+   for a Bank button hiding under the home indicator. */
+.actionbar {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 34rem;
+  padding-bottom: max(2px, env(safe-area-inset-bottom));
+}
+.actionbar__btn {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 26px;
-  min-height: 360px;
   justify-content: center;
+  gap: 1px;
+  /* Big enough to hit without looking, which is the whole point of putting
+     them here rather than in a row of small controls. */
+  min-height: 62px;
+  padding: 8px 12px;
 }
-.table__whose {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.25rem;
+.actionbar__verb {
+  font-size: 1.1875rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+/* The figure that decides it: how many dice you'd throw, or how much you'd walk
+   away with. Same weight as the verb, half a step down in size — it's a second
+   fact, not a caption. */
+.actionbar__num {
+  font-size: 0.875rem;
   font-weight: 700;
-}
-.table__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--good);
-  box-shadow: 0 0 10px var(--good);
-}
-.table__whose--bot .table__dot {
-  background: var(--info);
-  box-shadow: 0 0 10px var(--info);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
 }
 
 /* ---------- Dice ---------- */
@@ -806,57 +953,13 @@
   }
 }
 
-/* ---------- Controls ---------- */
-.controls {
-  width: min(460px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: center;
-}
-.controls__status {
-  font-size: 0.9375rem;
-  color: var(--text-on-wood-dim);
-  min-height: 20px;
-}
-.controls__meters {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-}
-.meter {
-  flex: 1;
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
-  border-radius: 10px;
-  padding: 10px;
-  text-align: center;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 2px 0 var(--paper-edge-deep),
-    var(--e-rest);
-}
-.meter__label {
-  display: block;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-dim);
-}
-.meter__value {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--gold);
-}
-.controls__buttons {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-.controls__buttons .btn {
-  flex: 1;
-  padding: 14px;
-  font-size: 1.0625rem;
-}
+/*
+ * (The .controls block that used to end this file is gone: a status line, three
+ * readout cards and two buttons, stacked. The status line became .guide, the
+ * buttons became .actionbar, and the cards were deleted — turn points is now
+ * the biggest thing on the mat, dice-to-roll is printed on the Roll button, and
+ * last-roll is the number that just flew up off the dice.
+ *
+ * The .meter rules those cards used still exist; they moved to screens.css,
+ * where the Daily screen and the UI gallery still use them.)
+ */

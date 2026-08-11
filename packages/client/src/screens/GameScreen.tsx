@@ -1,152 +1,109 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useGreed } from "../game/useGreed.js";
 import type { MatchSetup } from "../game/setup.js";
-import {
-  loadProfile,
-  recordGame,
-  summarize,
-  type Achievement,
-  type GameSummary,
-} from "../game/profile.js";
+import { loadProfile } from "../game/profile.js";
 import { cosmeticVars } from "../game/cosmetics.js";
-import { syncSteamAchievements } from "../game/steam.js";
-import { syncProfileUp } from "../net/auth.js";
-import { TableView } from "../components/TableView.js";
-import { Controls } from "../components/Controls.js";
-import { Toast } from "../components/Toast.js";
+import { useGameChrome } from "../game/useGameChrome.js";
+import { GameShell } from "./GameShell.js";
 import { GameOver } from "../components/GameOver.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { TurnHistory } from "../components/TurnHistory.js";
 import { RollOffView } from "../components/RollOffView.js";
 import { VolumeControls } from "../components/VolumeControls.js";
-import { CoachBar } from "../components/CoachBar.js";
-import { useGameSounds } from "../game/useGameSounds.js";
-import { useTurnCue } from "../game/useTurnCue.js";
-import { useKeyboardShortcuts } from "../game/useKeyboardShortcuts.js";
 import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface GameScreenProps {
   setup: MatchSetup;
-  /** Start with the coaching hint bar on (the "Learn to play" practice game). */
-  coach?: boolean;
   onExit: () => void;
 }
 
-export function GameScreen({ setup, coach = false, onExit }: GameScreenProps) {
+/** Offline play: local pass-and-play, or one human against bots. */
+export function GameScreen({ setup, onExit }: GameScreenProps) {
   const ctl = useGreed(setup);
   const { state } = ctl;
-  const [showRules, setShowRules] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [hints, setHints] = useState(coach);
-  const [summary, setSummary] = useState<GameSummary | null>(null);
-  const [unlocked, setUnlocked] = useState<Achievement[]>([]);
-  const recordedRef = useRef(false);
-
-  useGameSounds(state);
-  // Chime when it becomes a human player's turn (skip while the roll-off is up).
-  useTurnCue(state, !state.players[state.turn.playerIndex].isBot && !ctl.rollOffActive);
-
-  // Record a finished solo game (one human vs. bots) into the local profile.
-  useEffect(() => {
-    if (state.phase !== "game-over") {
-      recordedRef.current = false;
-      setSummary(null);
-      setUnlocked([]);
-      return;
-    }
-    if (recordedRef.current) return;
-    recordedRef.current = true;
-    const humans = state.players.filter((p) => !p.isBot);
-    if (humans.length !== 1) return; // only solo progression is tracked
-    const s = summarize(state, humans[0].id);
-    const result = recordGame(s);
-    setSummary(s);
-    setUnlocked(result.unlocked);
-    syncSteamAchievements(result.unlocked.map((a) => a.id));
-    void syncProfileUp(); // push updated stats to the account if signed in
-  }, [state.phase, state]);
-
-  const current = state.players[state.turn.playerIndex];
-  const lastPlayer = state.players[state.order[state.order.length - 1]];
-  const canAct = !current.isBot;
-  const [cosmetics] = useState(() => cosmeticVars(loadProfile()));
   const t = useT();
 
-  useKeyboardShortcuts({
-    enabled: !showRules && !showHistory && !ctl.rollOffActive && state.phase !== "game-over",
-    blockedByDialog: showRules || ctl.rollOffActive || state.phase === "game-over",
-    canRoll: canAct && ctl.legal.canRoll,
-    canBank: canAct && ctl.legal.canBank,
+  const canAct = !state.players[state.turn.playerIndex].isBot;
+  // Seat the human at the bottom of the table. Without this the bottom seat is
+  // whoever the roll-off put first, so in a solo game "your" seat wanders — and
+  // in the portrait layout the bottom seat is emphatically read as yours.
+  // Pass-and-play (several humans) has no single viewer, so it keeps turn order,
+  // and progression isn't recorded for it either.
+  const humans = state.players.filter((p) => !p.isBot);
+  const viewerId = humans.length === 1 ? humans[0].id : null;
+
+  const [profile] = useState(loadProfile);
+  const [cosmetics] = useState(() => cosmeticVars(profile));
+  // Offline there's only one profile to read from, so only the local human's
+  // avatar is an explicit pick; every bot's face comes from its name.
+  const avatars = viewerId ? { [viewerId]: profile.avatar } : undefined;
+
+  const chrome = useGameChrome({
+    state,
+    legal: ctl.legal,
+    canAct,
+    youId: viewerId,
+    rollOffActive: ctl.rollOffActive,
     onRoll: ctl.roll,
     onBank: ctl.bank,
-    onToggleHistory: () => setShowHistory((h) => !h),
   });
 
   return (
-    <div className="game" style={cosmetics}>
-      <header className="game__bar">
+    <GameShell
+      state={state}
+      legal={ctl.legal}
+      isRolling={ctl.isRolling}
+      rollingIndices={ctl.rollingIndices}
+      canAct={canAct}
+      onRoll={ctl.roll}
+      onBank={ctl.bank}
+      toast={ctl.toast}
+      cosmetics={cosmetics}
+      perspectiveId={viewerId}
+      avatars={avatars}
+      barLeft={
         <BarButton name="menu" onClick={onExit}>
           {t("bar.menu")}
         </BarButton>
-        <h1 className="game__logo game__logo--decor">GREED</h1>
-        <div className="game__bar-right">
-          <BarButton name="hints" pressed={hints} onClick={() => setHints((h) => !h)}>
-            {t("bar.hints")}
-          </BarButton>
+      }
+      barTitle={<h1 className="game__logo game__logo--decor">GREED</h1>}
+      barRight={
+        <>
           <VolumeControls />
-          <BarButton name="history" onClick={() => setShowHistory(true)} title="Turn history (H)">
+          <BarButton
+            name="history"
+            onClick={() => chrome.setShowHistory(true)}
+            title={t("history.title")}
+          >
             {t("bar.history")}
           </BarButton>
-          <BarButton name="rules" onClick={() => setShowRules(true)} title={t("bar.rules")}>
+          <BarButton name="rules" onClick={() => chrome.setShowRules(true)} title={t("bar.rules")}>
             {t("bar.rules")}
           </BarButton>
           <BarButton name="restart" onClick={() => ctl.restart()} title={t("bar.restart")}>
             {t("bar.restart")}
           </BarButton>
-        </div>
-      </header>
-
-      {state.endgame.triggered && state.phase === "playing" && (
-        <div className="banner banner--final">
-          {t("banner.finalRoundPre")}
-          <strong>{lastPlayer.name}</strong>
-          {t("banner.finalRoundPost")}
-        </div>
-      )}
-      {state.phase === "sudden-death" && (
-        <div className="banner banner--sd">{t("banner.suddenDeath")}</div>
-      )}
-
-      {hints && <CoachBar state={state} canAct={canAct} />}
-
-      <main className="game__main game__main--table">
-        <TableView state={state} rollingIndices={ctl.rollingIndices} isRolling={ctl.isRolling} />
-
-        <Controls
-          state={state}
-          legal={ctl.legal}
-          isRolling={ctl.isRolling}
-          canAct={canAct}
-          onRoll={ctl.roll}
-          onBank={ctl.bank}
-        />
-      </main>
-
-      <Toast toast={ctl.toast} />
-
-      {ctl.rollOffActive && <RollOffView entries={ctl.rollOff} onContinue={ctl.beginPlay} />}
-      {state.phase === "game-over" && (
-        <GameOver
-          state={state}
-          summary={summary}
-          unlocked={unlocked}
-          onPlayAgain={() => ctl.restart()}
-          onMenu={onExit}
-        />
-      )}
-      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
-      {showHistory && <TurnHistory state={state} onClose={() => setShowHistory(false)} />}
-    </div>
+        </>
+      }
+      overlays={
+        <>
+          {ctl.rollOffActive && <RollOffView entries={ctl.rollOff} onContinue={ctl.beginPlay} />}
+          {state.phase === "game-over" && (
+            <GameOver
+              state={state}
+              summary={chrome.summary}
+              unlocked={chrome.unlocked}
+              onPlayAgain={() => ctl.restart()}
+              onMenu={onExit}
+            />
+          )}
+          {chrome.showRules && <RulesModal onClose={() => chrome.setShowRules(false)} />}
+          {chrome.showHistory && (
+            <TurnHistory state={state} onClose={() => chrome.setShowHistory(false)} />
+          )}
+        </>
+      }
+    />
   );
 }

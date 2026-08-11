@@ -4,32 +4,35 @@
  * regardless of where they end up seated.
  */
 
-// Eight distinct hues, mid-toned so they stay legible as text and avatar rings
-// on the cream card stock the seats are now printed on. (They were previously
-// tuned for dark-green felt, where much lighter values were needed; those
-// washed out completely once the surface went light.)
+// Eight distinct hues, bright enough to read as rings and progress fills on the
+// dark charcoal a seat pod is now made of. These have been retuned twice and
+// the reason is worth remembering: a palette that works on one background is
+// close to useless on its opposite. Mid-tones legible on cream card stock go
+// muddy on charcoal, exactly as the light values before them washed out on
+// cream. Contrast against --surface-2 is asserted in theme.test.ts.
 const SEAT_COLORS = [
-  "#c2571c", // orange
-  "#1f6f9e", // blue
-  "#1f7a4d", // green
-  "#6b46b0", // purple
-  "#b5407e", // pink
-  "#9a6a10", // ochre
-  "#0f7a75", // teal
-  "#b3372c", // red
+  "#ff9d4d", // orange
+  "#5cb3ee", // blue
+  "#4fd08a", // green
+  "#b48cff", // purple
+  "#ff7ab8", // pink
+  "#e8bd52", // ochre
+  "#48d3ca", // teal
+  "#ff7a6e", // red
 ];
 
-// Colorblind-safe palette (Okabe–Ito), darkened where needed for contrast on
-// cream — notably the yellow, which is unusable on a light background.
+// Colorblind-safe palette (Okabe–Ito), lightened for a dark surface — these are
+// close to the original published values, which were designed against white but
+// hold up well as luminous accents on charcoal.
 const SEAT_COLORS_CB = [
-  "#a86a00", // orange
-  "#3782ab", // sky blue
-  "#007454", // bluish green
-  "#8a7b00", // dark yellow (Okabe–Ito yellow is invisible on cream)
-  "#0059a1", // blue
-  "#c1500a", // vermillion
-  "#a15a86", // reddish purple
-  "#6b6b6b", // gray
+  "#e69f00", // orange
+  "#56b4e9", // sky blue
+  "#3fc08a", // bluish green
+  "#f0e442", // yellow
+  "#6fa8ea", // blue
+  "#ff8a5c", // vermillion
+  "#e49ec9", // reddish purple
+  "#b6bfc9", // gray
 ];
 
 let colorblind = false;

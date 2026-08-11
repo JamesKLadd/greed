@@ -1,57 +1,8 @@
-/* ---------- Scoreboard ---------- */
-.scoreboard {
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-.scoreboard__title {
-  margin: 0 0 12px;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-}
-.scoreboard__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.seat {
-  border: 1px solid transparent;
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: rgba(88, 58, 26, 0.07);
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-.seat--current {
-  border-color: var(--gold);
-  background: rgba(245, 196, 81, 0.1);
-}
-.seat--winner {
-  border-color: var(--good);
-  background: rgba(100, 209, 151, 0.12);
-}
-.seat__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.seat__name {
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.seat__crown {
-  font-size: 0.8125rem;
-}
+/* ---------- Seat labels ----------
+   All that survives of the old right-hand scoreboard, which the seats-around-
+   the-table layout replaced. The little badge and presence dot are still used
+   by the lobby seat list and the roll-off, so they moved here rather than being
+   deleted with the rest. */
 .seat__tag {
   font-size: 0.625rem;
   text-transform: uppercase;
@@ -60,27 +11,6 @@
   background: var(--text-dim);
   border-radius: 5px;
   padding: 1px 5px;
-}
-.seat__total {
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  font-size: 1.125rem;
-}
-.seat__turn {
-  color: var(--good);
-  font-size: 0.875rem;
-}
-.seat__bar {
-  margin-top: 8px;
-  height: 6px;
-  border-radius: 4px;
-  background: rgba(88, 58, 26, 0.12);
-  overflow: hidden;
-}
-.seat__fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
-  transition: width 0.4s ease;
 }
 
 /* ---------- Toast ---------- */
@@ -97,17 +27,20 @@
   animation: toast-in 0.22s ease;
   z-index: 40;
 }
+/* All three toast fills are saturated mid-tones, which on a dark UI are LIGHT
+   surfaces — so they take dark ink, not white. (Under the old light palette
+   they were the darkest thing on screen and took near-white text.) */
 .toast--good {
   background: var(--good);
-  color: #f2fff7;
+  color: var(--ink);
 }
 .toast--bad {
   background: var(--bad);
-  color: #fff;
+  color: var(--ink);
 }
 .toast--info {
   background: var(--info);
-  color: #f2f9ff;
+  color: var(--ink);
 }
 @keyframes toast-in {
   from {
@@ -124,7 +57,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(38, 22, 10, 0.62);
+  background: rgba(3, 5, 9, 0.72);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -133,15 +66,14 @@
 }
 .overlay__card {
   width: min(440px, 100%);
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line);
   border-radius: var(--r-cut);
   padding: 26px;
   text-align: center;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 2px 0 var(--paper-edge),
-    0 3px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 3px 0 var(--room-3),
     var(--e-float);
 }
 .overlay__card--wide {
@@ -174,7 +106,7 @@
   justify-content: space-between;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   font-variant-numeric: tabular-nums;
 }
 .standings__row--win {
@@ -218,19 +150,19 @@
   font-weight: 500;
   opacity: 0.8;
 }
-/* The tutorial card: a slightly cooler paper stock so it reads as the
+/* The tutorial card: a slightly cooler, bluer slab so it reads as the
    "instructions insert" rather than a play piece. */
 .home-menu__learn {
-  background: linear-gradient(178deg, #f3f1e6, #e6e5d6);
-  border-color: #c3c0ac;
+  background: linear-gradient(178deg, #2b3444, #1e2532);
+  border-color: #4a5768;
   color: var(--text);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 2px 0 #c3c0ac,
+    var(--sheen),
+    0 2px 0 var(--room-3),
     var(--e-rest);
 }
 .home-menu__learn:hover:not(:disabled) {
-  background: linear-gradient(178deg, #f8f7ee, #edece0);
+  background: linear-gradient(178deg, #354052, #27303f);
 }
 .home-menu__learn--pulse {
   animation: learn-pulse 2s ease-in-out infinite;
@@ -301,7 +233,7 @@
 .crash__details pre {
   white-space: pre-wrap;
   word-break: break-word;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 10px;
   margin-top: 8px;
@@ -327,19 +259,19 @@
   align-items: center;
   gap: 3px;
   padding: 14px 8px;
-  background: linear-gradient(178deg, var(--paper-1), var(--paper-2));
-  border: 1px solid var(--paper-edge-deep);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 2px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 2px 0 var(--room-3),
     var(--e-rest);
 }
 .stat-tile__value {
   font-size: 1.625rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--gold);
+  color: var(--warn);
 }
 .stat-tile__label {
   font-size: 0.6875rem;
@@ -371,13 +303,17 @@
   gap: 11px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(245, 196, 81, 0.1);
-  border: 1px solid rgba(245, 196, 81, 0.32);
+  background: rgba(240, 169, 43, 0.12);
+  border: 1px solid rgba(240, 169, 43, 0.35);
 }
+/* Locked badges are quieter than earned ones, but still meant to be READ —
+   they're the list of things to go and do. 0.55 dimmed them to the edge of
+   legibility on a dark card, which is the wrong end of that trade for a game
+   aimed at people who don't want to squint. */
 .ach--locked {
-  background: rgba(88, 58, 26, 0.07);
-  border-color: var(--panel-line);
-  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--line);
+  opacity: 0.78;
 }
 .ach__icon {
   font-size: 1.375rem;
@@ -449,6 +385,19 @@
   justify-content: center;
   gap: 8px;
 }
+/* The same disc the seat pods wear, at a size you can actually pick from. */
+.avatar-disc {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: color-mix(in srgb, var(--seat, #ffffff) 26%, var(--room-3));
+  border: 2px solid var(--seat, var(--warn));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--seat, #ffffff) 35%, transparent);
+}
 .locker-preview--table {
   border-radius: 10px;
   background: radial-gradient(
@@ -494,7 +443,7 @@
   align-items: center;
   gap: 2px;
   padding: 10px 6px;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--panel-line);
   border-radius: 10px;
 }
@@ -775,7 +724,7 @@
   height: 28px;
   border-radius: 999px;
   border: 1px solid var(--panel-line);
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   position: relative;
   transition:
     background 0.15s ease,
@@ -887,7 +836,7 @@
 }
 .setup__goal-input {
   width: 92px;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--panel-line);
   color: var(--text);
   border-radius: 8px;
@@ -967,7 +916,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 4px 8px;
 }
@@ -1291,6 +1240,35 @@
 .daily__meters .meter {
   flex: 1;
 }
+/* A labelled readout card. These lived in game.css until the in-game screen
+   stopped using them (its numbers moved onto the mat and the action buttons);
+   the Daily run and the UI gallery still do, so the rules moved here rather
+   than being deleted with the rest of .controls. */
+.meter {
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  box-shadow:
+    var(--sheen),
+    0 2px 0 rgba(0, 0, 0, 0.5),
+    var(--e-rest);
+}
+.meter__label {
+  display: block;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+.meter__value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--warn);
+}
 .daily__dice {
   justify-content: center;
   margin-bottom: 14px;
@@ -1325,13 +1303,13 @@
   font-variant-numeric: tabular-nums;
   margin-right: 4px;
 }
-/* Daily entry on the home menu: a distinct "calendar card" stock. */
+/* Daily entry on the home menu: a distinct warm "calendar card" stock. */
 .home-menu__daily {
-  background: linear-gradient(178deg, #f7efe0, #eadfc8);
-  border-color: var(--paper-edge-deep);
+  background: linear-gradient(178deg, #3a3020, #2a2318);
+  border-color: #5b4c30;
 }
 .home-menu__daily:hover:not(:disabled) {
-  background: linear-gradient(178deg, #fdf7ea, #f2e8d3);
+  background: linear-gradient(178deg, #473b28, #342c1d);
 }
 
 /* ---------- Friends & profiles ---------- */
@@ -1361,7 +1339,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(88, 58, 26, 0.07);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: var(--r-md);
   padding: 6px 8px 6px 12px;
 }
@@ -1430,12 +1408,44 @@
 }
 
 /* ---------- Reactions ---------- */
+/* A reactions button on the edge of the screen, and the tray it opens over the
+   table. Anchored to the game column rather than the viewport so it can't end
+   up under the home indicator on a phone. */
 .emotes {
-  display: flex;
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: calc(96px + max(2px, env(safe-area-inset-bottom)));
+  z-index: 20;
+}
+.emotes__toggle {
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(178deg, var(--surface-3), var(--surface-1));
+  box-shadow: var(--sheen), var(--e-lift);
+}
+.emotes__pop {
+  position: absolute;
+  right: 0;
+  bottom: 52px;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
   gap: 8px;
-  justify-content: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  box-shadow: var(--sheen), var(--e-float);
+  animation: emote-tray 0.14s ease-out;
+}
+@keyframes emote-tray {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
 }
 .emotes__btn {
   width: 42px;
@@ -1443,11 +1453,11 @@
   font-size: 1.25rem;
   line-height: 1;
   border-radius: 50%;
-  border: 1px solid var(--paper-edge-deep);
-  background: linear-gradient(178deg, #fdf8ec, var(--paper-2));
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(178deg, var(--surface-3), var(--surface-1));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 2px 0 var(--paper-edge-deep),
+    var(--sheen),
+    0 2px 0 var(--room-3),
     var(--e-rest);
   transition: transform 0.06s ease;
 }

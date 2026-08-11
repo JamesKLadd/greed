@@ -28,6 +28,23 @@
   animation: none !important;
 }
 
+/*
+ * The blanket rules above collapse every animation to a millisecond, which is
+ * right for decoration and wrong for anything that COMMUNICATES by animating.
+ * The turn ring's closing flourish is one of those: killed outright, the ring
+ * blinks out of existence and reads as a bug rather than as "you started in
+ * time". Cancelling the animation leaves it drawn for the same short beat the
+ * component keeps it mounted, which says the same thing without moving.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .turn-ring--settling {
+    animation: none !important;
+  }
+}
+:root[data-motion="reduced"] .turn-ring--settling {
+  animation: none !important;
+}
+
 /* ---------- Accessibility: text scale & high contrast ---------- */
 /*
  * Text scale. `zoom` scaled everything including graphics and fought with fixed
@@ -46,21 +63,31 @@
 :root[data-text-scale="large"] {
   --text-scale: 1.125;
 }
-/* High contrast pushes the LIGHT palette further apart — near-black ink on
-   near-white stock, with harder edges. (It previously drove the opposite
-   direction, toward white-on-darker, which the tabletop restyle inverted.) */
+/* High contrast pushes the DARK palette further apart — pure white text on
+   near-black slabs, with borders bright enough to draw every edge. Note it sets
+   the SEMANTIC roles, not the legacy aliases: the aliases resolve to whatever
+   these are, so overriding --surface-1 here also moves --paper-1 with it.
+
+   The room stays where it is. Deepening it further would only widen the gap to
+   the felt, which is already the brightest thing on screen; the contrast that
+   actually needs help is text-on-slab and slab-against-slab. */
 :root[data-contrast="high"] {
-  --text: #14100b;
-  --text-dim: #4a3d2c;
-  --paper-1: #fffdf7;
-  --paper-2: #fdf8ea;
-  --paper-edge: #8d7a5f;
-  --paper-edge-deep: #6b5a41;
-  --panel: var(--paper-1);
-  --panel-line: var(--paper-edge-deep);
-  --text-on-wood: #ffffff;
-  --text-on-wood-dim: #f6ecdb;
-  --gold-deep: #7a3f0e;
+  --text: #ffffff;
+  --text-dim: #d7dee8;
+  --text-mute: #b3bdca;
+  --surface-1: #262f3c;
+  --surface-2: #10151d;
+  --surface-3: #35404f;
+  --line: #7d8b9c;
+  --line-strong: #a2aebd;
+  --accent: #4fe098;
+  --warn: #ffc247;
+  --bad: #ff7a6e;
+  --good: #4fe098;
+  --info: #79c2ff;
+  --gold-deep: #ffc247;
+  /* A whisper of a sheen is invisible at this setting; make the lit edge real. */
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 :root[data-contrast="high"] .btn {
   border-width: 1.5px;

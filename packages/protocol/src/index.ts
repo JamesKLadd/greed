@@ -60,10 +60,18 @@ export type ClientMessage =
       isPublic?: boolean;
       goal?: number;
       dice?: string;
+      avatar?: string;
       auth?: string;
     }
-  | { type: "join-room"; code: string; name: string; dice?: string; auth?: string }
-  | { type: "quick-match"; name: string; dice?: string; auth?: string }
+  | {
+      type: "join-room";
+      code: string;
+      name: string;
+      dice?: string;
+      avatar?: string;
+      auth?: string;
+    }
+  | { type: "quick-match"; name: string; dice?: string; avatar?: string; auth?: string }
   | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
   // A notification-only connection: no seat, no room. It exists so a signed-in
@@ -101,10 +109,14 @@ export interface PlayerPresence {
   connected: boolean;
 }
 
-/** A player's equipped dice-skin id, so every client can render their dice. */
+/** A player's equipped cosmetics, so every client renders them the same way. */
 export interface PlayerSkin {
   id: string;
   dice: string;
+  /** Equipped avatar id, or "" — an empty pick means "derive one from the name",
+   *  which every client does identically. Optional on the wire so a client can
+   *  talk to a server that predates avatars without crashing. */
+  avatar?: string;
 }
 
 export type ServerMessage =
@@ -118,6 +130,18 @@ export type ServerMessage =
       state: GameState;
       presence: PlayerPresence[];
       skins: PlayerSkin[];
+      /**
+       * Milliseconds left for the current seat to START their turn, or absent
+       * when no clock is running (a bot's turn, or the seat has already rolled
+       * — the server only ever limits starting, never the roll-or-bank
+       * decision).
+       *
+       * Deliberately a REMAINING DURATION rather than an absolute deadline: an
+       * epoch timestamp would need the client's wall clock to agree with the
+       * server's, and a phone with a wrong clock would show a countdown that is
+       * permanently full or permanently expired.
+       */
+      turnTimerMs?: number;
     }
   | { type: "emote"; playerId: string; emote: EmoteId }
   /** The notification connection is up; `username` is who the server thinks you are. */

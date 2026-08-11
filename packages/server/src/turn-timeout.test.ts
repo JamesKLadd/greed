@@ -134,4 +134,47 @@ describe("turn timeout", () => {
 
     host.ws.close();
   }, 10000);
+
+  it("broadcasts the countdown only while a human's turn is unstarted", async () => {
+    // What the countdown ring on the active seat draws. The server only limits
+    // STARTING a turn, so the clock must appear when it's a connected human's
+    // turn and disappear the moment they roll — and never run for a bot.
+    const host = await connect(url);
+    host.send({ type: "create-room", name: "Ticker", goal: 50000 });
+    const welcome = await host.waitFor((m) => m.type === "welcome");
+    const youId = (welcome as Extract<ServerMessage, { type: "welcome" }>).youId;
+    host.send({ type: "add-bot" });
+    await host.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2);
+    host.send({ type: "start-game" });
+
+    // Our turn, nothing rolled yet: a clock is running.
+    const waiting = await host.waitFor(
+      (m) =>
+        m.type === "game" &&
+        m.state.players[m.state.turn.playerIndex].id === youId &&
+        m.state.turn.rollCount === 0 &&
+        !m.state.turn.outcome,
+      6000,
+    );
+    expect(waiting.type).toBe("game");
+    const ticking = waiting as Extract<ServerMessage, { type: "game" }>;
+    expect(ticking.turnTimerMs, "clock while waiting for a human to start").toBeGreaterThan(0);
+    expect(ticking.turnTimerMs).toBeLessThanOrEqual(40); // the test config's turnIdleMs
+
+    // Once we've rolled, the deadline is gone even though it's still our turn.
+    host.send({ type: "game-action", action: { type: "ROLL" } });
+    const rolled = await host.waitFor(
+      (m) =>
+        m.type === "game" &&
+        m.state.players[m.state.turn.playerIndex].id === youId &&
+        m.state.turn.rollCount > 0,
+      4000,
+    );
+    expect(
+      (rolled as Extract<ServerMessage, { type: "game" }>).turnTimerMs,
+      "no clock once the turn has started",
+    ).toBeUndefined();
+
+    host.ws.close();
+  }, 10000);
 });
