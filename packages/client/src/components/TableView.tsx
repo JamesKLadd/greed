@@ -67,6 +67,8 @@ export function TableView({
   // in an online game shows the same ones (see flourishes.ts).
   const flames = streakFlames(state.turn);
   const badged = bigBankers(state);
+  // Player-list index of whoever acts last in the round order.
+  const playsLast = state.order[state.order.length - 1];
 
   const slots = seatSlots(n, landscape);
   // On a phone every opponent is a disc over a name over a score — that's what
@@ -139,12 +141,24 @@ export function TableView({
                 style={style}
               >
                 {/* Banked a thousand or more last turn: the seat wears dollar
-                    signs at its corners until they're back on the clock. */}
+                    signs at its corners until they're back on the clock.
+                    A plain "$" rather than the 💲 emoji, because the emoji is a
+                    fixed green glyph on every platform — against the warm pod
+                    it read as muddy, and it can't be recoloured. Text can be
+                    gold, which is the colour the rest of this badge speaks. */}
                 {badged.has(p.id) && (
-                  <span className="pseat__rich" aria-label={t("aria.bigBank", { name: p.name })}>
+                  <span
+                    className="pseat__rich"
+                    role="img"
+                    aria-label={t("aria.bigBank", { name: p.name })}
+                  >
                     {["tl", "tr", "bl", "br"].map((corner) => (
-                      <span key={corner} className={`pseat__cash pseat__cash--${corner}`}>
-                        💲
+                      <span
+                        key={corner}
+                        className={`pseat__cash pseat__cash--${corner}`}
+                        aria-hidden="true"
+                      >
+                        $
                       </span>
                     ))}
                   </span>
@@ -161,6 +175,21 @@ export function TableView({
                     {resolveAvatar(p.name, p.isBot, avatars?.[p.id])}
                     {showPresence && (
                       <span className={`pseat__conn${online ? " pseat__conn--on" : ""}`} />
+                    )}
+                    {/* Whoever's turn closes the round — the best seat at the
+                        table, since you act last knowing everyone else's score.
+                        It was only ever named in the endgame banner, by which
+                        point it's too late to be worth knowing.
+
+                        Pinned to the avatar rather than sitting beside the name:
+                        a compact pod is ~74px wide and the name row is already
+                        sharing space with the crown, which squeezed the flag
+                        down to an unreadable smudge. Here it has its own corner
+                        and can stay big enough to actually read. */}
+                    {playsLast === i && (
+                      <span className="pseat__last" role="img" aria-label={t("aria.playsLast")}>
+                        🏁
+                      </span>
                     )}
                     {isCurrent && turnTimer !== undefined && <TurnRing timer={turnTimer} />}
                   </span>

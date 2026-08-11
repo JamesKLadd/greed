@@ -197,6 +197,7 @@ export const en = {
   "aria.dieLocked": "die showing {value}, locked",
   "aria.dice": "dice",
   "aria.leader": "leader",
+  "aria.playsLast": "plays last this round",
   "aria.streak": "on a streak — {n} rolls this turn",
   "aria.bigBank": "{name} banked over a thousand",
 
@@ -689,6 +690,7 @@ export const es: Record<MsgKey, string> = {
   "aria.dieLocked": "dado mostrando {value}, bloqueado",
   "aria.dice": "dados",
   "aria.leader": "líder",
+  "aria.playsLast": "juega al final de la ronda",
   "aria.streak": "en racha: {n} tiradas este turno",
   "aria.bigBank": "{name} guardó más de mil",
 
