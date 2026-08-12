@@ -9,7 +9,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
 import { clientKey, rateLimit } from "./rate-limit.js";
-import { dailyStatus, submitDailyRun, submitDailyShootout } from "./daily.js";
+import { dailyStatus, submitDailyRun } from "./daily.js";
 import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
 import {
   AccountError,
@@ -144,7 +144,6 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
     // One legitimate run exists per day; this only stops replay hammering.
     "/api/daily/run": { limit: 20, windowMs: 60 * 60_000 },
-    "/api/daily/shootout": { limit: 20, windowMs: 60 * 60_000 },
     // Friend requests are the one social action that reaches another person,
     // so cap them; browsing profiles and lists is unrestricted.
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
@@ -202,16 +201,6 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const { result, alreadyPlayed } = await submitDailyRun(id, b.moves);
       json(res, alreadyPlayed ? 409 : 201, {
         result,
-        alreadyPlayed,
-        status: await dailyStatus(id),
-      });
-    } else if (method === "POST" && path === "/api/daily/shootout") {
-      const { id } = await requireUser(req);
-      const b = (await readBody(req)) as Record<string, unknown>;
-      // Same trust boundary as the run: the tiebreak is replayed, not reported.
-      const { tiebreak, alreadyPlayed } = await submitDailyShootout(id, b.moves);
-      json(res, alreadyPlayed ? 409 : 201, {
-        tiebreak,
         alreadyPlayed,
         status: await dailyStatus(id),
       });

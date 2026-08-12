@@ -2,13 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DAILY_TURNS,
   createDailyGame,
-  createDailyShootout,
   dailyKey,
   dailySeed,
   msUntilNextDaily,
   scoreDailyRun,
-  scoreDailyShootout,
-  shootoutSeed,
   type DailyMove,
 } from "./daily.js";
 import { applyAction, getLegalActions } from "./game.js";
@@ -158,50 +155,5 @@ describe("scoreDailyRun", () => {
       expect(r.complete).toBe(true);
       expect(r.score).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("the tiebreak shootout", () => {
-  it("uses different dice from the run itself", () => {
-    expect(shootoutSeed("2026-08-12", "u1")).not.toBe(dailySeed("2026-08-12", "u1"));
-  });
-
-  it("gives each player their own shootout", () => {
-    expect(shootoutSeed("2026-08-12", "u1")).not.toBe(shootoutSeed("2026-08-12", "u2"));
-  });
-
-  it("is deterministic, so the server replay agrees with the client", () => {
-    const moves: DailyMove[] = ["ROLL", "ROLL", "BANK"];
-    expect(scoreDailyShootout("2026-08-12", moves, "u1")).toBe(
-      scoreDailyShootout("2026-08-12", moves, "u1"),
-    );
-  });
-
-  it("is exactly one turn — extra moves cannot extend it", () => {
-    const short = scoreDailyShootout("2026-08-12", ["ROLL", "BANK"], "u1");
-    const padded = scoreDailyShootout(
-      "2026-08-12",
-      ["ROLL", "BANK", "ROLL", "ROLL", "BANK", "ROLL", "BANK"],
-      "u1",
-    );
-    expect(padded).toBe(short);
-  });
-
-  it("scores a bust as nothing", () => {
-    // Roll until the turn busts, then try to bank anyway.
-    let day = "";
-    for (let i = 0; i < 400 && !day; i++) {
-      const candidate = `2027-01-${String((i % 28) + 1).padStart(2, "0")}`;
-      const key = `probe-${i}`;
-      let s = createDailyShootout(candidate, key);
-      for (let k = 0; k < 30 && !s.turn.outcome; k++) s = applyAction(s, { type: "ROLL" });
-      if (s.turn.outcome === "busted") {
-        const moves: DailyMove[] = Array(30).fill("ROLL");
-        moves.push("BANK");
-        expect(scoreDailyShootout(candidate, moves, key)).toBe(0);
-        day = candidate;
-      }
-    }
-    expect(day, "expected at least one seed to bust within 30 rolls").not.toBe("");
   });
 });

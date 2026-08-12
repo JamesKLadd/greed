@@ -106,19 +106,6 @@ export async function migrate(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS friendships_addressee_idx ON friendships (addressee_id, status);`,
   );
 
-  // The tiebreak shootout: an extra turn played only when a run ties another
-  // player's score. Added as columns rather than a table because it belongs to
-  // exactly one run and is read on every leaderboard query.
-  await query(
-    `ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS tiebreak integer NOT NULL DEFAULT 0;`,
-  );
-  await query(`ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS tiebreak_moves text;`);
-  // Ranking is (score, then tiebreak), so the index has to agree with the sort.
-  await query(
-    `CREATE INDEX IF NOT EXISTS daily_runs_day_rank_idx
-       ON daily_runs (day, score DESC, tiebreak DESC);`,
-  );
-
   // One row per finished online game per player: what the match history reads.
   // Denormalised on purpose — a finished game is a fact, and re-deriving the
   // opponents later would mean keeping every room's state forever.

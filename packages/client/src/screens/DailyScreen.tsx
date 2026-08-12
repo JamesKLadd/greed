@@ -9,8 +9,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
-import { useDailyRun, type DailyMode } from "../game/useDailyRun.js";
-import { fetchDaily, submitDaily, submitShootout, type DailyStatus } from "../net/daily.js";
+import { useDailyRun } from "../game/useDailyRun.js";
+import { fetchDaily, submitDaily, type DailyStatus } from "../net/daily.js";
 import { awardAchievement, type Achievement } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
@@ -44,13 +44,9 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // The tiebreak turn is the same machinery on different dice, so it reuses the
-  // run hook and the same screen — it just plays one turn instead of ten.
-  const [mode, setMode] = useState<DailyMode>("run");
-
   // The account id seeds the dice, so this must be the same id the server
   // replays the run with.
-  const run = useDailyRun(day, user?.id ?? "", mode);
+  const run = useDailyRun(day, user?.id ?? "");
   useGameSounds(run.state);
   useRollSound(run.isRolling);
 
@@ -75,16 +71,10 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   useEffect(() => {
     if (!playing || !run.finished || submitting) return;
     setSubmitting(true);
-    // A shootout submits to its own endpoint: it is a tiebreak, not a score.
-    const submit =
-      mode === "shootout"
-        ? submitShootout(run.moves).then((r) => ({ status: r.status }))
-        : submitDaily(run.moves);
-    submit
+    submitDaily(run.moves)
       .then((res) => {
         setStatus(res.status);
         setPlaying(false);
-        setMode("run");
         // The one badge no amount of playing can force: it depends on everyone
         // else who played today, so it is granted here rather than by recordGame.
         const rank = res.status.yourRank;
@@ -99,7 +89,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("daily.submitFailed")))
       .finally(() => setSubmitting(false));
-  }, [playing, run.finished, run.moves, submitting, mode, t]);
+  }, [playing, run.finished, run.moves, submitting, t]);
 
   const played = status?.run != null;
 
@@ -239,31 +229,6 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 ? t("daily.yourRank", { rank: status.yourRank, players: status.players })
                 : t("daily.played")}
             </p>
-            {/* Level with someone: one turn decides who ranks above whom.
-                Offered rather than forced — declining just leaves you tied. */}
-            {status.tiedUnresolved && (
-              <div className="daily__tiebreak">
-                <h3>{t("daily.tiedTitle", { score: status.run.score })}</h3>
-                <p className="daily__note">{t("daily.tiedNote")}</p>
-                <Button
-                  variant="roll"
-                  size="lg"
-                  onClick={() => {
-                    setMode("shootout");
-                    setPlaying(true);
-                  }}
-                >
-                  {t("daily.playShootout")}
-                </Button>
-              </div>
-            )}
-            {status.tiebreak !== null && (
-              <p className="daily__note">
-                {status.tiebreak > 0
-                  ? t("daily.shootoutResult", { points: status.tiebreak })
-                  : t("daily.shootoutBust")}
-              </p>
-            )}
             {podium && (
               <div className="unlocks">
                 <div className="unlocks__head">{t("gameOver.unlockedOne")}</div>

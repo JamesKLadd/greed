@@ -1730,16 +1730,35 @@
 .match__score {
   font-weight: 800;
 }
-/* The daily tiebreak offer. Set apart from the result above it because it is a
-   decision, not a readout. */
-.daily__tiebreak {
-  margin: 16px 0;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--warn);
-  border-radius: 10px;
-  text-align: center;
-}
-.daily__tiebreak h3 {
-  margin: 0 0 6px;
+
+/* ---------- Narrow-screen row wrapping ----------
+   Two rows put a label and a control on one line, which stops fitting once the
+   control is more than a small toggle: the language switcher grew to three
+   locales, and "Join by code" carries a code field plus two actions. Both
+   overflowed the panel on a phone rather than wrapping, so the last control was
+   cut off at the right edge. */
+@media (max-width: 620px) {
+  .settings-row {
+    flex-wrap: wrap;
+  }
+  /* Only segmented controls take a line of their own — the pill switches are
+     small enough to stay beside their label. */
+  .settings-row .segmented {
+    width: 100%;
+  }
+  .settings-row .segmented .segmented__btn {
+    flex: 1;
+    /* Three locales on a 360px line: let the labels shrink rather than spill. */
+    min-width: 0;
+    padding-inline: 6px;
+  }
+  .join-row {
+    flex-wrap: wrap;
+  }
+  .join-row__code {
+    flex: 1 0 100%;
+  }
+  .join-row .btn {
+    flex: 1;
+  }
 }
