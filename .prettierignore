@@ -5,4 +5,5 @@ packages/client/src-tauri
 
 # Tool-generated plugin skills (Vercel marketplace integrations)
 .agents
+.claude
 skills-lock.json
