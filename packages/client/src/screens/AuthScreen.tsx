@@ -13,6 +13,7 @@ import {
   resetPassword,
   type AuthResult,
 } from "../net/auth.js";
+import { Button } from "../ui/index.js";
 
 type Mode = "login" | "signup" | "forgot" | "reset";
 
@@ -150,20 +151,21 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
                 onKeyDown={(e) => e.key === "Enter" && submitLogin()}
               />
             </label>
-            <button
-              className="btn btn--roll btn--big"
+            <Button
+              variant="roll"
+              size="lg"
               disabled={busy || !loginId.trim() || !password}
               onClick={submitLogin}
             >
               {busy ? t("auth.working") : t("auth.login")}
-            </button>
+            </Button>
             <div className="auth__links">
-              <button className="btn btn--ghost" onClick={() => switchMode("forgot")}>
+              <Button variant="ghost" onClick={() => switchMode("forgot")}>
                 {t("auth.forgotLink")}
-              </button>
-              <button className="btn btn--ghost" onClick={() => switchMode("signup")}>
+              </Button>
+              <Button variant="ghost" onClick={() => switchMode("signup")}>
                 {t("auth.createLink")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -213,17 +215,18 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
-            <button
-              className="btn btn--roll btn--big"
+            <Button
+              variant="roll"
+              size="lg"
               disabled={busy || !email.trim() || username.trim().length < 3 || password.length < 8}
               onClick={submitSignup}
             >
               {busy ? t("auth.working") : t("auth.signup")}
-            </button>
+            </Button>
             <div className="auth__links">
-              <button className="btn btn--ghost" onClick={() => switchMode("login")}>
+              <Button variant="ghost" onClick={() => switchMode("login")}>
                 {t("auth.haveAccount")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -241,17 +244,18 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
                 onKeyDown={(e) => e.key === "Enter" && submitForgot()}
               />
             </label>
-            <button
-              className="btn btn--roll btn--big"
+            <Button
+              variant="roll"
+              size="lg"
               disabled={busy || !email.trim()}
               onClick={submitForgot}
             >
               {busy ? t("auth.working") : t("auth.sendReset")}
-            </button>
+            </Button>
             <div className="auth__links">
-              <button className="btn btn--ghost" onClick={() => switchMode("login")}>
+              <Button variant="ghost" onClick={() => switchMode("login")}>
                 {t("auth.backToLogin")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -270,20 +274,21 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
                 onKeyDown={(e) => e.key === "Enter" && submitReset()}
               />
             </label>
-            <button
-              className="btn btn--roll btn--big"
+            <Button
+              variant="roll"
+              size="lg"
               disabled={busy || password.length < 8}
               onClick={submitReset}
             >
               {busy ? t("auth.working") : t("auth.setPassword")}
-            </button>
+            </Button>
           </>
         )}
 
         <div className="setup__actions">
-          <button className="btn btn--ghost" onClick={onBack}>
+          <Button variant="ghost" onClick={onBack}>
             {t("auth.back")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { RulesModal } from "../components/RulesModal.js";
 import { useInstallPrompt } from "../game/pwa.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
-import { Icon } from "../ui/index.js";
+import { Button, Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface HomeScreenProps {
@@ -141,8 +141,8 @@ export function HomeScreen({
           </button>
         )}
         <div className="home-menu__foot">
-          <button
-            className="btn btn--ghost"
+          <Button
+            variant="ghost"
             onClick={() => {
               markSeen();
               setShowRules(true);
@@ -150,27 +150,27 @@ export function HomeScreen({
           >
             <Icon name="book" />
             {t("home.howToPlay")}
-          </button>
-          <button className="btn btn--ghost" onClick={onFriends}>
+          </Button>
+          <Button variant="ghost" onClick={onFriends}>
             <Icon name="user" />
             {t("social.home")}
-          </button>
-          <button className="btn btn--ghost" onClick={onBoards}>
+          </Button>
+          <Button variant="ghost" onClick={onBoards}>
             <Icon name="chart" />
             {t("board.home")}
-          </button>
-          <button className="btn btn--ghost" onClick={onStats}>
+          </Button>
+          <Button variant="ghost" onClick={onStats}>
             <Icon name="chart" />
             {t("home.stats")}
-          </button>
-          <button className="btn btn--ghost" onClick={onLocker}>
+          </Button>
+          <Button variant="ghost" onClick={onLocker}>
             <Icon name="palette" />
             {t("home.locker")}
-          </button>
-          <button className="btn btn--ghost" onClick={onSettings}>
+          </Button>
+          <Button variant="ghost" onClick={onSettings}>
             <Icon name="gear" />
             {t("home.settings")}
-          </button>
+          </Button>
         </div>
 
         {canInstall && (

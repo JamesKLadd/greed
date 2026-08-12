@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../game/auth.js";
 import { ApiError, deleteAccount, resendVerification } from "../net/auth.js";
-import { TextField } from "../ui/index.js";
+import { Button, TextField } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 interface AccountScreenProps {
@@ -49,9 +49,9 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
         <div className="setup__panel">
           <p>{t("account.notSignedIn")}</p>
           <div className="setup__actions">
-            <button className="btn btn--ghost" onClick={onBack}>
+            <Button variant="ghost" onClick={onBack}>
               {t("bar.home")}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -125,13 +125,13 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
 
         {verificationRequired && !user.emailVerified && (
           <div className="account__resend">
-            <button className="btn" disabled={busy || cooldown > 0} onClick={resend}>
+            <Button disabled={busy || cooldown > 0} onClick={resend}>
               {busy
                 ? t("account.sending")
                 : cooldown > 0
                   ? t("account.resendIn", { time: formatCountdown(cooldown) })
                   : t("account.resend")}
-            </button>
+            </Button>
             {notice && <p className="account__resend-note">{notice}</p>}
           </div>
         )}
@@ -139,12 +139,12 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
         <p className="account__note">{t("account.note", { name: user.username })}</p>
 
         <div className="setup__actions">
-          <button className="btn btn--ghost" onClick={onBack}>
+          <Button variant="ghost" onClick={onBack}>
             {t("bar.home")}
-          </button>
-          <button className="btn btn--bank" onClick={logout}>
+          </Button>
+          <Button variant="bank" onClick={logout}>
             {t("account.logout")}
-          </button>
+          </Button>
         </div>
 
         {/* Kept apart from the ordinary actions above, and behind a second step:
@@ -169,8 +169,8 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
               />
               {deleteError && <p className="danger-zone__error">{deleteError}</p>}
               <div className="danger-zone__actions">
-                <button
-                  className="btn btn--ghost"
+                <Button
+                  variant="ghost"
                   disabled={busy}
                   onClick={() => {
                     setConfirmingDelete(false);
@@ -179,7 +179,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
                   }}
                 >
                   {t("common.cancel")}
-                </button>
+                </Button>
                 <button
                   className="btn btn--danger"
                   disabled={busy || deletePassword.length === 0}

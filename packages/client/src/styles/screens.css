@@ -537,6 +537,10 @@
   grid-template-columns: 16px 1fr auto 30px;
   align-items: center;
 }
+.lobby-seat:has(.seats-config__team),
+.lobby-seat:has(.seat__tag--team) {
+  grid-template-columns: 16px 1fr auto auto 30px;
+}
 .lobby-seat__name {
   display: inline-flex;
   align-items: center;
@@ -997,6 +1001,17 @@
       "num  name name remove"
       "kind kind pers pers";
     row-gap: 6px;
+  }
+  /* With sides on there is a third control, so it takes a line of its own
+     rather than squeezing the other two. */
+  .seats-config__row--edit:has(.seats-config__team) {
+    grid-template-areas:
+      "num  name name remove"
+      "kind kind pers pers"
+      "team team team team";
+  }
+  .seats-config__row--edit .seats-config__team {
+    grid-area: team;
   }
   .seats-config__row--edit .seats-config__num {
     grid-area: num;

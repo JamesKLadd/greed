@@ -1285,13 +1285,10 @@
    contribution) and wear a thin side-coloured edge, which is what ties a seat
    to the chip above it without adding a second score to read. */
 .felt__teams {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
+  justify-content: center;
   gap: 10px;
-  z-index: 3;
+  margin-top: 10px;
   pointer-events: none;
 }
 .teamchip {
@@ -1348,7 +1345,7 @@
    they never push into the dice corridor. */
 @media (max-width: 760px) {
   .felt__teams {
-    top: 4px;
+    margin-top: 6px;
     gap: 6px;
   }
   .teamchip {

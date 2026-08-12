@@ -245,15 +245,16 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
               <div className="daily__tiebreak">
                 <h3>{t("daily.tiedTitle", { score: status.run.score })}</h3>
                 <p className="daily__note">{t("daily.tiedNote")}</p>
-                <button
-                  className="btn btn--roll btn--big"
+                <Button
+                  variant="roll"
+                  size="lg"
                   onClick={() => {
                     setMode("shootout");
                     setPlaying(true);
                   }}
                 >
                   {t("daily.playShootout")}
-                </button>
+                </Button>
               </div>
             )}
             {status.tiebreak !== null && (

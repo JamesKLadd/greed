@@ -231,23 +231,6 @@ export function TableView({
           })}
         </div>
 
-        {sideTotals && (
-          // The only score that decides a team game, so it gets its own row on
-          // the mat: the pods carry contributions, this carries the match.
-          <div className="felt__teams" aria-live="polite">
-            {sideTotals.map((total, side) => (
-              <div
-                key={side}
-                className={`teamchip${total === leadSide && total > 0 ? " teamchip--lead" : ""}`}
-                data-team={side}
-              >
-                <span className="teamchip__name">{teamName(t, side)}</span>
-                <span className="teamchip__score">{total}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div className="felt__center">
           {/* What the turn is worth right now, over the dice it is riding on —
               the number you are deciding whether to bank or gamble. Bust zeroes
@@ -282,6 +265,25 @@ export function TableView({
             rollingDice={rollingDice}
             dice3d={dice3d}
           />
+
+          {sideTotals && (
+            // The only score that decides a team game, so it gets a row of its
+            // own — the pods carry contributions, this carries the match. It
+            // sits UNDER the dice, inside the centre corridor the pods already
+            // leave clear: anywhere on the mat's edge collides with a seat.
+            <div className="felt__teams" aria-live="polite">
+              {sideTotals.map((total, side) => (
+                <div
+                  key={side}
+                  className={`teamchip${total === leadSide && total > 0 ? " teamchip--lead" : ""}`}
+                  data-team={side}
+                >
+                  <span className="teamchip__name">{teamName(t, side)}</span>
+                  <span className="teamchip__score">{total}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

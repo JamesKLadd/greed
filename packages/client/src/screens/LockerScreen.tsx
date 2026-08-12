@@ -7,6 +7,7 @@ import { AVATARS, isUnlocked as avatarUnlocked } from "../game/avatars.js";
 import { seatColor } from "../game/theme.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
+import { Button, Screen } from "../ui/index.js";
 
 export function LockerScreen({ onBack }: { onBack: () => void }) {
   const t = useT();
@@ -76,42 +77,35 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
   );
 
   return (
-    <div className="setup">
-      <div className="setup__hero">
-        <h1 className="setup__logo">{t("locker.title")}</h1>
-        <p className="setup__tagline">{t("locker.tagline", { done: unlockedCount, total })}</p>
-      </div>
-
-      <div className="setup__panel">
-        {section(t("locker.dice"), "dice", DICE_SKINS, (c) => (
-          <div className="locker-preview locker-preview--dice" style={c.vars as CSSProperties}>
-            <Die value={5} size={32} />
-            <Die value={3} size={32} />
-          </div>
-        ))}
-
-        {section(t("locker.table"), "table", TABLE_THEMES, (c) => (
-          <div className="locker-preview locker-preview--table" style={c.vars as CSSProperties} />
-        ))}
-
-        {section(t("locker.avatars"), "avatar", AVATARS, (a, i) => (
-          <div className="locker-preview locker-preview--avatar">
-            <span
-              className="avatar-disc"
-              style={{ "--seat": seatColor(i) } as CSSProperties}
-              aria-hidden="true"
-            >
-              {a.emoji}
-            </span>
-          </div>
-        ))}
-
-        <div className="setup__actions">
-          <button className="btn btn--ghost" onClick={onBack}>
-            {t("bar.home")}
-          </button>
+    <Screen title={t("locker.title")} tagline={t("locker.tagline", { done: unlockedCount, total })}>
+      {section(t("locker.dice"), "dice", DICE_SKINS, (c) => (
+        <div className="locker-preview locker-preview--dice" style={c.vars as CSSProperties}>
+          <Die value={5} size={32} />
+          <Die value={3} size={32} />
         </div>
+      ))}
+
+      {section(t("locker.table"), "table", TABLE_THEMES, (c) => (
+        <div className="locker-preview locker-preview--table" style={c.vars as CSSProperties} />
+      ))}
+
+      {section(t("locker.avatars"), "avatar", AVATARS, (a, i) => (
+        <div className="locker-preview locker-preview--avatar">
+          <span
+            className="avatar-disc"
+            style={{ "--seat": seatColor(i) } as CSSProperties}
+            aria-hidden="true"
+          >
+            {a.emoji}
+          </span>
+        </div>
+      ))}
+
+      <div className="setup__actions">
+        <Button variant="ghost" onClick={onBack}>
+          {t("bar.home")}
+        </Button>
       </div>
-    </div>
+    </Screen>
   );
 }

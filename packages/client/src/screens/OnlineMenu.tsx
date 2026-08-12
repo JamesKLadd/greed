@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { OnlineController } from "../net/useOnlineGame.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
+import { Button, Screen } from "../ui/index.js";
 
 interface OnlineMenuProps {
   net: OnlineController;
@@ -49,84 +50,75 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
   };
 
   return (
-    <div className="setup">
-      <div className="setup__hero">
-        <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">{t("onlineMenu.tagline")}</p>
+    <Screen tagline={t("onlineMenu.tagline")}>
+      {net.error && (
+        <div className="banner banner--sd online-error" onClick={net.dismissError}>
+          {net.error} <span className="online-error__x">✕</span>
+        </div>
+      )}
+
+      <label className="field">
+        <span className="field__label">{t("onlineMenu.yourName")}</span>
+        <input
+          className="seats-config__name"
+          value={locked ? user!.username : name}
+          maxLength={16}
+          placeholder={t("common.playerDefault")}
+          readOnly={locked}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={rememberName}
+        />
+        {locked && <span className="field__hint">{t("onlineMenu.lockedName")}</span>}
+      </label>
+
+      <div className="online-actions">
+        <Button
+          variant="roll"
+          size="lg"
+          onClick={() => {
+            rememberName();
+            net.quickMatch(displayName);
+          }}
+        >
+          {t("onlineMenu.quickMatch")}
+        </Button>
+        <Button variant="bank" size="lg" disabled={cooldown > 0} onClick={createRoom}>
+          {cooldown > 0 ? t("onlineMenu.createWait", { s: cooldown }) : t("onlineMenu.createRoom")}
+        </Button>
       </div>
 
-      <div className="setup__panel">
-        {net.error && (
-          <div className="banner banner--sd online-error" onClick={net.dismissError}>
-            {net.error} <span className="online-error__x">✕</span>
-          </div>
-        )}
-
-        <label className="field">
-          <span className="field__label">{t("onlineMenu.yourName")}</span>
-          <input
-            className="seats-config__name"
-            value={locked ? user!.username : name}
-            maxLength={16}
-            placeholder={t("common.playerDefault")}
-            readOnly={locked}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={rememberName}
-          />
-          {locked && <span className="field__hint">{t("onlineMenu.lockedName")}</span>}
-        </label>
-
-        <div className="online-actions">
-          <button
-            className="btn btn--roll btn--big"
-            onClick={() => {
-              rememberName();
-              net.quickMatch(displayName);
-            }}
-          >
-            {t("onlineMenu.quickMatch")}
-          </button>
-          <button className="btn btn--bank btn--big" disabled={cooldown > 0} onClick={createRoom}>
-            {cooldown > 0
-              ? t("onlineMenu.createWait", { s: cooldown })
-              : t("onlineMenu.createRoom")}
-          </button>
-        </div>
-
-        <div className="join-row">
-          <input
-            className="seats-config__name join-row__code"
-            value={code}
-            maxLength={4}
-            placeholder={t("onlineMenu.roomCodePlaceholder")}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-          />
-          <button
-            className="btn"
-            disabled={code.length < 4}
-            onClick={() => {
-              rememberName();
-              net.joinRoom(code, displayName);
-            }}
-          >
-            {t("onlineMenu.join")}
-          </button>
-          <button
-            className="btn btn--ghost"
-            disabled={code.length < 4}
-            title={t("onlineMenu.watchHint")}
-            onClick={() => net.spectate(code)}
-          >
-            {t("onlineMenu.watch")}
-          </button>
-        </div>
-
-        <div className="setup__actions">
-          <button className="btn btn--ghost" onClick={onBack}>
-            {t("bar.home")}
-          </button>
-        </div>
+      <div className="join-row">
+        <input
+          className="seats-config__name join-row__code"
+          value={code}
+          maxLength={4}
+          placeholder={t("onlineMenu.roomCodePlaceholder")}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+        />
+        <Button
+          disabled={code.length < 4}
+          onClick={() => {
+            rememberName();
+            net.joinRoom(code, displayName);
+          }}
+        >
+          {t("onlineMenu.join")}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={code.length < 4}
+          title={t("onlineMenu.watchHint")}
+          onClick={() => net.spectate(code)}
+        >
+          {t("onlineMenu.watch")}
+        </Button>
       </div>
-    </div>
+
+      <div className="setup__actions">
+        <Button variant="ghost" onClick={onBack}>
+          {t("bar.home")}
+        </Button>
+      </div>
+    </Screen>
   );
 }

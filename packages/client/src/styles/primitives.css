@@ -202,6 +202,12 @@
   align-items: center;
   gap: 8px;
 }
+/* A team room adds a side picker to every seat row, which is a sixth column.
+   Keyed off the picker actually being there rather than a modifier class, so
+   the row shape can't drift out of step with what it contains. */
+.seats-config__row:has(.seats-config__team) {
+  grid-template-columns: 22px minmax(60px, 1fr) auto auto auto 30px;
+}
 .seats-config__num {
   color: var(--text-dim);
   text-align: center;
