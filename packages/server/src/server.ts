@@ -10,6 +10,7 @@ import {
   applyAction,
   determineOrder,
   getLegalActions,
+  isWinner,
   makeSeed,
   teamSeatingOrder,
   GOAL_DEFAULT,
@@ -21,6 +22,8 @@ import type { ClientMessage, ServerMessage } from "@greed/protocol";
 import { verifySession } from "./auth.js";
 import { markOffline, markOnline } from "./presence.js";
 import { requireFriend } from "./social.js";
+import { recordMatch } from "./leaderboards.js";
+import { accountsEnabled } from "./db.js";
 import { randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
@@ -657,9 +660,41 @@ export class GreedServer {
   // previous turn's clock.
   private applyAndBroadcast(room: Room, action: Parameters<typeof applyAction>[1]): void {
     if (!room.game) return;
+    const wasOver = room.game.phase === "game-over";
     room.game = applyAction(room.game, action);
     this.scheduleFollowups(room);
     this.broadcastGame(room);
+    // Record the result exactly once, on the transition into game-over.
+    if (!wasOver && room.game.phase === "game-over") this.recordResults(room);
+  }
+
+  /**
+   * File a finished game into each signed-in player's match history.
+   *
+   * Fire-and-forget: a database that is down or absent must not disturb a
+   * finished game, and there is nothing useful to tell the players about it —
+   * so failures are swallowed rather than surfaced. Guests are skipped, since
+   * a history needs an account to belong to.
+   */
+  private recordResults(room: Room): void {
+    const g = room.game;
+    if (!g || !accountsEnabled()) return;
+    for (const seat of room.seats) {
+      if (!seat.userId) continue;
+      const me = g.players.find((p) => p.id === seat.id);
+      if (!me) continue;
+      void recordMatch({
+        userId: seat.userId,
+        won: isWinner(g, seat.id),
+        score: me.total,
+        goal: g.config.goal,
+        players: g.players.length,
+        team: typeof me.team === "number" ? me.team : null,
+        opponents: g.players.filter((p) => p.id !== seat.id).map((p) => p.name),
+      }).catch(() => {
+        /* history is a nicety; never let it break a finished game */
+      });
+    }
   }
 
   private schedule(room: Room, ms: number, fn: () => void): void {

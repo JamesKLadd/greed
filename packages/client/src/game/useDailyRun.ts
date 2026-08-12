@@ -3,6 +3,7 @@ import {
   DAILY_TURNS,
   applyAction,
   createDailyGame,
+  createDailyShootout,
   dailyKey,
   diceToRoll,
   getLegalActions,
@@ -48,8 +49,21 @@ export interface DailyRunController {
   bank: () => void;
 }
 
-export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunController {
-  const [state, setState] = useState<GameState>(() => createDailyGame(day, playerKey));
+/**
+ * Which kind of run this is. A shootout is the same machinery with different
+ * dice and exactly one turn — sharing the hook is what keeps the tiebreak
+ * feeling like a turn of Greed rather than a separate minigame.
+ */
+export type DailyMode = "run" | "shootout";
+
+export function useDailyRun(
+  day: string = dailyKey(),
+  playerKey = "",
+  mode: DailyMode = "run",
+): DailyRunController {
+  const totalTurns = mode === "shootout" ? 1 : DAILY_TURNS;
+  const build = mode === "shootout" ? createDailyShootout : createDailyGame;
+  const [state, setState] = useState<GameState>(() => build(day, playerKey));
   const [turn, setTurn] = useState(0);
   const [moves, setMoves] = useState<DailyMove[]>([]);
   const [isRolling, setIsRolling] = useState(false);
@@ -61,12 +75,14 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
   // restored), and it changes the dice — so start the run over when the seed
   // it is built from changes. Without this the run would be played against the
   // signed-out seed and then scored by the server against the real one.
-  const seedKey = `${day}|${playerKey}`;
+  // The mode is part of the key too: a shootout is a different set of dice, so
+  // switching to it after the run must rebuild rather than continue.
+  const seedKey = `${day}|${playerKey}|${mode}`;
   const seedRef = useRef(seedKey);
   if (seedRef.current !== seedKey) {
     seedRef.current = seedKey;
     busy.current = false;
-    setState(createDailyGame(day, playerKey));
+    setState(build(day, playerKey));
     setTurn(0);
     setMoves([]);
     setIsRolling(false);
@@ -75,7 +91,7 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
   }
 
   const legal = useMemo(() => getLegalActions(state), [state]);
-  const finished = turn >= DAILY_TURNS;
+  const finished = turn >= totalTurns;
 
   const act = useCallback(
     (move: DailyMove) => {
@@ -111,7 +127,7 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
           window.setTimeout(() => {
             setTurn((t) => {
               const done = t + 1;
-              if (done < DAILY_TURNS) setState(applyAction(next, { type: "ADVANCE" }));
+              if (done < totalTurns) setState(applyAction(next, { type: "ADVANCE" }));
               return done;
             });
             busy.current = false;
@@ -121,13 +137,13 @@ export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunC
         }
       }, settle);
     },
-    [state, finished],
+    [state, finished, totalTurns],
   );
 
   return {
     state,
     turn,
-    totalTurns: DAILY_TURNS,
+    totalTurns,
     moves,
     finished,
     isRolling,

@@ -9,7 +9,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
 import { clientKey, rateLimit } from "./rate-limit.js";
-import { dailyStatus, submitDailyRun } from "./daily.js";
+import { dailyStatus, submitDailyRun, submitDailyShootout } from "./daily.js";
 import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
 import {
   AccountError,
@@ -25,6 +25,7 @@ import {
   deleteAccount,
 } from "./accounts.js";
 import { verificationRequired } from "./email.js";
+import { isLeaderboardCategory, leaderboard, matchHistory } from "./leaderboards.js";
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
 
@@ -97,6 +98,15 @@ async function requireUser(req: IncomingMessage): Promise<{ id: string; username
   return { id: claims.sub, username: claims.username };
 }
 
+/** The signed-in caller, or null. For endpoints that work either way. */
+async function optionalUser(req: IncomingMessage): Promise<{ id: string } | null> {
+  try {
+    return await requireUser(req);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Handle an API request. Returns true if the request was under `/api/` (and thus
  * fully handled here), false to let the caller serve something else.
@@ -134,6 +144,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
     // One legitimate run exists per day; this only stops replay hammering.
     "/api/daily/run": { limit: 20, windowMs: 60 * 60_000 },
+    "/api/daily/shootout": { limit: 20, windowMs: 60 * 60_000 },
     // Friend requests are the one social action that reaches another person,
     // so cap them; browsing profiles and lists is unrestricted.
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
@@ -194,6 +205,25 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
         alreadyPlayed,
         status: await dailyStatus(id),
       });
+    } else if (method === "POST" && path === "/api/daily/shootout") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      // Same trust boundary as the run: the tiebreak is replayed, not reported.
+      const { tiebreak, alreadyPlayed } = await submitDailyShootout(id, b.moves);
+      json(res, alreadyPlayed ? 409 : 201, {
+        tiebreak,
+        alreadyPlayed,
+        status: await dailyStatus(id),
+      });
+    } else if (method === "GET" && path === "/api/leaderboard") {
+      // Signed-out callers can browse the boards; they just have no own-rank.
+      const viewer = await optionalUser(req);
+      const raw = url.searchParams.get("category") ?? "wins";
+      if (!isLeaderboardCategory(raw)) throw new AccountError(400, "Unknown leaderboard.");
+      json(res, 200, await leaderboard(raw, viewer?.id ?? null));
+    } else if (method === "GET" && path === "/api/me/matches") {
+      const { id } = await requireUser(req);
+      json(res, 200, { matches: await matchHistory(id) });
     } else if (method === "GET" && path === "/api/friends") {
       const { id } = await requireUser(req);
       json(res, 200, await friendsView(id));

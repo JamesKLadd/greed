@@ -12,7 +12,13 @@
  * moves, or shop for a friendlier seed.
  */
 
-import { dailyKey, scoreDailyRun, type DailyMove, type DailyResult } from "@greed/core";
+import {
+  dailyKey,
+  scoreDailyRun,
+  scoreDailyShootout,
+  type DailyMove,
+  type DailyResult,
+} from "@greed/core";
 import { query } from "./db.js";
 import { AccountError } from "./accounts.js";
 
@@ -41,6 +47,14 @@ export interface DailyStatus {
   /** The player's own rank, even when outside the top slice. */
   yourRank: number | null;
   players: number;
+  /**
+   * True when someone else finished today on the same score AND the tie is
+   * still unbroken — i.e. the player may still play their sudden-death turn.
+   * False once they have played it, or when nothing is level.
+   */
+  tiedUnresolved: boolean;
+  /** The player's shootout result, once played. */
+  tiebreak: number | null;
 }
 
 function parseMoves(raw: unknown): DailyMove[] {
@@ -87,6 +101,54 @@ export async function submitDailyRun(
   return { result, alreadyPlayed: rows.length === 0 };
 }
 
+/**
+ * Play the one-turn tiebreak shootout. Only allowed when the player has a run
+ * today and is actually level with someone; the score is derived by replaying
+ * the submitted moves, exactly like the run itself, so it cannot be forged.
+ *
+ * `tiebreak_moves IS NULL` is what makes it a single shot — the same
+ * one-attempt rule the run has, enforced by the same trick (a conditional
+ * update rather than a read-then-write, so two requests can't both win).
+ */
+export async function submitDailyShootout(
+  userId: string,
+  rawMoves: unknown,
+  day = dailyKey(),
+): Promise<{ tiebreak: number; alreadyPlayed: boolean }> {
+  const moves = parseMoves(rawMoves);
+
+  const { rows: mine } = await query<{ score: number; tiebreak_moves: string | null }>(
+    `SELECT score, tiebreak_moves FROM daily_runs WHERE user_id = $1 AND day = $2`,
+    [userId, day],
+  );
+  if (!mine[0]) throw new AccountError(400, "Play today's run first.");
+  if (mine[0].tiebreak_moves !== null) {
+    return { tiebreak: 0, alreadyPlayed: true };
+  }
+  if (!(await isTied(userId, day, mine[0].score))) {
+    throw new AccountError(400, "Nothing to break — no one shares your score.");
+  }
+
+  const tiebreak = scoreDailyShootout(day, moves, userId);
+  const { rows } = await query<{ tiebreak: number }>(
+    `UPDATE daily_runs SET tiebreak = $3, tiebreak_moves = $4
+       WHERE user_id = $1 AND day = $2 AND tiebreak_moves IS NULL
+       RETURNING tiebreak`,
+    [userId, day, tiebreak, moves.join(",")],
+  );
+  return { tiebreak, alreadyPlayed: rows.length === 0 };
+}
+
+/** Is anyone else on this exact score today? */
+async function isTied(userId: string, day: string, score: number): Promise<boolean> {
+  const { rows } = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM daily_runs
+       WHERE day = $1 AND score = $2 AND user_id <> $3`,
+    [day, score, userId],
+  );
+  return Number(rows[0]?.n ?? 0) > 0;
+}
+
 /** Consecutive days played, counting back from today. */
 async function currentStreak(userId: string, today: string): Promise<number> {
   const { rows } = await query<{ day: string }>(
@@ -120,7 +182,7 @@ export async function dailyStatus(
     user_id: string;
   }>(
     `SELECT u.username, r.score, r.turns, r.best_turn, r.busts, r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.created_at ASC) AS rank
+            RANK() OVER (ORDER BY r.score DESC, r.tiebreak DESC, r.created_at ASC) AS rank
        FROM daily_runs r JOIN users u ON u.id = r.user_id
       WHERE r.day = $1
       ORDER BY rank
@@ -131,6 +193,8 @@ export async function dailyStatus(
   const mine = await query<{
     score: number;
     turns: number;
+    tiebreak: number;
+    tiebreak_moves: string | null;
     banks: number;
     busts: number;
     hot_dice: number;
@@ -140,7 +204,8 @@ export async function dailyStatus(
   }>(
     `WITH ranked AS (
        SELECT user_id, score, turns, banks, busts, hot_dice, best_turn,
-              RANK() OVER (ORDER BY score DESC, created_at ASC) AS rank,
+              tiebreak, tiebreak_moves,
+              RANK() OVER (ORDER BY score DESC, tiebreak DESC, created_at ASC) AS rank,
               COUNT(*) OVER () AS players
          FROM daily_runs WHERE day = $1
      )
@@ -154,6 +219,10 @@ export async function dailyStatus(
   );
 
   const own = mine.rows[0];
+  // Offer the shootout only while it can still change something: the player has
+  // a run, someone else matched it, and they have not taken their turn yet.
+  const tiedUnresolved =
+    own != null && own.tiebreak_moves == null && (await isTied(userId, day, own.score));
   return {
     day,
     run: own
@@ -179,5 +248,7 @@ export async function dailyStatus(
     })),
     yourRank: own ? Number(own.rank) : null,
     players: Number(total.rows[0]?.n ?? 0),
+    tiedUnresolved,
+    tiebreak: own?.tiebreak_moves != null ? own.tiebreak : null,
   };
 }

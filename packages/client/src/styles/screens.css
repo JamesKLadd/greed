@@ -1639,3 +1639,92 @@
 .ach[data-tier="bronze"] {
   border-left: 3px solid var(--tier-bronze);
 }
+
+/* ---------- Leaderboards & match history ---------- */
+.board-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board__row,
+.match {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-variant-numeric: tabular-nums;
+}
+.board__row--you {
+  background: rgba(240, 169, 43, 0.16);
+  font-weight: 700;
+}
+.board__rank {
+  color: var(--text-dim);
+  min-width: 3ch;
+}
+.board__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board__value {
+  font-weight: 800;
+}
+.match__result {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--text-dim);
+}
+.match--won .match__result {
+  background: var(--good);
+}
+.match--lost .match__result {
+  background: var(--bad);
+}
+.match__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.match__opponents {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.match__meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.match__score {
+  font-weight: 800;
+}
+/* The daily tiebreak offer. Set apart from the result above it because it is a
+   decision, not a readout. */
+.daily__tiebreak {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 10px;
+  text-align: center;
+}
+.daily__tiebreak h3 {
+  margin: 0 0 6px;
+}

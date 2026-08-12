@@ -4,6 +4,7 @@ import { SetupScreen } from "./screens/SetupScreen.js";
 import { GameScreen } from "./screens/GameScreen.js";
 import { OnlineScreen } from "./screens/OnlineScreen.js";
 import { StatsScreen } from "./screens/StatsScreen.js";
+import { LeaderboardScreen } from "./screens/LeaderboardScreen.js";
 import { LockerScreen } from "./screens/LockerScreen.js";
 import { SettingsScreen } from "./screens/SettingsScreen.js";
 import { AuthScreen } from "./screens/AuthScreen.js";
@@ -26,6 +27,7 @@ type Mode =
   | "daily"
   | "friends"
   | "stats"
+  | "boards"
   | "locker"
   | "settings"
   | "auth"
@@ -180,6 +182,7 @@ export function App() {
     }
 
     if (mode === "stats") return <StatsScreen onBack={() => setMode("home")} />;
+    if (mode === "boards") return <LeaderboardScreen onBack={() => setMode("home")} />;
     if (mode === "locker") return <LockerScreen onBack={() => setMode("home")} />;
     if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
 
@@ -200,6 +203,7 @@ export function App() {
         onPractice={startPractice}
         onFriends={() => setMode("friends")}
         onStats={() => setMode("stats")}
+        onBoards={() => setMode("boards")}
         onLocker={() => setMode("locker")}
         onSettings={() => setMode("settings")}
         onAuth={() => {
