@@ -26,7 +26,7 @@
  * reach the goal first, banks immediately for the win.
  */
 
-import { diceRemaining, getLegalActions } from "@greed/core";
+import { diceRemaining, getLegalActions, rivalBest, scoreFor } from "@greed/core";
 import type { BotPersonality, GameAction, GameState } from "@greed/core";
 import { rollModel } from "./probabilities.js";
 
@@ -65,14 +65,6 @@ const TEMPERAMENTS: Record<BotPersonality, Temperament> = {
   // look at the odds, then keeps going on a thinner edge than they justify.
   reckless: { bias: 0.75, floor: 350, ceiling: 0 },
 };
-
-function othersMaxTotal(state: GameState, playerIndex: number): number {
-  let max = 0;
-  state.players.forEach((p, i) => {
-    if (i !== playerIndex && p.total > max) max = p.total;
-  });
-  return max;
-}
 
 /**
  * Risk-neutral optimal value of a turn that is holding `score` points with `k`
@@ -113,9 +105,10 @@ function expectedValueOfRolling(score: number, k: number): number {
  */
 function endgameAwareDecision(state: GameState): GameAction | null {
   const turn = state.turn;
-  const player = state.players[turn.playerIndex];
   const goal = state.config.goal;
-  const prospective = player.total + turn.turnScore;
+  // In a team game the side's shared total is what wins, so a bot plays for the
+  // side: it banks to put the TEAM over the goal and chases the leading TEAM.
+  const prospective = scoreFor(state, turn.playerIndex) + turn.turnScore;
   const isLastSeat = turn.playerIndex === state.order[state.order.length - 1];
 
   // Last seat first to the goal wins outright — lock it in.
@@ -125,7 +118,7 @@ function endgameAwareDecision(state: GameState): GameAction | null {
 
   if (state.endgame.triggered) {
     // Final round: only bank if it at least ties first place; otherwise chase.
-    const target = othersMaxTotal(state, turn.playerIndex);
+    const target = rivalBest(state, turn.playerIndex);
     return prospective >= target ? { type: "BANK" } : { type: "ROLL" };
   }
   return null;
@@ -151,9 +144,7 @@ export function decide(state: GameState, ctx: BotContext = {}): GameAction {
   if (turn.turnScore < floor) return { type: "ROLL" };
   if (ceiling > 0 && turn.turnScore >= ceiling) return { type: "BANK" };
 
-  const player = state.players[turn.playerIndex];
-  const leader = Math.max(...state.players.map((p) => p.total));
-  const behind = player.total < leader;
+  const behind = scoreFor(state, turn.playerIndex) < rivalBest(state, turn.playerIndex);
   // Push harder when trailing, protect points when ahead, then apply temperament.
   const threshold = turn.turnScore * (behind ? 0.85 : 1.15) * bias;
   return expectedValueOfRolling(turn.turnScore, diceRemaining(turn)) > threshold

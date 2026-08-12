@@ -1278,3 +1278,84 @@
  * The .meter rules those cards used still exist; they moved to screens.css,
  * where the Daily screen and the UI gallery still use them.)
  */
+
+/* ---------- Teams ----------
+   A team game is decided by ONE number per side, so that number gets its own
+   row on the mat. The pods keep showing each player's own banked total (their
+   contribution) and wear a thin side-coloured edge, which is what ties a seat
+   to the chip above it without adding a second score to read. */
+.felt__teams {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 3;
+  pointer-events: none;
+}
+.teamchip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--team-0);
+  box-shadow: var(--e-rest, 0 2px 8px rgba(0, 0, 0, 0.4));
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.teamchip[data-team="1"] {
+  border-left-color: var(--team-1);
+}
+.teamchip__name {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.teamchip__score {
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.teamchip--lead .teamchip__score {
+  color: var(--team-0);
+}
+.teamchip--lead[data-team="1"] .teamchip__score {
+  color: var(--team-1);
+}
+
+/* The pod's tie to its side. A left edge rather than a full tint: the pods are
+   already coloured per player so you can tell seats apart, and repainting them
+   by side would throw that away. */
+.pseat--teamed {
+  border-left: 3px solid var(--team-0);
+}
+.pseat--teamed[data-team="1"] {
+  border-left-color: var(--team-1);
+}
+.pseat--teamed .pseat__fill {
+  background: var(--team-0);
+}
+.pseat--teamed[data-team="1"] .pseat__fill {
+  background: var(--team-1);
+}
+
+/* On a phone the mat is already tight; the chips shrink rather than wrap, so
+   they never push into the dice corridor. */
+@media (max-width: 760px) {
+  .felt__teams {
+    top: 4px;
+    gap: 6px;
+  }
+  .teamchip {
+    padding: 3px 9px;
+    font-size: 0.6875rem;
+  }
+  .teamchip__score {
+    font-size: 0.8125rem;
+  }
+}

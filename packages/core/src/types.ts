@@ -44,12 +44,20 @@ export interface ScoreResult {
   breakdown: ScoreBreakdownEntry[];
 }
 
+/** Supported team layouts: two equal sides. */
+export const TEAM_TABLE_SIZES = [4, 6] as const;
+
 export interface PlayerConfig {
   id: string;
   name: string;
   isBot: boolean;
   /** Optional risk temperament for a bot (defaults to "balanced"). */
   botPersonality?: BotPersonality;
+  /**
+   * Side index (0 or 1) in a team game. Omitted for a free-for-all — the mode is
+   * decided by the seats themselves, so a game is never half in teams.
+   */
+  team?: number;
 }
 
 export interface PlayerState extends PlayerConfig {
@@ -134,7 +142,7 @@ export type GameEvent =
   | { type: "endgame-triggered"; playerId: string }
   | { type: "auto-win"; playerId: string }
   | { type: "sudden-death"; contenderIds: string[] }
-  | { type: "game-over"; winnerId: string };
+  | { type: "game-over"; winnerId: string; winnerTeam?: number };
 
 export interface GameState {
   config: GameConfig;
@@ -149,7 +157,15 @@ export interface GameState {
   phase: GamePhase;
   endgame: EndgameState;
   suddenDeath: SuddenDeathState | null;
+  /**
+   * Player indices grouped by side, or null in a free-for-all. Derived once at
+   * setup so every score comparison can be team-aware without re-deriving it:
+   * `teams[t]` are the seats on side `t`, and a side's score is their sum.
+   */
+  teams: number[][] | null;
   winnerId: string | null;
+  /** Winning side (teams games only); null in a free-for-all or while playing. */
+  winnerTeam: number | null;
   log: GameEvent[];
 }
 

@@ -88,11 +88,33 @@ export function dailySeed(day: string, playerKey = ""): number {
   return h >>> 0;
 }
 
+/**
+ * Seed for a player's tiebreak shootout. Salted off the run seed so the extra
+ * turn cannot be scouted from the run you just played — and so a player who
+ * never ties never sees these dice at all.
+ */
+export function shootoutSeed(day: string, playerKey = ""): number {
+  return dailySeed(day, `${playerKey}|shootout`);
+}
+
 /** A fresh daily run for the given day and player. */
 export function createDailyGame(day: string, playerKey = ""): GameState {
   return createSoloGame(
     { id: DAILY_PLAYER_ID, name: "You", isBot: false },
     { seed: dailySeed(day, playerKey), goal: DAILY_GOAL },
+  );
+}
+
+/**
+ * A one-turn sudden-death shootout, used to separate players who finished the
+ * day on the same score. It is a real turn — you choose when to stop, and
+ * busting leaves you on nothing — so a tie is broken by nerve rather than by
+ * whoever happened to submit first.
+ */
+export function createDailyShootout(day: string, playerKey = ""): GameState {
+  return createSoloGame(
+    { id: DAILY_PLAYER_ID, name: "You", isBot: false },
+    { seed: shootoutSeed(day, playerKey), goal: DAILY_GOAL },
   );
 }
 
@@ -110,7 +132,20 @@ export function dailyComplete(state: GameState, turnsTaken: number): boolean {
  * submission score no better than an honest one.
  */
 export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): DailyResult {
-  let state = createDailyGame(day, playerKey);
+  return replay(createDailyGame(day, playerKey), moves, DAILY_TURNS);
+}
+
+/**
+ * Replay a shootout and report the points banked. Exactly one turn, scored the
+ * same authoritative way as the run itself — a bust is worth 0, which is what
+ * makes stopping a decision.
+ */
+export function scoreDailyShootout(day: string, moves: DailyMove[], playerKey = ""): number {
+  return replay(createDailyShootout(day, playerKey), moves, 1).score;
+}
+
+function replay(initial: GameState, moves: DailyMove[], turnLimit: number): DailyResult {
+  let state = initial;
   let turns = 0;
   let banks = 0;
   let busts = 0;
@@ -118,7 +153,7 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
   let bestTurn = 0;
 
   for (const move of moves) {
-    if (turns >= DAILY_TURNS) break;
+    if (turns >= turnLimit) break;
     const legal = getLegalActions(state);
     if (move === "ROLL" && !legal.canRoll) continue;
     if (move === "BANK" && !legal.canBank) continue;
@@ -137,7 +172,7 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
         busts += 1;
       }
       turns += 1;
-      if (turns < DAILY_TURNS) state = applyAction(state, { type: "ADVANCE" });
+      if (turns < turnLimit) state = applyAction(state, { type: "ADVANCE" });
     }
   }
 
@@ -148,6 +183,6 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
     busts,
     hotDice,
     bestTurn,
-    complete: turns >= DAILY_TURNS,
+    complete: turns >= turnLimit,
   };
 }

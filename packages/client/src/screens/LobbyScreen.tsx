@@ -3,6 +3,7 @@ import type { BotPersonality } from "@greed/core";
 import type { OnlineController } from "../net/useOnlineGame.js";
 import { PERSONALITIES } from "../game/setup.js";
 import { useT } from "../i18n/i18n.js";
+import { teamName } from "../game/teams.js";
 
 const GOALS = [1000, 2000, 3000, 5000];
 
@@ -79,6 +80,27 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
               <span className={`lobby-seat__ready${s.ready ? " is-ready" : ""}`}>
                 {s.isBot ? "" : s.ready ? t("lobby.ready") : t("lobby.notReady")}
               </span>
+              {lobby.teams &&
+                (isHost ? (
+                  <div className="segmented seats-config__team">
+                    {[0, 1].map((side) => (
+                      <button
+                        key={side}
+                        className={
+                          s.team === side ? "segmented__btn segmented__btn--on" : "segmented__btn"
+                        }
+                        data-team={side}
+                        onClick={() => net.setSeatTeam(s.id, side)}
+                      >
+                        {teamName(t, side)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="seat__tag seat__tag--team" data-team={s.team}>
+                    {teamName(t, s.team ?? 0)}
+                  </span>
+                ))}
               {isHost && !s.isHost && (
                 <button
                   className="seats-config__remove"
@@ -109,6 +131,28 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
             ))}
           </div>
         </div>
+
+        {lobby.teamsAvailable && (
+          <div className="setup__row">
+            <span className="setup__label">{t("setup.teams")}</span>
+            <div className="segmented">
+              <button
+                className={!lobby.teams ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+                disabled={!isHost}
+                onClick={() => net.setTeams(false)}
+              >
+                {t("setup.freeForAll")}
+              </button>
+              <button
+                className={lobby.teams ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+                disabled={!isHost}
+                onClick={() => net.setTeams(true)}
+              >
+                {t("setup.teamsOn", { size: lobby.seats.length / 2 })}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="setup__actions">
           <button className="btn btn--ghost" onClick={net.leave}>

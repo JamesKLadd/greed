@@ -1,4 +1,5 @@
 import type { BotPersonality, GameState } from "@greed/core";
+import { isWinner } from "@greed/core";
 
 /**
  * Local, single-player progression: lifetime stats and achievements persisted to
@@ -41,6 +42,10 @@ export interface GameSummary {
   turns: number;
   bankedPoints: number;
   opponents: number;
+  /** Deepest hole you climbed out of: the biggest gap to the leader, ever, this game. */
+  maxDeficit: number;
+  /** Most hot-dice clears inside a single one of your turns. */
+  bestHotStreak: number;
   /** The nerviest temperament at the table, for the Giant Slayer badge. */
   boldestOpponent?: BotPersonality;
 }
@@ -181,6 +186,47 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: "Bank 25,000 points across all your games.",
     earned: (_s, p) => p.totalBankedPoints >= 25000,
   },
+
+  // The hard tier. These ask for a run of luck you have to survive, or a habit
+  // you have to keep up for a whole evening — none of them fall out of a
+  // single ordinary game.
+  {
+    id: "comeback",
+    icon: "🔄",
+    title: "Comeback Kid",
+    desc: "Win after trailing the leader by 1500 or more.",
+    earned: (s) => s.won && s.maxDeficit >= 1500,
+  },
+  {
+    id: "chain-reaction",
+    icon: "⛓️",
+    title: "Chain Reaction",
+    desc: "Score hot dice three times in a single turn.",
+    earned: (s) => s.bestHotStreak >= 3,
+  },
+  {
+    id: "tidal-wave",
+    icon: "🌊",
+    title: "Tidal Wave",
+    desc: "Bank 2500+ in a single turn.",
+    earned: (s) => s.bestTurn >= 2500,
+  },
+  {
+    id: "unstoppable",
+    icon: "💫",
+    title: "Unstoppable",
+    desc: "Win ten games in a row.",
+    earned: (_s, p) => p.currentStreak >= 10,
+  },
+  {
+    id: "blitz",
+    icon: "⏱️",
+    title: "Blitz",
+    // The 3000 floor is what makes this hard: without it, a 500-goal game wins
+    // it on the first turn.
+    desc: "Win a game of 3000+ in five turns or fewer.",
+    earned: (s) => s.won && s.finalTotal >= 3000 && s.turns <= 5,
+  },
 ];
 
 function emptyProfile(): Profile {
@@ -280,16 +326,39 @@ export function summarize(state: GameState, youId: string): GameSummary {
   let busts = 0;
   let hotDice = 0;
   let bankedPoints = 0;
+  let maxDeficit = 0;
+  let hotStreak = 0;
+  let bestHotStreak = 0;
+  // Banking is the only thing that moves a score, so the running standings can
+  // be rebuilt from the bank events alone.
+  const totals = new Map<string, number>();
 
   for (const e of state.log) {
-    if (e.type === "bank" && e.playerId === youId) {
-      banks += 1;
-      bankedPoints += e.gained;
-      if (e.gained > bestTurn) bestTurn = e.gained;
-    } else if (e.type === "bust" && e.playerId === youId) {
-      busts += 1;
-    } else if (e.type === "hot-dice" && e.playerId === youId) {
-      hotDice += 1;
+    if (e.type === "bank") {
+      totals.set(e.playerId, e.total);
+      if (e.playerId === youId) {
+        banks += 1;
+        bankedPoints += e.gained;
+        if (e.gained > bestTurn) bestTurn = e.gained;
+        hotStreak = 0;
+      }
+      // Re-check after ANY bank: the gap can widen because someone passed you.
+      let leader = 0;
+      for (const [id, total] of totals) {
+        if (id !== youId && total > leader) leader = total;
+      }
+      maxDeficit = Math.max(maxDeficit, leader - (totals.get(youId) ?? 0));
+    } else if ("playerId" in e && e.playerId === youId) {
+      if (e.type === "bust") {
+        busts += 1;
+        hotStreak = 0;
+      } else if (e.type === "skip") {
+        hotStreak = 0;
+      } else if (e.type === "hot-dice") {
+        hotDice += 1;
+        hotStreak += 1;
+        bestHotStreak = Math.max(bestHotStreak, hotStreak);
+      }
     }
   }
 
@@ -304,7 +373,8 @@ export function summarize(state: GameState, youId: string): GameSummary {
   }
 
   return {
-    won: state.winnerId === youId,
+    // Team games are won by a side, so a partner's win is your win.
+    won: isWinner(state, youId),
     finalTotal: you?.total ?? 0,
     bestTurn,
     banks,
@@ -313,6 +383,8 @@ export function summarize(state: GameState, youId: string): GameSummary {
     turns: banks + busts,
     bankedPoints,
     opponents: bots.length,
+    maxDeficit,
+    bestHotStreak,
     boldestOpponent: boldest,
   };
 }

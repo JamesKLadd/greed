@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { DieValue, GameState } from "@greed/core";
+import { isWinner as isWinningSeat, teamTotal } from "@greed/core";
 import { DiceTray } from "./DiceTray.js";
 import { seatColor } from "../game/theme.js";
 import { resolveAvatar } from "../game/avatars.js";
@@ -10,6 +11,7 @@ import { useLayoutMode } from "../game/useLayoutMode.js";
 import type { EmoteId } from "@greed/protocol";
 import { EMOTE_GLYPH } from "./EmoteBar.js";
 import { useT } from "../i18n/i18n.js";
+import { teamName } from "../game/teams.js";
 
 interface TableViewProps {
   state: GameState;
@@ -62,6 +64,11 @@ export function TableView({
   const goal = state.config.goal;
   const n = state.players.length;
   const leadTotal = Math.max(...state.players.map((p) => p.total));
+  // In a team game the side's shared total is what races the goal; a seat's own
+  // number stays on its pod as that player's contribution to it.
+  const sides = state.teams;
+  const sideTotals = sides ? sides.map((_, t) => teamTotal(state, t)) : null;
+  const leadSide = sideTotals ? Math.max(...sideTotals) : 0;
   const currentIndex = state.turn.playerIndex;
   // Both flourishes are derived from the state, so every client and spectator
   // in an online game shows the same ones (see flourishes.ts).
@@ -99,9 +106,14 @@ export function TableView({
             const slot = slots[rel];
 
             const isCurrent = i === currentIndex && state.phase !== "game-over";
-            const isWinner = state.phase === "game-over" && state.winnerId === p.id;
-            const isLeader = p.total === leadTotal && p.total > 0;
-            const pct = Math.min(100, (p.total / goal) * 100);
+            // Every member of the winning side is a winner.
+            const isWinner = state.phase === "game-over" && isWinningSeat(state, p.id);
+            const side = sides ? (p.team as number) : null;
+            // One crown per game: the leading side wears it on the scoreboard
+            // instead, so four pods don't all sprout the same badge.
+            const isLeader = !sides && p.total === leadTotal && p.total > 0;
+            const progress = sideTotals && side !== null ? sideTotals[side] : p.total;
+            const pct = Math.min(100, (progress / goal) * 100);
             const turnScore = isCurrent ? state.turn.turnScore : 0;
             const isYou = p.id === perspectiveId;
             const color = seatColor(i);
@@ -136,10 +148,12 @@ export function TableView({
                   offline ? "pseat--offline" : "",
                   badged.has(p.id) ? "pseat--rich" : "",
                   playsLast === i ? "pseat--last" : "",
+                  side !== null ? "pseat--teamed" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
                 style={style}
+                data-team={side ?? undefined}
               >
                 {/* Banked a thousand or more last turn: the seat wears dollar
                     signs at its corners until they're back on the clock.
@@ -216,6 +230,23 @@ export function TableView({
             );
           })}
         </div>
+
+        {sideTotals && (
+          // The only score that decides a team game, so it gets its own row on
+          // the mat: the pods carry contributions, this carries the match.
+          <div className="felt__teams" aria-live="polite">
+            {sideTotals.map((total, side) => (
+              <div
+                key={side}
+                className={`teamchip${total === leadSide && total > 0 ? " teamchip--lead" : ""}`}
+                data-team={side}
+              >
+                <span className="teamchip__name">{teamName(t, side)}</span>
+                <span className="teamchip__score">{total}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="felt__center">
           {/* What the turn is worth right now, over the dice it is riding on —

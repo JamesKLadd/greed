@@ -156,6 +156,34 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(80,20,5,0.32)",
     },
   },
+  {
+    id: "aurora",
+    name: "Aurora",
+    requirement: "Win from 1500 behind",
+    unlock: (p) => p.achievements.includes("comeback"),
+    vars: {
+      "--die-c1": "#c9ffe9",
+      "--die-c2": "#5fb6f0",
+      "--die-c3": "#7a3fd0",
+      "--die-pip": "#0a0a2e",
+      "--die-pip2": "#e8faff",
+      "--die-lip": "rgba(24,8,70,0.34)",
+    },
+  },
+  {
+    id: "platinum",
+    name: "Platinum",
+    requirement: "Win ten games in a row",
+    unlock: (p) => p.achievements.includes("unstoppable"),
+    vars: {
+      "--die-c1": "#f6f9fc",
+      "--die-c2": "#c3cdd8",
+      "--die-c3": "#8b98a6",
+      "--die-pip": "#1a2029",
+      "--die-pip2": "#e8eef4",
+      "--die-lip": "rgba(40,55,72,0.28)",
+    },
+  },
 ];
 
 export const TABLE_THEMES: Cosmetic[] = [
@@ -285,6 +313,32 @@ export const TABLE_THEMES: Cosmetic[] = [
       "--felt-edge": "#2a0e1d",
       "--rail-1": "#6a4a3a",
       "--rail-2": "#3a241c",
+    },
+  },
+  {
+    id: "ocean",
+    name: "Ocean Deep",
+    requirement: "Hot dice three times in one turn",
+    unlock: (p) => p.achievements.includes("chain-reaction"),
+    vars: {
+      "--felt-1": "#0f5a63",
+      "--felt-2": "#083c46",
+      "--felt-edge": "#04242c",
+      "--rail-1": "#8a7340",
+      "--rail-2": "#463a20",
+    },
+  },
+  {
+    id: "frost",
+    name: "Frost",
+    requirement: "Win a 3000+ game in five turns",
+    unlock: (p) => p.achievements.includes("blitz"),
+    vars: {
+      "--felt-1": "#cfe3ee",
+      "--felt-2": "#9fbccf",
+      "--felt-edge": "#6b8ba0",
+      "--rail-1": "#7c8894",
+      "--rail-2": "#3c454e",
     },
   },
 ];

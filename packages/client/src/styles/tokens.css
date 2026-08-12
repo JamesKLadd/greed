@@ -168,6 +168,13 @@
   --info: #55a8e6;
   --focus: 0 0 0 3px rgba(53, 192, 122, 0.5);
 
+  /* Team sides. Named by colour in the catalog ("Amber"/"Teal"), so these two
+     values are the words as much as the paint — change one, change both. They
+     are picked to stay legible on every one of the table themes, since the
+     scoreboard chips sit on the mat. */
+  --team-0: #f0a92b;
+  --team-1: #3fc8bd;
+
   /* -------------------------------------------------------------- legacy
      Aliases, not values: ~50 call sites still reference these names, and
      pointing them at the semantic roles above flips the whole app in one file

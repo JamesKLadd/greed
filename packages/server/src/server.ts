@@ -6,7 +6,14 @@
  * information, the full GameState is broadcast to everyone.
  */
 
-import { applyAction, determineOrder, getLegalActions, makeSeed, GOAL_DEFAULT } from "@greed/core";
+import {
+  applyAction,
+  determineOrder,
+  getLegalActions,
+  makeSeed,
+  teamSeatingOrder,
+  GOAL_DEFAULT,
+} from "@greed/core";
 import type { GameAction } from "@greed/core";
 import { decide } from "@greed/bots";
 import { decode, encode, isEmoteId } from "@greed/protocol";
@@ -23,7 +30,10 @@ import {
   makeBotSeat,
   makeHumanSeat,
   RoomStore,
+  rebalanceTeams,
   startGame,
+  teamsAvailable,
+  teamsBalanced,
   MAX_SEATS,
   type Room,
   type Seat,
@@ -158,6 +168,9 @@ export class GreedServer {
     // disconnect) carry a correctly SHORTENED remainder rather than restarting
     // the countdown on everyone's screen.
     const left = room.turnDeadline ? room.turnDeadline - Date.now() : 0;
+    // The rematch tally only means anything once the game is over, and sending
+    // it while playing would put a changing field in every mid-game snapshot.
+    const over = room.game.phase === "game-over";
     return {
       type: "game",
       code: room.code,
@@ -165,6 +178,12 @@ export class GreedServer {
       presence,
       skins,
       turnTimerMs: left > 0 ? left : undefined,
+      rematch: over
+        ? {
+            votes: [...room.rematchVotes],
+            needed: room.seats.filter((s) => !s.isBot && s.ws !== null).length,
+          }
+        : undefined,
     };
   }
 
@@ -504,6 +523,25 @@ export class GreedServer {
         return this.broadcastLobby(room);
       }
 
+      case "set-teams": {
+        if (!isHost || room.phase !== "lobby") return;
+        if (msg.teams && !teamsAvailable(room)) return;
+        room.teams = msg.teams;
+        // Snap to alternating sides on the way in, so the common case needs no
+        // further fiddling and the room is immediately startable.
+        if (msg.teams && !teamsBalanced(room)) rebalanceTeams(room);
+        return this.broadcastLobby(room);
+      }
+
+      case "set-seat-team": {
+        if (!isHost || room.phase !== "lobby" || !room.teams) return;
+        if (msg.team !== 0 && msg.team !== 1) return;
+        const target = room.seats.find((s) => s.id === msg.seatId);
+        if (!target) return;
+        target.team = msg.team;
+        return this.broadcastLobby(room);
+      }
+
       case "start-game": {
         if (!isHost || room.phase !== "lobby" || !canStart(room)) return;
         return this.beginRollOff(room);
@@ -527,10 +565,31 @@ export class GreedServer {
       }
 
       case "rematch": {
+        // A vote, open to everyone still at the table — not a host command.
+        // Running it back is the common case after a game, and making everyone
+        // wait on one person (who may have closed the tab) is what sent tables
+        // back to the lobby instead.
+        if (room.phase !== "in-game" || room.game?.phase !== "game-over") return;
+        if (room.rematchVotes.has(seat.id)) room.rematchVotes.delete(seat.id);
+        else room.rematchVotes.add(seat.id);
+
+        const waitingOn = room.seats.filter((s) => !s.isBot && s.ws !== null);
+        const allIn = waitingOn.length > 0 && waitingOn.every((s) => room.rematchVotes.has(s.id));
+        if (!allIn) return this.broadcastGame(room);
+
+        // Deal a fresh game with the same table — new roll-off, same seats.
+        clearTimers(room);
+        room.rematchVotes.clear();
+        room.game = null;
+        return this.beginRollOff(room);
+      }
+
+      case "to-lobby": {
         if (!isHost || room.phase !== "in-game") return;
         clearTimers(room);
         room.phase = "lobby";
         room.game = null;
+        room.rematchVotes.clear();
         for (const s of room.seats) if (!s.isBot) s.ready = s.isHost;
         return this.broadcastLobby(room);
       }
@@ -564,10 +623,21 @@ export class GreedServer {
   private beginRollOff(room: Room): void {
     const seed = makeSeed(Date.now() ^ Math.floor(Math.random() * 2 ** 31));
     const { order, entries } = determineOrder(room.seats.length, seed);
-    const rows = order.map((pi) => ({
+    // A team table is re-seated so the sides alternate, so the reveal has to
+    // show that order, not the raw ranking. The game itself is still built
+    // after the reveal — the room must not be actionable while it plays.
+    const teamed = room.teams && teamsBalanced(room);
+    const seating = teamed
+      ? teamSeatingOrder(
+          order,
+          room.seats.map((s) => s.team),
+        )
+      : order;
+    const rows = seating.map((pi) => ({
       name: room.seats[pi].name,
       dice: entries[pi].dice,
       sum: entries[pi].sum,
+      team: teamed ? room.seats[pi].team : undefined,
     }));
     room.phase = "in-game"; // protect seats from lobby-removal during the roll-off
     const msg: ServerMessage = { type: "roll-off", rows };

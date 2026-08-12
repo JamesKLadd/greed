@@ -63,6 +63,46 @@ describe("summarize", () => {
     expect(s.won).toBe(false);
     expect(s.finalTotal).toBe(900);
   });
+
+  it("tracks the deepest hole you were ever in", () => {
+    const state = {
+      winnerId: "you",
+      config: { goal: 3000 },
+      players: [
+        { id: "you", name: "You", isBot: false, total: 3100 },
+        { id: "b1", name: "Bot 1", isBot: true, botPersonality: "balanced", total: 2600 },
+      ],
+      log: [
+        { type: "bank", playerId: "b1", gained: 900, total: 900 },
+        { type: "bust", playerId: "you", lostPoints: 400 },
+        { type: "bank", playerId: "b1", gained: 800, total: 1700 }, // you 0, gap 1700
+        { type: "bank", playerId: "you", gained: 1000, total: 1000 }, // gap back to 700
+        { type: "bank", playerId: "b1", gained: 900, total: 2600 },
+        { type: "bank", playerId: "you", gained: 2100, total: 3100 },
+      ],
+    } as unknown as GameState;
+    expect(summarize(state, "you").maxDeficit).toBe(1700);
+    // Symmetric: the bot was never behind at all.
+    expect(summarize(state, "b1").maxDeficit).toBe(500);
+  });
+
+  it("counts hot dice per turn, not just per game", () => {
+    const state = {
+      winnerId: "you",
+      config: { goal: 3000 },
+      players: [{ id: "you", name: "You", isBot: false, total: 3000 }],
+      log: [
+        { type: "hot-dice", playerId: "you" },
+        { type: "hot-dice", playerId: "you" },
+        { type: "bank", playerId: "you", gained: 1600, total: 1600 },
+        { type: "hot-dice", playerId: "you" }, // new turn: streak restarts
+        { type: "bust", playerId: "you", lostPoints: 700 },
+      ],
+    } as unknown as GameState;
+    const s = summarize(state, "you");
+    expect(s.hotDice).toBe(3);
+    expect(s.bestHotStreak).toBe(2);
+  });
 });
 
 describe("recordGame + achievements", () => {
@@ -77,6 +117,8 @@ describe("recordGame + achievements", () => {
       turns: 0,
       bankedPoints: 0,
       opponents: 1,
+      maxDeficit: 0,
+      bestHotStreak: 0,
       ...over,
     };
   }
@@ -109,6 +151,31 @@ describe("recordGame + achievements", () => {
     expect(reckless.unlocked.map((a) => a.id)).toContain("giant-slayer");
   });
 
+  it("awards Blitz only for a fast win at a real goal", () => {
+    // A short win at a tiny custom goal must not count — that's the whole point
+    // of the 3000 floor.
+    const cheap = recordGame(summaryOf({ won: true, finalTotal: 600, turns: 2 }));
+    expect(cheap.unlocked.map((a) => a.id)).not.toContain("blitz");
+    const real = recordGame(summaryOf({ won: true, finalTotal: 3200, turns: 5 }));
+    expect(real.unlocked.map((a) => a.id)).toContain("blitz");
+  });
+
+  it("awards Comeback Kid only when the deficit was survived AND won", () => {
+    const lost = recordGame(summaryOf({ won: false, maxDeficit: 2000 }));
+    expect(lost.unlocked.map((a) => a.id)).not.toContain("comeback");
+    const won = recordGame(summaryOf({ won: true, maxDeficit: 1500 }));
+    expect(won.unlocked.map((a) => a.id)).toContain("comeback");
+  });
+
+  it("needs a ten-win streak for Unstoppable", () => {
+    for (let i = 0; i < 9; i++) {
+      expect(recordGame(summaryOf({ won: true })).unlocked.map((a) => a.id)).not.toContain(
+        "unstoppable",
+      );
+    }
+    expect(recordGame(summaryOf({ won: true })).unlocked.map((a) => a.id)).toContain("unstoppable");
+  });
+
   it("does not award the same achievement twice", () => {
     recordGame(summaryOf({ won: true }));
     const second = recordGame(summaryOf({ won: true }));
@@ -129,6 +196,8 @@ describe("averageBank", () => {
       turns: 3,
       bankedPoints: 1000,
       opponents: 1,
+      maxDeficit: 0,
+      bestHotStreak: 0,
     });
     expect(averageBank(loadProfile())).toBe(333); // 1000 / 3, rounded
   });

@@ -32,6 +32,11 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   marathon: "ACH_MARATHON",
   untouchable: "ACH_UNTOUCHABLE",
   "big-banker": "ACH_BIG_BANKER",
+  comeback: "ACH_COMEBACK",
+  "chain-reaction": "ACH_CHAIN_REACTION",
+  "tidal-wave": "ACH_TIDAL_WAVE",
+  unstoppable: "ACH_UNSTOPPABLE",
+  blitz: "ACH_BLITZ",
 };
 
 interface TauriInternals {

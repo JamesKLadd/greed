@@ -85,6 +85,18 @@ export const AVATARS: Avatar[] = [
     requirement: "Win 25 games",
     unlock: (p) => p.achievements.includes("champion"),
   },
+  {
+    id: "shark",
+    emoji: "🦈",
+    requirement: "Bank 2500+ in a single turn",
+    unlock: (p) => p.achievements.includes("tidal-wave"),
+  },
+  {
+    id: "peacock",
+    emoji: "🦚",
+    requirement: "Win ten games in a row",
+    unlock: (p) => p.achievements.includes("unstoppable"),
+  },
 ];
 
 /** The faces anyone can have — the pool auto-assignment draws from. */

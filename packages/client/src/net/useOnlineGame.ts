@@ -6,6 +6,7 @@ import {
   encode,
   type ClientMessage,
   type LobbyView,
+  type RematchState,
   type RollOffRow,
   type ServerMessage,
 } from "@greed/protocol";
@@ -60,6 +61,8 @@ export interface OnlineController {
   isSpectator: boolean;
   /** Most recent reaction per player id, with a nonce so repeats re-animate. */
   emotes: Record<string, { emote: EmoteId; at: number }>;
+  /** Rematch tally once the game is over, or null while playing. */
+  rematchState: RematchState | null;
   sendEmote: (emote: EmoteId) => void;
   createRoom: (name: string, opts?: { isPublic?: boolean; goal?: number }) => void;
   joinRoom: (code: string, name: string) => void;
@@ -69,10 +72,15 @@ export interface OnlineController {
   setGoal: (goal: number) => void;
   addBot: (personality?: BotPersonality) => void;
   removeSeat: (seatId: string) => void;
+  setTeams: (teams: boolean) => void;
+  setSeatTeam: (seatId: string, team: number) => void;
   startGame: () => void;
   roll: () => void;
   bank: () => void;
+  /** Toggle your vote to run it back with the same table. */
   rematch: () => void;
+  /** Host only: take the table back to the lobby to change the setup. */
+  toLobby: () => void;
   leave: () => void;
   dismissError: () => void;
 }
@@ -96,6 +104,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [rollOff, setRollOff] = useState<RollOffRow[] | null>(null);
+  const [rematchState, setRematchState] = useState<RematchState | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
@@ -248,6 +257,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           setLobby(msg.lobby);
           setGame(null);
           setRollOff(null);
+          setRematchState(null);
           setStatus("lobby");
           break;
         case "roll-off":
@@ -275,6 +285,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           }
           prevPresenceRef.current = next;
           setPresence(next);
+          setRematchState(msg.rematch ?? null);
           const nextSkins: Record<string, string> = {};
           const nextAvatars: Record<string, string> = {};
           for (const s of msg.skins ?? []) {
@@ -420,6 +431,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     error,
     toast,
     rollOff,
+    rematchState,
     isRolling,
     rollingIndices,
     rollingDice,
@@ -466,10 +478,13 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setGoal: (goal) => send({ type: "set-goal", goal }),
     addBot: (personality) => send({ type: "add-bot", personality }),
     removeSeat: (seatId) => send({ type: "remove-seat", seatId }),
+    setTeams: (teams) => send({ type: "set-teams", teams }),
+    setSeatTeam: (seatId, team) => send({ type: "set-seat-team", seatId, team }),
     startGame: () => send({ type: "start-game" }),
     roll: () => send({ type: "game-action", action: { type: "ROLL" } }),
     bank: () => send({ type: "game-action", action: { type: "BANK" } }),
     rematch: () => send({ type: "rematch" }),
+    toLobby: () => send({ type: "to-lobby" }),
     leave,
     dismissError: () => setError(null),
   };

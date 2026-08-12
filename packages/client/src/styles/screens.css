@@ -1544,3 +1544,58 @@
     transform: translateY(-12px) scale(0.95);
   }
 }
+
+/* ---------- Team standings & side pickers ---------- */
+.seat__tag--team {
+  color: var(--ink);
+  background: var(--team-0);
+}
+.seat__tag--team[data-team="1"] {
+  background: var(--team-1);
+}
+.standings--teams {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.standings__team {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--team-0);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.standings__team[data-team="1"] {
+  border-left-color: var(--team-1);
+}
+.standings__team--win {
+  background: rgba(100, 209, 151, 0.12);
+}
+.standings__team-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.05);
+}
+.standings__team ol {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* The side pickers in setup carry their colour so the choice is readable at a
+   glance rather than by reading two words. */
+.seats-config__team .segmented__btn--on[data-team="0"] {
+  background: var(--team-0);
+  color: var(--ink);
+}
+.seats-config__team .segmented__btn--on[data-team="1"] {
+  background: var(--team-1);
+  color: var(--ink);
+}
+.setup__rebalance {
+  margin-left: auto;
+}

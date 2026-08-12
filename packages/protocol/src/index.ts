@@ -35,6 +35,8 @@ export interface LobbySeat {
   ready: boolean;
   connected: boolean;
   isHost: boolean;
+  /** Side (0 or 1) this seat plays for when the room is in team mode. */
+  team?: number;
 }
 
 export interface LobbyView {
@@ -45,6 +47,18 @@ export interface LobbyView {
   hostId: string;
   /** True when the host is allowed to start (>=2 seats, all humans ready). */
   canStart: boolean;
+  /** Two sides sharing a score. Only legal at a table of 4 or 6. */
+  teams: boolean;
+  /** Whether this table size can be split into two equal sides at all. */
+  teamsAvailable: boolean;
+}
+
+/** Where a rematch vote has got to, shown on the game-over screen. */
+export interface RematchState {
+  /** Seat ids that have voted to run it back. */
+  votes: string[];
+  /** How many votes are needed — every connected human at the table. */
+  needed: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,10 +99,21 @@ export type ClientMessage =
   | { type: "set-goal"; goal: number }
   | { type: "add-bot"; personality?: BotPersonality }
   | { type: "remove-seat"; seatId: string }
+  /** Host: switch the room between free-for-all and two sides. */
+  | { type: "set-teams"; teams: boolean }
+  /** Host: move one seat to a side. */
+  | { type: "set-seat-team"; seatId: string; team: number }
   | { type: "start-game" }
   | { type: "game-action"; action: GameAction }
   | { type: "emote"; emote: EmoteId }
+  /**
+   * Toggle your vote to run it back with the same table. Once every connected
+   * human has voted the server deals a new game in place — no trip through the
+   * lobby, which is what made a rematch feel like starting over.
+   */
   | { type: "rematch" }
+  /** Host: take the table back to the lobby to change the goal, seats or sides. */
+  | { type: "to-lobby" }
   | { type: "leave" }
   | { type: "ping" };
 
@@ -101,6 +126,8 @@ export interface RollOffRow {
   name: string;
   dice: number[];
   sum: number;
+  /** Side, in a team game — the play order alternates sides, so it shows here. */
+  team?: number;
 }
 
 /** Live connection status of a player during a game (bots are always connected). */
@@ -142,6 +169,8 @@ export type ServerMessage =
        * permanently full or permanently expired.
        */
       turnTimerMs?: number;
+      /** Rematch tally, sent once the game is over. Absent while playing. */
+      rematch?: RematchState;
     }
   | { type: "emote"; playerId: string; emote: EmoteId }
   /** The notification connection is up; `username` is who the server thinks you are. */

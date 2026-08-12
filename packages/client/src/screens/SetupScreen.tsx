@@ -4,7 +4,11 @@ import { GOAL_DEFAULT } from "@greed/core";
 import {
   PERSONALITIES,
   defaultSetup,
+  defaultTeam,
   randomPersonality,
+  rebalanceTeams,
+  teamsAvailable,
+  teamsBalanced,
   type MatchSetup,
   type SeatSetup,
 } from "../game/setup.js";
@@ -12,6 +16,7 @@ import { RulesModal } from "../components/RulesModal.js";
 import { Button, Modal } from "../ui/index.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
+import { teamName } from "../game/teams.js";
 
 const GOALS = [1000, 2000, 3000, 5000];
 const MIN_GOAL = 500;
@@ -71,10 +76,20 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
   };
 
   const addSeat = () =>
-    addBots(1, (n) => ({ name: `Robo ${n}`, isBot: true, personality: "balanced" }));
+    addBots(1, (n) => ({
+      name: `Robo ${n}`,
+      isBot: true,
+      personality: "balanced",
+      team: defaultTeam(setup.seats.length),
+    }));
 
   const addRandomBots = (count: number) => {
-    addBots(count, (n) => ({ name: `Robo ${n}`, isBot: true, personality: randomPersonality() }));
+    addBots(count, (n) => ({
+      name: `Robo ${n}`,
+      isBot: true,
+      personality: randomPersonality(),
+      team: defaultTeam(setup.seats.length + n - 1),
+    }));
     setShowRandomBots(false);
   };
 
@@ -86,6 +101,10 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
 
   const humanCount = setup.seats.filter((s) => !s.isBot).length;
   const freeSeats = MAX_SEATS - setup.seats.length;
+  // Teams need two equal sides, so the option only exists at a table of 4 or 6.
+  const canTeam = teamsAvailable(setup.seats.length);
+  const teamsOn = setup.teams && canTeam;
+  const balanced = teamsBalanced(setup.seats);
 
   return (
     <div className="setup">
@@ -149,6 +168,22 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
                   </option>
                 ))}
               </select>
+              {teamsOn && (
+                <div className="segmented seats-config__team">
+                  {[0, 1].map((side) => (
+                    <button
+                      key={side}
+                      className={
+                        seat.team === side ? "segmented__btn segmented__btn--on" : "segmented__btn"
+                      }
+                      data-team={side}
+                      onClick={() => updateSeat(i, { team: side })}
+                    >
+                      {teamName(t, side)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
                 className="seats-config__remove"
                 onClick={() => removeSeat(i)}
@@ -160,6 +195,42 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
             </li>
           ))}
         </ul>
+
+        {canTeam && (
+          <div className="setup__row">
+            <span className="setup__label">{t("setup.teams")}</span>
+            <div className="segmented">
+              <button
+                className={!setup.teams ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+                onClick={() => setSetup((s) => ({ ...s, teams: false }))}
+              >
+                {t("setup.freeForAll")}
+              </button>
+              <button
+                className={setup.teams ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+                onClick={() =>
+                  // Snapping to alternating sides on the way in means the common
+                  // case never needs the per-seat pickers at all.
+                  setSetup((s) => ({
+                    ...s,
+                    teams: true,
+                    seats: teamsBalanced(s.seats) ? s.seats : rebalanceTeams(s.seats),
+                  }))
+                }
+              >
+                {t("setup.teamsOn", { size: setup.seats.length / 2 })}
+              </button>
+            </div>
+            {teamsOn && !balanced && (
+              <button
+                className="btn btn--ghost setup__rebalance"
+                onClick={() => setSetup((s) => ({ ...s, seats: rebalanceTeams(s.seats) }))}
+              >
+                {t("setup.rebalance")}
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="setup__row">
           <span className="setup__label">{t("common.goal")}</span>
@@ -204,7 +275,12 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
           <button className="btn btn--ghost" onClick={() => setShowRules(true)}>
             {t("home.howToPlay")}
           </button>
-          <button className="btn btn--roll btn--big" onClick={() => onStart(setup)}>
+          <button
+            className="btn btn--roll btn--big"
+            onClick={() => onStart(setup)}
+            disabled={teamsOn && !balanced}
+            title={teamsOn && !balanced ? t("setup.unbalanced") : undefined}
+          >
             {humanCount === 0 ? t("setup.watchBots") : t("common.startGame")}
           </button>
         </div>

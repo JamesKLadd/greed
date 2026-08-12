@@ -5,7 +5,7 @@
  * player can reconnect with their token.
  */
 
-import { createGame, makeSeed, cleanPlayerName, GOAL_DEFAULT } from "@greed/core";
+import { createGame, makeSeed, cleanPlayerName, GOAL_DEFAULT, TEAM_TABLE_SIZES } from "@greed/core";
 import type { BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { LobbySeat, LobbyView } from "@greed/protocol";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -31,6 +31,8 @@ export interface Seat {
   lastEmoteAt?: number;
   /** Reconnection token (humans only). */
   token: string;
+  /** Side (0 or 1). Always set so toggling team mode off and on keeps pairings. */
+  team: number;
   /** Live socket, or null when a bot or a disconnected human. */
   ws: WebSocket | null;
 }
@@ -52,6 +54,10 @@ export interface Room {
   turnDeadline: number | null;
   /** Read-only watchers: sockets that receive broadcasts but hold no seat. */
   spectators: Set<WebSocket>;
+  /** Two sides sharing a score (only legal at 4 or 6 seats). */
+  teams: boolean;
+  /** Seat ids that have voted to run the last game back, in place. */
+  rematchVotes: Set<string>;
 }
 
 const MAX_SEATS = 8;
@@ -82,6 +88,8 @@ export class RoomStore {
       timers: new Set(),
       turnDeadline: null,
       spectators: new Set(),
+      teams: false,
+      rematchVotes: new Set(),
     };
     this.rooms.set(room.code, room);
     return room;
@@ -134,6 +142,7 @@ export function makeHumanSeat(
   dice = "ivory",
   userId?: string,
   avatar = "",
+  team = 0,
 ): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
@@ -146,11 +155,16 @@ export function makeHumanSeat(
     avatar,
     missedTurns: 0,
     token: randomBytes(16).toString("hex"),
+    team,
     ws: null,
   };
 }
 
-export function makeBotSeat(index: number, personality: BotPersonality = "balanced"): Seat {
+export function makeBotSeat(
+  index: number,
+  personality: BotPersonality = "balanced",
+  team = 0,
+): Seat {
   return {
     id: `bot_${randomUUID().slice(0, 8)}`,
     name: `Bot ${index}`,
@@ -163,16 +177,40 @@ export function makeBotSeat(index: number, personality: BotPersonality = "balanc
     avatar: "",
     missedTurns: 0,
     token: "",
+    team,
     ws: null,
   };
 }
 
+/** Can this table be split into two equal sides at all? */
+export function teamsAvailable(room: Room): boolean {
+  return (TEAM_TABLE_SIZES as readonly number[]).includes(room.seats.length);
+}
+
+/** Are the two sides currently the same size? */
+export function teamsBalanced(room: Room): boolean {
+  if (!teamsAvailable(room)) return false;
+  const a = room.seats.filter((s) => s.team === 0).length;
+  return a === room.seats.length - a;
+}
+
+/** Alternate the sides down the seat list — the fastest way back to legal. */
+export function rebalanceTeams(room: Room): void {
+  room.seats.forEach((s, i) => {
+    s.team = i % 2;
+  });
+}
+
 export function canStart(room: Room): boolean {
   if (room.seats.length < 2 || room.seats.length > MAX_SEATS) return false;
+  // A team room can't start lopsided — the engine would reject the game anyway,
+  // and finding that out at start time would strand everyone in the lobby.
+  if (room.teams && !teamsBalanced(room)) return false;
   return room.seats.every((s) => s.isBot || s.ready);
 }
 
 export function lobbyView(room: Room): LobbyView {
+  const teamed = room.teams && teamsAvailable(room);
   const seats: LobbySeat[] = room.seats.map((s) => ({
     id: s.id,
     name: s.name,
@@ -181,6 +219,7 @@ export function lobbyView(room: Room): LobbyView {
     ready: s.ready,
     connected: s.isBot || s.ws !== null,
     isHost: s.isHost,
+    team: teamed ? s.team : undefined,
   }));
   return {
     code: room.code,
@@ -189,18 +228,25 @@ export function lobbyView(room: Room): LobbyView {
     seats,
     hostId: room.seats.find((s) => s.isHost)?.id ?? "",
     canStart: canStart(room),
+    teams: teamed,
+    teamsAvailable: teamsAvailable(room),
   };
 }
 
 export function startGame(room: Room, order?: number[]): GameState {
+  // Guard the same way the lobby does: a room left in team mode after seats
+  // changed must not hand the engine an illegal table.
+  const teamed = room.teams && teamsBalanced(room);
   const configs: PlayerConfig[] = room.seats.map((s) => ({
     id: s.id,
     name: s.name,
     isBot: s.isBot,
     botPersonality: s.isBot ? s.personality : undefined,
+    team: teamed ? s.team : undefined,
   }));
   const seed = makeSeed(Date.now() ^ Math.floor(Math.random() * 2 ** 31));
   for (const s of room.seats) s.missedTurns = 0; // fresh turn-timeout count per game
+  room.rematchVotes.clear();
   room.game = createGame(configs, { goal: room.goal, seed, order });
   room.phase = "in-game";
   return room.game;

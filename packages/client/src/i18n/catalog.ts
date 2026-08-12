@@ -46,6 +46,19 @@ export const en = {
   "pers.balanced": "balanced",
   "pers.reckless": "reckless",
 
+  // Team play. The sides are named by colour because the pods, the scoreboard
+  // and the standings all tint by side.
+  "team.0": "Amber",
+  "team.1": "Teal",
+  "setup.teams": "Sides",
+  "setup.freeForAll": "Every player for themselves",
+  "setup.teamsOn": "Teams of {size}",
+  "setup.rebalance": "Even up the sides",
+  "setup.unbalanced": "Both sides need the same number of players.",
+  "gameOver.rematch": "Run it back",
+  "gameOver.rematchWaiting": "Waiting… {have}/{need} ready",
+  "gameOver.backToLobby": "Back to lobby",
+
   // Home screen.
   "home.tagline": "Roll. Risk it. Bank it — before it all slips away.",
   "home.learn": "Learn to play",
@@ -365,6 +378,16 @@ export const en = {
   "ach.untouchable.desc": "Beat a reckless bot without busting once.",
   "ach.big-banker.title": "Big Banker",
   "ach.big-banker.desc": "Bank 25,000 points across all your games.",
+  "ach.comeback.title": "Comeback Kid",
+  "ach.comeback.desc": "Win after trailing the leader by 1500 or more.",
+  "ach.chain-reaction.title": "Chain Reaction",
+  "ach.chain-reaction.desc": "Score hot dice three times in a single turn.",
+  "ach.tidal-wave.title": "Tidal Wave",
+  "ach.tidal-wave.desc": "Bank 2500+ in a single turn.",
+  "ach.unstoppable.title": "Unstoppable",
+  "ach.unstoppable.desc": "Win ten games in a row.",
+  "ach.blitz.title": "Blitz",
+  "ach.blitz.desc": "Win a game of 3000+ in five turns or fewer.",
 
   // Locker screen.
   "locker.title": "LOCKER",
@@ -400,6 +423,10 @@ export const en = {
   "cosmetic.whale.req": "Bank 1500+ in a single turn",
   "cosmetic.crown.name": "Crown",
   "cosmetic.crown.req": "Win 25 games",
+  "cosmetic.shark.name": "Shark",
+  "cosmetic.shark.req": "Bank 2500+ in a single turn",
+  "cosmetic.peacock.name": "Peacock",
+  "cosmetic.peacock.req": "Win ten games in a row",
 
   // Cosmetics (id-keyed): dice skins.
   "cosmetic.ivory.name": "Ivory",
@@ -421,6 +448,10 @@ export const en = {
   "cosmetic.rose-gold.req": "Win 25 games",
   "cosmetic.molten.name": "Molten",
   "cosmetic.molten.req": "Bank 1500+ in one turn",
+  "cosmetic.aurora.name": "Aurora",
+  "cosmetic.aurora.req": "Win from 1500 behind",
+  "cosmetic.platinum.name": "Platinum",
+  "cosmetic.platinum.req": "Win ten games in a row",
   // Cosmetics: table themes.
   "cosmetic.classic.name": "Classic Green",
   "cosmetic.slate.name": "Slate",
@@ -441,6 +472,10 @@ export const en = {
   "cosmetic.obsidian-felt.req": "Beat an expert clean",
   "cosmetic.rosewood.name": "Rosewood",
   "cosmetic.rosewood.req": "Bank 25,000 lifetime",
+  "cosmetic.ocean.name": "Ocean Deep",
+  "cosmetic.ocean.req": "Hot dice three times in one turn",
+  "cosmetic.frost.name": "Frost",
+  "cosmetic.frost.req": "Win a 3000+ game in five turns",
 
   // Online menu.
   "onlineMenu.tagline": "Play online — quick match or a private room.",
@@ -537,6 +572,17 @@ export const es: Record<MsgKey, string> = {
   "pers.cautious": "cauto",
   "pers.balanced": "equilibrado",
   "pers.reckless": "temerario",
+
+  "team.0": "Ámbar",
+  "team.1": "Turquesa",
+  "setup.teams": "Bandos",
+  "setup.freeForAll": "Cada uno por su cuenta",
+  "setup.teamsOn": "Equipos de {size}",
+  "setup.rebalance": "Igualar los bandos",
+  "setup.unbalanced": "Ambos bandos necesitan el mismo número de jugadores.",
+  "gameOver.rematch": "Otra vez",
+  "gameOver.rematchWaiting": "Esperando… {have}/{need} listos",
+  "gameOver.backToLobby": "Volver a la sala",
 
   "home.tagline": "Tira. Arriésgate. Guarda — antes de que se te escape todo.",
   "home.learn": "Aprende a jugar",
@@ -848,6 +894,16 @@ export const es: Record<MsgKey, string> = {
   "ach.untouchable.desc": "Vence a un bot temerario sin fallar ni una vez.",
   "ach.big-banker.title": "Gran Banquero",
   "ach.big-banker.desc": "Guarda 25.000 puntos entre todas tus partidas.",
+  "ach.comeback.title": "Remontada",
+  "ach.comeback.desc": "Gana tras ir 1500 puntos o más por detrás del líder.",
+  "ach.chain-reaction.title": "Reacción en Cadena",
+  "ach.chain-reaction.desc": "Consigue dados calientes tres veces en un mismo turno.",
+  "ach.tidal-wave.title": "Maremoto",
+  "ach.tidal-wave.desc": "Guarda 2500+ en un solo turno.",
+  "ach.unstoppable.title": "Imparable",
+  "ach.unstoppable.desc": "Gana diez partidas seguidas.",
+  "ach.blitz.title": "Relámpago",
+  "ach.blitz.desc": "Gana una partida de 3000+ en cinco turnos o menos.",
 
   "locker.title": "VESTUARIO",
   "locker.tagline": "Desbloquea dados, mesas y caras jugando — {done}/{total} desbloqueados.",
@@ -881,6 +937,10 @@ export const es: Record<MsgKey, string> = {
   "cosmetic.whale.req": "Guarda 1500+ en un solo turno",
   "cosmetic.crown.name": "Corona",
   "cosmetic.crown.req": "Gana 25 partidas",
+  "cosmetic.shark.name": "Tiburón",
+  "cosmetic.shark.req": "Guarda 2500+ en un solo turno",
+  "cosmetic.peacock.name": "Pavo Real",
+  "cosmetic.peacock.req": "Gana diez partidas seguidas",
 
   "cosmetic.ivory.name": "Marfil",
   "cosmetic.crimson.name": "Carmesí",
@@ -901,6 +961,10 @@ export const es: Record<MsgKey, string> = {
   "cosmetic.rose-gold.req": "Gana 25 partidas",
   "cosmetic.molten.name": "Fundido",
   "cosmetic.molten.req": "Guarda 1500+ en un turno",
+  "cosmetic.aurora.name": "Aurora",
+  "cosmetic.aurora.req": "Gana desde 1500 por detrás",
+  "cosmetic.platinum.name": "Platino",
+  "cosmetic.platinum.req": "Gana diez partidas seguidas",
   "cosmetic.classic.name": "Verde Clásico",
   "cosmetic.slate.name": "Pizarra",
   "cosmetic.slate.req": "Juega 5 partidas",
@@ -920,6 +984,10 @@ export const es: Record<MsgKey, string> = {
   "cosmetic.obsidian-felt.req": "Vence a un experto sin fallar",
   "cosmetic.rosewood.name": "Palo de Rosa",
   "cosmetic.rosewood.req": "Guarda 25.000 en total",
+  "cosmetic.ocean.name": "Océano Profundo",
+  "cosmetic.ocean.req": "Dados calientes tres veces en un turno",
+  "cosmetic.frost.name": "Escarcha",
+  "cosmetic.frost.req": "Gana una partida de 3000+ en cinco turnos",
 
   "onlineMenu.tagline": "Juega en línea — partida rápida o sala privada.",
   "onlineMenu.yourName": "Tu nombre",

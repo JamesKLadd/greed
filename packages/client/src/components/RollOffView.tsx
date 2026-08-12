@@ -3,11 +3,14 @@ import type { DieValue } from "@greed/core";
 import { Die } from "./Die.js";
 import { Button, Modal } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { teamName } from "../game/teams.js";
 
 export interface RollOffDisplayEntry {
   name: string;
   dice: number[];
   sum: number;
+  /** Side, in a team game — the order alternates sides, so it needs showing. */
+  team?: number;
 }
 
 interface RollOffViewProps {
@@ -53,8 +56,13 @@ export function RollOffView({ entries, onContinue }: RollOffViewProps) {
           const first = i === 0;
           const last = i === entries.length - 1;
           return (
-            <li key={i} className="rolloff__row">
+            <li key={i} className="rolloff__row" data-team={e.team}>
               <span className="rolloff__name">
+                {e.team !== undefined && (
+                  <span className="seat__tag seat__tag--team" data-team={e.team}>
+                    {teamName(t, e.team)}
+                  </span>
+                )}
                 {e.name}
                 {first && <span className="seat__tag">{t("rolloff.goesFirst")}</span>}
                 {last && <span className="seat__tag">{t("rolloff.playsLast")}</span>}

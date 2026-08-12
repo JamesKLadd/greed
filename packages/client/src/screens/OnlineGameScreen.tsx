@@ -20,6 +20,9 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const canAct = current.id === net.youId && state.phase !== "game-over";
   const legal = getLegalActions(state);
   const isHost = net.lobby?.seats.find((s) => s.id === net.youId)?.isHost ?? false;
+  const votes = net.rematchState?.votes.length ?? 0;
+  const needed = net.rematchState?.needed ?? 0;
+  const votedRematch = net.youId != null && (net.rematchState?.votes.includes(net.youId) ?? false);
   // Online: the dice in the center belong to whoever's turn it is, so render the
   // CURRENT player's equipped skin (broadcast by the server) for every viewer.
   // Never a table theme — the felt stays shared/identical for everyone.
@@ -87,9 +90,18 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
               youId={net.youId}
               summary={chrome.summary}
               unlocked={chrome.unlocked}
-              // Only the host can restart; other seats see a note, spectators neither.
-              onPlayAgain={!net.isSpectator && isHost ? net.rematch : undefined}
-              waitingNote={!net.isSpectator && !isHost ? t("gameOver.waitingRematch") : undefined}
+              // Running it back is a vote now, open to every seat — the table
+              // restarts in place as soon as everyone still here has said yes.
+              onPlayAgain={net.isSpectator ? undefined : net.rematch}
+              playAgainLabel={
+                votedRematch
+                  ? t("gameOver.rematchWaiting", { have: votes, need: needed })
+                  : t("gameOver.rematch")
+              }
+              playAgainActive={votedRematch}
+              // The host keeps a way back to the lobby to change goal or sides.
+              onSecondary={!net.isSpectator && isHost ? net.toLobby : undefined}
+              secondaryLabel={t("gameOver.backToLobby")}
               onMenu={net.leave}
               menuLabel={t("common.leavePlain")}
             />
