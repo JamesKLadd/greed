@@ -1599,3 +1599,43 @@
 .setup__rebalance {
   margin-left: auto;
 }
+
+/* ---------- Achievement tiers ----------
+   A bronze and a gold are not the same achievement, so the grid says which is
+   which and the header carries a weighted score beside the raw count. */
+.ach-score {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ach__tier {
+  margin-left: 8px;
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  vertical-align: middle;
+  color: var(--ink);
+  background: var(--tier-bronze);
+}
+.ach__tier[data-tier="silver"] {
+  background: var(--tier-silver);
+}
+.ach__tier[data-tier="gold"] {
+  background: var(--tier-gold);
+}
+/* Locked rows are dimmed as a whole, so the tier chip must not shout. */
+.ach--locked .ach__tier {
+  background: var(--text-dim);
+  opacity: 0.5;
+}
+.ach[data-tier="gold"] {
+  border-left: 3px solid var(--tier-gold);
+}
+.ach[data-tier="silver"] {
+  border-left: 3px solid var(--tier-silver);
+}
+.ach[data-tier="bronze"] {
+  border-left: 3px solid var(--tier-bronze);
+}

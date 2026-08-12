@@ -50,13 +50,31 @@ export interface GameSummary {
   boldestOpponent?: BotPersonality;
 }
 
+/**
+ * How hard a badge is to get. Purely a weighting for the profile score and a
+ * colour in the grid — the unlock conditions themselves are unchanged.
+ */
+export type AchievementTier = "bronze" | "silver" | "gold";
+
+/** What each tier is worth toward the profile score. */
+export const TIER_POINTS: Record<AchievementTier, number> = {
+  bronze: 10,
+  silver: 25,
+  gold: 50,
+};
+
 export interface Achievement {
   id: string;
   icon: string;
   title: string;
   desc: string;
-  /** True when this game (with the already-updated profile) earns it. */
-  earned: (s: GameSummary, p: Profile) => boolean;
+  tier: AchievementTier;
+  /**
+   * True when this game (with the already-updated profile) earns it. Badges
+   * that cannot be won by playing a game (the daily-leaderboard one) have no
+   * predicate and are granted through `awardAchievement` instead.
+   */
+  earned?: (s: GameSummary, p: Profile) => boolean;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -65,6 +83,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🥇",
     title: "First Blood",
     desc: "Win your first game.",
+    tier: "bronze",
     earned: (s) => s.won,
   },
   {
@@ -72,6 +91,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🔥",
     title: "Hot Hand",
     desc: "Score hot dice (all five) in a turn.",
+    tier: "bronze",
     earned: (s) => s.hotDice >= 1,
   },
   {
@@ -79,6 +99,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "💰",
     title: "Big Spender",
     desc: "Bank 1000+ in a single turn.",
+    tier: "bronze",
     earned: (s) => s.bestTurn >= 1000,
   },
   {
@@ -86,6 +107,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "✨",
     title: "Flawless",
     desc: "Win a game without busting once.",
+    tier: "bronze",
     earned: (s) => s.won && s.busts === 0,
   },
   {
@@ -93,6 +115,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🎩",
     title: "High Roller",
     desc: "Finish a game with 3000+ points.",
+    tier: "silver",
     earned: (s) => s.finalTotal >= 3000,
   },
   {
@@ -100,6 +123,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🎯",
     title: "Hat Trick",
     desc: "Win three games in a row.",
+    tier: "silver",
     earned: (_s, p) => p.currentStreak >= 3,
   },
   {
@@ -107,6 +131,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🐉",
     title: "Giant Slayer",
     desc: "Beat a reckless bot.",
+    tier: "silver",
     earned: (s) => s.won && s.boldestOpponent === "reckless",
   },
   {
@@ -114,6 +139,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🎖️",
     title: "Veteran",
     desc: "Play 10 games.",
+    tier: "bronze",
     earned: (_s, p) => p.gamesPlayed >= 10,
   },
   {
@@ -121,6 +147,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🌋",
     title: "Inferno",
     desc: "Score hot dice twice in one game.",
+    tier: "silver",
     earned: (s) => s.hotDice >= 2,
   },
   {
@@ -128,6 +155,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🚀",
     title: "Moonshot",
     desc: "Bank 1500+ in a single turn.",
+    tier: "silver",
     earned: (s) => s.bestTurn >= 1500,
   },
   {
@@ -135,6 +163,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🏔️",
     title: "Landslide",
     desc: "Finish a game with 5000+ points.",
+    tier: "gold",
     earned: (s) => s.finalTotal >= 5000,
   },
   {
@@ -142,6 +171,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "⚡",
     title: "On Fire",
     desc: "Win five games in a row.",
+    tier: "gold",
     earned: (_s, p) => p.currentStreak >= 5,
   },
   {
@@ -149,6 +179,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🎮",
     title: "Dedicated",
     desc: "Play 25 games.",
+    tier: "silver",
     earned: (_s, p) => p.gamesPlayed >= 25,
   },
   {
@@ -156,6 +187,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "👑",
     title: "Champion",
     desc: "Win 25 games.",
+    tier: "gold",
     earned: (_s, p) => p.wins >= 25,
   },
   {
@@ -163,6 +195,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "👥",
     title: "Full Table",
     desc: "Win a game with four or more opponents.",
+    tier: "silver",
     earned: (s) => s.won && s.opponents >= 4,
   },
   {
@@ -170,6 +203,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🏃",
     title: "Marathon",
     desc: "Play a game lasting 20 or more turns.",
+    tier: "silver",
     earned: (s) => s.turns >= 20,
   },
   {
@@ -177,6 +211,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🛡️",
     title: "Untouchable",
     desc: "Beat a reckless bot without busting once.",
+    tier: "gold",
     earned: (s) => s.won && s.busts === 0 && s.boldestOpponent === "reckless",
   },
   {
@@ -184,6 +219,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🏦",
     title: "Big Banker",
     desc: "Bank 25,000 points across all your games.",
+    tier: "gold",
     earned: (_s, p) => p.totalBankedPoints >= 25000,
   },
 
@@ -195,6 +231,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🔄",
     title: "Comeback Kid",
     desc: "Win after trailing the leader by 1500 or more.",
+    tier: "gold",
     earned: (s) => s.won && s.maxDeficit >= 1500,
   },
   {
@@ -202,6 +239,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "⛓️",
     title: "Chain Reaction",
     desc: "Score hot dice three times in a single turn.",
+    tier: "gold",
     earned: (s) => s.bestHotStreak >= 3,
   },
   {
@@ -209,6 +247,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🌊",
     title: "Tidal Wave",
     desc: "Bank 2500+ in a single turn.",
+    tier: "gold",
     earned: (s) => s.bestTurn >= 2500,
   },
   {
@@ -216,6 +255,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "💫",
     title: "Unstoppable",
     desc: "Win ten games in a row.",
+    tier: "gold",
     earned: (_s, p) => p.currentStreak >= 10,
   },
   {
@@ -225,7 +265,20 @@ export const ACHIEVEMENTS: Achievement[] = [
     // The 3000 floor is what makes this hard: without it, a 500-goal game wins
     // it on the first turn.
     desc: "Win a game of 3000+ in five turns or fewer.",
+    tier: "gold",
     earned: (s) => s.won && s.finalTotal >= 3000 && s.turns <= 5,
+  },
+
+  // The one badge that cannot be ground out. There is a single daily run per
+  // day and the board is everyone who played it, so this is the only thing in
+  // the game you cannot get simply by playing enough.
+  {
+    id: "daily-elite",
+    icon: "🏅",
+    title: "Podium Finish",
+    desc: "Finish in the top ten of a daily challenge.",
+    tier: "gold",
+    // No predicate: granted from the daily result, not from a game.
   },
 ];
 
@@ -309,6 +362,34 @@ export function equipCosmetic(kind: "dice" | "table" | "avatar", id: string): Pr
   p[kind] = id;
   saveProfile(p);
   return p;
+}
+
+/**
+ * Grant a badge that no single game can earn — currently only the daily
+ * leaderboard one. Returns the achievement when it was newly unlocked, so the
+ * caller can celebrate it, or null when it was already held.
+ */
+export function awardAchievement(id: string): Achievement | null {
+  const a = ACHIEVEMENTS.find((x) => x.id === id);
+  if (!a) return null;
+  const p = loadProfile();
+  if (p.achievements.includes(id)) return null;
+  p.achievements.push(id);
+  saveProfile(p);
+  return a;
+}
+
+/** Weighted total of every badge earned — one number for "how far along am I". */
+export function achievementScore(p: Profile): number {
+  return ACHIEVEMENTS.filter((a) => p.achievements.includes(a.id)).reduce(
+    (sum, a) => sum + TIER_POINTS[a.tier],
+    0,
+  );
+}
+
+/** The score a profile would have with everything unlocked. */
+export function maxAchievementScore(): number {
+  return ACHIEVEMENTS.reduce((sum, a) => sum + TIER_POINTS[a.tier], 0);
 }
 
 /** Average points per banked turn (0 when no turns banked yet). */
@@ -409,7 +490,7 @@ export function recordGame(summary: GameSummary): { profile: Profile; unlocked: 
   const unlocked: Achievement[] = [];
   for (const a of ACHIEVEMENTS) {
     if (p.achievements.includes(a.id)) continue;
-    if (a.earned(summary, p)) {
+    if (a.earned?.(summary, p)) {
       p.achievements.push(a.id);
       unlocked.push(a);
     }

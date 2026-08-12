@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ACHIEVEMENTS, averageBank, loadProfile, resetProfile } from "../game/profile.js";
+import {
+  ACHIEVEMENTS,
+  achievementScore,
+  averageBank,
+  loadProfile,
+  maxAchievementScore,
+  resetProfile,
+} from "../game/profile.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -51,6 +58,11 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
             {t("stats.achievements")}{" "}
             <span className="ach-count">
               {unlockedCount}/{ACHIEVEMENTS.length}
+            </span>{" "}
+            {/* One number for "how far along am I": a bronze and a gold are not
+                the same achievement, so a raw count flatters a shallow profile. */}
+            <span className="ach-score" title={t("stats.score")}>
+              {t("stats.scoreOf", { score: achievementScore(profile), max: maxAchievementScore() })}
             </span>
           </h2>
         </div>
@@ -58,10 +70,19 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
           {ACHIEVEMENTS.map((a) => {
             const has = profile.achievements.includes(a.id);
             return (
-              <li key={a.id} className={has ? "ach" : "ach ach--locked"}>
+              <li
+                key={a.id}
+                className={has ? "ach" : "ach ach--locked"}
+                data-tier={has ? a.tier : undefined}
+              >
                 <span className="ach__icon">{has ? a.icon : "🔒"}</span>
                 <span className="ach__body">
-                  <span className="ach__title">{t(`ach.${a.id}.title` as MsgKey)}</span>
+                  <span className="ach__title">
+                    {t(`ach.${a.id}.title` as MsgKey)}
+                    <span className="ach__tier" data-tier={a.tier}>
+                      {t(`ach.tier.${a.tier}` as MsgKey)}
+                    </span>
+                  </span>
                   <span className="ach__desc">{t(`ach.${a.id}.desc` as MsgKey)}</span>
                 </span>
               </li>

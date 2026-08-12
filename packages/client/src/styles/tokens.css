@@ -175,6 +175,12 @@
   --team-0: #f0a92b;
   --team-1: #3fc8bd;
 
+  /* Achievement tiers. Metal colours, lightened enough to stay legible as
+     small chips on the dark panels. */
+  --tier-bronze: #c98b52;
+  --tier-silver: #c6ced6;
+  --tier-gold: #f2c14e;
+
   /* -------------------------------------------------------------- legacy
      Aliases, not values: ~50 call sites still reference these names, and
      pointing them at the semantic roles above flips the whole app in one file

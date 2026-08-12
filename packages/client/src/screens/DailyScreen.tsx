@@ -11,6 +11,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
 import { useDailyRun } from "../game/useDailyRun.js";
 import { fetchDaily, submitDaily, type DailyStatus } from "../net/daily.js";
+import { awardAchievement, type Achievement } from "../game/profile.js";
+import { syncSteamAchievements } from "../game/steam.js";
+import { syncProfileUp } from "../net/auth.js";
+
+/** Placing this high on a daily board earns the one badge you cannot grind. */
+const DAILY_PODIUM_RANK = 10;
 import { ApiError } from "../net/auth.js";
 import { Die } from "../components/Die.js";
 import { Button, Icon } from "../ui/index.js";
@@ -18,6 +24,7 @@ import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { useT } from "../i18n/i18n.js";
+import type { MsgKey } from "../i18n/i18n.js";
 
 interface DailyScreenProps {
   onBack: () => void;
@@ -32,6 +39,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const { dice3d } = loadSettings();
   const [day, setDay] = useState(() => dailyKey());
   const [status, setStatus] = useState<DailyStatus | null>(null);
+  const [podium, setPodium] = useState<Achievement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -68,6 +76,17 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       .then((res) => {
         setStatus(res.status);
         setPlaying(false);
+        // The one badge no amount of playing can force: it depends on everyone
+        // else who played today, so it is granted here rather than by recordGame.
+        const rank = res.status.yourRank;
+        if (rank !== null && rank <= DAILY_PODIUM_RANK) {
+          const won = awardAchievement("daily-elite");
+          if (won) {
+            setPodium(won);
+            syncSteamAchievements([won.id]);
+            void syncProfileUp();
+          }
+        }
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("daily.submitFailed")))
       .finally(() => setSubmitting(false));
@@ -211,6 +230,18 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 ? t("daily.yourRank", { rank: status.yourRank, players: status.players })
                 : t("daily.played")}
             </p>
+            {podium && (
+              <div className="unlocks">
+                <div className="unlocks__head">{t("gameOver.unlockedOne")}</div>
+                <div className="unlocks__row">
+                  <span className="unlocks__icon">{podium.icon}</span>
+                  <span>
+                    <strong>{t(`ach.${podium.id}.title` as MsgKey)}</strong> —{" "}
+                    {t(`ach.${podium.id}.desc` as MsgKey)}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="summary">
               <div className="summary__stat">
                 <span className="summary__label">{t("gameOver.bestTurn")}</span>

@@ -184,6 +184,22 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(40,55,72,0.28)",
     },
   },
+  {
+    id: "laurel",
+    name: "Laurel",
+    // Not a milestone: the only way in is to place on a daily board, which
+    // depends on everyone else who played that day.
+    requirement: "Finish top ten in a daily",
+    unlock: (p) => p.achievements.includes("daily-elite"),
+    vars: {
+      "--die-c1": "#f7f2df",
+      "--die-c2": "#cbbd7e",
+      "--die-c3": "#8d7c3a",
+      "--die-pip": "#243018",
+      "--die-pip2": "#fbf7e8",
+      "--die-lip": "rgba(70,60,20,0.3)",
+    },
+  },
 ];
 
 export const TABLE_THEMES: Cosmetic[] = [

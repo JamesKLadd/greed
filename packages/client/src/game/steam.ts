@@ -37,6 +37,7 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   "tidal-wave": "ACH_TIDAL_WAVE",
   unstoppable: "ACH_UNSTOPPABLE",
   blitz: "ACH_BLITZ",
+  "daily-elite": "ACH_DAILY_ELITE",
 };
 
 interface TauriInternals {

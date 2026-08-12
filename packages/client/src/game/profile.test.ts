@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { GameState } from "@greed/core";
-import { averageBank, loadProfile, recordGame, summarize, type GameSummary } from "./profile.js";
+import {
+  ACHIEVEMENTS,
+  achievementScore,
+  averageBank,
+  awardAchievement,
+  loadProfile,
+  maxAchievementScore,
+  recordGame,
+  summarize,
+  TIER_POINTS,
+  type GameSummary,
+} from "./profile.js";
 
 // Minimal in-memory localStorage so the profile persists across recordGame calls.
 class MemStore {
@@ -200,5 +211,46 @@ describe("averageBank", () => {
       bestHotStreak: 0,
     });
     expect(averageBank(loadProfile())).toBe(333); // 1000 / 3, rounded
+  });
+});
+
+describe("achievement tiers", () => {
+  it("gives every badge a tier", () => {
+    for (const a of ACHIEVEMENTS) expect(TIER_POINTS[a.tier], a.id).toBeGreaterThan(0);
+  });
+
+  it("scores a profile by tier weight, not badge count", () => {
+    expect(achievementScore(loadProfile())).toBe(0);
+    const bronze = ACHIEVEMENTS.find((a) => a.tier === "bronze")!;
+    const gold = ACHIEVEMENTS.find((a) => a.tier === "gold")!;
+    awardAchievement(bronze.id);
+    expect(achievementScore(loadProfile())).toBe(TIER_POINTS.bronze);
+    awardAchievement(gold.id);
+    expect(achievementScore(loadProfile())).toBe(TIER_POINTS.bronze + TIER_POINTS.gold);
+    // Two badges, but not two equal badges.
+    expect(TIER_POINTS.gold).toBeGreaterThan(TIER_POINTS.bronze);
+  });
+
+  it("caps at the maximum when everything is unlocked", () => {
+    for (const a of ACHIEVEMENTS) awardAchievement(a.id);
+    expect(achievementScore(loadProfile())).toBe(maxAchievementScore());
+  });
+});
+
+describe("awardAchievement", () => {
+  it("grants a badge that no game can earn, once", () => {
+    const first = awardAchievement("daily-elite");
+    expect(first?.id).toBe("daily-elite");
+    expect(loadProfile().achievements).toContain("daily-elite");
+    expect(awardAchievement("daily-elite")).toBeNull();
+  });
+
+  it("ignores an unknown id", () => {
+    expect(awardAchievement("no-such-badge")).toBeNull();
+  });
+
+  it("keeps the daily badge out of the game-driven path", () => {
+    // It has no `earned` predicate, so no combination of results can unlock it.
+    expect(ACHIEVEMENTS.find((a) => a.id === "daily-elite")!.earned).toBeUndefined();
   });
 });
