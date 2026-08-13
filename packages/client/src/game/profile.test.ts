@@ -97,6 +97,80 @@ describe("summarize", () => {
     expect(summarize(state, "b1").maxDeficit).toBe(500);
   });
 
+  it("measures the deficit by SIDE in a team game, not by seat", () => {
+    // The bug this pins: Comeback Kid was handed out for a hole nobody was ever
+    // in. Your side leads from the first turn, but you personally trail your own
+    // partner by 1800 — and seat-by-seat that read as a 1800-point recovery,
+    // counting a TEAMMATE as the leader you climbed back past.
+    const state = {
+      winnerId: "mate",
+      winnerTeam: 0,
+      config: { goal: 2000 },
+      teams: [
+        [0, 2],
+        [1, 3],
+      ],
+      players: [
+        { id: "you", name: "You", isBot: false, total: 200, team: 0 },
+        { id: "b1", name: "Bot 1", isBot: true, botPersonality: "balanced", total: 900, team: 1 },
+        {
+          id: "mate",
+          name: "Partner",
+          isBot: true,
+          botPersonality: "cautious",
+          total: 2000,
+          team: 0,
+        },
+        { id: "b2", name: "Bot 2", isBot: true, botPersonality: "reckless", total: 700, team: 1 },
+      ],
+      log: [
+        { type: "bank", playerId: "mate", gained: 2000, total: 2000 }, // your side 2000-0
+        { type: "bank", playerId: "b1", gained: 900, total: 900 }, // 2000-900
+        { type: "bank", playerId: "you", gained: 200, total: 200 }, // 2200-900
+        { type: "bank", playerId: "b2", gained: 700, total: 700 }, // 2200-1600
+      ],
+    } as unknown as GameState;
+    const s = summarize(state, "you");
+    // Your side was never behind, so there is no comeback to celebrate.
+    expect(s.maxDeficit).toBe(0);
+    // A partner's win is still your win — that part was always right.
+    expect(s.won).toBe(true);
+  });
+
+  it("still credits a real team deficit to everyone who dug out of it", () => {
+    const state = {
+      winnerId: "you",
+      winnerTeam: 0,
+      config: { goal: 3000 },
+      teams: [
+        [0, 2],
+        [1, 3],
+      ],
+      players: [
+        { id: "you", name: "You", isBot: false, total: 1800, team: 0 },
+        { id: "b1", name: "Bot 1", isBot: true, botPersonality: "balanced", total: 1000, team: 1 },
+        {
+          id: "mate",
+          name: "Partner",
+          isBot: true,
+          botPersonality: "cautious",
+          total: 1400,
+          team: 0,
+        },
+        { id: "b2", name: "Bot 2", isBot: true, botPersonality: "reckless", total: 1200, team: 1 },
+      ],
+      log: [
+        { type: "bank", playerId: "b1", gained: 1000, total: 1000 },
+        { type: "bank", playerId: "b2", gained: 1200, total: 1200 }, // 0 vs 2200
+        { type: "bank", playerId: "you", gained: 1800, total: 1800 },
+        { type: "bank", playerId: "mate", gained: 1400, total: 1400 }, // 3200 vs 2200
+      ],
+    } as unknown as GameState;
+    expect(summarize(state, "you").maxDeficit).toBe(2200);
+    // The whole side climbed out of it together, so the partner's is the same.
+    expect(summarize(state, "mate").maxDeficit).toBe(2200);
+  });
+
   it("counts hot dice per turn, not just per game", () => {
     const state = {
       winnerId: "you",

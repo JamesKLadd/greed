@@ -414,6 +414,22 @@ export function summarize(state: GameState, youId: string): GameSummary {
   // be rebuilt from the bank events alone.
   const totals = new Map<string, number>();
 
+  /**
+   * Which score each seat's bank moves — their own, or their side's.
+   *
+   * The deficit has to be measured on the score the game is DECIDED by, the
+   * same one `isWinner` above settles the win on. Measured seat by seat, a team
+   * game hands out Comeback Kid for a hole you were never in: the lowest
+   * scorer on a winning side personally trails the table's top scorer all game,
+   * so a side that led from the front still looked like a 1500-point recovery.
+   * A free-for-all is the same code with every seat its own side.
+   */
+  const sideOf = new Map<string, string>();
+  for (const p of state.players) {
+    sideOf.set(p.id, p.team == null ? p.id : `team:${p.team}`);
+  }
+  const yourSide = sideOf.get(youId) ?? youId;
+
   for (const e of state.log) {
     if (e.type === "bank") {
       totals.set(e.playerId, e.total);
@@ -424,11 +440,16 @@ export function summarize(state: GameState, youId: string): GameSummary {
         hotStreak = 0;
       }
       // Re-check after ANY bank: the gap can widen because someone passed you.
-      let leader = 0;
+      const bySide = new Map<string, number>();
       for (const [id, total] of totals) {
-        if (id !== youId && total > leader) leader = total;
+        const side = sideOf.get(id) ?? id;
+        bySide.set(side, (bySide.get(side) ?? 0) + total);
       }
-      maxDeficit = Math.max(maxDeficit, leader - (totals.get(youId) ?? 0));
+      let leader = 0;
+      for (const [side, total] of bySide) {
+        if (side !== yourSide && total > leader) leader = total;
+      }
+      maxDeficit = Math.max(maxDeficit, leader - (bySide.get(yourSide) ?? 0));
     } else if ("playerId" in e && e.playerId === youId) {
       if (e.type === "bust") {
         busts += 1;
