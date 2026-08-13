@@ -12,8 +12,8 @@
 
 import {
   DAILY_TURNS,
-  applyAction,
   dailyKey,
+  dailyMoveStart,
   dailyPosition,
   getLegalActions,
   type DailyMove,
@@ -159,9 +159,7 @@ export async function playDailyMove(
 
   // Legality is checked against the position the NEXT move actually starts
   // from — a finished turn is advanced past first, exactly as the replay does.
-  let probe = before.state;
-  if (probe.turn.outcome) probe = applyAction(probe, { type: "ADVANCE" });
-  const legal = getLegalActions(probe);
+  const legal = getLegalActions(dailyMoveStart(before.state));
   if (move === "ROLL" && !legal.canRoll) throw new AccountError(400, "That move isn't legal.");
   if (move === "BANK" && !legal.canBank) throw new AccountError(400, "That move isn't legal.");
 

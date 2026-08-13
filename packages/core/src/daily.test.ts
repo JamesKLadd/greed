@@ -7,6 +7,7 @@ const SEED_B = 0x51ed_9876;
 import {
   DAILY_TURNS,
   createDailyGame,
+  dailyMoveStart,
   dailyPosition,
   dailyKey,
   dailySeed,
@@ -15,6 +16,18 @@ import {
   type DailyMove,
 } from "./daily.js";
 import { applyAction, getLegalActions } from "./game.js";
+import { diceToRoll } from "./turn.js";
+
+/** Roll the opening turn until it busts, leaving the bust on screen. */
+function untilBust(seed: number) {
+  const moves: DailyMove[] = [];
+  let pos = dailyPosition(seed, moves);
+  for (let i = 0; i < 40 && pos.turns === 0; i++) {
+    moves.push("ROLL");
+    pos = dailyPosition(seed, moves);
+  }
+  return { moves, pos };
+}
 
 /** Play a run with a simple policy, recording the moves as a client would. */
 function playRun(seed: number, bankAt: number): DailyMove[] {
@@ -252,5 +265,55 @@ describe("dailyPosition — the server's view of a run", () => {
   it("agrees with scoreDailyRun, which is the same replay", () => {
     const moves: DailyMove[] = ["ROLL", "ROLL", "BANK", "ROLL", "BANK"];
     expect(scoreDailyRun(SEED_A, moves)).toEqual(dailyPosition(SEED_A, moves).result);
+  });
+});
+
+describe("dailyMoveStart — where the next move begins", () => {
+  /** Bank the opening turn on its first scoring roll. Leaves two dice locked. */
+  const banked: DailyMove[] = ["ROLL", "BANK"];
+
+  it("clears a banked turn, so the next throw uses all five dice", () => {
+    // The bug this pins: after banking, the finished turn is still on screen
+    // with its scoring dice locked. Working out the next throw from THAT turn
+    // threw only the leftovers — the dice locked when the turn ended stayed lit
+    // and never re-rolled, because as far as the board was concerned the turn
+    // had never ended.
+    const pos = dailyPosition(SEED_A, banked);
+    expect(pos.state.turn.outcome).toBe("banked");
+    expect(pos.state.turn.locked.some(Boolean)).toBe(true);
+    expect(diceToRoll(pos.state.turn).length).toBeLessThan(5);
+
+    const start = dailyMoveStart(pos.state);
+    expect(start.turn.outcome).toBeNull();
+    expect(start.turn.locked).toEqual([false, false, false, false, false]);
+    expect(start.turn.turnScore).toBe(0);
+    expect(diceToRoll(start.turn)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("clears a busted turn the same way", () => {
+    const { pos } = untilBust(SEED_A);
+    expect(pos.state.turn.outcome).toBe("busted");
+    const start = dailyMoveStart(pos.state);
+    expect(start.turn.outcome).toBeNull();
+    expect(diceToRoll(start.turn)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("leaves a turn still in play alone", () => {
+    const pos = dailyPosition(SEED_A, ["ROLL"]);
+    expect(pos.state.turn.outcome).toBeNull();
+    expect(dailyMoveStart(pos.state)).toBe(pos.state);
+  });
+
+  it("deals nothing: the score stands and the next throw is unchanged", () => {
+    // The client calls this without knowing the seed, so it must not be able to
+    // advance the run or peek at a die. Clearing the board locally and then
+    // playing the move has to land exactly where the server's replay lands.
+    const pos = dailyPosition(SEED_A, banked);
+    const start = dailyMoveStart(pos.state);
+    expect(start.turn.dice).toEqual([1, 1, 1, 1, 1]); // a fresh turn shows no throw
+    expect(start.players[0].total).toBe(pos.state.players[0].total);
+    expect(applyAction(start, { type: "ROLL" }).turn.dice).toEqual(
+      dailyPosition(SEED_A, [...banked, "ROLL"]).state.turn.dice,
+    );
   });
 });

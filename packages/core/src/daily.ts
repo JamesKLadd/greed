@@ -193,6 +193,23 @@ export interface DailyPosition {
 }
 
 /**
+ * The position the next move actually starts from.
+ *
+ * A finished turn is left on screen with its `outcome` still set, so the player
+ * can see the roll that busted them — but the next move does not begin there.
+ * The replay advances past it first, and so must anything else reasoning about
+ * that move: the server deciding whether it is legal, the client deciding which
+ * dice the throw will tumble. Reading the finished turn instead sees the
+ * previous turn's locks, which is a board that no longer exists.
+ *
+ * A no-op on a turn still in play, and never touches the RNG — advancing only
+ * swaps in a fresh turn, so this cannot deal anything or move the run along.
+ */
+export function dailyMoveStart(state: GameState): GameState {
+  return state.turn.outcome ? applyAction(state, { type: "ADVANCE" }) : state;
+}
+
+/**
  * Replay a sequence of moves against a day's seed and report where the run
  * stands. This is the single source of truth for a daily run: the server owns
  * the move list, replays it here, and hands the resulting state back to the
@@ -219,7 +236,7 @@ export function dailyPosition(seed: number, moves: DailyMove[]): DailyPosition {
   for (const move of moves) {
     if (turns >= DAILY_TURNS) break;
     // The previous turn is still on show; starting a new move clears it.
-    if (state.turn.outcome) state = applyAction(state, { type: "ADVANCE" });
+    state = dailyMoveStart(state);
 
     const legal = getLegalActions(state);
     if (move === "ROLL" && !legal.canRoll) continue;

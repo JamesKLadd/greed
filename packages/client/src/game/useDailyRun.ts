@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import {
+  dailyMoveStart,
   diceToRoll,
   getLegalActions,
   type DailyMove,
@@ -25,7 +26,10 @@ import { playDailyMove, type DailyRunView } from "../net/daily.js";
  *
  * Turn resolution still mirrors the main game: a finished turn stays on screen
  * until the next move, so the player sees the roll that busted them. The server
- * leaves it visible too, and advances past it when the next move arrives.
+ * leaves it visible too, and advances past it when the next move arrives — and
+ * this hook advances its own copy at the same moment, which is the ONE thing it
+ * applies locally. That step deals nothing and needs no seed; without it the
+ * board spends the whole round trip still showing the turn that just ended.
  */
 
 /** How long a finished turn stays on screen before the run moves on. */
@@ -68,12 +72,23 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
       busy.current = true;
       setError(null);
 
+      // Clear the finished turn off the board before the move goes out. The
+      // server advances past it first, so the throw belongs to a NEW turn — but
+      // until the reply lands the screen is still showing the old one. Rolling
+      // from there threw the new turn against the last turn's board: the dice
+      // locked when it ended sat there lit and motionless while only the ones
+      // that happened to be free tumbled, and the turn score kept the banked
+      // figure. Advancing is pure — a fresh turn, no dice dealt — so the client
+      // can do it without knowing the seed.
+      const from = dailyMoveStart(state);
+      if (from !== state) setView((v) => ({ ...v, state: from }));
+
       // Start the tumble immediately and let the round trip happen underneath
       // it: the dice are already spinning by the time the faces come back, so
       // the latency lands inside the animation rather than in front of it.
       const started = Date.now();
       if (move === "ROLL") {
-        setRollingIndices(state.turn.hotDice ? [0, 1, 2, 3, 4] : diceToRoll(state.turn));
+        setRollingIndices(diceToRoll(from.turn));
         setIsRolling(true);
       }
 
