@@ -48,14 +48,87 @@ export interface DailyResult {
   complete: boolean;
 }
 
-/** ISO day key (UTC) for a date — the identity of a daily challenge. */
+/**
+ * The clock the daily runs on.
+ *
+ * A zone, not a fixed offset. "CST" literally means UTC-6 all year, but US
+ * Central observes daylight saving — so a hardcoded -6 would roll the day over
+ * at 1am local for the eight months the zone is on CDT. Naming the zone keeps
+ * the reset at local midnight in both halves of the year.
+ *
+ * Both the client and the server derive the day from this, so they must agree:
+ * that needs an ICU-complete runtime, which Node 20+ and every browser we
+ * target are.
+ */
+export const DAILY_ZONE = "America/Chicago";
+
+const zoneFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: DAILY_ZONE,
+  hour12: false,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+interface ZonedParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+/** An instant, read as a wall clock in the daily's zone. */
+function zonedParts(ts: number): ZonedParts {
+  const found: Record<string, string> = {};
+  for (const part of zoneFormat.formatToParts(new Date(ts))) {
+    if (part.type !== "literal") found[part.type] = part.value;
+  }
+  return {
+    year: Number(found.year),
+    month: Number(found.month),
+    day: Number(found.day),
+    // Some engines render midnight as hour 24 under hour12:false.
+    hour: Number(found.hour) % 24,
+    minute: Number(found.minute),
+    second: Number(found.second),
+  };
+}
+
+/** How far the zone's wall clock is ahead of UTC at this instant, in ms. */
+function zoneOffsetMs(ts: number): number {
+  const p = zonedParts(ts);
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  // formatToParts has no milliseconds, so compare on whole seconds. Offsets are
+  // whole minutes, so nothing is lost.
+  return asUtc - Math.floor(ts / 1000) * 1000;
+}
+
+/** The instant local midnight begins on a given local calendar date. */
+function zonedMidnight(year: number, month: number, day: number): number {
+  const wall = Date.UTC(year, month - 1, day);
+  // Correct by the offset in force at the guess, then re-check: near a DST
+  // boundary the first correction can land on the other side of it.
+  const first = wall - zoneOffsetMs(wall);
+  const second = wall - zoneOffsetMs(first);
+  return second;
+}
+
+/** Day key for an instant — the identity of a daily challenge, in DAILY_ZONE. */
 export function dailyKey(date: Date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+  const p = zonedParts(date.getTime());
+  const mm = String(p.month).padStart(2, "0");
+  const dd = String(p.day).padStart(2, "0");
+  return `${p.year}-${mm}-${dd}`;
 }
 
 /**
- * Milliseconds until the next challenge begins — i.e. until the next UTC
- * midnight, the instant `dailyKey` starts naming a new day.
+ * Milliseconds until the next challenge begins — i.e. until the next midnight
+ * in DAILY_ZONE, the instant `dailyKey` starts naming a new day.
  *
  * It lives here beside `dailyKey` so the countdown a player watches and the key
  * that decides which run they get can never disagree about when the day turns
@@ -63,8 +136,16 @@ export function dailyKey(date: Date = new Date()): string {
  * the new one and a full day remains on it.
  */
 export function msUntilNextDaily(now: Date = new Date()): number {
-  const nextMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
-  return nextMidnight - now.getTime();
+  const p = zonedParts(now.getTime());
+  // Tomorrow's date on a calendar. Plain UTC arithmetic on the parts, with no
+  // zone involved — this only has to roll month and year ends over correctly.
+  const tomorrow = new Date(Date.UTC(p.year, p.month - 1, p.day + 1));
+  const next = zonedMidnight(
+    tomorrow.getUTCFullYear(),
+    tomorrow.getUTCMonth() + 1,
+    tomorrow.getUTCDate(),
+  );
+  return next - now.getTime();
 }
 
 /**

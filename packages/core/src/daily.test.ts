@@ -42,28 +42,57 @@ describe("daily seed", () => {
     expect(dailySeed("2026-08-09", "u1")).not.toBe(dailySeed("2025-08-09", "u1"));
   });
 
-  it("keys a date as a UTC ISO day", () => {
+  it("keys a date by the Central calendar day, not the UTC one", () => {
+    // Summer (CDT, UTC-5): the day turns over at 05:00Z.
+    expect(dailyKey(new Date("2026-08-10T04:59:59Z"))).toBe("2026-08-09");
+    expect(dailyKey(new Date("2026-08-10T05:00:00Z"))).toBe("2026-08-10");
+    // Winter (CST, UTC-6): at 06:00Z.
+    expect(dailyKey(new Date("2026-01-15T05:59:59Z"))).toBe("2026-01-14");
+    expect(dailyKey(new Date("2026-01-15T06:00:00Z"))).toBe("2026-01-15");
+    // Late-evening UTC is still the same Central day, where UTC keying would
+    // already have rolled over — this is the case players actually hit.
     expect(dailyKey(new Date("2026-08-09T23:30:00Z"))).toBe("2026-08-09");
   });
 
-  it("counts down to the UTC midnight that starts the next challenge", () => {
-    expect(msUntilNextDaily(new Date("2026-08-09T23:30:00Z"))).toBe(30 * 60 * 1000);
-    expect(msUntilNextDaily(new Date("2026-08-09T00:00:00Z"))).toBe(24 * 60 * 60 * 1000);
+  it("counts down to Central midnight, through both offsets", () => {
+    // 23:30 Central on an August evening is 04:30Z the next morning.
+    expect(msUntilNextDaily(new Date("2026-08-10T04:30:00Z"))).toBe(30 * 60 * 1000);
+    // The same wall-clock moment in January is an hour later in UTC.
+    expect(msUntilNextDaily(new Date("2026-01-15T05:30:00Z"))).toBe(30 * 60 * 1000);
+    // A full day remains at the stroke of midnight.
+    expect(msUntilNextDaily(new Date("2026-08-10T05:00:00Z"))).toBe(24 * 60 * 60 * 1000);
     // Month and year ends are just the next day like any other.
-    expect(msUntilNextDaily(new Date("2026-08-31T23:59:59Z"))).toBe(1000);
-    expect(msUntilNextDaily(new Date("2026-12-31T23:59:59Z"))).toBe(1000);
+    expect(msUntilNextDaily(new Date("2026-09-01T04:59:59Z"))).toBe(1000);
+    expect(msUntilNextDaily(new Date("2027-01-01T05:59:59Z"))).toBe(1000);
   });
 
   it("never runs out while the day it belongs to is still current", () => {
     // The countdown drives the "come back tomorrow" clock, so a zero or
     // negative reading would mean showing a finished timer on a live day.
-    for (const iso of ["2026-08-09T00:00:00.000Z", "2026-08-09T12:34:56.789Z"]) {
+    // Includes both DST switchovers, where the day is 23 and 25 hours long.
+    for (const iso of [
+      "2026-08-09T00:00:00.000Z",
+      "2026-08-09T12:34:56.789Z",
+      "2026-01-15T23:59:59.999Z",
+      "2026-03-08T06:00:00.000Z", // spring forward, 2am Central
+      "2026-03-08T09:30:00.000Z",
+      "2026-11-01T05:00:00.000Z", // fall back
+      "2026-11-01T08:30:00.000Z",
+    ]) {
       const now = new Date(iso);
       const ms = msUntilNextDaily(now);
-      expect(ms).toBeGreaterThan(0);
-      expect(dailyKey(new Date(now.getTime() + ms))).not.toBe(dailyKey(now));
-      expect(dailyKey(new Date(now.getTime() + ms - 1))).toBe(dailyKey(now));
+      expect(ms, iso).toBeGreaterThan(0);
+      expect(dailyKey(new Date(now.getTime() + ms)), iso).not.toBe(dailyKey(now));
+      expect(dailyKey(new Date(now.getTime() + ms - 1)), iso).toBe(dailyKey(now));
     }
+  });
+
+  it("makes the day exactly 23 or 25 hours long across a DST switch", () => {
+    // Proof the boundary really tracks the zone rather than a fixed offset.
+    const spring = msUntilNextDaily(new Date("2026-03-08T06:00:00Z")); // midnight CST
+    expect(spring).toBe(23 * 60 * 60 * 1000);
+    const fall = msUntilNextDaily(new Date("2026-11-01T05:00:00Z")); // midnight CDT
+    expect(fall).toBe(25 * 60 * 60 * 1000);
   });
 
   it("gives different players different dice on the same day", () => {
