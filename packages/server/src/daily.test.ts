@@ -1,0 +1,179 @@
+/**
+ * The daily challenge's anti-cheat guarantees, against the real replay and
+ * storage logic with the database stubbed in memory.
+ *
+ * These exist because the exploit they close was not a bug in a function — it
+ * was in where the dice lived. The client used to hold the seed and play the
+ * run locally, so leaving the screen and coming back dealt the SAME dice again
+ * and a player could retry a turn until it went well. What follows pins the
+ * properties that make that impossible: a run is claimed on the first start,
+ * its seed is the server's secret, and the move list only ever grows.
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/** One row of daily_runs, keyed by user+day. */
+interface Row {
+  moves: string;
+  seed: number;
+  complete: boolean;
+  score: number;
+  turns: number;
+}
+const rows = new Map<string, Row>();
+const key = (user: string, day: string) => `${user}|${day}`;
+
+// A stub that understands only the handful of statements daily.ts issues.
+vi.mock("./db.js", () => ({
+  query: async (sql: string, params: unknown[] = []) => {
+    const [user, day] = params as [string, string];
+    if (sql.includes("SELECT moves, seed FROM daily_runs")) {
+      const row = rows.get(key(user, day));
+      return { rows: row ? [{ moves: row.moves, seed: String(row.seed) }] : [] };
+    }
+    if (sql.includes("INSERT INTO daily_runs")) {
+      const k = key(user, day);
+      // ON CONFLICT DO NOTHING: an existing run is never replaced.
+      if (!rows.has(k)) {
+        rows.set(k, { moves: "", seed: Number(params[2]), complete: false, score: 0, turns: 0 });
+      }
+      return { rows: [] };
+    }
+    if (sql.includes("UPDATE daily_runs")) {
+      const row = rows.get(key(user, day));
+      if (row && !row.complete) {
+        row.score = params[2] as number;
+        row.turns = params[3] as number;
+        row.moves = params[8] as string;
+        row.complete = params[9] as boolean;
+      }
+      return { rows: [] };
+    }
+    return { rows: [] };
+  },
+}));
+
+const { startDailyRun, playDailyMove, resumeDailyRun } = await import("./daily.js");
+
+const DAY = "2026-08-12";
+const USER = "user-1";
+
+/** Play until the run completes, banking as soon as there is anything to bank. */
+async function playOut(user = USER) {
+  for (let i = 0; i < 400; i++) {
+    const run = await resumeDailyRun(user, DAY);
+    if (!run) break;
+    const move = run.state.turn.turnScore > 0 && !run.state.turn.outcome ? "BANK" : "ROLL";
+    await playDailyMove(user, move, DAY);
+  }
+}
+
+beforeEach(() => rows.clear());
+
+describe("claiming a run", () => {
+  it("creates the run on start, before a single move is played", async () => {
+    await startDailyRun(USER, DAY);
+    expect(rows.has(key(USER, DAY))).toBe(true);
+  });
+
+  it("starting again returns the run in progress, not a fresh one", async () => {
+    const first = await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    const seed = rows.get(key(USER, DAY))!.seed;
+
+    const second = await startDailyRun(USER, DAY);
+    // Same seed, and the throw already played is still there — this is the
+    // exact move that used to hand out a brand-new board.
+    expect(rows.get(key(USER, DAY))!.seed).toBe(seed);
+    expect(second.state.turn.rollCount).toBeGreaterThan(0);
+    expect(second.state.turn.dice).not.toEqual(first.state.turn.dice);
+  });
+
+  it("resuming after leaving returns the same position, not a new deal", async () => {
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    const a = await resumeDailyRun(USER, DAY);
+    const b = await resumeDailyRun(USER, DAY);
+    expect(b!.state.turn.dice).toEqual(a!.state.turn.dice);
+    expect(b!.turns).toBe(a!.turns);
+  });
+
+  it("refuses moves for a run that was never started", async () => {
+    await expect(playDailyMove(USER, "ROLL", DAY)).rejects.toThrow(/start today's run/i);
+  });
+});
+
+describe("the seed is the server's", () => {
+  it("gives two players different dice on the same day", async () => {
+    const a = await startDailyRun("player-a", DAY);
+    const b = await startDailyRun("player-b", DAY);
+    await playDailyMove("player-a", "ROLL", DAY);
+    await playDailyMove("player-b", "ROLL", DAY);
+    const after = [await resumeDailyRun("player-a", DAY), await resumeDailyRun("player-b", DAY)];
+    expect(after[0]!.state.turn.dice).not.toEqual(after[1]!.state.turn.dice);
+    expect(a.state.turn.dice).toEqual(b.state.turn.dice); // both un-rolled to begin with
+  });
+
+  it("is not derived from the day and player, so it cannot be recomputed", async () => {
+    // Two players on the same day, and the same player on two runs, must not
+    // land on a predictable value. Seeds are random per run.
+    const seeds = new Set<number>();
+    for (let i = 0; i < 20; i++) {
+      rows.clear();
+      await startDailyRun(USER, DAY);
+      seeds.add(rows.get(key(USER, DAY))!.seed);
+    }
+    // A derived seed would give the same value all 20 times.
+    expect(seeds.size).toBeGreaterThan(1);
+  });
+});
+
+describe("a run is one attempt", () => {
+  it("rejects further moves once the run is complete", async () => {
+    await startDailyRun(USER, DAY);
+    await playOut();
+    expect(rows.get(key(USER, DAY))!.complete).toBe(true);
+    await expect(playDailyMove(USER, "ROLL", DAY)).rejects.toThrow(/already played/i);
+  });
+
+  it("will not re-open a finished run by starting again", async () => {
+    await startDailyRun(USER, DAY);
+    await playOut();
+    const score = rows.get(key(USER, DAY))!.score;
+    const moves = rows.get(key(USER, DAY))!.moves;
+
+    await startDailyRun(USER, DAY);
+    expect(rows.get(key(USER, DAY))!.score).toBe(score);
+    expect(rows.get(key(USER, DAY))!.moves).toBe(moves);
+    expect(await resumeDailyRun(USER, DAY)).toBeNull();
+  });
+
+  it("plays exactly DAILY_TURNS turns", async () => {
+    await startDailyRun(USER, DAY);
+    await playOut();
+    expect(rows.get(key(USER, DAY))!.turns).toBe(10);
+  });
+});
+
+describe("moves only ever append", () => {
+  it("stores one more move per accepted action", async () => {
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    expect(rows.get(key(USER, DAY))!.moves).toBe("ROLL");
+    await playDailyMove(USER, "BANK", DAY);
+    expect(rows.get(key(USER, DAY))!.moves).toBe("ROLL,BANK");
+  });
+
+  it("rejects an illegal move instead of silently dropping it", async () => {
+    await startDailyRun(USER, DAY);
+    // Banking before rolling is not legal, so the run must not advance.
+    await expect(playDailyMove(USER, "BANK", DAY)).rejects.toThrow(/isn't legal/i);
+    expect(rows.get(key(USER, DAY))!.moves).toBe("");
+  });
+
+  it("rejects anything that isn't a ROLL or a BANK", async () => {
+    await startDailyRun(USER, DAY);
+    await expect(playDailyMove(USER, "ADVANCE", DAY)).rejects.toThrow(/invalid move/i);
+    await expect(playDailyMove(USER, { type: "ROLL" }, DAY)).rejects.toThrow(/invalid move/i);
+  });
+});

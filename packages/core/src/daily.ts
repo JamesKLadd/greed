@@ -9,13 +9,13 @@
  * score can't survive it, and the only way to submit a bigger number is to
  * actually play better.
  *
- * The seed is derived from the day AND the player, so no two people play the
- * same dice. A single shared seed would eventually be solved: once the day's
- * throws are known, the best line through them is a fixed sequence anyone can
- * copy, and the board would rank who read the spoiler rather than who played
- * well. Per-player dice come from the same distribution — everyone faces ten
- * turns of the same odds — so scores stay comparable while the route to a good
- * one has to be found live, every time.
+ * Every run gets its own randomly generated seed, held by the server and never
+ * sent to the client. Two properties fall out of that. No two people play the
+ * same dice, so the best line through a day cannot be worked out once and
+ * copied. And nobody — including the player — can read their own dice ahead of
+ * time, so the route to a good score has to be found live, one throw at a
+ * time. Runs stay comparable because every seed draws from the same
+ * distribution: ten turns of identical odds.
  */
 
 import { applyAction, createSoloGame, getLegalActions } from "./game.js";
@@ -68,13 +68,13 @@ export function msUntilNextDaily(now: Date = new Date()): number {
 }
 
 /**
- * Seed for one player's run on a given day. Derived from the day and a stable
- * per-player key (the account id), so client and server compute the same value
- * with nothing to store or distribute — but two players never share dice.
+ * A seed derived from a day and a per-player key.
  *
- * `playerKey` defaults to empty, which reproduces the old day-only seed. Pass
- * the real key everywhere a run is played or replayed; the server uses the id
- * it authenticated, so a client cannot shop for a friendlier seed.
+ * NO LONGER used to deal a daily run — the server now generates a random seed
+ * per run and keeps it, because a derived seed is reproducible by anyone who
+ * can work out the inputs, and a player who can reproduce their seed can read
+ * the whole day off ahead of time. Kept for re-verifying runs recorded under
+ * the old scheme, whose stored seed is 0.
  */
 export function dailySeed(day: string, playerKey = ""): number {
   // FNV-1a over "day|player", which spreads adjacent days (and neighbouring
@@ -88,11 +88,11 @@ export function dailySeed(day: string, playerKey = ""): number {
   return h >>> 0;
 }
 
-/** A fresh daily run for the given day and player. */
-export function createDailyGame(day: string, playerKey = ""): GameState {
+/** A fresh daily run on a given seed. */
+export function createDailyGame(seed: number): GameState {
   return createSoloGame(
     { id: DAILY_PLAYER_ID, name: "You", isBot: false },
-    { seed: dailySeed(day, playerKey), goal: DAILY_GOAL },
+    { seed, goal: DAILY_GOAL },
   );
 }
 
@@ -101,16 +101,34 @@ export function dailyComplete(state: GameState, turnsTaken: number): boolean {
   return turnsTaken >= DAILY_TURNS;
 }
 
+/** Where a run stands after a sequence of moves. */
+export interface DailyPosition {
+  /** The live game, with a just-finished turn still showing its outcome. */
+  state: GameState;
+  /** Turns completed so far, 0..DAILY_TURNS. */
+  turns: number;
+  /** Aggregate stats for the run so far. */
+  result: DailyResult;
+}
+
 /**
- * Replay a sequence of moves against a day's seed and report the true result.
+ * Replay a sequence of moves against a day's seed and report where the run
+ * stands. This is the single source of truth for a daily run: the server owns
+ * the move list, replays it here, and hands the resulting state back to the
+ * client to render.
  *
  * Illegal or excess moves are ignored rather than throwing: a replay should
- * yield the score the moves actually earn, and silently dropping a move that
- * couldn't have been made is exactly the behaviour that makes a forged
- * submission score no better than an honest one.
+ * yield the position the moves actually reach, and silently dropping a move
+ * that couldn't have been made is what makes a forged submission worth no more
+ * than an honest one.
+ *
+ * A finished turn is left ON SCREEN (its `outcome` still set) rather than
+ * advanced past, so the player sees the roll that busted them. The next move
+ * advances first — which is why the move list only ever holds ROLL and BANK,
+ * and never an ADVANCE the client could desync on.
  */
-export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): DailyResult {
-  let state = createDailyGame(day, playerKey);
+export function dailyPosition(seed: number, moves: DailyMove[]): DailyPosition {
+  let state = createDailyGame(seed);
   let turns = 0;
   let banks = 0;
   let busts = 0;
@@ -119,6 +137,9 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
 
   for (const move of moves) {
     if (turns >= DAILY_TURNS) break;
+    // The previous turn is still on show; starting a new move clears it.
+    if (state.turn.outcome) state = applyAction(state, { type: "ADVANCE" });
+
     const legal = getLegalActions(state);
     if (move === "ROLL" && !legal.canRoll) continue;
     if (move === "BANK" && !legal.canBank) continue;
@@ -128,7 +149,6 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
     state = applyAction(state, { type: move });
     if (!hotBefore && state.turn.hotDice) hotDice += 1;
 
-    // A finished turn (banked or busted) waits for an explicit ADVANCE.
     if (state.turn.outcome) {
       if (state.turn.outcome === "banked") {
         banks += 1;
@@ -137,17 +157,25 @@ export function scoreDailyRun(day: string, moves: DailyMove[], playerKey = ""): 
         busts += 1;
       }
       turns += 1;
-      if (turns < DAILY_TURNS) state = applyAction(state, { type: "ADVANCE" });
     }
   }
 
   return {
-    score: state.players[0].total,
+    state,
     turns,
-    banks,
-    busts,
-    hotDice,
-    bestTurn,
-    complete: turns >= DAILY_TURNS,
+    result: {
+      score: state.players[0].total,
+      turns,
+      banks,
+      busts,
+      hotDice,
+      bestTurn,
+      complete: turns >= DAILY_TURNS,
+    },
   };
+}
+
+/** The score a move list earns — the run's final, authoritative result. */
+export function scoreDailyRun(seed: number, moves: DailyMove[]): DailyResult {
+  return dailyPosition(seed, moves).result;
 }

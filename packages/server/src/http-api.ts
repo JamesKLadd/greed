@@ -9,7 +9,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
 import { clientKey, rateLimit } from "./rate-limit.js";
-import { dailyStatus, submitDailyRun } from "./daily.js";
+import { dailyStatus, playDailyMove, resumeDailyRun, startDailyRun } from "./daily.js";
 import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
 import {
   AccountError,
@@ -143,7 +143,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     // endpoint. High enough that the debounced check while typing never trips.
     "/api/auth/username-available": { limit: 120, windowMs: 60_000 },
     // One legitimate run exists per day; this only stops replay hammering.
-    "/api/daily/run": { limit: 20, windowMs: 60 * 60_000 },
+    // A run is a few dozen moves; this only stops a hammering client.
+    "/api/daily/move": { limit: 400, windowMs: 60 * 60_000 },
+    "/api/daily/start": { limit: 20, windowMs: 60 * 60_000 },
     // Friend requests are the one social action that reaches another person,
     // so cap them; browsing profiles and lists is unrestricted.
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
@@ -194,16 +196,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     } else if (method === "GET" && path === "/api/daily") {
       const { id } = await requireUser(req);
       json(res, 200, await dailyStatus(id));
-    } else if (method === "POST" && path === "/api/daily/run") {
+    } else if (method === "POST" && path === "/api/daily/start") {
+      const { id } = await requireUser(req);
+      json(res, 200, await startDailyRun(id));
+    } else if (method === "POST" && path === "/api/daily/move") {
       const { id } = await requireUser(req);
       const b = (await readBody(req)) as Record<string, unknown>;
-      // The score is derived from the moves here, never read from the body.
-      const { result, alreadyPlayed } = await submitDailyRun(id, b.moves);
-      json(res, alreadyPlayed ? 409 : 201, {
-        result,
-        alreadyPlayed,
-        status: await dailyStatus(id),
-      });
+      // The server owns the dice: it appends the move, replays from the seed
+      // and returns the position. The client never sees the seed at all.
+      const view = await playDailyMove(id, b.move);
+      json(res, 200, { ...view, status: view.complete ? await dailyStatus(id) : undefined });
+    } else if (method === "GET" && path === "/api/daily/resume") {
+      const { id } = await requireUser(req);
+      json(res, 200, { run: await resumeDailyRun(id) });
     } else if (method === "GET" && path === "/api/leaderboard") {
       // Signed-out callers can browse the boards; they just have no own-rank.
       const viewer = await optionalUser(req);

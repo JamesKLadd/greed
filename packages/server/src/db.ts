@@ -85,6 +85,17 @@ export async function migrate(): Promise<void> {
       PRIMARY KEY (user_id, day)
     );
   `);
+  // Each run's dice come from a randomly generated seed the server keeps to
+  // itself. A seed derived from (day, player) — which is what this used to do —
+  // is reproducible by anyone who can work out the inputs, and a player who can
+  // reproduce their seed can read the whole day off before playing it.
+  await query(`ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS seed bigint NOT NULL DEFAULT 0;`);
+  // A run is claimed the moment it starts, so rows exist before they are
+  // finished. Defaulting to true keeps every run that predates this column —
+  // all of which were only ever written on completion — counted as complete.
+  await query(
+    `ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS complete boolean NOT NULL DEFAULT true;`,
+  );
   // Leaderboard reads are "top N for a day", so order within the day.
   await query(
     `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,

@@ -2,15 +2,21 @@
  * The daily challenge: one seeded run a day, ten turns, highest total.
  *
  * Your dice are yours: the seed comes from the day AND your account, so nobody
- * can play a route somebody else worked out. The run plays locally; on
- * completion the recorded MOVES are submitted and the server replays them
- * against your seed to derive the score (see net/daily.ts).
+ * can play a route somebody else worked out — and the seed stays on the server,
+ * which deals every throw. The run is claimed the moment it starts, so leaving
+ * this screen and coming back resumes it rather than dealing a fresh board.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
-import { useDailyRun } from "../game/useDailyRun.js";
-import { fetchDaily, submitDaily, type DailyStatus } from "../net/daily.js";
+import { DailyRun } from "../components/DailyRun.js";
+import {
+  fetchDaily,
+  resumeDaily,
+  startDaily,
+  type DailyRunView,
+  type DailyStatus,
+} from "../net/daily.js";
 import { awardAchievement, type Achievement } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
@@ -18,11 +24,9 @@ import { syncProfileUp } from "../net/auth.js";
 /** Placing this high on a daily board earns the one badge you cannot grind. */
 const DAILY_PODIUM_RANK = 10;
 import { ApiError } from "../net/auth.js";
-import { Die } from "../components/Die.js";
 import { Button, Icon } from "../ui/index.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
-import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -33,7 +37,7 @@ interface DailyScreenProps {
 
 export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const t = useT();
-  const { status: authStatus, user } = useAuth();
+  const { status: authStatus } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
   // effect on the way back rather than on the next run.
   const { dice3d } = loadSettings();
@@ -42,19 +46,20 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const [podium, setPodium] = useState<Achievement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  // The account id seeds the dice, so this must be the same id the server
-  // replays the run with.
-  const run = useDailyRun(day, user?.id ?? "");
-  useGameSounds(run.state);
-  useRollSound(run.isRolling);
+  // The position the server dealt, or null when no run is open. This is the
+  // only handle on a run the client gets — there is no local game to fall back
+  // on, by design.
+  const [runView, setRunView] = useState<DailyRunView | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setStatus(await fetchDaily());
+      const [next, open] = await Promise.all([fetchDaily(), resumeDaily()]);
+      setStatus(next);
+      // A run left half-played picks up exactly where it was left.
+      setRunView(open.run);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
     } finally {
@@ -67,29 +72,40 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     else setLoading(false);
   }, [authStatus, load]);
 
-  // Submit as soon as the tenth turn resolves.
-  useEffect(() => {
-    if (!playing || !run.finished || submitting) return;
-    setSubmitting(true);
-    submitDaily(run.moves)
-      .then((res) => {
-        setStatus(res.status);
-        setPlaying(false);
-        // The one badge no amount of playing can force: it depends on everyone
-        // else who played today, so it is granted here rather than by recordGame.
-        const rank = res.status.yourRank;
-        if (rank !== null && rank <= DAILY_PODIUM_RANK) {
-          const won = awardAchievement("daily-elite");
-          if (won) {
-            setPodium(won);
-            syncSteamAchievements([won.id]);
-            void syncProfileUp();
-          }
+  /** The run is over: the server already has the score, so just re-read it. */
+  const onFinished = useCallback(async () => {
+    setRunView(null);
+    try {
+      const next = await fetchDaily();
+      setStatus(next);
+      // The one badge no amount of playing can force: it depends on everyone
+      // else who played today, so it is granted here rather than by recordGame.
+      const rank = next.yourRank;
+      if (rank !== null && rank <= DAILY_PODIUM_RANK) {
+        const won = awardAchievement("daily-elite");
+        if (won) {
+          setPodium(won);
+          syncSteamAchievements([won.id]);
+          void syncProfileUp();
         }
-      })
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("daily.submitFailed")))
-      .finally(() => setSubmitting(false));
-  }, [playing, run.finished, run.moves, submitting, t]);
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
+    }
+  }, [t]);
+
+  /** Claim today's run. The server creates it, so this cannot be undone. */
+  const begin = useCallback(async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      setRunView(await startDaily());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
+    } finally {
+      setStarting(false);
+    }
+  }, [t]);
 
   const played = status?.run != null;
 
@@ -151,77 +167,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
         {loading && <p className="daily__note">{t("daily.loading")}</p>}
 
         {/* ---- the run itself ---- */}
-        {!loading && playing && (
-          <div className="daily__run">
-            <div className="daily__meters">
-              <div className="meter">
-                <span className="meter__label">{t("daily.turn")}</span>
-                <span className="meter__value">
-                  {Math.min(run.turn + 1, DAILY_TURNS)}/{run.totalTurns}
-                </span>
-              </div>
-              <div className="meter">
-                <span className="meter__label">{t("daily.banked")}</span>
-                <span className="meter__value">{run.state.players[0].total}</span>
-              </div>
-              <div className="meter">
-                <span className="meter__label">{t("controls.turnPoints")}</span>
-                <span className="meter__value">{run.state.turn.turnScore}</span>
-              </div>
-            </div>
-
-            <div
-              className={[
-                "dice-tray",
-                "daily__dice",
-                run.state.turn.outcome === "busted" ? "dice-tray--busted" : "",
-                run.state.turn.hotDice && !run.isRolling ? "dice-tray--hot" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {run.state.turn.dice.map((v, i) => (
-                <Die
-                  key={i}
-                  value={v}
-                  size={46}
-                  locked={run.state.turn.locked[i] && !run.state.turn.hotDice}
-                  rolling={run.isRolling && run.rollingIndices.includes(i)}
-                  dim={run.state.turn.lastRoll === null && !run.isRolling}
-                  dimensional={dice3d}
-                  landing={
-                    run.isRolling && run.rollingIndices.includes(i)
-                      ? run.rollingDice?.[i]
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-
-            <p className="daily__status">
-              {run.state.turn.outcome === "busted"
-                ? t("daily.busted")
-                : run.state.turn.hotDice
-                  ? t("controls.hotDice")
-                  : run.state.turn.lastRoll === null
-                    ? t("controls.rollToStart")
-                    : t("controls.rollOrBank")}
-            </p>
-
-            <div className="daily__actions">
-              <Button variant="roll" size="lg" disabled={!run.canRoll} onClick={run.roll}>
-                {t("controls.rollDice")}
-              </Button>
-              <Button variant="bank" size="lg" disabled={!run.canBank} onClick={run.bank}>
-                {t("controls.bank")}
-              </Button>
-            </div>
-            {submitting && <p className="daily__note">{t("daily.submitting")}</p>}
-          </div>
+        {!loading && runView && (
+          <DailyRun initial={runView} dice3d={dice3d} onFinished={onFinished} />
         )}
 
         {/* ---- today's result ---- */}
-        {!loading && !playing && played && status?.run && (
+        {!loading && !runView && played && status?.run && (
           <div className="daily__result">
             <div className="daily__score">{status.run.score}</div>
             <p className="daily__note">
@@ -265,11 +216,11 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
         )}
 
         {/* ---- not played yet ---- */}
-        {!loading && !playing && !played && (
+        {!loading && !runView && !played && (
           <div className="daily__intro">
             <p className="daily__note">{t("daily.intro", { turns: DAILY_TURNS })}</p>
-            <Button variant="roll" size="lg" onClick={() => setPlaying(true)}>
-              {t("daily.play")}
+            <Button variant="roll" size="lg" disabled={starting} onClick={() => void begin()}>
+              {starting ? t("daily.loading") : t("daily.play")}
             </Button>
           </div>
         )}

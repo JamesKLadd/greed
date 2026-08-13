@@ -1,140 +1,136 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
-  DAILY_TURNS,
-  applyAction,
-  createDailyGame,
-  dailyKey,
   diceToRoll,
   getLegalActions,
   type DailyMove,
   type DieValue,
   type GameState,
 } from "@greed/core";
+import { playDailyMove, type DailyRunView } from "../net/daily.js";
 
 /**
- * Plays a daily run locally while recording every move.
+ * Drives a daily run against the server.
  *
- * The run is played client-side for responsiveness, but the move list is what
- * gets submitted — the server replays it to derive the score, so this hook never
- * needs to be trusted. Turn resolution mirrors the main game: a finished turn
- * stays visible until an explicit advance, so the player sees the roll that
- * busted them.
+ * The server deals: it owns the move list and the seed, applies each move to its
+ * own copy and hands back the resulting position. This hook renders that
+ * position and nothing else — it never builds a game, never sees the seed, and
+ * never decides a score.
  *
- * `playerKey` (the account id) seeds the dice along with the day, so each player
- * gets their own throws. It MUST match what the server replays with, which is
- * the id it authenticated — pass the signed-in user's id and nothing else.
+ * That is the whole point. When the client held the seed it could deal itself
+ * the day's dice in advance, and leaving the screen and coming back dealt the
+ * SAME dice again — so a player could bail out of a bad turn, replay it knowing
+ * what was coming, and keep going until the run looked good. A run is now
+ * claimed on the server the moment it starts, and the only way to reach the
+ * next throw is to ask for it.
+ *
+ * Turn resolution still mirrors the main game: a finished turn stays on screen
+ * until the next move, so the player sees the roll that busted them. The server
+ * leaves it visible too, and advances past it when the next move arrives.
  */
 
-/** How long a finished turn stays on screen before the run moves on. Matches the
- *  unhurried inter-turn hold the main game uses, less the roll settle already
- *  spent above. */
+/** How long a finished turn stays on screen before the run moves on. */
 const RESOLVE_MS = 1900;
+/** Minimum tumble, so a fast reply still reads as a throw rather than a jump. */
 const ROLL_ANIM_MS = 600;
 
 export interface DailyRunController {
   state: GameState;
-  /** Completed turns, 0..DAILY_TURNS. */
+  /** Completed turns, 0..totalTurns. */
   turn: number;
   totalTurns: number;
-  moves: DailyMove[];
   finished: boolean;
   isRolling: boolean;
   rollingIndices: number[];
-  /** Faces the throw in flight will land on — see the same field on useGreed. */
+  /** Faces the throw in flight will land on — null until the server replies. */
   rollingDice: DieValue[] | null;
   canRoll: boolean;
   canBank: boolean;
+  /** Set when a move could not be sent; the run is unchanged and can be retried. */
+  error: string | null;
   roll: () => void;
   bank: () => void;
 }
 
-export function useDailyRun(day: string = dailyKey(), playerKey = ""): DailyRunController {
-  const [state, setState] = useState<GameState>(() => createDailyGame(day, playerKey));
-  const [turn, setTurn] = useState(0);
-  const [moves, setMoves] = useState<DailyMove[]>([]);
+export function useDailyRun(initial: DailyRunView): DailyRunController {
+  const [view, setView] = useState<DailyRunView>(initial);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
 
-  // The account id arrives a moment after mount (the session is still being
-  // restored), and it changes the dice — so start the run over when the seed
-  // it is built from changes. Without this the run would be played against the
-  // signed-out seed and then scored by the server against the real one.
-  const seedKey = `${day}|${playerKey}`;
-  const seedRef = useRef(seedKey);
-  if (seedRef.current !== seedKey) {
-    seedRef.current = seedKey;
-    busy.current = false;
-    setState(createDailyGame(day, playerKey));
-    setTurn(0);
-    setMoves([]);
-    setIsRolling(false);
-    setRollingIndices([]);
-    setRollingDice(null);
-  }
-
-  const legal = useMemo(() => getLegalActions(state), [state]);
-  const finished = turn >= DAILY_TURNS;
+  const state = view.state;
+  const finished = view.complete;
 
   const act = useCallback(
     (move: DailyMove) => {
       if (busy.current || finished) return;
-      const current = getLegalActions(state);
-      if (move === "ROLL" && !current.canRoll) return;
-      if (move === "BANK" && !current.canBank) return;
-
       busy.current = true;
-      setMoves((m) => [...m, move]);
+      setError(null);
 
-      const next = applyAction(state, { type: move });
-
+      // Start the tumble immediately and let the round trip happen underneath
+      // it: the dice are already spinning by the time the faces come back, so
+      // the latency lands inside the animation rather than in front of it.
+      const started = Date.now();
       if (move === "ROLL") {
-        // Tumble only the dice actually being thrown, and tell them which face
-        // they are turning to — the result is otherwise held back until the
-        // animation ends.
         setRollingIndices(state.turn.hotDice ? [0, 1, 2, 3, 4] : diceToRoll(state.turn));
-        setRollingDice(next.turn.dice);
         setIsRolling(true);
       }
 
-      const settle = move === "ROLL" ? ROLL_ANIM_MS : 0;
+      playDailyMove(move)
+        .then((next) => {
+          const wait = Math.max(0, ROLL_ANIM_MS - (Date.now() - started));
+          if (move === "ROLL") setRollingDice(next.state.turn.dice);
 
-      window.setTimeout(() => {
-        setIsRolling(false);
-        setRollingIndices([]);
-        setRollingDice(null);
-        setState(next);
-
-        if (next.turn.outcome) {
-          // Hold the finished turn so the result is readable, then advance.
-          window.setTimeout(() => {
-            setTurn((t) => {
-              const done = t + 1;
-              if (done < DAILY_TURNS) setState(applyAction(next, { type: "ADVANCE" }));
-              return done;
-            });
-            busy.current = false;
-          }, RESOLVE_MS);
-        } else {
+          window.setTimeout(
+            () => {
+              setIsRolling(false);
+              setRollingIndices([]);
+              setRollingDice(null);
+              setView(next);
+              if (next.state.turn.outcome) {
+                // Hold the finished turn so the result is readable. The server
+                // has already recorded it, so nothing is riding on this timer.
+                window.setTimeout(() => {
+                  busy.current = false;
+                }, RESOLVE_MS);
+              } else {
+                busy.current = false;
+              }
+            },
+            move === "ROLL" ? wait : 0,
+          );
+        })
+        .catch((err: unknown) => {
+          setIsRolling(false);
+          setRollingIndices([]);
+          setRollingDice(null);
           busy.current = false;
-        }
-      }, settle);
+          setError(err instanceof Error ? err.message : "Couldn't play that move.");
+        });
     },
     [state, finished],
   );
 
+  // Mirrors the server's own legality probe: a finished turn is still showing,
+  // and the next move advances past it — so rolling is offered again rather
+  // than a dead board, while banking needs a live turn with points on it.
+  const showingOutcome = state.turn.outcome != null;
+  const legal = getLegalActions(state);
+  const canRoll = !finished && !isRolling && (showingOutcome || legal.canRoll);
+  const canBank = !finished && !isRolling && !showingOutcome && legal.canBank;
+
   return {
     state,
-    turn,
-    totalTurns: DAILY_TURNS,
-    moves,
+    turn: view.turns,
+    totalTurns: view.totalTurns,
     finished,
     isRolling,
     rollingIndices,
     rollingDice,
-    canRoll: !finished && !isRolling && legal.canRoll,
-    canBank: !finished && !isRolling && legal.canBank,
+    canRoll,
+    canBank,
+    error,
     roll: () => act("ROLL"),
     bank: () => act("BANK"),
   };
