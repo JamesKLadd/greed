@@ -1,15 +1,13 @@
 /**
  * Daily challenge storage and leaderboard.
  *
- * Scores are never taken on trust: the client submits the MOVES it made, and
- * the server replays them through the shared engine (`scoreDailyRun`) to derive
- * the score itself. A client that posts a made-up number gets whatever its moves
- * are actually worth. The moves are stored too, so any run can be re-verified
- * later without asking the player for anything.
+ * The server deals. It holds each run's seed — randomly generated at start and
+ * never sent anywhere — owns the move list, and replays it through the shared
+ * engine to derive both the position and the score. A client cannot preview its
+ * dice, restart against dice it has already seen, or report a score at all.
  *
- * The replay uses the id we authenticated as the seed key, so a run is scored
- * against the dice that player was dealt — nobody can submit somebody else's
- * moves, or shop for a friendlier seed.
+ * The moves are stored alongside the seed, so any run can be re-verified later
+ * without asking the player for anything.
  */
 
 import {
@@ -61,16 +59,28 @@ export interface DailyRunView {
   complete: boolean;
 }
 
-/** A run as stored: the secret seed plus the moves played so far. */
+/** A run as stored: the secret seed, the moves played so far, and whether it
+ *  is finished. */
 interface StoredRun {
   seed: number;
   moves: DailyMove[];
+  /**
+   * The stored flag, which is the ONLY authority on whether a run is over.
+   *
+   * Completion must never be re-derived by replaying the moves. A run recorded
+   * before the seed became a stored secret has moves that belong to the old
+   * derived seed and a `seed` column of 0; replaying those moves against 0
+   * meets different dice, drops most of them as illegal, and lands short of the
+   * turn limit — which made a finished run look resumable and handed the player
+   * a bogus board.
+   */
+  complete: boolean;
 }
 
 /** Load a run, or null when the player has not started today. */
 async function storedRun(userId: string, day: string): Promise<StoredRun | null> {
-  const { rows } = await query<{ moves: string; seed: string }>(
-    `SELECT moves, seed FROM daily_runs WHERE user_id = $1 AND day = $2`,
+  const { rows } = await query<{ moves: string; seed: string; complete: boolean }>(
+    `SELECT moves, seed, complete FROM daily_runs WHERE user_id = $1 AND day = $2`,
     [userId, day],
   );
   if (!rows[0]) return null;
@@ -78,6 +88,7 @@ async function storedRun(userId: string, day: string): Promise<StoredRun | null>
     // bigint comes back as a string from pg.
     seed: Number(rows[0].seed),
     moves: rows[0].moves ? (rows[0].moves.split(",") as DailyMove[]) : [],
+    complete: rows[0].complete,
   };
 }
 
@@ -87,7 +98,9 @@ function viewOf(run: StoredRun): DailyRunView {
     state: pos.state,
     turns: pos.turns,
     totalTurns: DAILY_TURNS,
-    complete: pos.result.complete,
+    // The stored flag wins: a run marked finished is finished, whatever a
+    // replay of its moves happens to make of them.
+    complete: run.complete || pos.result.complete,
   };
 }
 
@@ -138,6 +151,7 @@ export async function playDailyMove(
   const run = await storedRun(userId, day);
   if (run === null) throw new AccountError(400, "Start today's run first.");
   const { seed, moves } = run;
+  if (run.complete) throw new AccountError(409, "You've already played today.");
   if (moves.length >= MAX_MOVES) throw new AccountError(400, "That run is too long.");
 
   const before = dailyPosition(seed, moves);
@@ -188,7 +202,7 @@ export async function resumeDailyRun(
   day = dailyKey(),
 ): Promise<DailyRunView | null> {
   const run = await storedRun(userId, day);
-  if (run === null) return null;
+  if (run === null || run.complete) return null;
   const view = viewOf(run);
   return view.complete ? null : view;
 }

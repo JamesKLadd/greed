@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { dailyPosition, type DailyMove } from "@greed/core";
 
 /** One row of daily_runs, keyed by user+day. */
 interface Row {
@@ -27,9 +28,11 @@ const key = (user: string, day: string) => `${user}|${day}`;
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     const [user, day] = params as [string, string];
-    if (sql.includes("SELECT moves, seed FROM daily_runs")) {
+    if (sql.includes("SELECT moves, seed, complete FROM daily_runs")) {
       const row = rows.get(key(user, day));
-      return { rows: row ? [{ moves: row.moves, seed: String(row.seed) }] : [] };
+      return {
+        rows: row ? [{ moves: row.moves, seed: String(row.seed), complete: row.complete }] : [],
+      };
     }
     if (sql.includes("INSERT INTO daily_runs")) {
       const k = key(user, day);
@@ -152,6 +155,54 @@ describe("a run is one attempt", () => {
     await startDailyRun(USER, DAY);
     await playOut();
     expect(rows.get(key(USER, DAY))!.turns).toBe(10);
+  });
+});
+
+describe("runs recorded before the seed was stored", () => {
+  /**
+   * A row written by the old scheme: its moves belong to a seed derived from
+   * (day, player), while the `seed` column defaulted to 0. Replaying those
+   * moves against 0 meets different dice and lands short of the turn limit, so
+   * anything that infers completion from a replay will offer a finished run
+   * back as playable.
+   */
+  const LEGACY_MOVES = "ROLL,ROLL,BANK,ROLL,BANK,ROLL,ROLL,BANK,ROLL,BANK";
+
+  function legacyRow() {
+    rows.set(key(USER, DAY), {
+      moves: LEGACY_MOVES,
+      seed: 0,
+      complete: true,
+      score: 2550,
+      turns: 10,
+    });
+  }
+
+  it("has a replay that really does disagree with the stored flag", () => {
+    // Guards the fixture. If these moves happened to complete when replayed
+    // against seed 0, everything below would pass without exercising the bug.
+    const pos = dailyPosition(0, LEGACY_MOVES.split(",") as DailyMove[]);
+    expect(pos.result.complete).toBe(false);
+    expect(pos.turns).toBeLessThan(10);
+  });
+
+  it("is not offered as a run to resume", async () => {
+    legacyRow();
+    expect(await resumeDailyRun(USER, DAY)).toBeNull();
+  });
+
+  it("cannot be played on", async () => {
+    legacyRow();
+    await expect(playDailyMove(USER, "ROLL", DAY)).rejects.toThrow(/already played/i);
+  });
+
+  it("is not reopened or overwritten by starting again", async () => {
+    legacyRow();
+    const view = await startDailyRun(USER, DAY);
+    expect(view.complete).toBe(true);
+    const row = rows.get(key(USER, DAY))!;
+    expect(row.score).toBe(2550);
+    expect(row.seed).toBe(0);
   });
 });
 
