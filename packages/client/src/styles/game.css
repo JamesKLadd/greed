@@ -63,6 +63,168 @@
   padding-right: max(10px, env(safe-area-inset-right));
 }
 
+/*
+ * The board row: the standings rail, the table, and an empty gutter.
+ *
+ * A GRID rather than a flex row, and the third column is the point of it: it is
+ * empty, exactly as wide as the rail, and it exists so the felt stays centred on
+ * the screen whether or not the rail is showing. Without it the table slides
+ * sideways by half the rail's width the moment the viewport crosses the
+ * breakpoint, which reads as the board lurching.
+ *
+ * The default is a single column. `.placings` is display:none there, and a
+ * display:none element generates no box at all — so it does not take a grid slot
+ * and the table lands in the only column rather than being pushed to row two.
+ */
+.game__board {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+/* ---------- Standings rail ----------
+   Hidden by default and switched on only where there is room for a column
+   BESIDE the oval rather than instead of part of it. 1100px is that width: it
+   leaves the felt 700px at the breakpoint, which is still a table rather than a
+   squeezed one. Below it the pods carry the scores, as they always have. */
+.placings {
+  display: none;
+}
+@media (min-width: 1100px) {
+  .game__board {
+    --gutter: 200px;
+    grid-template-columns: var(--gutter) minmax(0, 1fr) var(--gutter);
+  }
+  .placings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    /* Centred beside the table, and never taller than the stage — a full table
+       of eight scrolls inside the panel instead of pushing the buttons off. */
+    align-self: center;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: var(--sp-3);
+    background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--sheen), var(--e-rest);
+  }
+}
+.placings__title {
+  margin: 0;
+  font-family: var(--ff-body);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.placings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+/* place | who | score, with the middle column absorbing the slack. */
+.placings__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  /* A player line wears its seat colour on the left edge, so a line here and a
+     pod at the table are recognisably the same player. */
+  border-left: 3px solid var(--seat, transparent);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: var(--fs-sm);
+}
+.placings__row--team[data-team="0"] {
+  border-left-color: var(--team-0);
+}
+.placings__row--team[data-team="1"] {
+  border-left-color: var(--team-1);
+}
+.placings__row--lead {
+  background: rgba(240, 169, 43, 0.14);
+}
+.placings__row--you {
+  outline: 1px solid var(--line-strong);
+}
+.placings__row--you .placings__name {
+  font-weight: 800;
+}
+.placings__place {
+  min-width: 1.25rem;
+  text-align: center;
+  font-family: var(--ff-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
+}
+.placings__row--lead .placings__place {
+  color: var(--gold);
+}
+.placings__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.placings__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.placings__you {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+/* The seats making up a side, and what each has put in. */
+.placings__members {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+}
+.placings__member {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.placings__member-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.placings__member-total {
+  font-variant-numeric: tabular-nums;
+}
+.placings__scores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: var(--lh-tight);
+}
+.placings__score {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+/* How far off the lead. Dim and small: it's context for the score above it. */
+.placings__gap {
+  font-size: var(--fs-2xs);
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- The table ---------- */
 /* The stage absorbs whatever vertical room the bar, banners and controls leave.
    `min-height: 0` for the same reason as .game__main--table above. */

@@ -301,6 +301,11 @@ export const en = {
   "table.offline": "offline — autoplaying",
   "table.thinking": "thinking…",
 
+  // The running order beside the board. In a team game the lines are the two
+  // sides, since that is the score the game is decided on.
+  "placings.title": "Standings",
+  "placings.behind": "{points} behind the lead",
+
   // Coaching hints (practice bar).
   "coach.gameOver": "Game over — {name} wins. Play again to keep practising!",
   "coach.bust":
@@ -850,6 +855,9 @@ export const es: Record<MsgKey, string> = {
   "table.offline": "desconectado — jugando solo",
   "table.thinking": "pensando…",
 
+  "placings.title": "Clasificación",
+  "placings.behind": "{points} por detrás del líder",
+
   "coach.gameOver": "Fin de la partida — gana {name}. ¡Juega de nuevo para seguir practicando!",
   "coach.bust":
     "¡Te pasaste! Una tirada que no puntúa pierde todo lo que habías acumulado este turno. Los puntos guardados, en cambio, nunca se pierden.",
@@ -1379,6 +1387,9 @@ export const fr: Record<MsgKey, string> = {
 
   "table.offline": "hors ligne — joue automatiquement",
   "table.thinking": "réfléchit…",
+
+  "placings.title": "Classement",
+  "placings.behind": "{points} de retard sur le leader",
 
   "coach.gameOver": "Partie terminée — {name} gagne. Rejouez pour continuer à vous entraîner !",
   "coach.bust":

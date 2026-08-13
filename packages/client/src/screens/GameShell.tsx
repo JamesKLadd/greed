@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { DieValue, GameState, LegalActions } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
 import { TableView } from "../components/TableView.js";
+import { Placings } from "../components/Placings.js";
 import { ActionBar } from "../components/ActionBar.js";
 import { GuidanceLine } from "../components/GuidanceLine.js";
 import { Toast } from "../components/Toast.js";
@@ -101,19 +102,26 @@ export function GameShell({
       )}
 
       <main className="game__main game__main--table">
-        <TableView
-          state={state}
-          rollingIndices={rollingIndices}
-          isRolling={isRolling}
-          rollingDice={rollingDice}
-          perspectiveId={perspectiveId}
-          presence={presence}
-          emotes={emotes}
-          avatars={avatars}
-          turnTimer={turnTimer}
-          showTurnScore={showTurnScore}
-          dice3d={dice3d}
-        />
+        {/* The running order in the left gutter, the table in the middle, and a
+            matching empty gutter on the right so the felt stays centred on
+            screen rather than shifting when the rail appears. */}
+        <div className="game__board">
+          <Placings state={state} youId={perspectiveId} />
+
+          <TableView
+            state={state}
+            rollingIndices={rollingIndices}
+            isRolling={isRolling}
+            rollingDice={rollingDice}
+            perspectiveId={perspectiveId}
+            presence={presence}
+            emotes={emotes}
+            avatars={avatars}
+            turnTimer={turnTimer}
+            showTurnScore={showTurnScore}
+            dice3d={dice3d}
+          />
+        </div>
 
         <GuidanceLine state={state} canAct={canAct} muted={!showGuidance} />
 
