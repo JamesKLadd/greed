@@ -33,15 +33,24 @@ describe("rollCall", () => {
     expect(rollCall(turnAfter([3, 3, 3, 2, 4]))).toBe("triple");
   });
 
-  it("still calls the triple when a fourth die matches", () => {
-    // Four 6s is a triple plus a leftover, not two of anything.
+  it("still calls the triple when a fourth or fifth die matches", () => {
+    // Four 6s reaches the engine as a triple plus a leftover, five 5s as a
+    // triple plus two — both are three of a kind and then some.
     expect(rollCall(turnAfter([6, 6, 6, 6, 2]))).toBe("triple");
+    expect(rollCall(turnAfter([5, 5, 5, 5, 5]))).toBe("triple");
   });
 
-  it("says nothing about three 1s, which the engine scores individually", () => {
-    // 100 each beats the 100 triple, so no triple is ever awarded — and calling
-    // one would name an award that isn't in the score.
-    expect(rollCall(turnAfter([1, 1, 1, 2, 3]))).toBe(null);
+  it("calls three 1s, which the engine never awards as a triple", () => {
+    // Three separate hundreds beat the 100 a triple of 1s would pay, so the
+    // score contains no triple — but three matching dice are three matching
+    // dice, and this is the throw a table shouts about.
+    expect(rollCall(turnAfter([1, 1, 1, 2, 3]))).toBe("triple");
+    expect(rollCall(turnAfter([1, 1, 1, 1, 3]))).toBe("triple");
+  });
+
+  it("does not call two 1s and two 5s", () => {
+    // Four scoring dice, no three of anything.
+    expect(rollCall(turnAfter([1, 1, 5, 5, 3]))).toBe(null);
   });
 
   it("says nothing for a plain scoring throw or a bust", () => {

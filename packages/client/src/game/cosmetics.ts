@@ -70,6 +70,17 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-pip": "#4a3410",
       "--die-pip2": "#fff3cf",
       "--die-lip": "rgba(120,80,10,0.32)",
+      // Gold dice are already the colour a scoring die goes, so the usual
+      // treatment would be invisible here. This set inverts instead: the face
+      // that scored is struck dark with pale gold pips. Same idea — the scoring
+      // face is the one that stopped looking like the others — reached from the
+      // other direction, because on this skin that is the only direction left.
+      "--score-1": "#6d4d16",
+      "--score-2": "#402c09",
+      "--score-3": "#241804",
+      "--score-pip": "#f0cf80",
+      "--score-pip2": "#fff6dd",
+      "--score-lip": "rgba(0,0,0,0.45)",
     },
   },
   {

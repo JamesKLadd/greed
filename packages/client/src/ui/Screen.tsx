@@ -50,13 +50,24 @@ export function Screen({
     </>
   );
 
+  // A long wordmark cannot take the short one's size on a phone: LEADERBOARDS
+  // at the 48px floor runs off the side of the screen, and Spanish
+  // (CLASIFICACIONES) is longer still. Sized by how long the word actually is,
+  // so every locale is covered by one rule rather than one being noticed and
+  // hand-fixed at a time.
+  const letters = typeof title === "string" ? title.length : 0;
+  const logoClass = cx(
+    "setup__logo",
+    letters >= 13 ? "setup__logo--xlong" : letters >= 9 ? "setup__logo--long" : null,
+  );
+
   return (
     <div className="setup">
       {headerRight != null && <div className="home-account">{headerRight}</div>}
 
       {hero && (
         <div className="setup__hero">
-          <h1 className="setup__logo">{title}</h1>
+          <h1 className={logoClass}>{title}</h1>
           {tagline != null && <p className="setup__tagline">{tagline}</p>}
         </div>
       )}

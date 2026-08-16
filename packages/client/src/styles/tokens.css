@@ -71,7 +71,11 @@
      --die-* above: a player has to be able to tell at a glance which dice are
      banked, and that reading must not change with the skin they equipped. It is
      the whole face rather than a rim around it, because colour is the fastest
-     thing the eye picks out of a row of five — a rim has to be looked for. */
+     thing the eye picks out of a row of five — a rim has to be looked for.
+
+     A skin whose own stock is this colour would swallow the cue, so these are
+     overridable per skin the same way --die-* are (see the gold dice, which
+     invert it rather than repeat it). */
   --score-1: #ffeaad;
   --score-2: #f3bf4a;
   --score-3: #cf9219;
@@ -95,8 +99,13 @@
      so you look DOWN onto the face that's up. Positive puts the camera under
      the table — the neighbouring faces then turn away from you and get culled,
      leaving a flat-looking square. */
-  --cube-tilt-x: -18deg;
-  --cube-tilt-y: -16deg;
+  /* Shallower than it was (-18/-16). The neighbouring faces were showing enough
+     of themselves to be mistaken for the face you're meant to read — a player
+     checking a die shouldn't have to work out which square is the answer. They
+     are still there, just reduced to the rim that keeps the die reading as a
+     solid object rather than a printed square. */
+  --cube-tilt-x: -11deg;
+  --cube-tilt-y: -9deg;
   --cube-roll-ms: 600ms;
   --cube-settle-ms: 300ms;
 

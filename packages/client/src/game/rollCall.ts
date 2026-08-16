@@ -8,11 +8,12 @@ import type { TurnState } from "@greed/core";
  * you count them. The dice themselves already say WHICH ones scored; this says
  * WHY, in the words a table actually uses.
  *
- * Read off the roll's own breakdown rather than re-derived from the faces,
- * because the engine's award is the truth: a fourth matching die does not make
- * a second triple, and a straight is only a straight when it took all five.
- * Straight wins the tie for the simple reason that it cannot coexist with a
- * triple — checked in that order so the rule is stated rather than assumed.
+ * Read off the roll's own breakdown rather than re-derived from the faces on
+ * the mat, because the breakdown describes THIS throw: dice locked by an
+ * earlier throw in the same turn are still lying there, and three of them
+ * matching is not something the player just did. Straight is checked first for
+ * the simple reason that it cannot coexist with a triple — stated rather than
+ * assumed.
  */
 export type RollCall = "straight" | "triple" | null;
 
@@ -20,6 +21,19 @@ export function rollCall(turn: TurnState): RollCall {
   const roll = turn.lastRoll;
   if (!roll) return null;
   if (roll.breakdown.some((b) => b.kind === "straight")) return "straight";
-  if (roll.breakdown.some((b) => b.kind === "triple")) return "triple";
+
+  // Three of a kind is three matching dice in the throw — whatever the engine
+  // decided to PAY for them. Trusting the award alone called every triple
+  // except three 1s, which is the loudest one at the table: 1s are scored as
+  // three separate hundreds because 300 beats the 100 a triple of 1s pays, so
+  // no "triple" is ever awarded for them. Counting the dice each face consumed
+  // sees it — and sees four and five of a kind, which arrive as a triple plus
+  // leftovers rather than as an entry of their own.
+  const diceByFace = new Map<number, number>();
+  for (const entry of roll.breakdown) {
+    if (entry.face == null) continue;
+    diceByFace.set(entry.face, (diceByFace.get(entry.face) ?? 0) + entry.diceUsed);
+  }
+  for (const dice of diceByFace.values()) if (dice >= 3) return "triple";
   return null;
 }

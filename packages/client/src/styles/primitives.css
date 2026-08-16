@@ -144,6 +144,16 @@
 .setup__logo {
   font-size: clamp(48px, 9vw, 96px);
 }
+/* Wordmarks longer than the five letters of GREED, stepped down so they fit a
+   phone's width. The floor is what matters here — 9vw is 34px on a 375px screen
+   and the clamp was taking the 48px minimum instead, which is how LEADERBOARDS
+   ended up wider than the screen it was on. See Screen.tsx for who gets which. */
+.setup__logo--long {
+  font-size: clamp(30px, 7vw, 68px);
+}
+.setup__logo--xlong {
+  font-size: clamp(24px, 6vw, 60px);
+}
 /* The hero sits directly on the table, not on card stock, so it takes the
    on-wood ink rather than --text-dim (which is tuned for cream). */
 .setup__tagline {

@@ -35,6 +35,20 @@ const DIE_VARS = [
   "--die-lip",
 ] as const;
 
+/**
+ * How a die that SCORED is drawn. Optional on a skin — tokens.css carries the
+ * default — but all six or none of them: half a set would paint gold pips on a
+ * gold face, which is the one thing this cue must never do.
+ */
+const SCORE_VARS = [
+  "--score-1",
+  "--score-2",
+  "--score-3",
+  "--score-pip",
+  "--score-pip2",
+  "--score-lip",
+] as const;
+
 const TABLE_VARS = ["--felt-1", "--felt-2", "--felt-edge", "--rail-1", "--rail-2"] as const;
 
 /** Colors are written inconsistently (`rgba(1, 2, 3, 0.4)` vs `rgba(1,2,3,.4)`). */
@@ -64,7 +78,25 @@ function varUsesWithFallback(css: string): { name: string; fallback: string }[] 
 describe("cosmetics shape", () => {
   it("every dice skin defines exactly the six die vars", () => {
     for (const skin of DICE_SKINS) {
-      expect(Object.keys(skin.vars).sort(), `dice skin "${skin.id}"`).toEqual([...DIE_VARS].sort());
+      const die = Object.keys(skin.vars).filter((v) => v.startsWith("--die-"));
+      expect(die.sort(), `dice skin "${skin.id}"`).toEqual([...DIE_VARS].sort());
+    }
+  });
+
+  it("a dice skin restating the scoring colours restates all of them", () => {
+    for (const skin of DICE_SKINS) {
+      const score = Object.keys(skin.vars).filter((v) => v.startsWith("--score-"));
+      if (score.length === 0) continue; // takes the default in tokens.css
+      expect(score.sort(), `dice skin "${skin.id}"`).toEqual([...SCORE_VARS].sort());
+    }
+  });
+
+  it("a dice skin defines nothing but die and scoring colours", () => {
+    for (const skin of DICE_SKINS) {
+      const stray = Object.keys(skin.vars).filter(
+        (v) => !v.startsWith("--die-") && !v.startsWith("--score-"),
+      );
+      expect(stray, `dice skin "${skin.id}"`).toEqual([]);
     }
   });
 
