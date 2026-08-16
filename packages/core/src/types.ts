@@ -15,6 +15,23 @@ export const DICE_COUNT = 5;
 export const GOAL_DEFAULT = 3000;
 
 /**
+ * The most a Best Total may be worth on the leaderboard.
+ *
+ * Best Total is a career best carried up from whatever games a player has
+ * played, and a game's goal is a setting — so a local game to 50,000 produced a
+ * "best total" that no standard game could ever approach. Eligibility is now
+ * limited to games at GOAL_DEFAULT (see recordGame), and anything above this
+ * ceiling is treated as coming from before that rule, or from a client that
+ * doesn't honour it, and is worth nothing.
+ *
+ * It sits above the goal rather than at it because a standard game does not
+ * stop the moment the goal is passed: the round plays out, and a last big bank
+ * can carry a legitimate total past 3000. Far past 4000 it is not a dice game
+ * any more, it is a setting.
+ */
+export const BEST_TOTAL_CEILING = 4000;
+
+/**
  * A bot's risk temperament — the ONE thing that distinguishes one bot from
  * another. Every bot plays at the same standard skill level (there is no
  * difficulty setting); what changes is how far it pushes a turn before banking.

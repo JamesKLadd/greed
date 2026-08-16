@@ -7,7 +7,7 @@
  * roll back a stat.
  */
 
-import { hasProfanity } from "@greed/core";
+import { hasProfanity, BEST_TOTAL_CEILING } from "@greed/core";
 import { query } from "./db.js";
 import { hashPassword, hashToken, newSingleUseToken, signSession, verifyPassword } from "./auth.js";
 import { sendResetEmail, sendVerifyEmail, emailEnabled, verificationRequired } from "./email.js";
@@ -110,13 +110,24 @@ function normalizeProfile(raw: Partial<StoredProfile> | null): StoredProfile {
  * streak and equipped cosmetics take the incoming (most recent) value. */
 export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): StoredProfile {
   const max = (a: number, b: number) => Math.max(a || 0, b || 0);
+  /**
+   * The one figure that is checked rather than simply kept.
+   *
+   * Everything else on this profile is bounded by the dice, but Best Total was
+   * bounded by the goal — a setting — so a local game to 50,000 posted a career
+   * best no standard game could approach. Clients only record it from a game at
+   * the standard goal now, and this is what makes that stick: the merge is
+   * monotonic, so without it one old client with the old number in localStorage
+   * would push it straight back up after every clean-up.
+   */
+  const total = max(existing.bestTotal, incoming.bestTotal);
   return {
     gamesPlayed: max(existing.gamesPlayed, incoming.gamesPlayed),
     wins: max(existing.wins, incoming.wins),
     currentStreak: incoming.currentStreak ?? existing.currentStreak,
     bestStreak: max(existing.bestStreak, incoming.bestStreak),
     bestTurn: max(existing.bestTurn, incoming.bestTurn),
-    bestTotal: max(existing.bestTotal, incoming.bestTotal),
+    bestTotal: total > BEST_TOTAL_CEILING ? 0 : total,
     totalBanks: max(existing.totalBanks, incoming.totalBanks),
     totalBankedPoints: max(existing.totalBankedPoints, incoming.totalBankedPoints),
     hotDiceTotal: max(existing.hotDiceTotal, incoming.hotDiceTotal),

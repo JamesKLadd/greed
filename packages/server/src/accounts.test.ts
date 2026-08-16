@@ -41,6 +41,25 @@ describe("mergeProfile", () => {
     expect(m.totalBankedPoints).toBe(5000);
   });
 
+  it("refuses a best total no standard game could produce", () => {
+    // The board's one exploitable figure: the goal is a setting, so a local
+    // game to 50,000 used to post a career best nothing could beat. The merge
+    // is monotonic, so refusing it HERE is what stops an old client pushing it
+    // back up after the rows have been cleaned.
+    const stored = { ...emptyProfile(), bestTotal: 3400 };
+    const rigged = { ...emptyProfile(), bestTotal: 50000 };
+    expect(mergeProfile(stored, rigged).bestTotal).toBe(0);
+    // And it works the other way round: a stored figure from before the rule
+    // is voided by the next sync rather than preserved by the max.
+    expect(mergeProfile(rigged, stored).bestTotal).toBe(0);
+  });
+
+  it("keeps a believable best total", () => {
+    const a = { ...emptyProfile(), bestTotal: 3100 };
+    const b = { ...emptyProfile(), bestTotal: 3900 };
+    expect(mergeProfile(a, b).bestTotal).toBe(3900);
+  });
+
   it("unions achievements and takes the latest cosmetics", () => {
     const a = {
       ...emptyProfile(),

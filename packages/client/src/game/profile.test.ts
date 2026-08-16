@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { GameState } from "@greed/core";
+import { BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 import {
   ACHIEVEMENTS,
   achievementScore,
@@ -195,6 +196,7 @@ describe("recordGame + achievements", () => {
     return {
       won: false,
       finalTotal: 0,
+      goal: GOAL_DEFAULT,
       bestTurn: 0,
       banks: 0,
       busts: 0,
@@ -266,6 +268,45 @@ describe("recordGame + achievements", () => {
     const second = recordGame(summaryOf({ won: true }));
     expect(second.unlocked.map((a) => a.id)).not.toContain("first-win");
   });
+
+  describe("best total is a standard-game figure", () => {
+    it("records a total from a game at the standard goal", () => {
+      const r = recordGame(summaryOf({ finalTotal: 3200, goal: GOAL_DEFAULT }));
+      expect(r.profile.bestTotal).toBe(3200);
+    });
+
+    it("ignores a total from a game with the goal set elsewhere", () => {
+      // The whole exploit: set the goal high, play on, post a career best no
+      // standard game could ever reach.
+      const r = recordGame(summaryOf({ finalTotal: 50000, goal: 100000 }));
+      expect(r.profile.bestTotal).toBe(0);
+    });
+
+    it("ignores a short game too — the rule is the standard goal, not a range", () => {
+      const r = recordGame(summaryOf({ finalTotal: 1100, goal: 1000 }));
+      expect(r.profile.bestTotal).toBe(0);
+    });
+
+    it("keeps an earlier standard-game best when a rigged game follows", () => {
+      recordGame(summaryOf({ finalTotal: 3400, goal: GOAL_DEFAULT }));
+      const r = recordGame(summaryOf({ finalTotal: 90000, goal: 90000 }));
+      expect(r.profile.bestTotal).toBe(3400);
+    });
+
+    it("voids a stored total from before the rule, on the way out of storage", () => {
+      // A monotonic merge would otherwise push this straight back up to the
+      // server after every clean-up.
+      const saved = { ...loadProfile(), bestTotal: BEST_TOTAL_CEILING + 1 };
+      localStorage.setItem("greed:profile", JSON.stringify(saved));
+      expect(loadProfile().bestTotal).toBe(0);
+    });
+
+    it("leaves a believable stored total alone", () => {
+      const saved = { ...loadProfile(), bestTotal: BEST_TOTAL_CEILING };
+      localStorage.setItem("greed:profile", JSON.stringify(saved));
+      expect(loadProfile().bestTotal).toBe(BEST_TOTAL_CEILING);
+    });
+  });
 });
 
 describe("averageBank", () => {
@@ -274,6 +315,7 @@ describe("averageBank", () => {
     recordGame({
       won: true,
       finalTotal: 900,
+      goal: GOAL_DEFAULT,
       bestTurn: 500,
       banks: 3,
       busts: 0,

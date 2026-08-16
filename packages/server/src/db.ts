@@ -7,6 +7,7 @@
 
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
+import { BEST_TOTAL_CEILING } from "@greed/core";
 
 const { Pool } = pg;
 
@@ -139,4 +140,29 @@ export async function migrate(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS match_history_user_idx
        ON match_history (user_id, played_at DESC);`,
   );
+
+  // Void Best Totals that no standard game could have produced.
+  //
+  // Best Total came up from the client as a career best over ANY game, and a
+  // game's goal is a setting — so a local game to 50,000 posted a score the
+  // board had no way to question. Clients only record it from a game at the
+  // standard goal now, and mergeProfile refuses anything over the ceiling on
+  // the way in; this clears what was already banked under the old rule.
+  //
+  // Left in the migration rather than run once by hand: it is idempotent (after
+  // the first pass nothing matches), it is the record of what happened to those
+  // rows, and it runs on the deploy that introduces the rule instead of needing
+  // to be remembered separately.
+  const voided = await query(
+    `UPDATE users
+        SET profile = jsonb_set(profile, '{bestTotal}', '0'::jsonb),
+            updated_at = now()
+      WHERE (profile ->> 'bestTotal')::numeric > $1`,
+    [BEST_TOTAL_CEILING],
+  );
+  if (voided.rowCount) {
+    console.log(
+      `Leaderboards: voided ${voided.rowCount} Best Total(s) above ${BEST_TOTAL_CEILING}.`,
+    );
+  }
 }

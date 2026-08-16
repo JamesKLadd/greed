@@ -1,5 +1,5 @@
 import type { BotPersonality, GameState } from "@greed/core";
-import { isWinner } from "@greed/core";
+import { isWinner, BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 
 /**
  * Local, single-player progression: lifetime stats and achievements persisted to
@@ -35,6 +35,11 @@ export interface Profile {
 export interface GameSummary {
   won: boolean;
   finalTotal: number;
+  /**
+   * The target this game was played to. Best Total is only a comparable number
+   * between players who were chasing the same one — see recordGame.
+   */
+  goal: number;
   bestTurn: number;
   banks: number;
   busts: number;
@@ -300,11 +305,25 @@ function emptyProfile(): Profile {
   };
 }
 
+/**
+ * Void a Best Total that no standard game could have produced.
+ *
+ * Applied on the way OUT of storage and through every merge, because the merge
+ * is monotonic: a stored figure from before the goal rule existed would
+ * otherwise survive being cleared on the server and be pushed straight back up
+ * on the next sync. Zero rather than a trim, since there is no way to know what
+ * the player's real best was.
+ */
+function sane(p: Profile): Profile {
+  if (p.bestTotal > BEST_TOTAL_CEILING) p.bestTotal = 0;
+  return p;
+}
+
 export function loadProfile(): Profile {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyProfile();
-    return { ...emptyProfile(), ...(JSON.parse(raw) as Partial<Profile>) };
+    return sane({ ...emptyProfile(), ...(JSON.parse(raw) as Partial<Profile>) });
   } catch {
     return emptyProfile();
   }
@@ -339,7 +358,7 @@ export function replaceProfile(p: Profile): void {
  */
 export function mergeProfiles(a: Profile, b: Profile): Profile {
   const max = (x: number, y: number) => Math.max(x || 0, y || 0);
-  return {
+  return sane({
     gamesPlayed: max(a.gamesPlayed, b.gamesPlayed),
     wins: max(a.wins, b.wins),
     currentStreak: b.currentStreak ?? a.currentStreak,
@@ -353,7 +372,7 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     dice: b.dice || a.dice,
     table: b.table || a.table,
     avatar: b.avatar || a.avatar,
-  };
+  });
 }
 
 /** Equip a cosmetic (dice skin, table theme or avatar); returns the updated profile. */
@@ -478,6 +497,7 @@ export function summarize(state: GameState, youId: string): GameSummary {
     // Team games are won by a side, so a partner's win is your win.
     won: isWinner(state, youId),
     finalTotal: you?.total ?? 0,
+    goal: state.config.goal,
     bestTurn,
     banks,
     busts,
@@ -503,7 +523,14 @@ export function recordGame(summary: GameSummary): { profile: Profile; unlocked: 
     p.currentStreak = 0;
   }
   p.bestTurn = Math.max(p.bestTurn, summary.bestTurn);
-  p.bestTotal = Math.max(p.bestTotal, summary.finalTotal);
+  // Best Total counts only from a STANDARD game. The goal is a setting, so a
+  // local game to 50,000 was a way to post a career best that no real game
+  // could ever reach — the number stopped meaning "how big a game did you
+  // play" and started meaning "how high did you set the target". Every other
+  // stat here is bounded by the dice; this one was bounded by a text field.
+  if (summary.goal === GOAL_DEFAULT) {
+    p.bestTotal = Math.max(p.bestTotal, summary.finalTotal);
+  }
   p.totalBanks += summary.banks;
   p.totalBankedPoints += summary.bankedPoints;
   p.hotDiceTotal += summary.hotDice;
