@@ -40,6 +40,8 @@ interface GameShellProps {
   avatars?: Record<string, string>;
   turnTimer?: { endsAt: number; total: number } | null;
 
+  /** A message about the connection, shown above the game's own banners. */
+  notice?: ReactNode;
   /** Top bar: the leave/menu button, and the utility buttons on the right. */
   barLeft: ReactNode;
   barRight: ReactNode;
@@ -69,6 +71,7 @@ export function GameShell({
   emotes,
   avatars,
   turnTimer,
+  notice,
   barLeft,
   barRight,
   barTitle,
@@ -89,6 +92,8 @@ export function GameShell({
         {barTitle}
         <div className="game__bar-right">{barRight}</div>
       </header>
+
+      {notice}
 
       {state.endgame.triggered && state.phase === "playing" && (
         <div className="banner banner--final">

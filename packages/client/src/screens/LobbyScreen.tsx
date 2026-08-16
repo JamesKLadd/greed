@@ -37,6 +37,8 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
         </div>
       )}
 
+      {net.reconnecting && <div className="banner banner--sd">{t("net.reconnecting")}</div>}
+
       {net.isSpectator && <div className="banner banner--spectate">{t("spectate.lobbyWait")}</div>}
 
       <div className="setup__row setup__row--head">
@@ -124,6 +126,29 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
               {g}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Whether a seat is put on the clock to start its turn. A table of
+          strangers needs it; a family in one room, passing a phone round and
+          arguing about it, does not. */}
+      <div className="setup__row">
+        <span className="setup__label">{t("lobby.turnClock")}</span>
+        <div className="segmented">
+          <button
+            className={lobby.turnTimer ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+            disabled={!isHost}
+            onClick={() => net.setTurnTimerEnabled(true)}
+          >
+            {t("lobby.turnClockOn")}
+          </button>
+          <button
+            className={!lobby.turnTimer ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+            disabled={!isHost}
+            onClick={() => net.setTurnTimerEnabled(false)}
+          >
+            {t("lobby.turnClockOff")}
+          </button>
         </div>
       </div>
 

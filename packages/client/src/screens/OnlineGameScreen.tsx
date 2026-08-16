@@ -56,6 +56,12 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       avatars={net.avatars}
       turnTimer={net.turnTimer}
       spectating={net.isSpectator}
+      // The board keeps showing the last position it had while the connection
+      // is being re-made, and a frozen board with no explanation is exactly what
+      // this is here to prevent.
+      notice={
+        net.reconnecting ? <div className="banner banner--sd">{t("net.reconnecting")}</div> : null
+      }
       barLeft={
         <BarButton name="menu" onClick={net.leave}>
           {t("bar.leave")}

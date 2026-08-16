@@ -6,6 +6,7 @@ import { seatColor } from "../game/theme.js";
 import { resolveAvatar } from "../game/avatars.js";
 import { seatSlots, usesCompactSeats } from "./tableGeometry.js";
 import { bigBankers, streakFlames } from "../game/flourishes.js";
+import { rollCall } from "../game/rollCall.js";
 import { TurnRing } from "./TurnRing.js";
 import { useLayoutMode } from "../game/useLayoutMode.js";
 import type { EmoteId } from "@greed/protocol";
@@ -74,6 +75,7 @@ export function TableView({
   // in an online game shows the same ones (see flourishes.ts).
   const flames = streakFlames(state.turn);
   const badged = bigBankers(state);
+  const call = rollCall(state.turn);
   // Player-list index of whoever acts last in the round order.
   const playsLast = state.order[state.order.length - 1];
 
@@ -265,6 +267,16 @@ export function TableView({
             rollingDice={rollingDice}
             dice3d={dice3d}
           />
+
+          {/* What the throw was, named. Held back while the dice are in the air
+              — the tray is still showing the PREVIOUS throw until they land, and
+              calling that one out mid-tumble would name the wrong roll. Keyed by
+              the roll number so each throw replays the stamp. */}
+          {call && !isRolling && (
+            <div key={state.turn.rollCount} className={`felt__call felt__call--${call}`}>
+              {t(`call.${call}`)}
+            </div>
+          )}
 
           {sideTotals && (
             // The only score that decides a team game, so it gets a row of its

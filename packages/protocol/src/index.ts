@@ -51,6 +51,12 @@ export interface LobbyView {
   teams: boolean;
   /** Whether this table size can be split into two equal sides at all. */
   teamsAvailable: boolean;
+  /**
+   * Whether a seat is put on the clock to START its turn. Off means the table
+   * waits indefinitely for the first roll — which is what a family playing in
+   * one room usually wants, and a stranger lobby usually does not.
+   */
+  turnTimer: boolean;
 }
 
 /** Where a rematch vote has got to, shown on the game-over screen. */
@@ -103,6 +109,8 @@ export type ClientMessage =
   | { type: "set-teams"; teams: boolean }
   /** Host: move one seat to a side. */
   | { type: "set-seat-team"; seatId: string; team: number }
+  /** Host: put seats on the clock to start their turn, or don't. */
+  | { type: "set-turn-timer"; enabled: boolean }
   | { type: "start-game" }
   | { type: "game-action"; action: GameAction }
   | { type: "emote"; emote: EmoteId }

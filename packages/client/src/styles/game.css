@@ -154,7 +154,15 @@
 .placings__row--lead {
   background: rgba(240, 169, 43, 0.14);
 }
-.placings__row--you {
+/* Whose go it is. The same amber ring the active pod wears, so the two read as
+   one statement — but without the pod's breathing glow, which beside the table
+   would be a second thing pulsing for no extra information. */
+.placings__row--turn {
+  box-shadow: 0 0 0 2px var(--warn);
+}
+/* The you-marker is a quiet grey outline and the turn ring is a loud amber one;
+   drawn together they just fight, and the ring is the one carrying news. */
+.placings__row--you:not(.placings__row--turn) {
   outline: 1px solid var(--line-strong);
 }
 .placings__row--you .placings__name {
@@ -204,6 +212,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Which seat on a ringed side is actually holding the dice. */
+.placings__member--turn {
+  color: var(--warn);
+  font-weight: 700;
 }
 .placings__member-total {
   font-variant-numeric: tabular-nums;
@@ -856,8 +869,9 @@
      dice don't jump the instant a roll scores. */
   min-height: clamp(46px, 11cqw, 62px);
   /* Tightened against the whose-turn chip above, but with clear air below: a
-     scoring die lifts 5px on its lock-pop, so a snug gap gets clipped into. */
-  margin: -6px 0 2px;
+     scoring die lifts 9px and peaks higher than that on its lock-pop, so a snug
+     gap gets climbed into. */
+  margin: -6px 0 4px;
 }
 /* The biggest number on the screen. This is what the whole turn is about — the
    amount you're deciding whether to keep or gamble — so it outranks every other
@@ -904,6 +918,44 @@
 @keyframes pot-pop {
   from {
     transform: scale(0.86);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* What the throw was, stamped under the dice that made it. Deliberately small
+   and wide-tracked rather than loud: the gold dice above are the headline, and
+   this is the caption naming the pattern for anyone still learning which
+   handfuls are worth something. It takes no space when there's nothing to say —
+   the two big patterns are rare, and a permanently reserved empty line under the
+   dice would cost the mat more than the label is worth. */
+.felt__call {
+  font-family: var(--ff-display);
+  font-size: clamp(0.72rem, 2.6cqw, 0.95rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em; /* the tracking is trailing-only; re-centre for it */
+  text-transform: uppercase;
+  color: var(--score-3);
+  background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  padding: 3px 14px;
+  margin-top: -4px;
+  box-shadow: var(--sheen), var(--e-rest);
+  animation: call-stamp 0.3s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+/* A straight takes all five dice and pays 500 — the bigger of the two calls,
+   and it gets the brighter ink to match. */
+.felt__call--straight {
+  color: var(--score-2);
+}
+@keyframes call-stamp {
+  from {
+    transform: scale(1.35);
     opacity: 0;
   }
   to {
@@ -1346,13 +1398,28 @@
   transition: box-shadow 0.18s ease;
 }
 .die--3d.die--locked .die__side--up {
-  /* A lit rim rather than a wash: a big soft inset glow swallows the pips, and
-     the pips are the thing you're checking when you look at a scoring die. */
+  /* The face itself turns gold. This used to be a lit rim, which was accurate
+     and far too polite: on a phone, at a glance, across five dice, a thin ring
+     is something you have to go looking for. Struck stock reads instantly, and
+     the pips stay dark on it — the pips are what you check on a scoring die, so
+     they must not be washed out by the treatment that highlights it. */
+  background:
+    radial-gradient(120% 100% at 30% 16%, rgba(255, 255, 255, 0.5), transparent 52%),
+    linear-gradient(155deg, var(--score-1) 0%, var(--score-2) 55%, var(--score-3) 100%);
   box-shadow:
-    inset 0 0 0 0.045em rgba(245, 196, 81, 0.95),
-    inset 0 0 0.22em rgba(245, 196, 81, 0.4),
-    0 0 0.3em rgba(245, 196, 81, 0.45);
-  filter: brightness(1.08) saturate(1.1);
+    inset 0 0 0 0.045em rgba(255, 255, 255, 0.45),
+    inset 0 0.03em 0.03em rgba(255, 255, 255, 0.5),
+    inset 0 -0.09em 0.12em var(--score-lip),
+    0 0 0.42em rgba(243, 191, 74, 0.5);
+  /* The face brightness ramp on .die__side is per-position; the scoring face
+     opts out of it so gold is gold wherever the cube has come to rest. */
+  filter: none;
+}
+.die--3d.die--locked .die__side--up .pip--on {
+  background: radial-gradient(circle at 38% 30%, var(--score-pip2), var(--score-pip) 76%);
+  box-shadow:
+    inset 0 0.015em 0.03em rgba(0, 0, 0, 0.5),
+    0 0.008em 0 rgba(255, 255, 255, 0.35);
 }
 .die--3d.die--locked .die__side:not(.die__side--up) {
   /* Sides deliberately stay unlit — that contrast is what makes the top face
@@ -1377,25 +1444,49 @@
     inset 0 0.015em 0.025em rgba(0, 0, 0, 0.55),
     0 0.008em 0 rgba(255, 255, 255, 0.4);
 }
+/* The flat die (the tray with 3D turned off, and the small inline dice) gets the
+   same struck-gold stock — there is only one face to strike. */
+.die--locked:not(.die--3d) {
+  background:
+    radial-gradient(120% 100% at 30% 16%, rgba(255, 255, 255, 0.5), transparent 52%),
+    linear-gradient(155deg, var(--score-1) 0%, var(--score-2) 55%, var(--score-3) 100%);
+}
+.die--locked:not(.die--3d) .pip--on {
+  background: radial-gradient(circle at 38% 30%, var(--score-pip2), var(--score-pip) 76%);
+}
+/* Scoring dice sit APART from the rest: pushed forward out of the row, on a
+   shadow that says they are off the felt. The lift is what carries the state at
+   arm's length, where the colour of a single face is too small to resolve. */
 .die--locked {
   outline-color: var(--gold);
   box-shadow:
     inset 0 0.03em 0.03em rgba(255, 255, 255, 0.5),
     inset 0 -0.09em 0.12em var(--die-lip),
-    0 0 0.28em rgba(181, 101, 29, 0.55),
-    0 0.14em 0.2em -0.05em rgba(72, 44, 18, 0.38);
-  transform: translateY(-5px);
-  animation: lock-pop 0.32s ease;
+    0 0 0.3em rgba(181, 101, 29, 0.55),
+    0 0.26em 0.3em -0.06em rgba(72, 44, 18, 0.45);
+  transform: translateY(-9px);
+  animation: lock-pop 0.34s ease;
+}
+/* The cube carries no box-shadow of its own (see above), so its lift is drawn
+   by the felt shadow underneath it: bigger, softer and further away, the way a
+   raised object's shadow actually behaves. */
+.die--3d.die--locked::after {
+  left: 6%;
+  right: 6%;
+  bottom: -0.22em;
+  height: 0.17em;
+  background: rgba(30, 18, 6, 0.34);
+  filter: blur(0.1em);
 }
 @keyframes lock-pop {
   0% {
     transform: translateY(0) scale(1);
   }
   55% {
-    transform: translateY(-9px) scale(1.13);
+    transform: translateY(-14px) scale(1.15);
   }
   100% {
-    transform: translateY(-5px) scale(1);
+    transform: translateY(-9px) scale(1);
   }
 }
 .die--dim {

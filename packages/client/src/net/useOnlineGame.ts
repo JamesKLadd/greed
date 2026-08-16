@@ -30,6 +30,55 @@ const ROLL_ANIM_MS = 600;
  */
 const OUTCOME_HOLD_MS = 2100;
 
+/**
+ * How many snapshots may be waiting before the board stops queuing and jumps to
+ * the newest one.
+ *
+ * Every held-back snapshot is time the player is looking at a position the table
+ * has already left, and the gap only closes when the server goes quiet. A busy
+ * table — five people, nobody hesitating — can hand out positions faster than
+ * they can be animated, and once that happens the board drifts further behind
+ * with every throw. Dropping an animation is a smaller price than watching dice
+ * nobody else can see.
+ */
+const MAX_PENDING = 3;
+
+/** Backoff between reconnection attempts, in ms (the last value repeats). */
+const RECONNECT_DELAYS = [400, 1000, 2000, 4000, 8000, 15000];
+
+/**
+ * How often a live connection says something.
+ *
+ * A websocket that carries no traffic looks abandoned to everything it passes
+ * through, and proxies close it. Nothing about that reaches the game: the socket
+ * simply stops delivering, and the first anyone knows is a board that has
+ * stopped moving. The server pings for the same reason from its end.
+ */
+const KEEPALIVE_MS = 20000;
+
+/**
+ * Everything about a snapshot that the board can actually show.
+ *
+ * Snapshots are re-broadcast for things the board cannot see — someone
+ * dropping, a rematch vote, the turn clock ticking down — and two that agree on
+ * this key differ only in those. Showing the second one again would restart the
+ * pause on a finished turn every time one arrived.
+ */
+function boardKey(s: GameState): string {
+  const t = s.turn;
+  return [
+    s.log.length,
+    s.phase,
+    t.playerIndex,
+    t.rollCount,
+    t.turnScore,
+    t.outcome ?? "",
+    t.dice.join(""),
+    t.locked.map(Number).join(""),
+    t.hotDice ? 1 : 0,
+  ].join("|");
+}
+
 export type OnlineStatus = "menu" | "connecting" | "lobby" | "roll-off" | "in-game";
 
 export interface OnlineController {
@@ -59,6 +108,12 @@ export interface OnlineController {
   turnTimer: { endsAt: number; total: number } | null;
   /** True when this client is a read-only watcher (no seat). */
   isSpectator: boolean;
+  /**
+   * True while the connection is down and being re-established. The board keeps
+   * showing the last position it had, which is why this has to be visible: an
+   * unannounced dead socket is indistinguishable from a table thinking.
+   */
+  reconnecting: boolean;
   /** Most recent reaction per player id, with a nonce so repeats re-animate. */
   emotes: Record<string, { emote: EmoteId; at: number }>;
   /** Rematch tally once the game is over, or null while playing. */
@@ -74,6 +129,8 @@ export interface OnlineController {
   removeSeat: (seatId: string) => void;
   setTeams: (teams: boolean) => void;
   setSeatTeam: (seatId: string, team: number) => void;
+  /** Host: put seats on the clock to start their turn, or let the table wait. */
+  setTurnTimerEnabled: (enabled: boolean) => void;
   startGame: () => void;
   roll: () => void;
   bank: () => void;
@@ -118,6 +175,19 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const prevPresenceRef = useRef<Record<string, boolean>>({});
   const youIdRef = useRef<string | null>(null);
 
+  // ---- connection ----------------------------------------------------------
+  const [reconnecting, setReconnecting] = useState(false);
+  const reconnectingRef = useRef(false);
+  /** We asked for this close, so don't chase it. */
+  const closingRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const retriesRef = useRef(0);
+  const keepaliveRef = useRef<number | null>(null);
+  /** The room being watched, if this client is a spectator (it holds no token). */
+  const spectateCodeRef = useRef<string | null>(null);
+  /** Latest `send`, so the retry timer can reach it without a dependency cycle. */
+  const sendRef = useRef<((msg: ClientMessage) => void) | null>(null);
+
   // ---- display queue -------------------------------------------------------
   // Snapshots arrive from the server the instant they happen, but showing them
   // that way meant a roll's RESULT — the newly locked dice, the higher turn
@@ -126,10 +196,19 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   // animation has run, and a finished turn is guaranteed its full time on screen.
   // Everything downstream (sounds, toasts, the table) reads the displayed state,
   // so they all stay in step with what the player is actually looking at.
-  const displayQueueRef = useRef<{ state: GameState; showAt: number }[]>([]);
-  const drainTimerRef = useRef<number | null>(null);
+  //
+  // Two rules keep the queue honest, and both were learnt the hard way. The
+  // tumble begins when a snapshot reaches the FRONT of the queue, never when it
+  // arrives: starting it on arrival threw dice at a board that was still showing
+  // an older position, so the faces in the air belonged to a throw nobody else
+  // at the table had seen yet. And the queue is capped — see MAX_PENDING — so a
+  // board that falls behind jumps forward instead of drifting.
+  const pendingRef = useRef<{ state: GameState; roll: boolean }[]>([]);
+  const stepTimerRef = useRef<number | null>(null);
   /** Earliest the currently displayed snapshot may be replaced. */
   const holdUntilRef = useRef(0);
+  /** The position on screen right now. A throw is measured against this. */
+  const displayedRef = useRef<GameState | null>(null);
   /** Last snapshot ACCEPTED (not necessarily shown) — the queue's own tail. */
   const lastQueuedRef = useRef<GameState | null>(null);
   const queuedLogLen = useRef(0);
@@ -140,63 +219,80 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setRollingIndices([]);
     setRollingDice(null);
     setGame(next);
+    displayedRef.current = next;
     // A finished turn (bust or bank) earns a pause; anything else may be
     // replaced as soon as the next snapshot is due.
     holdUntilRef.current = performance.now() + (next.turn.outcome ? OUTCOME_HOLD_MS : 0);
   }, []);
 
   const drain = useCallback(() => {
-    if (drainTimerRef.current != null) return;
-    const head = displayQueueRef.current[0];
-    if (!head) return;
-    const wait = Math.max(head.showAt, holdUntilRef.current) - performance.now();
+    if (stepTimerRef.current != null) return; // a hold or a tumble is running
+    const q = pendingRef.current;
+    if (q.length === 0) return;
+
+    // Too far behind to be worth catching up politely: drop the backlog and go
+    // straight to where the table actually is.
+    if (q.length > MAX_PENDING) {
+      q.splice(0, q.length - 1);
+      holdUntilRef.current = 0;
+    }
+
+    const wait = holdUntilRef.current - performance.now();
     if (wait > 0) {
-      drainTimerRef.current = window.setTimeout(() => {
-        drainTimerRef.current = null;
+      stepTimerRef.current = window.setTimeout(() => {
+        stepTimerRef.current = null;
         drain();
       }, wait);
       return;
     }
-    displayQueueRef.current.shift();
-    showSnapshot(head.state);
-    drain();
+
+    const head = q.shift()!;
+    if (!head.roll) {
+      showSnapshot(head.state);
+      drain();
+      return;
+    }
+
+    // Throw the dice this snapshot put in the air, worked out from the board as
+    // it stands NOW — the ones lying unlocked in front of the player, or all
+    // five when the last throw cleared the mat. The faces are known up front so
+    // the dice turn to them in one motion (see Die.tsx), while the snapshot
+    // itself stays withheld until they land: that gap is what keeps the new
+    // score and the new locks from appearing before the dice settle.
+    const shown = displayedRef.current;
+    const continues =
+      shown != null &&
+      shown.turn.playerIndex === head.state.turn.playerIndex &&
+      shown.turn.rollCount + 1 === head.state.turn.rollCount;
+    const thrown = continues ? diceToRoll(shown.turn) : head.state.turn.dice.map((_, i) => i); // out of step: throw all five
+    setRollingIndices(thrown);
+    setRollingDice(head.state.turn.dice);
+    setIsRolling(true);
+    stepTimerRef.current = window.setTimeout(() => {
+      stepTimerRef.current = null;
+      showSnapshot(head.state);
+      drain();
+    }, ROLL_ANIM_MS);
   }, [showSnapshot]);
 
-  /**
-   * Accept a snapshot for display. A snapshot carrying a fresh roll starts the
-   * dice tumbling straight away but is itself withheld until the tumble ends —
-   * that gap is the whole point, and it's why the queue exists.
-   */
+  /** Accept a snapshot for display. */
   const enqueueGame = useCallback(
     (next: GameState) => {
-      const prev = lastQueuedRef.current;
       // A shorter log than last time means a new game (rematch) — resync and
       // drop anything still waiting, which belongs to the game just ended.
       if (next.log.length < queuedLogLen.current) {
-        displayQueueRef.current = [];
+        pendingRef.current = [];
         queuedLogLen.current = 0;
         holdUntilRef.current = 0;
       }
-      const fresh = next.log.slice(queuedLogLen.current);
-      queuedLogLen.current = next.log.length;
+      // Nothing new to show (a presence change, a vote, the clock): keep it out
+      // of the queue entirely rather than re-showing the position it repeats.
+      if (lastQueuedRef.current && boardKey(lastQueuedRef.current) === boardKey(next)) return;
 
-      let showAt = performance.now();
-      if (fresh.some((e) => e.type === "roll")) {
-        // Tumble the dice this throw actually put in the air: the ones that were
-        // unlocked before it, or all five after hot dice.
-        const indices =
-          prev && prev.turn.playerIndex === next.turn.playerIndex && !prev.turn.hotDice
-            ? prev.turn.locked.map((locked, i) => (locked ? -1 : i)).filter((i) => i >= 0)
-            : diceToRoll(next.turn);
-        setRollingIndices(indices);
-        // The snapshot being withheld already holds the thrown faces, so the
-        // dice can turn straight to them while the rest of it waits.
-        setRollingDice(next.turn.dice);
-        setIsRolling(true);
-        showAt += ROLL_ANIM_MS;
-      }
+      const roll = next.log.slice(queuedLogLen.current).some((e) => e.type === "roll");
+      queuedLogLen.current = next.log.length;
       lastQueuedRef.current = next;
-      displayQueueRef.current.push({ state: next, showAt });
+      pendingRef.current.push({ state: next, roll });
       drain();
     },
     [drain],
@@ -204,19 +300,31 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
 
   /** Drop anything waiting to be shown — the game it belonged to is gone. */
   const clearQueue = useCallback(() => {
-    displayQueueRef.current = [];
-    if (drainTimerRef.current != null) window.clearTimeout(drainTimerRef.current);
-    drainTimerRef.current = null;
+    pendingRef.current = [];
+    if (stepTimerRef.current != null) window.clearTimeout(stepTimerRef.current);
+    stepTimerRef.current = null;
     holdUntilRef.current = 0;
     lastQueuedRef.current = null;
+    displayedRef.current = null;
     queuedLogLen.current = 0;
     setIsRolling(false);
     setRollingIndices([]);
     setRollingDice(null);
   }, []);
 
+  /** Stop chasing a connection: there is nothing left to come back to. */
+  const stopRetrying = useCallback(() => {
+    if (retryTimerRef.current != null) window.clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = null;
+    retriesRef.current = 0;
+    reconnectingRef.current = false;
+    setReconnecting(false);
+  }, []);
+
   const resetToMenu = useCallback(() => {
     clearQueue();
+    stopRetrying();
+    spectateCodeRef.current = null;
     setStatus("menu");
     setLobby(null);
     setGame(null);
@@ -228,7 +336,46 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setIsSpectator(false);
     setEmotes({});
     prevPresenceRef.current = {};
-  }, [clearQueue]);
+  }, [clearQueue, stopRetrying]);
+
+  /**
+   * The message that puts this client back where it was, or null when there is
+   * nowhere to return to (sitting in the menu, or a room we deliberately left).
+   */
+  const resumeMessage = useCallback((): ClientMessage | null => {
+    const watching = spectateCodeRef.current;
+    if (watching) return { type: "spectate", code: watching };
+    const token = localStorage.getItem(TOKEN_KEY);
+    return token ? { type: "reconnect", token } : null;
+  }, []);
+
+  /**
+   * The connection dropped. Go back for it, on a backoff.
+   *
+   * Without this a dead socket was simply the end: the board froze on whatever
+   * position it last had, with no error and no way back except reloading the
+   * page, while the table carried on without the player. The seat is held server
+   * side for exactly this, so re-announcing the token picks the game back up
+   * where it is now.
+   */
+  const scheduleRetry = useCallback(() => {
+    if (retryTimerRef.current != null) return;
+    const resume = resumeMessage();
+    if (!resume) {
+      stopRetrying();
+      return;
+    }
+    reconnectingRef.current = true;
+    setReconnecting(true);
+    const delay = RECONNECT_DELAYS[Math.min(retriesRef.current, RECONNECT_DELAYS.length - 1)];
+    retriesRef.current += 1;
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+      // send() opens a fresh socket and flushes this on connect; if that attempt
+      // fails, its close handler brings us back here with a longer delay.
+      sendRef.current?.(resume);
+    }, delay);
+  }, [resumeMessage, stopRetrying]);
 
   const handleMessage = useCallback(
     (raw: string) => {
@@ -244,13 +391,22 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           youIdRef.current = msg.youId;
           setCode(msg.code);
           setIsSpectator(false);
+          spectateCodeRef.current = null;
           localStorage.setItem(TOKEN_KEY, msg.token);
+          // We are seated (again). Anything still queued was assembled before
+          // the gap and describes a game that has moved on since; the snapshot
+          // arriving behind this one is the truth.
+          clearQueue();
+          stopRetrying();
           break;
         case "spectating":
           // A watcher holds no seat: no youId, no reconnect token. The lobby/game
           // snapshot that follows drives the status.
           setIsSpectator(true);
           setCode(msg.code);
+          spectateCodeRef.current = msg.code;
+          clearQueue();
+          stopRetrying();
           break;
         case "lobby":
           clearQueue();
@@ -310,7 +466,15 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           break;
         case "error":
           setError(msg.message);
-          setStatus((s) => (s === "connecting" ? "menu" : s));
+          if (reconnectingRef.current) {
+            // The server turned our resume away — the room is gone, or the
+            // session expired while we were away. Staying put would leave a
+            // board that can never move again; say so and go back to the menu.
+            localStorage.removeItem(TOKEN_KEY);
+            resetToMenu();
+          } else {
+            setStatus((s) => (s === "connecting" ? "menu" : s));
+          }
           break;
         case "left":
           localStorage.removeItem(TOKEN_KEY);
@@ -320,7 +484,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           break;
       }
     },
-    [resetToMenu, clearQueue, enqueueGame],
+    [resetToMenu, clearQueue, stopRetrying, enqueueGame],
   );
 
   const ensureSocket = useCallback(() => {
@@ -331,19 +495,42 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     ) {
       return existing;
     }
+    // Opening a connection on purpose cancels any standing intent to close one.
+    // Without this, a single deliberate hang-up — in development React mounts,
+    // unmounts and remounts, so that happens on the way in — left the flag set
+    // for the rest of the session, and every later drop was mistaken for one we
+    // asked for and never chased.
+    closingRef.current = false;
     const ws = new WebSocket(SERVER_URL);
     wsRef.current = ws;
     ws.onmessage = (e) => handleMessage(e.data.toString());
     ws.onopen = () => {
       for (const m of queueRef.current) ws.send(encode(m));
       queueRef.current = [];
+      // Keep the line warm. The server pings too, but only one end needs to be
+      // wrong about the other for a game to quietly stop arriving.
+      if (keepaliveRef.current != null) window.clearInterval(keepaliveRef.current);
+      keepaliveRef.current = window.setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(encode({ type: "ping" }));
+      }, KEEPALIVE_MS);
     };
     ws.onerror = () => {
+      // While retrying, a failed attempt is expected and the banner already
+      // says what is happening — an error card on top of it would only be noise.
+      if (reconnectingRef.current) return;
       setError("Cannot reach the server. Is it running?");
       setStatus((s) => (s === "connecting" ? "menu" : s));
     };
+    ws.onclose = () => {
+      if (wsRef.current !== ws) return; // already replaced by a newer socket
+      wsRef.current = null;
+      if (keepaliveRef.current != null) window.clearInterval(keepaliveRef.current);
+      keepaliveRef.current = null;
+      if (closingRef.current) return; // we hung up on purpose
+      scheduleRetry();
+    };
     return ws;
-  }, [handleMessage]);
+  }, [handleMessage, scheduleRetry]);
 
   const send = useCallback(
     (msg: ClientMessage) => {
@@ -356,6 +543,12 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     },
     [ensureSocket],
   );
+
+  // The retry timer fires long after the render that armed it, so it reaches
+  // `send` through a ref rather than closing over a stale one.
+  useEffect(() => {
+    sendRef.current = send;
+  });
 
   // Join an invited room, or else attempt to rejoin an in-progress game after
   // a refresh.
@@ -388,6 +581,10 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     }, 0);
     return () => {
       window.clearTimeout(timer);
+      // Leaving the screen: this close is ours, so the socket must not be chased.
+      closingRef.current = true;
+      if (retryTimerRef.current != null) window.clearTimeout(retryTimerRef.current);
+      if (keepaliveRef.current != null) window.clearInterval(keepaliveRef.current);
       wsRef.current?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -440,6 +637,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     avatars,
     turnTimer,
     isSpectator,
+    reconnecting,
     emotes,
     sendEmote: (emote) => send({ type: "emote", emote }),
     createRoom: (name, opts) =>
@@ -480,6 +678,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     removeSeat: (seatId) => send({ type: "remove-seat", seatId }),
     setTeams: (teams) => send({ type: "set-teams", teams }),
     setSeatTeam: (seatId, team) => send({ type: "set-seat-team", seatId, team }),
+    setTurnTimerEnabled: (enabled) => send({ type: "set-turn-timer", enabled }),
     startGame: () => send({ type: "start-game" }),
     roll: () => send({ type: "game-action", action: { type: "ROLL" } }),
     bank: () => send({ type: "game-action", action: { type: "BANK" } }),

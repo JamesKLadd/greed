@@ -67,6 +67,18 @@
   --die-pip2: #6a5942;
   --die-lip: rgba(120, 100, 60, 0.22);
 
+  /* A die that SCORED. Struck gold with dark pips, deliberately ignoring the
+     --die-* above: a player has to be able to tell at a glance which dice are
+     banked, and that reading must not change with the skin they equipped. It is
+     the whole face rather than a rim around it, because colour is the fastest
+     thing the eye picks out of a row of five — a rim has to be looked for. */
+  --score-1: #ffeaad;
+  --score-2: #f3bf4a;
+  --score-3: #cf9219;
+  --score-pip: #33200a;
+  --score-pip2: #7b5a20;
+  --score-lip: rgba(138, 82, 8, 0.45);
+
   /* ---------------------------------------------------------------- 3D dice
      How the cube is posed and how long a throw takes. The tilt is deliberately
      shallow: the face that's up stays ~90% of the die's footprint so five of

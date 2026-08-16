@@ -56,6 +56,18 @@ export interface GreedServerOptions {
   turnIdleMs: number;
   /** Forfeit this many turns in one game and the player is kicked. */
   maxMissedTurns: number;
+  /**
+   * How often every socket is pinged to prove it is still there. 0 disables it.
+   *
+   * This is not a nicety. A socket that dies without closing cleanly — a phone
+   * that sleeps, a laptop lid, wifi that drops mid-turn — leaves the server
+   * believing that player is present and waiting on them, which stalls the
+   * whole table until the operating system eventually gives up on the TCP
+   * connection, minutes later. A ping that goes unanswered for two rounds is
+   * how that gets noticed in seconds instead. It doubles as the keep-alive that
+   * stops an idle proxy closing a connection that is perfectly healthy.
+   */
+  heartbeatMs: number;
 }
 
 /** Minimum gap between one seat's emotes. */
@@ -66,6 +78,17 @@ const CHALLENGE_TTL_MS = 120_000;
 
 /** Minimum gap between one player's challenges, so an invite can't be spammed. */
 const CHALLENGE_COOLDOWN_MS = 5000;
+
+/**
+ * How long a game in progress is held open after the last human drops.
+ *
+ * A room used to be destroyed the moment nobody was connected to it, which made
+ * a dropped connection unrecoverable by definition: the player's client would
+ * come back a fraction of a second later to be told the session had expired,
+ * because the table it was asking for no longer existed. Wifi drops for a few
+ * seconds; a phone locks; a laptop lid closes. The game waits.
+ */
+const EMPTY_ROOM_TTL_MS = 60_000;
 
 /** A pending friend challenge: a private room held open for two players. */
 interface Challenge {
@@ -97,6 +120,7 @@ const DEFAULT_OPTIONS: GreedServerOptions = {
   rollOffMs: 4200,
   turnIdleMs: 10000,
   maxMissedTurns: 3,
+  heartbeatMs: 20000,
 };
 
 export class GreedServer {
@@ -111,14 +135,55 @@ export class GreedServer {
   /** Open challenges, keyed by id. */
   private challenges = new Map<string, Challenge>();
   private readonly cfg: GreedServerOptions;
+  /** Sockets that have answered the most recent heartbeat. */
+  private alive = new WeakSet<WebSocket>();
+  private heartbeat: NodeJS.Timeout | null = null;
 
   constructor(wss: WebSocketServer, options: Partial<GreedServerOptions> = {}) {
     this.cfg = { ...DEFAULT_OPTIONS, ...options };
     wss.on("connection", (ws) => this.onConnection(ws));
+    if (this.cfg.heartbeatMs > 0) this.startHeartbeat(wss);
+    wss.on("close", () => this.stop());
+  }
+
+  /**
+   * Ping every socket on an interval and hang up on any that missed the last
+   * one. Terminating fires the usual close handling, so a player whose
+   * connection died silently is treated exactly like one who left: their seat
+   * is held for a reconnect, and play carries on without them.
+   */
+  private startHeartbeat(wss: WebSocketServer): void {
+    this.heartbeat = setInterval(() => {
+      for (const ws of wss.clients) {
+        if (!this.alive.has(ws)) {
+          ws.terminate();
+          continue;
+        }
+        this.alive.delete(ws);
+        try {
+          ws.ping();
+        } catch {
+          /* a socket closing under us is not an error */
+        }
+      }
+    }, this.cfg.heartbeatMs);
+    // Never let the heartbeat be the reason the process stays up.
+    this.heartbeat.unref?.();
+  }
+
+  /** Stop the heartbeat (the server is shutting down). */
+  stop(): void {
+    if (this.heartbeat) clearInterval(this.heartbeat);
+    this.heartbeat = null;
   }
 
   private onConnection(ws: WebSocket): void {
+    this.alive.add(ws);
+    ws.on("pong", () => this.alive.add(ws));
     ws.on("message", (data) => {
+      // Any traffic at all proves the socket is live; a client that is chatting
+      // must never be hung up on for missing a ping it never saw.
+      this.alive.add(ws);
       let msg: ClientMessage;
       try {
         msg = decode<ClientMessage>(data.toString());
@@ -474,9 +539,39 @@ export class GreedServer {
     const found = this.store.findByToken(token);
     if (!found) return this.send(ws, { type: "error", message: "Session expired." });
     found.seat.ws = ws;
+    // If the table was being held empty, this is the player it was held for.
+    this.resumeRoom(found.room);
     this.welcome(ws, found.room, found.seat);
     // Let the rest of the table see them come back online.
     if (found.room.phase === "in-game") this.broadcastGame(found.room);
+  }
+
+  /**
+   * The last human left a game in progress. Stop the clock and hold the table.
+   *
+   * Nothing may happen while nobody is watching — bots would play the game out
+   * to an empty room, and whoever comes back would arrive at a result rather
+   * than at their turn. So the follow-up timers are cleared and the room simply
+   * waits, until either someone reconnects or the grace period runs out.
+   */
+  private holdRoom(room: Room): void {
+    if (room.emptyTimer) return;
+    clearTimers(room);
+    room.emptyTimer = setTimeout(() => {
+      room.emptyTimer = null;
+      for (const ws of room.spectators) this.send(ws, { type: "left" });
+      room.spectators.clear();
+      this.store.delete(room);
+    }, EMPTY_ROOM_TTL_MS);
+    room.emptyTimer.unref?.();
+  }
+
+  /** Somebody came back to a held table: cancel the teardown and restart play. */
+  private resumeRoom(room: Room): void {
+    if (!room.emptyTimer) return;
+    clearTimeout(room.emptyTimer);
+    room.emptyTimer = null;
+    this.scheduleFollowups(room);
   }
 
   /** Messages that require the sender to already be seated in a room. */
@@ -533,6 +628,12 @@ export class GreedServer {
         // Snap to alternating sides on the way in, so the common case needs no
         // further fiddling and the room is immediately startable.
         if (msg.teams && !teamsBalanced(room)) rebalanceTeams(room);
+        return this.broadcastLobby(room);
+      }
+
+      case "set-turn-timer": {
+        if (!isHost || room.phase !== "lobby") return;
+        room.turnTimer = msg.enabled;
         return this.broadcastLobby(room);
       }
 
@@ -702,8 +803,14 @@ export class GreedServer {
       room.timers.delete(t);
       try {
         fn();
-      } catch {
-        /* room may have been torn down */
+      } catch (err) {
+        // The room may simply have been torn down under the timer, which is
+        // normal. Anything else leaves a table with no pending follow-up — a
+        // game that never moves again — so it is logged rather than swallowed:
+        // a stalled room is otherwise invisible from the outside.
+        if (this.store.get(room.code)) {
+          console.error(`[room ${room.code}] scheduled step failed:`, err);
+        }
       }
     }, ms);
     room.timers.add(t);
@@ -739,7 +846,9 @@ export class GreedServer {
 
     // A connected human. If they haven't STARTED their turn (no roll yet), give
     // them a grace period; a time-out forfeits the turn and counts against them.
-    if (seat && g.turn.rollCount === 0) {
+    // Unless the host turned the clock off, in which case the table simply
+    // waits — the seat is still played for them if they actually drop.
+    if (seat && room.turnTimer && g.turn.rollCount === 0) {
       // The only clock the server actually keeps. Recorded on the room so the
       // next broadcast can tell clients how long is left, which is what the
       // countdown ring on the active seat draws.
@@ -841,7 +950,13 @@ export class GreedServer {
     }
 
     if (!room.seats.some((s) => !s.isBot && s.ws)) {
-      // Nobody human left connected — tear the room down and release its watchers.
+      // Nobody human left connected. A game in progress is worth holding on to
+      // — the player is probably three seconds from being back — but an empty
+      // lobby is not, and its seats are gone already.
+      if (room.phase === "in-game" && room.game) {
+        this.holdRoom(room);
+        return;
+      }
       for (const spectatorWs of room.spectators) {
         this.send(spectatorWs, { type: "left" });
         this.spectators.delete(spectatorWs);
@@ -856,8 +971,18 @@ export class GreedServer {
   private leaveRoom(ws: WebSocket): void {
     const conn = this.conns.get(ws);
     if (!conn) return;
+    const { room } = conn;
     this.send(ws, { type: "left" });
     this.onClose(ws);
+    // Walking away is not the same as dropping out: nobody is coming back for a
+    // table the last player deliberately left, so it isn't held for them.
+    if (room.emptyTimer) {
+      clearTimeout(room.emptyTimer);
+      room.emptyTimer = null;
+      for (const w of room.spectators) this.send(w, { type: "left" });
+      room.spectators.clear();
+      this.store.delete(room);
+    }
   }
 
   private reassignHost(room: Room): void {

@@ -47,6 +47,11 @@ export interface Room {
   /** Pending scheduled follow-ups (bot moves / inter-turn advances). */
   timers: Set<NodeJS.Timeout>;
   /**
+   * Set while a game in progress is being held open for a player who dropped —
+   * see the grace period in server.ts. Null whenever anyone is connected.
+   */
+  emptyTimer: NodeJS.Timeout | null;
+  /**
    * When the current seat's grace period to START their turn runs out, or null
    * when no clock is running. Only ever set for a connected human who hasn't
    * rolled yet — that is the only thing the server actually puts a limit on.
@@ -56,6 +61,16 @@ export interface Room {
   spectators: Set<WebSocket>;
   /** Two sides sharing a score (only legal at 4 or 6 seats). */
   teams: boolean;
+  /**
+   * Whether seats are put on the clock to start their turn.
+   *
+   * On by default, because a table of strangers cannot afford one person
+   * wandering off. A host who knows everyone can turn it off — see
+   * `scheduleFollowups`, which simply doesn't arm the clock then. It has never
+   * governed anything but the FIRST roll; once a player is rolling, the
+   * roll-or-bank decision is untimed either way.
+   */
+  turnTimer: boolean;
   /** Seat ids that have voted to run the last game back, in place. */
   rematchVotes: Set<string>;
 }
@@ -86,9 +101,11 @@ export class RoomStore {
       phase: "lobby",
       game: null,
       timers: new Set(),
+      emptyTimer: null,
       turnDeadline: null,
       spectators: new Set(),
       teams: false,
+      turnTimer: true,
       rematchVotes: new Set(),
     };
     this.rooms.set(room.code, room);
@@ -101,6 +118,8 @@ export class RoomStore {
 
   delete(room: Room): void {
     clearTimers(room);
+    if (room.emptyTimer) clearTimeout(room.emptyTimer);
+    room.emptyTimer = null;
     this.rooms.delete(room.code);
   }
 
@@ -230,6 +249,7 @@ export function lobbyView(room: Room): LobbyView {
     canStart: canStart(room),
     teams: teamed,
     teamsAvailable: teamsAvailable(room),
+    turnTimer: room.turnTimer,
   };
 }
 
