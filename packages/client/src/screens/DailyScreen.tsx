@@ -222,11 +222,20 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
             <Button variant="roll" size="lg" disabled={starting} onClick={() => void begin()}>
               {starting ? t("daily.loading") : t("daily.play")}
             </Button>
+            {/* Said out loud, because an absent board looks like a broken one.
+                The server sends no scores until the run is in (see dailyStatus),
+                so there is nothing here to reveal by explaining it. */}
+            <p className="daily__note daily__note--locked">
+              <Icon name="lock" /> {t("daily.boardLocked")}
+            </p>
           </div>
         )}
 
         {/* ---- leaderboard ---- */}
-        {!loading && status && status.leaderboard.length > 0 && (
+        {/* Gated on having played as well as on having rows: the server withholds
+            the board until then, and this says the same thing on the near side so
+            a stale status can't flash it up. */}
+        {!loading && played && status && status.leaderboard.length > 0 && (
           <div className="daily__board">
             <h2 className="daily__boardTitle">{t("daily.leaderboard")}</h2>
             <ol className="standings">

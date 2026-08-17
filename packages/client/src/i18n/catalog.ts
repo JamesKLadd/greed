@@ -159,6 +159,9 @@ export const en = {
   "daily.submitting": "Submitting your run…",
   "daily.loading": "Loading today's challenge…",
   "daily.leaderboard": "Today's top scores",
+  // Everyone plays the same ten turns; knowing what the day is worth before you
+  // start is a different game from finding out.
+  "daily.boardLocked": "Today's scores are hidden until your run is in.",
   "daily.yourRank": "You placed #{rank} of {players} today.",
   "daily.played": "You've already played today. Come back tomorrow!",
   "daily.nextIn": "Next challenge in",
@@ -722,6 +725,7 @@ export const es: Record<MsgKey, string> = {
   "daily.submitting": "Enviando tu partida…",
   "daily.loading": "Cargando el reto de hoy…",
   "daily.leaderboard": "Mejores puntuaciones de hoy",
+  "daily.boardLocked": "Las puntuaciones de hoy se ocultan hasta que termines tu partida.",
   "daily.yourRank": "Quedaste #{rank} de {players} hoy.",
   "daily.played": "Ya jugaste hoy. ¡Vuelve mañana!",
   "daily.nextIn": "Próximo reto en",
@@ -1261,6 +1265,7 @@ export const fr: Record<MsgKey, string> = {
   "daily.submitting": "Envoi de votre partie…",
   "daily.loading": "Chargement du défi du jour…",
   "daily.leaderboard": "Meilleurs scores du jour",
+  "daily.boardLocked": "Les scores du jour restent cachés jusqu'à la fin de votre partie.",
   "daily.yourRank": "Vous êtes {rank}e sur {players} aujourd'hui.",
   "daily.played": "Vous avez déjà joué aujourd'hui. Revenez demain !",
   "daily.nextIn": "Prochain défi dans",

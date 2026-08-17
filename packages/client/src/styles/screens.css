@@ -1275,6 +1275,19 @@
 .daily__run {
   text-align: center;
 }
+/* Why the board isn't there. Quieter than the note above it and under the Play
+   button, so it reads as a footnote to the run rather than a warning. */
+.daily__note--locked {
+  /* A flex row, not inline-flex: inline would let it settle beside the Play
+     button on the same line instead of under it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px 0 0;
+  font-size: var(--fs-sm);
+  opacity: 0.85;
+}
 .daily__meters {
   display: flex;
   gap: 10px;

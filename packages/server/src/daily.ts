@@ -45,6 +45,11 @@ export interface DailyStatus {
   run: DailyResult | null;
   /** Current streak of consecutive days played, including today. */
   streak: number;
+  /**
+   * Today's board — EMPTY until this player's own run is in. See dailyStatus:
+   * it is withheld at the source rather than hidden by the client, because a
+   * payload the client is trusted to keep to itself is not withheld at all.
+   */
   leaderboard: DailyEntry[];
   /** The player's own rank, even when outside the top slice. */
   yourRank: number | null;
@@ -223,29 +228,22 @@ async function currentStreak(userId: string, today: string): Promise<number> {
   return streak;
 }
 
+/**
+ * Where the player stands on today's challenge.
+ *
+ * The board is a reward for having played, not a preview of it. Everyone gets
+ * the same ten turns, and seeing what the day is worth before the first throw
+ * changes how it gets played — a target to beat is a different game from an
+ * unknown one, and it cannot be un-seen. So the scores are withheld until this
+ * player's own run is finished, and withheld HERE: a board that reached the
+ * client and was merely not drawn is a board anyone curious enough to open the
+ * network tab has already read.
+ */
 export async function dailyStatus(
   userId: string,
   day = dailyKey(),
   top = 20,
 ): Promise<DailyStatus> {
-  const board = await query<{
-    username: string;
-    score: number;
-    turns: number;
-    best_turn: number;
-    busts: number;
-    rank: string;
-    user_id: string;
-  }>(
-    `SELECT u.username, r.score, r.turns, r.best_turn, r.busts, r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.created_at ASC) AS rank
-       FROM daily_runs r JOIN users u ON u.id = r.user_id
-      WHERE r.day = $1 AND r.complete
-      ORDER BY rank
-      LIMIT $2`,
-    [day, top],
-  );
-
   const mine = await query<{
     score: number;
     turns: number;
@@ -266,12 +264,34 @@ export async function dailyStatus(
     [day, userId],
   );
 
+  const own = mine.rows[0];
+
+  // Not played yet: no names, no scores, and no query for them either.
+  const board = own
+    ? await query<{
+        username: string;
+        score: number;
+        turns: number;
+        best_turn: number;
+        busts: number;
+        rank: string;
+        user_id: string;
+      }>(
+        `SELECT u.username, r.score, r.turns, r.best_turn, r.busts, r.user_id,
+            RANK() OVER (ORDER BY r.score DESC, r.created_at ASC) AS rank
+       FROM daily_runs r JOIN users u ON u.id = r.user_id
+      WHERE r.day = $1 AND r.complete
+      ORDER BY rank
+      LIMIT $2`,
+        [day, top],
+      )
+    : { rows: [] };
+
   const total = await query<{ n: string }>(
     `SELECT COUNT(*)::text AS n FROM daily_runs WHERE day = $1 AND complete`,
     [day],
   );
 
-  const own = mine.rows[0];
   return {
     day,
     run: own

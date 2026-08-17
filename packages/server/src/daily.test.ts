@@ -24,10 +24,60 @@ interface Row {
 const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
 
+/** Finished runs for a day, best first — the order the board is built in. */
+function finished(day: string): { user: string; row: Row }[] {
+  return [...rows.entries()]
+    .filter(([k, row]) => k.endsWith(`|${day}`) && row.complete)
+    .map(([k, row]) => ({ user: k.split("|")[0], row }))
+    .sort((a, b) => b.row.score - a.row.score);
+}
+
 // A stub that understands only the handful of statements daily.ts issues.
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     const [user, day] = params as [string, string];
+    // ---- dailyStatus reads (their params are NOT [user, day]) ----
+    if (sql.includes("FROM ranked WHERE user_id")) {
+      // The requesting player's own standing: params are [day, userId].
+      const board = finished(params[0] as string);
+      const i = board.findIndex((e) => e.user === (params[1] as string));
+      if (i < 0) return { rows: [] };
+      const { row } = board[i];
+      return {
+        rows: [
+          {
+            score: row.score,
+            turns: row.turns,
+            banks: 0,
+            busts: 0,
+            hot_dice: 0,
+            best_turn: 0,
+            rank: String(i + 1),
+            players: String(board.length),
+          },
+        ],
+      };
+    }
+    if (sql.includes("JOIN users u ON u.id = r.user_id")) {
+      // The board itself: params are [day, top].
+      return {
+        rows: finished(params[0] as string).map((e, i) => ({
+          username: `player-${e.user}`,
+          score: e.row.score,
+          turns: e.row.turns,
+          best_turn: 0,
+          busts: 0,
+          user_id: e.user,
+          rank: String(i + 1),
+        })),
+      };
+    }
+    if (sql.includes("COUNT(*)::text")) {
+      return { rows: [{ n: String(finished(params[0] as string).length) }] };
+    }
+    if (sql.includes("SELECT to_char(day")) {
+      return { rows: [] }; // streak: not what these tests are about
+    }
     if (sql.includes("SELECT moves, seed, complete FROM daily_runs")) {
       const row = rows.get(key(user, day));
       return {
@@ -56,7 +106,7 @@ vi.mock("./db.js", () => ({
   },
 }));
 
-const { startDailyRun, playDailyMove, resumeDailyRun } = await import("./daily.js");
+const { startDailyRun, playDailyMove, resumeDailyRun, dailyStatus } = await import("./daily.js");
 
 const DAY = "2026-08-12";
 const USER = "user-1";
@@ -226,5 +276,48 @@ describe("moves only ever append", () => {
     await startDailyRun(USER, DAY);
     await expect(playDailyMove(USER, "ADVANCE", DAY)).rejects.toThrow(/invalid move/i);
     await expect(playDailyMove(USER, { type: "ROLL" }, DAY)).rejects.toThrow(/invalid move/i);
+  });
+});
+
+describe("the board is a reward for playing", () => {
+  /** Somebody else's finished run, so there is always a board to withhold. */
+  async function anotherPlayerFinishes(user = "user-2") {
+    await startDailyRun(user, DAY);
+    await playOut(user);
+  }
+
+  it("sends no scores to a player who hasn't started", async () => {
+    await anotherPlayerFinishes();
+    const status = await dailyStatus(USER, DAY);
+    expect(status.leaderboard).toEqual([]);
+    expect(status.run).toBe(null);
+    expect(status.yourRank).toBe(null);
+  });
+
+  it("sends no scores mid-run either — the whole point is not knowing yet", async () => {
+    await anotherPlayerFinishes();
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    expect((await dailyStatus(USER, DAY)).leaderboard).toEqual([]);
+  });
+
+  it("opens the board once the run is finished", async () => {
+    await anotherPlayerFinishes();
+    await startDailyRun(USER, DAY);
+    await playOut(USER);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.leaderboard.length).toBe(2);
+    expect(status.run?.complete).toBe(true);
+    expect(status.yourRank).not.toBe(null);
+    // Own row is marked, which is what the board highlights.
+    expect(status.leaderboard.some((e) => e.you)).toBe(true);
+  });
+
+  it("still says how many people have played, which gives nothing away", async () => {
+    await anotherPlayerFinishes();
+    await anotherPlayerFinishes("user-3");
+    const status = await dailyStatus(USER, DAY);
+    expect(status.players).toBe(2);
+    expect(status.leaderboard).toEqual([]);
   });
 });
