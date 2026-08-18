@@ -39,3 +39,26 @@ export function fetchLeaderboard(category: LeaderboardCategory): Promise<Leaderb
 export function fetchMatches(): Promise<{ matches: MatchRecord[] }> {
   return api<{ matches: MatchRecord[] }>("/api/me/matches", { auth: true });
 }
+
+/** One run on the all-time daily board. */
+export interface DailyBestEntry {
+  username: string;
+  /** YYYY-MM-DD. A plain date, not an instant — see formatDay in the screen. */
+  day: string;
+  score: number;
+  rank: number;
+  you?: boolean;
+}
+
+export interface DailyBestView {
+  entries: DailyBestEntry[];
+  yourBest: DailyBestEntry | null;
+  runs: number;
+  /** True when today's runs are being held back until you've played today. */
+  todayHidden: boolean;
+}
+
+/** The best daily runs ever played. Public, like the other boards. */
+export function fetchDailyBest(): Promise<DailyBestView> {
+  return api<DailyBestView>("/api/leaderboard/daily", { auth: true });
+}

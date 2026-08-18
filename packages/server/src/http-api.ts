@@ -8,6 +8,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
+import { dailyKey } from "@greed/core";
 import { clientKey, rateLimit } from "./rate-limit.js";
 import { dailyStatus, playDailyMove, resumeDailyRun, startDailyRun } from "./daily.js";
 import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
@@ -25,7 +26,7 @@ import {
   deleteAccount,
 } from "./accounts.js";
 import { verificationRequired } from "./email.js";
-import { isLeaderboardCategory, leaderboard, matchHistory } from "./leaderboards.js";
+import { dailyBest, isLeaderboardCategory, leaderboard, matchHistory } from "./leaderboards.js";
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
 
@@ -215,6 +216,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const raw = url.searchParams.get("category") ?? "wins";
       if (!isLeaderboardCategory(raw)) throw new AccountError(400, "Unknown leaderboard.");
       json(res, 200, await leaderboard(raw, viewer?.id ?? null));
+    } else if (method === "GET" && path === "/api/leaderboard/daily") {
+      // The best daily runs ever played. Public like the other boards; today's
+      // runs are held back from anyone who hasn't finished today's yet.
+      const viewer = await optionalUser(req);
+      json(res, 200, await dailyBest(viewer?.id ?? null, dailyKey()));
     } else if (method === "GET" && path === "/api/me/matches") {
       const { id } = await requireUser(req);
       json(res, 200, { matches: await matchHistory(id) });

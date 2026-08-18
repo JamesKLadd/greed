@@ -15,6 +15,7 @@ interface HomeScreenProps {
   onStats: () => void;
   onBoards: () => void;
   onLocker: () => void;
+  onUpdates: () => void;
   onSettings: () => void;
   onAuth: () => void;
   onAuthForOnline: () => void;
@@ -34,6 +35,7 @@ export function HomeScreen({
   onStats,
   onBoards,
   onLocker,
+  onUpdates,
   onSettings,
   onAuth,
   onAuthForOnline,
@@ -170,6 +172,12 @@ export function HomeScreen({
           <Button variant="ghost" onClick={onSettings}>
             <Icon name="gear" />
             {t("home.settings")}
+          </Button>
+          {/* Last in the row: it is the one thing here you read once per
+              release rather than per session. */}
+          <Button variant="ghost" onClick={onUpdates}>
+            <Icon name="book" />
+            {t("home.updates")}
           </Button>
         </div>
 

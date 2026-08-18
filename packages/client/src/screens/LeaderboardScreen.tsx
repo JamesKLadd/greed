@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchDailyBest,
   fetchLeaderboard,
   fetchMatches,
   LEADERBOARD_CATEGORIES,
   type LeaderboardCategory,
+  type DailyBestView,
   type LeaderboardView,
   type MatchRecord,
 } from "../net/leaderboards.js";
@@ -24,7 +26,27 @@ import { Button, Screen } from "../ui/index.js";
  * a ranked ladder.
  */
 
-type Tab = LeaderboardCategory | "history";
+type Tab = LeaderboardCategory | "daily" | "history";
+
+function isCareer(tab: Tab): tab is LeaderboardCategory {
+  return (LEADERBOARD_CATEGORIES as readonly string[]).includes(tab);
+}
+
+/**
+ * A daily challenge's date, rendered in the reader's own timezone.
+ *
+ * Built from the parts rather than `new Date("2026-08-12")`, which JavaScript
+ * reads as UTC midnight — and anywhere west of London that prints as the day
+ * before, which would put every run on the wrong date.
+ */
+function formatDay(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   const t = useT();
@@ -32,6 +54,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   const { status: authStatus } = useAuth();
   const [tab, setTab] = useState<Tab>("wins");
   const [board, setBoard] = useState<LeaderboardView | null>(null);
+  const [daily, setDaily] = useState<DailyBestView | null>(null);
   const [matches, setMatches] = useState<MatchRecord[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +71,8 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           .then((r) => setMatches(r.matches))
           .catch(fail)
           .finally(done);
+      } else if (which === "daily") {
+        fetchDailyBest().then(setDaily).catch(fail).finally(done);
       } else {
         fetchLeaderboard(which).then(setBoard).catch(fail).finally(done);
       }
@@ -73,6 +98,15 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             {t(`board.cat.${c}` as MsgKey)}
           </button>
         ))}
+        {/* The daily boards are runs, not careers: a different table, a different
+            shape (a run has a date), so it is its own tab rather than a fifth
+            category on the career board. */}
+        <button
+          className={tab === "daily" ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+          onClick={() => setTab("daily")}
+        >
+          {t("board.cat.daily")}
+        </button>
         {/* History needs an account — it is your own games, not a public board. */}
         {!signedOut && (
           <button
@@ -87,7 +121,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       {error && <div className="banner banner--sd">{error}</div>}
       {loading && <p className="daily__status">{t("board.loading")}</p>}
 
-      {!loading && tab !== "history" && board && (
+      {/* The career boards. Spelled out as "is a career category" rather than
+          "isn't history": a third kind of tab arrived, and the loose test drew
+          the last career board underneath it. */}
+      {!loading && isCareer(tab) && board && (
         <>
           {board.entries.length === 0 ? (
             <p className="daily__status">{t("board.empty")}</p>
@@ -111,6 +148,45 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
               {t("board.yourRank", { rank: board.yourRank, players: board.players })}
             </p>
           )}
+          {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}
+        </>
+      )}
+
+      {!loading && tab === "daily" && daily && (
+        <>
+          {daily.entries.length === 0 ? (
+            <p className="daily__status">{t("board.empty")}</p>
+          ) : (
+            <ol className="board">
+              {daily.entries.map((e) => (
+                <li
+                  key={`${e.rank}-${e.username}-${e.day}`}
+                  className={e.you ? "board__row board__row--you" : "board__row"}
+                >
+                  <span className="board__rank">#{e.rank}</span>
+                  <span className="board__name">
+                    {e.username}
+                    <span className="board__when">{formatDay(e.day)}</span>
+                  </span>
+                  <span className="board__value">{n(e.score)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {/* Your own best run, even when it is nowhere near the top slice. */}
+          {daily.yourBest && (
+            <p className="daily__note">
+              {t("board.yourBestRun", {
+                score: n(daily.yourBest.score),
+                date: formatDay(daily.yourBest.day),
+                rank: daily.yourBest.rank,
+                runs: daily.runs,
+              })}
+            </p>
+          )}
+          {/* Said plainly, because a board that quietly omits today is worse
+              than one that says it is doing so. */}
+          {daily.todayHidden && <p className="daily__status">{t("board.dailyTodayHidden")}</p>}
           {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}
         </>
       )}

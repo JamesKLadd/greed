@@ -6,6 +6,7 @@ import { OnlineScreen } from "./screens/OnlineScreen.js";
 import { StatsScreen } from "./screens/StatsScreen.js";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen.js";
 import { LockerScreen } from "./screens/LockerScreen.js";
+import { UpdateLogScreen } from "./screens/UpdateLogScreen.js";
 import { SettingsScreen } from "./screens/SettingsScreen.js";
 import { AuthScreen } from "./screens/AuthScreen.js";
 import { AccountScreen } from "./screens/AccountScreen.js";
@@ -29,6 +30,7 @@ type Mode =
   | "stats"
   | "boards"
   | "locker"
+  | "updates"
   | "settings"
   | "auth"
   | "account";
@@ -184,6 +186,7 @@ export function App() {
     if (mode === "stats") return <StatsScreen onBack={() => setMode("home")} />;
     if (mode === "boards") return <LeaderboardScreen onBack={() => setMode("home")} />;
     if (mode === "locker") return <LockerScreen onBack={() => setMode("home")} />;
+    if (mode === "updates") return <UpdateLogScreen onBack={() => setMode("home")} />;
     if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
 
     if (mode === "local") {
@@ -205,6 +208,7 @@ export function App() {
         onStats={() => setMode("stats")}
         onBoards={() => setMode("boards")}
         onLocker={() => setMode("locker")}
+        onUpdates={() => setMode("updates")}
         onSettings={() => setMode("settings")}
         onAuth={() => {
           setAuthNext(null);

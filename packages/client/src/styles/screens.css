@@ -1710,6 +1710,18 @@
 .board__value {
   font-weight: 800;
 }
+/* A daily row carries a date as well as a name: the date under the name, in the
+   dim ink, so the column still scans as "who" at a glance. */
+.board__name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.board__when {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--text-dim);
+}
 .match__result {
   font-size: 0.6875rem;
   text-transform: uppercase;
@@ -1773,5 +1785,93 @@
   }
   .join-row .btn {
     flex: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ update log
+   Versions down one side, that release's notes down the other. The version list
+   is navigation and history at once, so it stays visible rather than collapsing
+   into a dropdown — except on a phone, where two columns leave neither of them
+   readable and it becomes a row of chips above the notes. */
+.updates__split {
+  display: grid;
+  grid-template-columns: minmax(120px, 168px) 1fr;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.updates__versions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Long histories scroll on their own rather than stretching the panel. */
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.updates__version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.updates__version:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.updates__version--on {
+  background: rgba(240, 169, 43, 0.16);
+  border-color: var(--line-strong);
+  font-weight: 700;
+}
+.updates__versionNo {
+  font-variant-numeric: tabular-nums;
+}
+.updates__latest {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+.updates__heading {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: var(--fs-xl);
+}
+.updates__date {
+  margin: 2px 0 14px;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.updates__notes {
+  margin: 0;
+  padding-left: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: var(--lh-body);
+}
+@media (max-width: 760px) {
+  .updates__split {
+    grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+  .updates__versions {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+  }
+  .updates__version {
+    width: auto;
+    flex: 0 0 auto;
   }
 }

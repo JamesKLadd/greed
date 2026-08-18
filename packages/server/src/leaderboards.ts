@@ -174,3 +174,125 @@ export async function matchHistory(userId: string): Promise<MatchRecord[]> {
     opponents: r.opponents ?? [],
   }));
 }
+
+// ---------------------------------------------------------------------------
+// All-time daily challenge
+// ---------------------------------------------------------------------------
+
+/** One run on the all-time daily board: who, which day, what they scored. */
+export interface DailyBestEntry {
+  username: string;
+  /** The challenge's day, as YYYY-MM-DD. Formatted by the client, in its own
+   *  timezone — an ISO instant would land on the wrong date west of UTC. */
+  day: string;
+  score: number;
+  rank: number;
+  you?: boolean;
+}
+
+export interface DailyBestView {
+  entries: DailyBestEntry[];
+  /** The viewer's own best run ever, even if it is nowhere near the top. */
+  yourBest: DailyBestEntry | null;
+  /** Total runs the board is drawn from. */
+  runs: number;
+  /**
+   * True when TODAY's runs were left out because the viewer hasn't finished
+   * today's challenge yet. The daily board is hidden until your run is in, and
+   * an all-time board that included today would hand back what that withholds —
+   * so today is filtered out rather than the whole board being denied.
+   */
+  todayHidden: boolean;
+}
+
+/** How many runs the all-time board shows. */
+const DAILY_BOARD_SIZE = 25;
+
+/**
+ * The best daily runs ever played.
+ *
+ * A row is a RUN, not a player: the date is half of what makes a score worth
+ * reading, and someone who has had two blinding days has earned both of them.
+ */
+export async function dailyBest(userId: string | null, today: string): Promise<DailyBestView> {
+  // Has the viewer finished today's run? Until they have, today stays out of
+  // the board (see todayHidden).
+  let includeToday = false;
+  if (userId) {
+    const { rows } = await query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM daily_runs
+        WHERE user_id = $1 AND day = $2 AND complete`,
+      [userId, today],
+    );
+    includeToday = Number(rows[0]?.n ?? 0) > 0;
+  }
+  // Two forms of the same filter, so the ranking a player sees is the ranking
+  // of the rows they are allowed to see rather than a top slice with holes in.
+  const scope = includeToday ? `r.complete` : `r.complete AND r.day < $1::date`;
+  const params = includeToday ? [] : [today];
+
+  const { rows } = await query<{
+    username: string;
+    day: string;
+    score: number;
+    rank: string;
+    user_id: string;
+  }>(
+    `SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
+            RANK() OVER (ORDER BY r.score DESC, r.day ASC) AS rank
+       FROM daily_runs r JOIN users u ON u.id = r.user_id
+      WHERE ${scope} AND r.score > 0
+      ORDER BY rank
+      LIMIT ${DAILY_BOARD_SIZE}`,
+    params,
+  );
+
+  const { rows: totals } = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM daily_runs r WHERE ${scope} AND r.score > 0`,
+    params,
+  );
+
+  let yourBest: DailyBestEntry | null = null;
+  if (userId) {
+    const mineParams = includeToday ? [userId] : [today, userId];
+    const mine = includeToday ? `$1` : `$2`;
+    const { rows: own } = await query<{
+      username: string;
+      day: string;
+      score: number;
+      rank: string;
+    }>(
+      `WITH ranked AS (
+         SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
+                RANK() OVER (ORDER BY r.score DESC, r.day ASC) AS rank
+           FROM daily_runs r JOIN users u ON u.id = r.user_id
+          WHERE ${scope} AND r.score > 0
+       )
+       SELECT * FROM ranked WHERE user_id = ${mine} ORDER BY rank LIMIT 1`,
+      mineParams,
+    );
+    const r = own[0];
+    if (r) {
+      yourBest = {
+        username: r.username,
+        day: r.day,
+        score: r.score,
+        rank: Number(r.rank),
+        you: true,
+      };
+    }
+  }
+
+  return {
+    entries: rows.map((r) => ({
+      username: r.username,
+      day: r.day,
+      score: r.score,
+      rank: Number(r.rank),
+      you: userId != null && r.user_id === userId ? true : undefined,
+    })),
+    yourBest,
+    runs: Number(totals[0]?.n ?? 0),
+    todayHidden: !includeToday,
+  };
+}
