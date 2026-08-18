@@ -8,7 +8,7 @@
  * notification socket rather than stored and pushed at them later.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Icon, Screen, TextField } from "../ui/index.js";
 import { ProfileCard } from "../components/ProfileCard.js";
 import { ApiError } from "../net/auth.js";
@@ -25,6 +25,9 @@ import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
 
+/** How often the list refreshes itself while the screen is open. */
+const REFRESH_MS = 5000;
+
 interface FriendsScreenProps {
   onBack: () => void;
   onSignIn: () => void;
@@ -40,16 +43,47 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setView(await fetchFriends());
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("social.loadFailed"));
-    }
-  }, [t]);
+  /** A refresh nobody asked for reports nothing: a blip must not throw an error
+   *  card over a list that is still perfectly good. */
+  const inFlight = useRef(false);
+  const load = useCallback(
+    async (quiet = false) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      try {
+        setView(await fetchFriends());
+      } catch (err) {
+        if (!quiet) setError(err instanceof ApiError ? err.message : t("social.loadFailed"));
+      } finally {
+        inFlight.current = false;
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
-    if (authStatus === "authed") void load();
+    if (authStatus !== "authed") return;
+    void load();
+    // Sitting on this screen, the interesting things happen on someone else's
+    // device: a request you sent gets accepted, a friend comes online. Waiting
+    // for those meant leaving the screen and coming back to find out, so the
+    // list keeps itself up to date instead.
+    const id = window.setInterval(() => {
+      // Nothing to see on a screen nobody is looking at, and a phone in a
+      // pocket should not be polling every five seconds.
+      if (document.visibilityState === "visible") void load(true);
+    }, REFRESH_MS);
+    // Coming back to a backgrounded tab is the one moment the list is most
+    // likely to be stale, so it refreshes then rather than up to five seconds
+    // later.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [authStatus, load]);
 
   const run = async (fn: () => Promise<FriendsView>) => {
