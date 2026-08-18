@@ -44,6 +44,14 @@ export function defaultTeam(seatIndex: number): number {
   return seatIndex % 2;
 }
 
+/**
+ * The table a local game opens on: you and one bot of each temperament.
+ *
+ * Three opponents rather than two, and one of each on purpose — the bots differ
+ * only in how far they push a turn, so a table with all three is the shortest
+ * way to see what that difference looks like. It is also a four-seat table,
+ * which is one of the two sizes that can be split into sides.
+ */
 export function defaultSetup(): MatchSetup {
   return {
     goal: GOAL_DEFAULT,
@@ -51,7 +59,8 @@ export function defaultSetup(): MatchSetup {
     seats: [
       { name: "You", isBot: false, personality: "balanced", team: 0 },
       { name: "Robo 1", isBot: true, personality: "cautious", team: 1 },
-      { name: "Robo 2", isBot: true, personality: "reckless", team: 0 },
+      { name: "Robo 2", isBot: true, personality: "balanced", team: 0 },
+      { name: "Robo 3", isBot: true, personality: "reckless", team: 1 },
     ],
   };
 }
