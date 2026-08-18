@@ -23,7 +23,7 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     version: "0.6.1",
-    date: "2026-08-19",
+    date: "2026-08-18",
     notes: [
       "NEW RULE: Rolling a 5-of-a-kind of any number will give you 1000 points",
       "Added the ability to lock & unlock dice by clicking/tapping on individual dice",
