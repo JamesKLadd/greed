@@ -60,6 +60,7 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
       canAct={canAct}
       onRoll={ctl.roll}
       onBank={ctl.bank}
+      onToggleDie={ctl.toggleDie}
       toast={ctl.toast}
       cosmetics={cosmetics}
       perspectiveId={viewerId}

@@ -1,3 +1,4 @@
+import { isFiveOfAKind } from "@greed/core";
 import type { TurnState } from "@greed/core";
 
 /**
@@ -15,11 +16,15 @@ import type { TurnState } from "@greed/core";
  * the simple reason that it cannot coexist with a triple — stated rather than
  * assumed.
  */
-export type RollCall = "straight" | "triple" | null;
+export type RollCall = "five" | "straight" | "triple" | null;
 
 export function rollCall(turn: TurnState): RollCall {
   const roll = turn.lastRoll;
   if (!roll) return null;
+  // Read off the MAT, not the throw: five of a kind is the one hand that can be
+  // built up over several throws, so the throw that completes it may be a single
+  // die. It outranks the others, and cannot coexist with them anyway.
+  if (isFiveOfAKind(turn)) return "five";
   if (roll.breakdown.some((b) => b.kind === "straight")) return "straight";
 
   // Three of a kind is three matching dice in the throw — whatever the engine

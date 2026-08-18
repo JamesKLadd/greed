@@ -11,6 +11,17 @@ export type DieValue = 1 | 2 | 3 | 4 | 5 | 6;
 /** Number of dice each turn starts with. */
 export const DICE_COUNT = 5;
 
+/**
+ * Five dice showing the same face, whatever that face is.
+ *
+ * Flat, and worth more than any combination of the same five dice scored any
+ * other way, so it always replaces what they were paying rather than adding to
+ * it: three 1s and then two more is 1000, not 300 + 1000. Unlike a straight or
+ * a triple it does NOT have to arrive in one throw — it is the one hand a player
+ * can build up.
+ */
+export const FIVE_OF_A_KIND = 1000;
+
 /** Default banked-total needed to trigger the endgame. */
 export const GOAL_DEFAULT = 3000;
 
@@ -40,11 +51,20 @@ export type BotPersonality = "cautious" | "balanced" | "reckless";
 
 /** How a chunk of a roll scored, for UI display / logs. */
 export interface ScoreBreakdownEntry {
-  kind: "ones" | "fives" | "triple" | "straight";
+  kind: "ones" | "fives" | "triple" | "straight" | "five-of-a-kind";
   /** Die face involved (absent for straights). */
   face?: DieValue;
   /** How many dice this entry consumed. */
   diceUsed: number;
+  /**
+   * Which dice it consumed, as positions in the array that was scored.
+   *
+   * Needed because an award now has to survive being reconsidered: a player can
+   * unlock a die, and the points that die was part of have to come off with it.
+   * Knowing only HOW MANY dice an award used is not enough to say whether it is
+   * still standing.
+   */
+  indices: number[];
   points: number;
 }
 
@@ -106,6 +126,21 @@ export interface RollOffEntry {
   sum: number;
 }
 
+/**
+ * One thing the dice paid for: a pair of fives, a triple, a straight.
+ *
+ * Points are attributed to the DICE that earned them rather than added to a
+ * running total, because the total now has to be able to go down — see
+ * TurnState.awards.
+ */
+export interface TurnAward {
+  kind: ScoreBreakdownEntry["kind"];
+  face?: DieValue;
+  /** Die indices (0..4) in the current set of five. */
+  dice: number[];
+  points: number;
+}
+
 /** The live state of the current player's turn. */
 export interface TurnState {
   /** Index into `players` of whose turn it is. */
@@ -120,6 +155,22 @@ export interface TurnState {
   rollCount: number;
   /** Result of the most recent throw (null before the first roll). */
   lastRoll: ScoreResult | null;
+  /**
+   * Every award granted to the dice CURRENTLY on the mat, with the dice each one
+   * used. An award only counts while all of its dice are still locked, which is
+   * what lets a player unlock a die and lose exactly what it was worth — and get
+   * it back by locking it again, as long as it hasn't been thrown since.
+   *
+   * Cleared when hot dice hands out a fresh five (their points move to
+   * `carried`), and when a die is re-thrown any award that used it is dropped.
+   */
+  awards: TurnAward[];
+  /**
+   * Points banked into this turn by earlier hot-dice clears, which no longer
+   * belong to any die on the mat. `turnScore` is this plus whatever the dice
+   * currently held are worth.
+   */
+  carried: number;
   /** True once a throw scored 0 and the turn is forfeited. */
   busted: boolean;
   /** True when the last throw cleared all 5 dice (next roll is a fresh 5). */
@@ -191,7 +242,13 @@ export type GameAction =
   | { type: "BANK" }
   | { type: "ADVANCE" }
   /** Forfeit the current (not-yet-finished) turn with no points — used for time-outs. */
-  | { type: "SKIP" };
+  | { type: "SKIP" }
+  /**
+   * Hold a die, or put it back in the cup. The player's call, not the engine's:
+   * scoring dice still lock themselves, but a five-of-a-kind can be built over
+   * several throws, and building one means being able to say "not that die".
+   */
+  | { type: "TOGGLE_LOCK"; index: number };
 
 export interface LegalActions {
   canRoll: boolean;

@@ -134,6 +134,8 @@ export interface OnlineController {
   startGame: () => void;
   roll: () => void;
   bank: () => void;
+  /** Hold a die, or put it back. Applied by the server like any other action. */
+  toggleDie: (index: number) => void;
   /** Toggle your vote to run it back with the same table. */
   rematch: () => void;
   /** Host only: take the table back to the lobby to change the setup. */
@@ -682,6 +684,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     startGame: () => send({ type: "start-game" }),
     roll: () => send({ type: "game-action", action: { type: "ROLL" } }),
     bank: () => send({ type: "game-action", action: { type: "BANK" } }),
+    toggleDie: (index) => send({ type: "game-action", action: { type: "TOGGLE_LOCK", index } }),
     rematch: () => send({ type: "rematch" }),
     toLobby: () => send({ type: "to-lobby" }),
     leave,

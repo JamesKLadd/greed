@@ -10,6 +10,12 @@ interface DiceTrayProps {
   rollingDice?: DieValue[] | null;
   /** Draw the dice as 3D cubes (a display setting). */
   dice3d?: boolean;
+  /**
+   * Hold this die, or put it back. Absent when the dice are not this player's
+   * to touch — someone else's turn, a spectator, a finished turn — and the tray
+   * is then exactly what it was before.
+   */
+  onToggle?: (index: number) => void;
 }
 
 export function DiceTray({
@@ -18,6 +24,7 @@ export function DiceTray({
   isRolling,
   rollingDice,
   dice3d = true,
+  onToggle,
 }: DiceTrayProps) {
   const t = useT();
   const hasRolled = turn.lastRoll !== null || isRolling;
@@ -44,6 +51,15 @@ export function DiceTray({
             dim={!hasRolled}
             dimensional={dice3d}
             landing={rolling ? rollingDice?.[i] : undefined}
+            // Dice in the air are nobody's to grab.
+            onToggle={onToggle && !isRolling ? () => onToggle(i) : undefined}
+            toggleLabel={
+              onToggle && !isRolling
+                ? turn.locked[i]
+                  ? t("aria.unhold")
+                  : t("aria.hold")
+                : undefined
+            }
           />
         );
       })}

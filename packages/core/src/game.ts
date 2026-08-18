@@ -19,7 +19,7 @@
 
 import { rollDice, nextInt } from "./rng.js";
 import { scoreRoll } from "./scoring.js";
-import { createTurn, diceToRoll, turnLegalActions } from "./turn.js";
+import { createTurn, diceToRoll, heldScore, refreshTurn, turnLegalActions } from "./turn.js";
 import { GOAL_DEFAULT, TEAM_TABLE_SIZES } from "./types.js";
 import { clone } from "./util.js";
 import type {
@@ -247,6 +247,8 @@ export function applyAction(prev: GameState, action: GameAction): GameState {
       return doAdvance(state);
     case "SKIP":
       return doSkip(state);
+    case "TOGGLE_LOCK":
+      return doToggleLock(state, action.index);
     default:
       return state;
   }
@@ -256,9 +258,12 @@ function doRoll(state: GameState): GameState {
   const turn = state.turn;
   if (!turnLegalActions(turn).canRoll) return state;
 
-  // Hot dice: the previous throw cleared all 5, so throw a fresh 5.
+  // Hot dice: the mat was cleared, so throw a fresh 5. What those dice earned
+  // is carried, since it no longer belongs to any die about to be thrown.
   let indices: number[];
   if (turn.hotDice) {
+    turn.carried += heldScore(turn);
+    turn.awards = [];
     turn.locked = turn.locked.map(() => false);
     turn.hotDice = false;
     indices = turn.dice.map((_, i) => i);
@@ -287,21 +292,59 @@ function doRoll(state: GameState): GameState {
     turn.busted = true;
     turn.awaitingDecision = false;
     turn.turnScore = 0;
+    turn.carried = 0;
+    turn.awards = [];
     turn.outcome = "busted";
     state.log.push({ type: "bust", playerId: player.id, lostPoints: lost });
     return state;
   }
 
-  turn.turnScore += result.points;
+  // Dice that have just been thrown carry nothing over from before: any award
+  // that used one of them describes a hand that no longer exists.
+  const rethrown = new Set(indices);
+  turn.awards = turn.awards.filter((a) => !a.dice.some((i) => rethrown.has(i)));
+  // The throw's awards, moved from positions within the throw to seats on the
+  // mat, so they can be checked against the locks later.
+  for (const entry of result.breakdown) {
+    turn.awards.push({
+      kind: entry.kind,
+      face: entry.face,
+      dice: entry.indices.map((k) => indices[k]),
+      points: entry.points,
+    });
+  }
   indices.forEach((diceIndex, k) => {
     if (result.scoringMask[k]) turn.locked[diceIndex] = true;
   });
 
-  if (turn.locked.every(Boolean)) {
-    turn.hotDice = true;
+  const wasHot = turn.hotDice;
+  refreshTurn(turn);
+  if (turn.hotDice && !wasHot) {
     state.log.push({ type: "hot-dice", playerId: player.id });
   }
   turn.awaitingDecision = true;
+  return state;
+}
+
+/**
+ * Hold a die, or put it back.
+ *
+ * The engine still locks scoring dice on its own; this is the player overruling
+ * it — which they need, because a five of a kind is built up over several
+ * throws and building one means being able to reject the die that isn't part of
+ * it. Unlocking takes back whatever that die was earning: any award it belonged
+ * to stops counting (see heldScore), which can also mean a mat that was clear no
+ * longer is.
+ */
+function doToggleLock(state: GameState, index: number): GameState {
+  const turn = state.turn;
+  if (turn.outcome) return state;
+  if (!Number.isInteger(index) || index < 0 || index >= turn.dice.length) return state;
+  // Nothing on the mat to hold before the first throw.
+  if (turn.rollCount === 0) return state;
+
+  turn.locked[index] = !turn.locked[index];
+  refreshTurn(turn);
   return state;
 }
 

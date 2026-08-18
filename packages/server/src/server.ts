@@ -709,8 +709,9 @@ export class GreedServer {
   private onGameAction(room: Room, seat: Seat, action: GameAction): void {
     const g = room.game;
     if (!g || room.phase !== "in-game" || g.phase === "game-over") return;
-    // The server owns ADVANCE (inter-turn timing); clients only ROLL or BANK.
-    if (action.type !== "ROLL" && action.type !== "BANK") return;
+    // The server owns ADVANCE (inter-turn timing) and SKIP (time-outs); a client
+    // may throw, bank, or change which dice it is holding.
+    if (action.type !== "ROLL" && action.type !== "BANK" && action.type !== "TOGGLE_LOCK") return;
     const current = g.players[g.turn.playerIndex];
     if (current.id !== seat.id) return; // not your turn
     const legal = getLegalActions(g);

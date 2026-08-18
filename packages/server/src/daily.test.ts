@@ -321,3 +321,37 @@ describe("the board is a reward for playing", () => {
     expect(status.leaderboard).toEqual([]);
   });
 });
+
+describe("holding dice in a daily run", () => {
+  it("records the hold in the move list, so a replay meets the same dice", async () => {
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    const held = await resumeDailyRun(USER, DAY);
+    const before = held!.state.turn.locked.findIndex((l) => !l);
+    if (before < 0) return; // every die scored; nothing to hold by hand
+    await playDailyMove(USER, ("H" + before) as "H0", DAY);
+    expect(rows.get(key(USER, DAY))!.moves.split(",")).toContain("H" + before);
+    const after = await resumeDailyRun(USER, DAY);
+    expect(after!.state.turn.locked[before]).toBe(true);
+  });
+
+  it("puts a held die back, and the tally with it", async () => {
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    const run = await resumeDailyRun(USER, DAY);
+    const paying = run!.state.turn.locked.findIndex(Boolean);
+    if (paying < 0) return; // busted opening throw
+    const before = run!.state.turn.turnScore;
+    await playDailyMove(USER, ("H" + paying) as "H0", DAY);
+    const after = await resumeDailyRun(USER, DAY);
+    expect(after!.state.turn.locked[paying]).toBe(false);
+    expect(after!.state.turn.turnScore).toBeLessThan(before);
+  });
+
+  it("refuses a hold before the first throw, and anything that is not a move", async () => {
+    await startDailyRun(USER, DAY);
+    await expect(playDailyMove(USER, "H0", DAY)).rejects.toThrow(/isn't legal/i);
+    await expect(playDailyMove(USER, "H5", DAY)).rejects.toThrow(/invalid move/i);
+    await expect(playDailyMove(USER, "HOLD", DAY)).rejects.toThrow(/invalid move/i);
+  });
+});

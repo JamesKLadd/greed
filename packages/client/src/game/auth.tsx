@@ -18,7 +18,13 @@ import {
   type AccountUser,
   type AuthResult,
 } from "../net/auth.js";
-import { loadProfile, mergeProfiles, replaceProfile, type Profile } from "./profile.js";
+import {
+  loadProfile,
+  mergeProfiles,
+  replaceProfile,
+  resetProfile,
+  type Profile,
+} from "./profile.js";
 
 type Status = "loading" | "anon" | "authed";
 
@@ -167,6 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     rememberUser(null);
     setUser(null);
     setStatus("anon");
+    // Take the progress with it. Signing in MERGES whatever is on the device
+    // into the account, which is how a guest keeps what they played before
+    // signing up — but it also meant the next account created on this device
+    // inherited the last one's career. Two people sharing a tablet, or one
+    // person making a second account, ended up with the same stats. The
+    // account's own copy is safe on the server, so signing back in restores it.
+    resetProfile();
   }, []);
 
   const value = useMemo<AuthContextValue>(

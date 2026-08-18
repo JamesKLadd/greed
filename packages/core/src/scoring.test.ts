@@ -34,10 +34,18 @@ describe("scoreRoll - confirmed cases", () => {
     expect(r.isHotDice).toBe(false);
   });
 
-  it("five 1s = 500 and is hot dice", () => {
-    const r = scoreRoll(d(1, 1, 1, 1, 1));
-    expect(r.points).toBe(500);
-    expect(r.isHotDice).toBe(true);
+  it("five of a kind = 1000, whatever the face", () => {
+    // Worth more than the same five dice scored any other way: five 1s as
+    // individuals would be 500, five 5s as a triple plus two singles 600.
+    for (const face of [1, 2, 3, 4, 5, 6] as const) {
+      const r = scoreRoll(d(face, face, face, face, face));
+      expect(r.points, `five ${face}s`).toBe(1000);
+      expect(r.isHotDice).toBe(true);
+      expect(r.scoringMask).toEqual([true, true, true, true, true]);
+      expect(r.breakdown).toEqual([
+        { kind: "five-of-a-kind", face, diceUsed: 5, indices: [0, 1, 2, 3, 4], points: 1000 },
+      ]);
+    }
   });
 
   it("1,1,1,5,5 = 400 and is hot dice", () => {

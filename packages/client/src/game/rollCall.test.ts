@@ -8,10 +8,14 @@ function turnAfter(dice: DieValue[] | null): TurnState {
   return {
     playerIndex: 0,
     turnScore: 0,
-    dice: [1, 1, 1, 1, 1],
-    locked: [false, false, false, false, false],
+    // The dice on the mat, held exactly as the engine would hold them: what
+    // scored is what stays. rollCall reads the mat for a five of a kind.
+    dice: dice ?? [1, 1, 1, 1, 1],
+    locked: dice ? scoreRoll(dice).scoringMask : [false, false, false, false, false],
     rollCount: dice ? 1 : 0,
     lastRoll: dice ? scoreRoll(dice) : null,
+    awards: [],
+    carried: 0,
     busted: false,
     hotDice: false,
     awaitingDecision: dice != null,
@@ -33,11 +37,16 @@ describe("rollCall", () => {
     expect(rollCall(turnAfter([3, 3, 3, 2, 4]))).toBe("triple");
   });
 
-  it("still calls the triple when a fourth or fifth die matches", () => {
-    // Four 6s reaches the engine as a triple plus a leftover, five 5s as a
-    // triple plus two — both are three of a kind and then some.
+  it("still calls the triple when a fourth die matches", () => {
+    // Four 6s reaches the engine as a triple plus a leftover: three of a kind
+    // and then some, and the fourth 6 is not even held.
     expect(rollCall(turnAfter([6, 6, 6, 6, 2]))).toBe("triple");
-    expect(rollCall(turnAfter([5, 5, 5, 5, 5]))).toBe("triple");
+  });
+
+  it("calls five of a kind, which outranks the rest", () => {
+    for (const face of [1, 2, 3, 4, 5, 6] as const) {
+      expect(rollCall(turnAfter([face, face, face, face, face]))).toBe("five");
+    }
   });
 
   it("calls three 1s, which the engine never awards as a triple", () => {

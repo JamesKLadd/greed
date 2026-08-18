@@ -31,8 +31,27 @@ const DAILY_GOAL = 1_000_000_000;
 
 export const DAILY_PLAYER_ID = "you";
 
-/** The moves a player may make in a daily run. */
-export type DailyMove = "ROLL" | "BANK";
+/**
+ * The moves a player may make in a daily run.
+ *
+ * "H0".."H4" hold a die or put it back — the same tap the other modes make
+ * locally, but a daily run is replayed from its move list on the server, so a
+ * change to which dice are held has to be part of that list or the replay would
+ * throw different dice from the ones the player actually saw.
+ */
+export type DailyMove = "ROLL" | "BANK" | "H0" | "H1" | "H2" | "H3" | "H4";
+
+/** The die a hold move refers to, or null if this isn't one. */
+export function holdIndex(move: DailyMove): number | null {
+  return move.startsWith("H") ? Number(move.slice(1)) : null;
+}
+
+/** Is this string one of the moves a client may submit? */
+export function isDailyMove(value: unknown): value is DailyMove {
+  return (
+    value === "ROLL" || value === "BANK" || (typeof value === "string" && /^H[0-4]$/.test(value))
+  );
+}
 
 export interface DailyResult {
   /** Final banked total. */
@@ -235,6 +254,16 @@ export function dailyPosition(seed: number, moves: DailyMove[]): DailyPosition {
 
   for (const move of moves) {
     if (turns >= DAILY_TURNS) break;
+
+    // Holding a die changes nothing about the run's progress — no dice are
+    // dealt, no turn ends — so it is applied where it stands, against the turn
+    // as the player is looking at it rather than the one after it.
+    const held = holdIndex(move);
+    if (held !== null) {
+      state = applyAction(state, { type: "TOGGLE_LOCK", index: held });
+      continue;
+    }
+
     // The previous turn is still on show; starting a new move clears it.
     state = dailyMoveStart(state);
 
@@ -244,7 +273,8 @@ export function dailyPosition(seed: number, moves: DailyMove[]): DailyPosition {
 
     const before = state.players[0].total;
     const hotBefore = state.turn.hotDice;
-    state = applyAction(state, { type: move });
+    // Narrowed by the two guards above: only ROLL and BANK reach here.
+    state = applyAction(state, { type: move as "ROLL" | "BANK" });
     if (!hotBefore && state.turn.hotDice) hotDice += 1;
 
     if (state.turn.outcome) {

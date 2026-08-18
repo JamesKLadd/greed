@@ -16,6 +16,8 @@ import {
   dailyMoveStart,
   dailyPosition,
   getLegalActions,
+  holdIndex,
+  isDailyMove,
   type DailyMove,
   type DailyResult,
   type GameState,
@@ -150,7 +152,7 @@ export async function playDailyMove(
   rawMove: unknown,
   day = dailyKey(),
 ): Promise<DailyRunView> {
-  if (rawMove !== "ROLL" && rawMove !== "BANK") throw new AccountError(400, "Invalid move.");
+  if (!isDailyMove(rawMove)) throw new AccountError(400, "Invalid move.");
   const move: DailyMove = rawMove;
 
   const run = await storedRun(userId, day);
@@ -162,11 +164,21 @@ export async function playDailyMove(
   const before = dailyPosition(seed, moves);
   if (before.result.complete) throw new AccountError(409, "You've already played today.");
 
-  // Legality is checked against the position the NEXT move actually starts
-  // from — a finished turn is advanced past first, exactly as the replay does.
-  const legal = getLegalActions(dailyMoveStart(before.state));
-  if (move === "ROLL" && !legal.canRoll) throw new AccountError(400, "That move isn't legal.");
-  if (move === "BANK" && !legal.canBank) throw new AccountError(400, "That move isn't legal.");
+  // Holding a die is judged against the turn as it stands — it does not start a
+  // new one — and only while there is a turn in play to hold dice in.
+  const held = holdIndex(move);
+  if (held !== null) {
+    const turn = before.state.turn;
+    if (turn.outcome || turn.rollCount === 0) {
+      throw new AccountError(400, "That move isn't legal.");
+    }
+  } else {
+    // Legality is checked against the position the NEXT move actually starts
+    // from — a finished turn is advanced past first, exactly as the replay does.
+    const legal = getLegalActions(dailyMoveStart(before.state));
+    if (move === "ROLL" && !legal.canRoll) throw new AccountError(400, "That move isn't legal.");
+    if (move === "BANK" && !legal.canBank) throw new AccountError(400, "That move isn't legal.");
+  }
 
   const next = [...moves, move];
   const after = dailyPosition(seed, next);

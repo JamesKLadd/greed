@@ -89,6 +89,14 @@ interface DieProps {
    * result is revealed early. Defaults to `value` (no throw in flight).
    */
   landing?: DieValue;
+  /**
+   * Called when the player taps this die to hold it or put it back. Omitted
+   * wherever the dice are a picture rather than a control (the rules modal, the
+   * turn history, another player's turn), and the die stays inert.
+   */
+  onToggle?: () => void;
+  /** Why tapping is unavailable right now, for the tooltip / screen reader. */
+  toggleLabel?: string;
 }
 
 function Face({ value, className = "" }: { value: number; className?: string }) {
@@ -109,6 +117,8 @@ export function Die({
   size,
   dimensional = false,
   landing,
+  onToggle,
+  toggleLabel,
 }: DieProps) {
   const t = useT();
   const [shown, setShown] = useState<number>(value);
@@ -168,6 +178,7 @@ export function Die({
   const v = rolling && !dimensional ? shown : value;
   const classes = [
     "die",
+    onToggle ? "die--tappable" : "",
     dimensional ? "die--3d" : "",
     locked ? "die--locked" : "",
     rolling ? "die--rolling" : "",
@@ -189,11 +200,17 @@ export function Die({
       : null),
   };
 
+  const face = locked ? t("aria.dieLocked", { value }) : t("aria.die", { value });
+  // A die you can act on is a button, not a picture: it has to be reachable by
+  // keyboard and announced as something that does something.
+  const Tag = onToggle ? "button" : "div";
   return (
-    <div
+    <Tag
       className={classes}
-      role="img"
-      aria-label={locked ? t("aria.dieLocked", { value }) : t("aria.die", { value })}
+      {...(onToggle
+        ? { type: "button" as const, onClick: onToggle, title: toggleLabel, "aria-pressed": locked }
+        : { role: "img" })}
+      aria-label={toggleLabel ? face + " — " + toggleLabel : face}
       style={style}
     >
       {dimensional ? (
@@ -221,6 +238,6 @@ export function Die({
       ) : (
         <Face value={v} />
       )}
-    </div>
+    </Tag>
   );
 }

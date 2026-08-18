@@ -20,6 +20,9 @@ const EXAMPLES: Example[] = [
   { dice: [1, 1, 5, 3, 2], points: "250", whyKey: "rules.ex.onesFives" },
   { dice: [6, 6, 6, 2, 3], points: "600", whyKey: "rules.ex.triple" },
   { dice: [1, 2, 3, 4, 5], points: "500", whyKey: "rules.ex.straight" },
+  // The one hand that can be assembled over several throws, so it says so here:
+  // a player who doesn't know that will never go looking for it.
+  { dice: [4, 4, 4, 4, 4], points: "1000", whyKey: "rules.ex.fiveKind" },
 ];
 
 export function RulesModal({ onClose }: RulesModalProps) {

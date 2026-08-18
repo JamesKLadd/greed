@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  applyAction,
   dailyMoveStart,
   diceToRoll,
   getLegalActions,
@@ -56,6 +57,8 @@ export interface DailyRunController {
   error: string | null;
   roll: () => void;
   bank: () => void;
+  /** Hold a die, or put it back. */
+  toggleDie: (index: number) => void;
 }
 
 export function useDailyRun(initial: DailyRunView): DailyRunController {
@@ -135,6 +138,36 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
     [after, release],
   );
 
+  /**
+   * Hold a die, or put it back.
+   *
+   * Applied here the moment it is tapped and sent on afterwards, unlike a throw:
+   * holding deals no dice and needs no seed, so the client can work it out for
+   * itself and a tap lands without waiting for a round trip. The server still
+   * has to be told, because a run is replayed from its move list — the dice a
+   * later throw produces depend on which of them were held.
+   */
+  const holdSeq = useRef(0);
+  const toggleDie = useCallback(
+    (index: number) => {
+      if (busyRef.current || finished) return;
+      if (state.turn.outcome || state.turn.rollCount === 0) return;
+
+      setView((v) => ({ ...v, state: applyAction(v.state, { type: "TOGGLE_LOCK", index }) }));
+      const seq = ++holdSeq.current;
+      playDailyMove(("H" + index) as DailyMove)
+        .then((next) => {
+          // A reply to a tap that has already been overtaken describes a board
+          // two taps ago; the newest request is the only one worth adopting.
+          if (seq === holdSeq.current) setView(next);
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : "Couldn't play that move.");
+        });
+    },
+    [state, finished],
+  );
+
   const act = useCallback(
     (move: DailyMove) => {
       if (busyRef.current || finished) return;
@@ -208,5 +241,6 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
     error,
     roll: () => act("ROLL"),
     bank: () => act("BANK"),
+    toggleDie,
   };
 }

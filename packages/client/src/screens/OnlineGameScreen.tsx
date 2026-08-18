@@ -48,6 +48,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       canAct={canAct}
       onRoll={net.roll}
       onBank={net.bank}
+      onToggleDie={net.toggleDie}
       toast={net.toast}
       cosmetics={diceVars}
       perspectiveId={net.youId}

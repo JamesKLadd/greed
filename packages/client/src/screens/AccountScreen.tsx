@@ -138,6 +138,12 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
 
         <p className="account__note">{t("account.note", { name: user.username })}</p>
 
+        {/* Said before the button, not after it: signing out clears this
+            device's copy of the career so the next account to be created here
+            starts from nothing. The account keeps its own, and signing back in
+            brings it down again. */}
+        <p className="daily__note">{t("account.logoutNote")}</p>
+
         <div className="setup__actions">
           <Button variant="ghost" onClick={onBack}>
             {t("bar.home")}

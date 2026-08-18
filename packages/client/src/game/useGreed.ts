@@ -40,6 +40,8 @@ export interface GreedController {
   beginPlay: () => void;
   roll: () => void;
   bank: () => void;
+  /** Hold a die, or put it back — the player overruling the auto-lock. */
+  toggleDie: (index: number) => void;
   restart: (setup?: MatchSetup) => void;
 }
 
@@ -90,6 +92,15 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     if (!getLegalActions(s).canBank) return;
     applyNow({ type: "BANK" });
   }, [applyNow]);
+
+  const toggleDie = useCallback(
+    (index: number) => {
+      // Never mid-throw: the dice on screen are the previous position.
+      if (isRollingRef.current) return;
+      applyNow({ type: "TOGGLE_LOCK", index });
+    },
+    [applyNow],
+  );
 
   const restart = useCallback(
     (setup?: MatchSetup) => {
@@ -167,6 +178,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     beginPlay,
     roll,
     bank,
+    toggleDie,
     restart,
   };
 }

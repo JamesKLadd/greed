@@ -63,6 +63,9 @@ export const en = {
   "lobby.turnClockOff": "Off",
   "net.reconnecting": "Connection lost — reconnecting…",
   // Called out under the dice when a throw lands one of the two big patterns.
+  "aria.hold": "Tap to hold this die",
+  "aria.unhold": "Tap to put this die back",
+  "call.five": "5 OF A KIND",
   "call.triple": "3 OF A KIND",
   "call.straight": "STRAIGHT",
   "board.title": "LEADERBOARDS",
@@ -227,6 +230,8 @@ export const en = {
   "account.note":
     "Your stats, achievements and locker are saved to this account and sync across every device you sign in on. You play as {name} in local and online games.",
   "account.logout": "Log out",
+  "account.logoutNote":
+    "Signing out clears this device’s copy of your stats — your account keeps them, and they come back when you sign in.",
   "account.delete": "Delete account",
   "account.deleteNote":
     "Permanently deletes your account, your synced stats and achievements, your daily challenge scores and your friends list. This cannot be undone.",
@@ -586,6 +591,7 @@ export const en = {
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "three of a kind = 100 × face",
   "rules.ex.straight": "a straight uses all five dice",
+  "rules.ex.fiveKind": "five of a kind — build it over several throws",
   "rules.note":
     "Three 1s = 300 (the singles beat the triple), three 5s = 500, four 6s = 600. Everything in a throw adds together.",
   "rules.finishHead": "Turn order & the finish",
@@ -635,6 +641,9 @@ export const es: Record<MsgKey, string> = {
   "lobby.turnClockOn": "Activado",
   "lobby.turnClockOff": "Desactivado",
   "net.reconnecting": "Conexión perdida — reconectando…",
+  "aria.hold": "Toca para guardar este dado",
+  "aria.unhold": "Toca para devolver este dado",
+  "call.five": "REPÓKER",
   "call.triple": "TRÍO",
   "call.straight": "ESCALERA",
   "setup.rebalance": "Igualar los bandos",
@@ -800,6 +809,8 @@ export const es: Record<MsgKey, string> = {
   "account.note":
     "Tus estadísticas, logros y vestuario se guardan en esta cuenta y se sincronizan en todos los dispositivos donde inicies sesión. Juegas como {name} en partidas locales y en línea.",
   "account.logout": "Cerrar sesión",
+  "account.logoutNote":
+    "Al cerrar sesión se borra la copia de tus estadísticas en este dispositivo; tu cuenta las conserva y vuelven al iniciar sesión.",
   "account.delete": "Eliminar cuenta",
   "account.deleteNote":
     "Elimina permanentemente tu cuenta, tus estadísticas y logros sincronizados, tus puntuaciones del desafío diario y tu lista de amigos. Esto no se puede deshacer.",
@@ -1138,6 +1149,7 @@ export const es: Record<MsgKey, string> = {
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "trío = 100 × valor",
   "rules.ex.straight": "una escalera usa los cinco dados",
+  "rules.ex.fiveKind": "repóker — puedes formarlo en varias tiradas",
   "rules.note":
     "Tres 1 = 300 (los sueltos superan al trío), tres 5 = 500, cuatro 6 = 600. Todo lo de una tirada se suma.",
   "rules.finishHead": "Orden de turno y el final",
@@ -1185,6 +1197,9 @@ export const fr: Record<MsgKey, string> = {
   "lobby.turnClockOn": "Activé",
   "lobby.turnClockOff": "Désactivé",
   "net.reconnecting": "Connexion perdue — reconnexion…",
+  "aria.hold": "Touchez pour garder ce dé",
+  "aria.unhold": "Touchez pour remettre ce dé",
+  "call.five": "QUINTE",
   "call.triple": "BRELAN",
   "call.straight": "SUITE",
   "setup.rebalance": "Équilibrer les camps",
@@ -1348,6 +1363,8 @@ export const fr: Record<MsgKey, string> = {
   "account.note":
     "Vos statistiques, succès et vestiaire sont enregistrés sur ce compte et synchronisés sur tous vos appareils. Vous jouez sous le nom {name} en local comme en ligne.",
   "account.logout": "Se déconnecter",
+  "account.logoutNote":
+    "La déconnexion efface la copie de vos statistiques sur cet appareil — votre compte les garde et elles reviennent à la connexion.",
   "account.delete": "Supprimer le compte",
   "account.deleteNote":
     "Supprime définitivement votre compte, vos statistiques et succès synchronisés, vos scores du défi quotidien et votre liste d'amis. Cette action est irréversible.",
@@ -1685,6 +1702,7 @@ export const fr: Record<MsgKey, string> = {
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "brelan = 100 × la face",
   "rules.ex.straight": "une suite utilise les cinq dés",
+  "rules.ex.fiveKind": "quinte — vous pouvez la construire en plusieurs lancers",
   "rules.note":
     "Trois 1 = 300 (les unités battent le brelan), trois 5 = 500, quatre 6 = 600. Tout ce qu'un lancer marque s'additionne.",
   "rules.finishHead": "Ordre de jeu et fin de partie",

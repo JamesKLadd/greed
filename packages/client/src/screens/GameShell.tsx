@@ -29,6 +29,8 @@ interface GameShellProps {
   canAct: boolean;
   onRoll: () => void;
   onBank: () => void;
+  /** Hold a die or put it back. Only offered while the turn is the viewer's. */
+  onToggleDie?: (index: number) => void;
   toast: ToastMessage | null;
 
   /** Equipped cosmetics, applied as inline custom properties on the root. */
@@ -64,6 +66,7 @@ export function GameShell({
   canAct,
   onRoll,
   onBank,
+  onToggleDie,
   toast,
   cosmetics,
   perspectiveId,
@@ -125,6 +128,9 @@ export function GameShell({
             turnTimer={turnTimer}
             showTurnScore={showTurnScore}
             dice3d={dice3d}
+            // Only the player whose turn it is can hold dice, and only while the
+            // turn is still live.
+            onToggleDie={canAct && !isRolling && !state.turn.outcome ? onToggleDie : undefined}
           />
         </div>
 

@@ -948,10 +948,20 @@
   box-shadow: var(--sheen), var(--e-rest);
   animation: call-stamp 0.3s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
-/* A straight takes all five dice and pays 500 — the bigger of the two calls,
-   and it gets the brighter ink to match. */
+/* A straight takes all five dice and pays 500 — bigger than a triple, and it
+   gets the brighter ink to match. */
 .felt__call--straight {
   color: var(--score-2);
+}
+/* Five of a kind is the biggest hand in the game and the only one a player can
+   set out to build, so it is the one call that is allowed to shout. */
+.felt__call--five {
+  color: var(--score-1);
+  border-color: var(--score-3);
+  box-shadow:
+    var(--sheen),
+    0 0 0.6em rgba(243, 191, 74, 0.45),
+    var(--e-rest);
 }
 @keyframes call-stamp {
   from {
@@ -1608,4 +1618,36 @@
   .teamchip__score {
     font-size: 0.8125rem;
   }
+}
+
+/* ---------------------------------------------------------------- held by hand
+   A die you can act on. It is a <button> now (see Die.tsx), so it has to be
+   stripped back to looking like a die again — and then given the one thing a
+   button owes the person using it: some sign that pressing it will do
+   something. Deliberately restrained, because five dice all inviting a tap at
+   once would shout over the roll they just came from. */
+.die--tappable {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  /* The tap target is the die itself; nothing here may change its size, or the
+     five of them stop fitting on one row on a phone. */
+  touch-action: manipulation;
+}
+.die--tappable:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* Lifting slightly under the pointer says "this moves" without moving anything
+   that matters. Held dice already sit forward, so they lift from there. */
+@media (hover: hover) {
+  .die--tappable:hover {
+    filter: brightness(1.06);
+  }
+}
+.die--tappable:active {
+  filter: brightness(0.96);
 }
