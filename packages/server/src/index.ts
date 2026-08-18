@@ -7,6 +7,7 @@ import { GreedServer } from "./server.js";
 import { accountsEnabled, migrate } from "./db.js";
 import { handleApi } from "./http-api.js";
 import { emailStatus, verificationStatus } from "./email.js";
+import { loadSecret, secretSource } from "./auth.js";
 
 // Load local dev secrets (Vercel `env pull` writes .env.local at the repo root).
 // In production the host injects env vars, so a missing file is fine.
@@ -60,6 +61,12 @@ async function start(): Promise<void> {
   // Where verification/reset links point, and whether mail actually leaves the
   // building. Both are pure env config, so logging them makes a bad deploy
   // obvious at boot instead of at the first signup.
+  // Resolve the session secret before anything can sign a token with it. What
+  // it resolved to is logged, because a server quietly signing with a value it
+  // invented at boot looks exactly like a server that works — until it restarts
+  // and everyone has to log in again.
+  await loadSecret();
+  console.log(`Sessions signed with: ${secretSource}`);
   console.log(`App URL: ${process.env.APP_URL || "http://localhost:5173 (default)"}`);
   console.log(emailStatus());
   console.log(verificationStatus());
