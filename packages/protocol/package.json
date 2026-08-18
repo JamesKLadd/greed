@@ -9,6 +9,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@greed/core": "0.5.0"
+    "@greed/core": "*"
   }
 }
