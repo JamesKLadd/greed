@@ -95,7 +95,17 @@ interface DieProps {
    * turn history, another player's turn), and the die stays inert.
    */
   onToggle?: () => void;
-  /** Why tapping is unavailable right now, for the tooltip / screen reader. */
+  /**
+   * Tapping is unavailable at this instant — mid-throw, or on a turn that has
+   * just ended. NOT the same as having no `onToggle`: whether a die is a button
+   * at all decides what ELEMENT it is, and that must not change while the dice
+   * are on the table. Swapping the element mid-turn destroys and recreates it,
+   * and a transition cannot run on an element that has only just appeared — the
+   * cube jumped straight to its final face and only the throw's little hop was
+   * left, which is exactly what "the dice don't spin when I roll" was.
+   */
+  toggleDisabled?: boolean;
+  /** What tapping would do, for the tooltip and screen reader. */
   toggleLabel?: string;
 }
 
@@ -118,6 +128,7 @@ export function Die({
   dimensional = false,
   landing,
   onToggle,
+  toggleDisabled = false,
   toggleLabel,
 }: DieProps) {
   const t = useT();
@@ -208,9 +219,15 @@ export function Die({
     <Tag
       className={classes}
       {...(onToggle
-        ? { type: "button" as const, onClick: onToggle, title: toggleLabel, "aria-pressed": locked }
+        ? {
+            type: "button" as const,
+            onClick: onToggle,
+            disabled: toggleDisabled,
+            title: toggleDisabled ? undefined : toggleLabel,
+            "aria-pressed": locked,
+          }
         : { role: "img" })}
-      aria-label={toggleLabel ? face + " — " + toggleLabel : face}
+      aria-label={onToggle && !toggleDisabled && toggleLabel ? face + " — " + toggleLabel : face}
       style={style}
     >
       {dimensional ? (

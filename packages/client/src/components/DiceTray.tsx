@@ -51,15 +51,12 @@ export function DiceTray({
             dim={!hasRolled}
             dimensional={dice3d}
             landing={rolling ? rollingDice?.[i] : undefined}
-            // Dice in the air are nobody's to grab.
-            onToggle={onToggle && !isRolling ? () => onToggle(i) : undefined}
-            toggleLabel={
-              onToggle && !isRolling
-                ? turn.locked[i]
-                  ? t("aria.unhold")
-                  : t("aria.hold")
-                : undefined
-            }
+            // Passed whenever these dice are the viewer's to touch, and only
+            // switched OFF by `toggleDisabled` — see the note on that prop for
+            // why this must not become undefined mid-throw.
+            onToggle={onToggle ? () => onToggle(i) : undefined}
+            toggleDisabled={isRolling || turn.outcome !== null}
+            toggleLabel={turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
         );
       })}

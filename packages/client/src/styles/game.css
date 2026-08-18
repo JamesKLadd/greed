@@ -1651,3 +1651,12 @@
 .die--tappable:active {
   filter: brightness(0.96);
 }
+
+/* Mid-throw the die is still a button, just not one you may press. It must look
+   exactly as it did a moment ago: any dimming here would read as the dice
+   greying out every time they are thrown. */
+.die--tappable:disabled {
+  cursor: default;
+  opacity: 1;
+  filter: none;
+}

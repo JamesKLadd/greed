@@ -128,9 +128,11 @@ export function GameShell({
             turnTimer={turnTimer}
             showTurnScore={showTurnScore}
             dice3d={dice3d}
-            // Only the player whose turn it is can hold dice, and only while the
-            // turn is still live.
-            onToggleDie={canAct && !isRolling && !state.turn.outcome ? onToggleDie : undefined}
+            // Whose dice these are. Deliberately NOT narrowed by "and not
+            // mid-throw": the tray disables itself for that, and taking the
+            // handler away instead would swap the element the dice are drawn
+            // in, which costs them their spin.
+            onToggleDie={canAct ? onToggleDie : undefined}
           />
         </div>
 

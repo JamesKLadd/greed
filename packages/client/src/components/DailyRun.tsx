@@ -81,12 +81,10 @@ export function DailyRun({ initial, dice3d, onFinished }: DailyRunProps) {
               run.isRolling && run.rollingIndices.includes(i) ? run.rollingDice?.[i] : undefined
             }
             // Held dice are the player's to change here too: the five-of-a-kind
-            // is worth chasing in a daily run as much as anywhere else.
-            onToggle={
-              run.isRolling || run.finished || run.state.turn.outcome !== null
-                ? undefined
-                : () => run.toggleDie(i)
-            }
+            // is worth chasing in a daily run as much as anywhere else. Always
+            // passed, never withdrawn mid-throw — see toggleDisabled on Die.
+            onToggle={() => run.toggleDie(i)}
+            toggleDisabled={run.isRolling || run.finished || run.state.turn.outcome !== null}
             toggleLabel={run.state.turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
         ))}
