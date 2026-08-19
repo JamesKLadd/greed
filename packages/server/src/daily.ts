@@ -138,6 +138,28 @@ export async function startDailyRun(userId: string, day = dailyKey()): Promise<D
 }
 
 /**
+ * Raise a player's career best turn to `points`, if it beats what they have.
+ *
+ * GREATEST in the statement rather than a read-then-write, so two runs finishing
+ * at once cannot talk over each other — and so this can never LOWER a figure,
+ * which is the same rule the profile merge follows everywhere else.
+ */
+async function raiseBestTurn(userId: string, points: number): Promise<void> {
+  await query(
+    `UPDATE users
+        SET profile = jsonb_set(
+              profile,
+              '{bestTurn}',
+              to_jsonb(GREATEST(COALESCE((profile ->> 'bestTurn')::numeric, 0), $2::numeric)),
+              true
+            ),
+            updated_at = now()
+      WHERE id = $1`,
+    [userId, points],
+  );
+}
+
+/**
  * Play one move. The server owns the move list and the dice: it appends, replays
  * from the seed, stores the derived score and hands back the new position.
  *
@@ -183,6 +205,15 @@ export async function playDailyMove(
   const next = [...moves, move];
   const after = dailyPosition(seed, next);
   const r = after.result;
+
+  // A turn banked in a daily run is a turn the player played, so it counts
+  // toward their career best like any other. Written from HERE rather than
+  // reported by the client: the daily is the one mode whose score the server
+  // derives itself, and feeding the board from the number it derived keeps that
+  // property instead of handing it back to a client to pass along.
+  if (r.bestTurn > before.result.bestTurn) {
+    await raiseBestTurn(userId, r.bestTurn);
+  }
 
   await query(
     `UPDATE daily_runs

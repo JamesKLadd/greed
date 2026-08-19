@@ -8,6 +8,7 @@ import {
   awardAchievement,
   loadProfile,
   maxAchievementScore,
+  raiseBestTurn,
   recordGame,
   summarize,
   TIER_POINTS,
@@ -368,5 +369,20 @@ describe("awardAchievement", () => {
   it("keeps the daily badge out of the game-driven path", () => {
     // It has no `earned` predicate, so no combination of results can unlock it.
     expect(ACHIEVEMENTS.find((a) => a.id === "daily-elite")!.earned).toBeUndefined();
+  });
+});
+
+describe("raiseBestTurn", () => {
+  it("takes a bigger turn from outside a recorded game", () => {
+    // A daily run's best turn: no game to record, but a turn all the same.
+    expect(raiseBestTurn(1400)).toBe(true);
+    expect(loadProfile().bestTurn).toBe(1400);
+  });
+
+  it("never lowers what is already there, and says when it did nothing", () => {
+    raiseBestTurn(1400);
+    expect(raiseBestTurn(900)).toBe(false);
+    expect(raiseBestTurn(1400)).toBe(false);
+    expect(loadProfile().bestTurn).toBe(1400);
   });
 });

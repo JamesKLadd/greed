@@ -17,7 +17,7 @@ import {
   type DailyRunView,
   type DailyStatus,
 } from "../net/daily.js";
-import { awardAchievement, type Achievement } from "../game/profile.js";
+import { awardAchievement, raiseBestTurn, type Achievement } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
 
@@ -78,6 +78,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     try {
       const next = await fetchDaily();
       setStatus(next);
+      // A turn banked in the run counts toward the career best like any other.
+      // The server has already folded it into the account (see daily.ts); this
+      // is the local copy catching up so the Stats screen agrees now rather
+      // than after the next sign-in.
+      const improved = next.run ? raiseBestTurn(next.run.bestTurn) : false;
+      if (improved) void syncProfileUp();
       // The one badge no amount of playing can force: it depends on everyone
       // else who played today, so it is granted here rather than by recordGame.
       const rank = next.yourRank;

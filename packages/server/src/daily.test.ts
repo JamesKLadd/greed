@@ -23,6 +23,8 @@ interface Row {
 }
 const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
+/** Career best turn per user, as the users table would hold it. */
+const bestTurns = new Map<string, number>();
 
 /** Finished runs for a day, best first — the order the board is built in. */
 function finished(day: string): { user: string; row: Row }[] {
@@ -92,6 +94,12 @@ vi.mock("./db.js", () => ({
       }
       return { rows: [] };
     }
+    if (sql.includes("UPDATE users") && sql.includes("bestTurn")) {
+      // GREATEST(...) in the real statement; the stub keeps the higher number.
+      const [id, points] = params as [string, number];
+      bestTurns.set(id, Math.max(bestTurns.get(id) ?? 0, points));
+      return { rows: [] };
+    }
     if (sql.includes("UPDATE daily_runs")) {
       const row = rows.get(key(user, day));
       if (row && !row.complete) {
@@ -121,7 +129,10 @@ async function playOut(user = USER) {
   }
 }
 
-beforeEach(() => rows.clear());
+beforeEach(() => {
+  rows.clear();
+  bestTurns.clear();
+});
 
 describe("claiming a run", () => {
   it("creates the run on start, before a single move is played", async () => {
@@ -327,8 +338,12 @@ describe("holding dice in a daily run", () => {
     await startDailyRun(USER, DAY);
     await playDailyMove(USER, "ROLL", DAY);
     const held = await resumeDailyRun(USER, DAY);
+    // The seed is random per run, so the opening throw is whatever it is: a
+    // bust leaves no live turn to hold dice in, and every die scoring leaves
+    // none loose. Neither is what this test is about.
+    if (held!.state.turn.outcome) return;
     const before = held!.state.turn.locked.findIndex((l) => !l);
-    if (before < 0) return; // every die scored; nothing to hold by hand
+    if (before < 0) return;
     await playDailyMove(USER, ("H" + before) as "H0", DAY);
     expect(rows.get(key(USER, DAY))!.moves.split(",")).toContain("H" + before);
     const after = await resumeDailyRun(USER, DAY);
@@ -339,8 +354,9 @@ describe("holding dice in a daily run", () => {
     await startDailyRun(USER, DAY);
     await playDailyMove(USER, "ROLL", DAY);
     const run = await resumeDailyRun(USER, DAY);
+    if (run!.state.turn.outcome) return; // busted opening throw
     const paying = run!.state.turn.locked.findIndex(Boolean);
-    if (paying < 0) return; // busted opening throw
+    if (paying < 0) return;
     const before = run!.state.turn.turnScore;
     await playDailyMove(USER, ("H" + paying) as "H0", DAY);
     const after = await resumeDailyRun(USER, DAY);
@@ -353,5 +369,45 @@ describe("holding dice in a daily run", () => {
     await expect(playDailyMove(USER, "H0", DAY)).rejects.toThrow(/isn't legal/i);
     await expect(playDailyMove(USER, "H5", DAY)).rejects.toThrow(/invalid move/i);
     await expect(playDailyMove(USER, "HOLD", DAY)).rejects.toThrow(/invalid move/i);
+  });
+});
+
+describe("a daily turn counts toward the career best", () => {
+  it("raises the account's best turn when a run banks a bigger one", async () => {
+    await startDailyRun(USER, DAY);
+    await playOut();
+    const run = dailyPosition(
+      rows.get(key(USER, DAY))!.seed,
+      rows.get(key(USER, DAY))!.moves.split(",") as DailyMove[],
+    );
+    // Whatever the run's best turn was, the account has at least that.
+    expect(bestTurns.get(USER) ?? 0).toBe(run.result.bestTurn);
+    expect(run.result.bestTurn).toBeGreaterThan(0);
+  });
+
+  it("writes it as the run goes, not only at the end", async () => {
+    await startDailyRun(USER, DAY);
+    // Play until the first turn is banked; the best turn exists from then on.
+    for (let i = 0; i < 40; i++) {
+      const run = await resumeDailyRun(USER, DAY);
+      if (!run) break;
+      const banked = run.state.turn.turnScore > 0 && !run.state.turn.outcome;
+      await playDailyMove(USER, banked ? "BANK" : "ROLL", DAY);
+      if (banked) break;
+    }
+    const stored = dailyPosition(
+      rows.get(key(USER, DAY))!.seed,
+      rows.get(key(USER, DAY))!.moves.split(",") as DailyMove[],
+    );
+    if (stored.result.bestTurn > 0) {
+      expect(bestTurns.get(USER)).toBe(stored.result.bestTurn);
+    }
+  });
+
+  it("never lowers a career best that is already higher", async () => {
+    bestTurns.set(USER, 99999);
+    await startDailyRun(USER, DAY);
+    await playOut();
+    expect(bestTurns.get(USER)).toBe(99999);
   });
 });

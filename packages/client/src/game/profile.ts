@@ -345,6 +345,22 @@ export function resetProfile(): void {
   }
 }
 
+/**
+ * Raise the career best turn, if `points` beats it. Returns true if it moved.
+ *
+ * For turns that happen outside a recorded GAME — a daily run, which is scored
+ * on the server and folded into the account there. This keeps the local copy in
+ * step so the Stats screen shows it straight away rather than after the next
+ * sign-in; the two agree because both only ever take the higher number.
+ */
+export function raiseBestTurn(points: number): boolean {
+  const p = loadProfile();
+  if (!(points > p.bestTurn)) return false;
+  p.bestTurn = points;
+  saveProfile(p);
+  return true;
+}
+
 /** Overwrite the whole saved profile (used when adopting a synced account profile). */
 export function replaceProfile(p: Profile): void {
   saveProfile({ ...emptyProfile(), ...p });
