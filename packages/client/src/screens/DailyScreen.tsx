@@ -21,8 +21,6 @@ import { awardAchievement, raiseBestTurn, type Achievement } from "../game/profi
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
 
-/** Placing this high on a daily board earns the one badge you cannot grind. */
-const DAILY_PODIUM_RANK = 10;
 import { ApiError } from "../net/auth.js";
 import { Button, Icon } from "../ui/index.js";
 import { useAuth } from "../game/auth.js";
@@ -52,12 +50,34 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const [runView, setRunView] = useState<DailyRunView | null>(null);
   const [starting, setStarting] = useState(false);
 
+  /**
+   * Grant the podium badge if the server says a CLOSED day has this player in
+   * its top ten.
+   *
+   * It used to be granted from where you stood the moment you finished, which
+   * a board fills up over the course of its day — so playing in the first hour
+   * after the reset placed you against almost nobody, and the badge (and the
+   * laurel dice behind it) fell out of being early rather than being good. It
+   * settles when the day does now, which means it can arrive on a later visit
+   * than the run that earned it.
+   */
+  const claimPodium = useCallback((next: DailyStatus) => {
+    if (!next.eliteEarned) return;
+    const won = awardAchievement("daily-elite");
+    if (!won) return;
+    setPodium(won);
+    syncSteamAchievements([won.id]);
+    void syncProfileUp();
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [next, open] = await Promise.all([fetchDaily(), resumeDaily()]);
       setStatus(next);
+      // Yesterday's board may have closed since the last visit.
+      claimPodium(next);
       // A run left half-played picks up exactly where it was left.
       setRunView(open.run);
     } catch (err) {
@@ -65,7 +85,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, claimPodium]);
 
   useEffect(() => {
     if (authStatus === "authed") void load();
@@ -84,21 +104,11 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       // than after the next sign-in.
       const improved = next.run ? raiseBestTurn(next.run.bestTurn) : false;
       if (improved) void syncProfileUp();
-      // The one badge no amount of playing can force: it depends on everyone
-      // else who played today, so it is granted here rather than by recordGame.
-      const rank = next.yourRank;
-      if (rank !== null && rank <= DAILY_PODIUM_RANK) {
-        const won = awardAchievement("daily-elite");
-        if (won) {
-          setPodium(won);
-          syncSteamAchievements([won.id]);
-          void syncProfileUp();
-        }
-      }
+      claimPodium(next);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
     }
-  }, [t]);
+  }, [t, claimPodium]);
 
   /** Claim today's run. The server creates it, so this cannot be undone. */
   const begin = useCallback(async () => {
@@ -172,6 +182,22 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
 
         {loading && <p className="daily__note">{t("daily.loading")}</p>}
 
+        {/* The podium badge settles when a DAY closes, so it usually arrives on
+            a later visit than the run that earned it — which means it cannot
+            live inside today's result panel any more. */}
+        {podium && (
+          <div className="unlocks">
+            <div className="unlocks__head">{t("gameOver.unlockedOne")}</div>
+            <div className="unlocks__row">
+              <span className="unlocks__icon">{podium.icon}</span>
+              <span>
+                <strong>{t(`ach.${podium.id}.title` as MsgKey)}</strong> —{" "}
+                {t(`ach.${podium.id}.desc` as MsgKey)}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ---- the run itself ---- */}
         {!loading && runView && (
           <DailyRun initial={runView} dice3d={dice3d} onFinished={onFinished} />
@@ -186,18 +212,6 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 ? t("daily.yourRank", { rank: status.yourRank, players: status.players })
                 : t("daily.played")}
             </p>
-            {podium && (
-              <div className="unlocks">
-                <div className="unlocks__head">{t("gameOver.unlockedOne")}</div>
-                <div className="unlocks__row">
-                  <span className="unlocks__icon">{podium.icon}</span>
-                  <span>
-                    <strong>{t(`ach.${podium.id}.title` as MsgKey)}</strong> —{" "}
-                    {t(`ach.${podium.id}.desc` as MsgKey)}
-                  </span>
-                </div>
-              </div>
-            )}
             <div className="summary">
               <div className="summary__stat">
                 <span className="summary__label">{t("gameOver.bestTurn")}</span>

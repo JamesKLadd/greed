@@ -56,7 +56,20 @@ export interface DailyStatus {
   /** The player's own rank, even when outside the top slice. */
   yourRank: number | null;
   players: number;
+  /**
+   * True once the player has finished in the top ten on a day that is OVER.
+   *
+   * Deliberately not "you are top ten right now": a board fills up across its
+   * day, so a run played in the first hour is measured against whoever happened
+   * to be up early, and placing on it then meant only that few people had
+   * played. Standing on a board that has closed is the thing worth a badge, and
+   * a closed board cannot change again.
+   */
+  eliteEarned: boolean;
 }
+
+/** How high on a FINISHED daily board earns the badge. */
+const PODIUM_RANK = 10;
 
 /** The run as the client is allowed to see it: the position, nothing more. */
 export interface DailyRunView {
@@ -335,6 +348,20 @@ export async function dailyStatus(
     [day],
   );
 
+  // Has this player ever placed on a board that has since closed? Days strictly
+  // before today only — today's is still being written, and where they stand on
+  // it now says as much about the hour as about the run.
+  const podium = await query<{ ok: number }>(
+    `WITH ranked AS (
+       SELECT user_id,
+              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+         FROM daily_runs
+        WHERE complete AND score > 0 AND day < $2::date
+     )
+     SELECT 1 AS ok FROM ranked WHERE user_id = $1 AND rank <= $3 LIMIT 1`,
+    [userId, day, PODIUM_RANK],
+  );
+
   return {
     day,
     run: own
@@ -360,5 +387,6 @@ export async function dailyStatus(
     })),
     yourRank: own ? Number(own.rank) : null,
     players: Number(total.rows[0]?.n ?? 0),
+    eliteEarned: podium.rows.length > 0,
   };
 }

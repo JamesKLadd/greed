@@ -34,6 +34,11 @@ export interface DailyStatus {
   leaderboard: DailyEntry[];
   yourRank: number | null;
   players: number;
+  /**
+   * True once a top-ten finish on a CLOSED day is on the record. The server
+   * decides this: where you stand on today's board is not the same claim.
+   */
+  eliteEarned: boolean;
 }
 
 export function fetchDaily(): Promise<DailyStatus> {

@@ -39,6 +39,21 @@ vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     const [user, day] = params as [string, string];
     // ---- dailyStatus reads (their params are NOT [user, day]) ----
+    if (sql.includes("PARTITION BY day")) {
+      // "Have they ever placed on a board that has closed?": [userId, today, cap].
+      const [id, today, cap] = params as [string, string, number];
+      const placed = [...rows.entries()].some(([k, row]) => {
+        const [user, rowDay] = k.split("|");
+        if (user !== id || !row.complete || row.score <= 0) return false;
+        if (rowDay >= today) return false; // today's board is still open
+        const sameDay = [...rows.entries()].filter(
+          ([k2, r2]) => k2.endsWith("|" + rowDay) && r2.complete && r2.score > 0,
+        );
+        const better = sameDay.filter(([, r2]) => r2.score > row.score).length;
+        return better + 1 <= cap;
+      });
+      return { rows: placed ? [{ ok: 1 }] : [] };
+    }
     if (sql.includes("FROM ranked WHERE user_id")) {
       // The requesting player's own standing: params are [day, userId].
       const board = finished(params[0] as string);
@@ -409,5 +424,44 @@ describe("a daily turn counts toward the career best", () => {
     await startDailyRun(USER, DAY);
     await playOut();
     expect(bestTurns.get(USER)).toBe(99999);
+  });
+});
+
+describe("the podium badge settles when the day does", () => {
+  const YESTERDAY = "2026-08-11";
+
+  /** A finished run on a given day, at a given score. */
+  function record(user: string, day: string, score: number) {
+    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  }
+
+  it("is not earned by topping a board that is still open", async () => {
+    // The cheese: play the moment the day resets, when almost nobody has.
+    record(USER, DAY, 3000);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.yourRank).toBe(1); // top of today, for what that is worth
+    expect(status.eliteEarned).toBe(false);
+  });
+
+  it("is earned once that day has closed with you in the top ten", async () => {
+    record(USER, YESTERDAY, 3000);
+    expect((await dailyStatus(USER, DAY)).eliteEarned).toBe(true);
+  });
+
+  it("is not earned by finishing eleventh on a closed day", async () => {
+    for (let i = 0; i < 10; i++) record("rival-" + i, YESTERDAY, 5000 + i);
+    record(USER, YESTERDAY, 1000);
+    expect((await dailyStatus(USER, DAY)).eliteEarned).toBe(false);
+  });
+
+  it("counts a top-ten finish on a crowded closed day", async () => {
+    for (let i = 0; i < 30; i++) record("rival-" + i, YESTERDAY, 100 + i);
+    record(USER, YESTERDAY, 9000);
+    expect((await dailyStatus(USER, DAY)).eliteEarned).toBe(true);
+  });
+
+  it("ignores a scoreless run", async () => {
+    record(USER, YESTERDAY, 0);
+    expect((await dailyStatus(USER, DAY)).eliteEarned).toBe(false);
   });
 });

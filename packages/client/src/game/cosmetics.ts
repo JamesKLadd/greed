@@ -198,9 +198,9 @@ export const DICE_SKINS: Cosmetic[] = [
   {
     id: "laurel",
     name: "Laurel",
-    // Not a milestone: the only way in is to place on a daily board, which
-    // depends on everyone else who played that day.
-    requirement: "Finish top ten in a daily",
+    // Not a milestone: the only way in is to be on a daily board when its day
+    // closes, which depends on everyone else who played it.
+    requirement: "Top ten on a daily board at day's end",
     unlock: (p) => p.achievements.includes("daily-elite"),
     vars: {
       "--die-c1": "#f7f2df",

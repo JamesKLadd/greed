@@ -276,12 +276,13 @@ export const ACHIEVEMENTS: Achievement[] = [
 
   // The one badge that cannot be ground out. There is a single daily run per
   // day and the board is everyone who played it, so this is the only thing in
-  // the game you cannot get simply by playing enough.
+  // the game you cannot get simply by playing enough. Settled when the DAY is:
+  // where you stand an hour after the reset is a fact about the hour.
   {
     id: "daily-elite",
     icon: "🏅",
     title: "Podium Finish",
-    desc: "Finish in the top ten of a daily challenge.",
+    desc: "Be in the top ten of a daily board when the day ends.",
     tier: "gold",
     // No predicate: granted from the daily result, not from a game.
   },
