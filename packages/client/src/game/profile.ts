@@ -22,6 +22,12 @@ export interface Profile {
   totalBanks: number;
   totalBankedPoints: number;
   hotDiceTotal: number;
+  /**
+   * Daily challenges won outright — highest score on a day, once that day is
+   * over. Derived on the server (a client cannot know where everyone else
+   * finished); this is the copy that rides along with the profile.
+   */
+  dailyWins: number;
   /** Unlocked achievement ids. */
   achievements: string[];
   /** Equipped cosmetic ids. */
@@ -286,6 +292,52 @@ export const ACHIEVEMENTS: Achievement[] = [
     tier: "gold",
     // No predicate: granted from the daily result, not from a game.
   },
+
+  // Streaks. These ask for nothing but turning up — which is exactly why they
+  // take longer to get than anything else here: the one thing you cannot do in
+  // an evening is come back on twenty different days.
+  {
+    id: "daily-streak-3",
+    icon: "🌅",
+    title: "Early Riser",
+    desc: "Play the daily challenge three days in a row.",
+    tier: "bronze",
+  },
+  {
+    id: "daily-streak-5",
+    icon: "📆",
+    title: "Clockwork",
+    desc: "Play the daily challenge five days in a row.",
+    tier: "silver",
+  },
+  {
+    id: "daily-streak-10",
+    icon: "☄️",
+    title: "Comet",
+    desc: "Play the daily challenge ten days in a row.",
+    tier: "gold",
+  },
+  {
+    id: "daily-streak-20",
+    icon: "🌑",
+    title: "Eclipse",
+    desc: "Play the daily challenge twenty days in a row.",
+    tier: "gold",
+  },
+];
+
+/**
+ * Streak length → the badge it earns, shortest first.
+ *
+ * The streak itself is the server's number (consecutive days with a finished
+ * run), so these cannot be won by fiddling with a clock. Listed in one place
+ * because the daily screen awards them and the locker reads back off them.
+ */
+export const DAILY_STREAK_BADGES: { days: number; id: string }[] = [
+  { days: 3, id: "daily-streak-3" },
+  { days: 5, id: "daily-streak-5" },
+  { days: 10, id: "daily-streak-10" },
+  { days: 20, id: "daily-streak-20" },
 ];
 
 function emptyProfile(): Profile {
@@ -299,6 +351,7 @@ function emptyProfile(): Profile {
     totalBanks: 0,
     totalBankedPoints: 0,
     hotDiceTotal: 0,
+    dailyWins: 0,
     achievements: [],
     dice: "ivory",
     table: "classic",
@@ -362,6 +415,23 @@ export function raiseBestTurn(points: number): boolean {
   return true;
 }
 
+/**
+ * Raise the recorded daily-challenge wins, if `wins` beats what is stored.
+ * Returns true if it moved.
+ *
+ * The server owns this figure — only it can see where everyone else finished —
+ * and writes it onto the account as the run is read back. This keeps the local
+ * copy in step so the Stats screen shows it straight away; the two agree
+ * because, like every other career stat here, both only take the higher number.
+ */
+export function raiseDailyWins(wins: number): boolean {
+  const p = loadProfile();
+  if (!(wins > p.dailyWins)) return false;
+  p.dailyWins = wins;
+  saveProfile(p);
+  return true;
+}
+
 /** Overwrite the whole saved profile (used when adopting a synced account profile). */
 export function replaceProfile(p: Profile): void {
   saveProfile({ ...emptyProfile(), ...p });
@@ -385,6 +455,7 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     totalBanks: max(a.totalBanks, b.totalBanks),
     totalBankedPoints: max(a.totalBankedPoints, b.totalBankedPoints),
     hotDiceTotal: max(a.hotDiceTotal, b.hotDiceTotal),
+    dailyWins: max(a.dailyWins, b.dailyWins),
     achievements: [...new Set([...a.achievements, ...b.achievements])],
     dice: b.dice || a.dice,
     table: b.table || a.table,

@@ -29,6 +29,8 @@ export interface PublicProfile {
   dice: string;
   dailyBest: number | null;
   dailyRuns: number;
+  /** Daily challenges won outright, on days that have closed. */
+  dailyWins: number;
   relation: "self" | "friends" | "incoming" | "outgoing" | "none";
 }
 

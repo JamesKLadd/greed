@@ -6,14 +6,17 @@ import {
   achievementScore,
   averageBank,
   awardAchievement,
+  DAILY_STREAK_BADGES,
   loadProfile,
   maxAchievementScore,
   raiseBestTurn,
+  raiseDailyWins,
   recordGame,
   summarize,
   TIER_POINTS,
   type GameSummary,
 } from "./profile.js";
+import { DICE_SKINS, TABLE_THEMES } from "./cosmetics.js";
 
 // Minimal in-memory localStorage so the profile persists across recordGame calls.
 class MemStore {
@@ -369,6 +372,49 @@ describe("awardAchievement", () => {
   it("keeps the daily badge out of the game-driven path", () => {
     // It has no `earned` predicate, so no combination of results can unlock it.
     expect(ACHIEVEMENTS.find((a) => a.id === "daily-elite")!.earned).toBeUndefined();
+  });
+});
+
+describe("daily streak badges", () => {
+  it("names badges that actually exist, and none a game could win", () => {
+    for (const b of DAILY_STREAK_BADGES) {
+      const a = ACHIEVEMENTS.find((x) => x.id === b.id);
+      expect(a, b.id).toBeDefined();
+      // Awarded from the server's streak count, like the podium one — a
+      // predicate here would let a local game hand out a daily badge.
+      expect(a!.earned, b.id).toBeUndefined();
+    }
+  });
+
+  it("asks for more days as it goes up", () => {
+    const days = DAILY_STREAK_BADGES.map((b) => b.days);
+    expect([...days].sort((a, b) => a - b)).toEqual(days);
+    expect(new Set(days).size).toBe(days.length);
+  });
+
+  it("puts something in the locker behind every one of them", () => {
+    // A badge with no reward attached is the sort of thing that only shows up
+    // when somebody earns it, which is the worst time to find out.
+    const gated = [...DICE_SKINS, ...TABLE_THEMES].flatMap((c) =>
+      DAILY_STREAK_BADGES.filter((b) => c.unlock?.({ ...loadProfile(), achievements: [b.id] })).map(
+        (b) => b.id,
+      ),
+    );
+    for (const b of DAILY_STREAK_BADGES) expect(gated, b.id).toContain(b.id);
+  });
+});
+
+describe("raiseDailyWins", () => {
+  it("takes a higher count and reports the move", () => {
+    expect(raiseDailyWins(2)).toBe(true);
+    expect(loadProfile().dailyWins).toBe(2);
+  });
+
+  it("never lowers one, however often it is told to", () => {
+    raiseDailyWins(5);
+    expect(raiseDailyWins(3)).toBe(false);
+    expect(raiseDailyWins(5)).toBe(false);
+    expect(loadProfile().dailyWins).toBe(5);
   });
 });
 

@@ -1381,6 +1381,182 @@
   font-variant-numeric: tabular-nums;
   margin-right: 4px;
 }
+/* The run panel with the roll of past champions beside it. Wider than a plain
+   `.setup__panel` because it is two panels; below 960px there isn't room for a
+   second column, so the roll drops underneath. */
+.daily__layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  width: min(1000px, 100%);
+}
+.daily__layout > .setup__panel {
+  width: auto;
+}
+.daily__layout > .daily {
+  flex: 1 1 560px;
+  min-width: 0;
+  max-width: 680px;
+}
+@media (max-width: 960px) {
+  .daily__layout {
+    flex-direction: column;
+    align-items: center;
+    width: min(680px, 100%);
+  }
+  .daily__layout > .setup__panel {
+    width: 100%;
+  }
+}
+/* Yesterday's result, announced on the way in. */
+.daily__herald {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--gold-deep);
+  background: linear-gradient(178deg, #3b3016, #2c2411);
+}
+.daily__heraldFace {
+  position: relative;
+  font-size: 1.75rem;
+  line-height: 1;
+  flex: none;
+}
+.daily__heraldBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.daily__heraldName {
+  color: var(--gold);
+}
+.daily__heraldSub {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+/* The crown sits ON the face, half off its top-right corner, so a row still
+   reads as one avatar rather than two emoji side by side. */
+.daily__crown {
+  position: absolute;
+  top: -0.5em;
+  right: -0.45em;
+  font-size: 0.62em;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+/* A board row is a button now: tapping it opens that player's run. */
+.daily__row {
+  width: 100%;
+  border: 0;
+  margin: 0;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.daily__row:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.daily__row.standings__row--win:hover {
+  background: rgba(100, 209, 151, 0.24);
+}
+.daily__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.daily__face {
+  position: relative;
+  font-size: 1.25rem;
+  line-height: 1;
+  flex: none;
+}
+.daily__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* "Tap a name" — a footnote to the board, not an instruction that needs weight. */
+.daily__note--hint {
+  font-size: var(--fs-sm);
+  margin-bottom: 10px;
+  opacity: 0.85;
+}
+/* ---- The roll of past champions ---- */
+.daily-hall {
+  flex: 0 1 260px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.daily-hall__title {
+  font-size: 1rem;
+  margin: 0 0 10px;
+}
+/* Capped and scrolled: this list only grows, and it must never be the reason
+   the page is taller than the run beside it. */
+.daily-hall__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.daily-hall__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-variant-numeric: tabular-nums;
+}
+.daily-hall__face {
+  font-size: 1.125rem;
+  line-height: 1;
+  flex: none;
+}
+.daily-hall__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.daily-hall__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.daily-hall__when {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.daily-hall__score {
+  font-weight: 800;
+  color: var(--gold-deep);
+}
+/* ---- One player's run, read in close-up ---- */
+.daily-detail {
+  text-align: center;
+}
+.daily-detail__face {
+  position: relative;
+  display: inline-block;
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
 /* Daily entry on the home menu: a distinct warm "calendar card" stock. */
 .home-menu__daily {
   background: linear-gradient(178deg, #3a3020, #2a2318);

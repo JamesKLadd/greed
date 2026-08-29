@@ -38,6 +38,12 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   unstoppable: "ACH_UNSTOPPABLE",
   blitz: "ACH_BLITZ",
   "daily-elite": "ACH_DAILY_ELITE",
+  // Spelled out, not "..._3": the Steamworks names here are letters and
+  // underscores throughout, and the contract test holds that line.
+  "daily-streak-3": "ACH_DAILY_STREAK_THREE",
+  "daily-streak-5": "ACH_DAILY_STREAK_FIVE",
+  "daily-streak-10": "ACH_DAILY_STREAK_TEN",
+  "daily-streak-20": "ACH_DAILY_STREAK_TWENTY",
 };
 
 interface TauriInternals {

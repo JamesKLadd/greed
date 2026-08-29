@@ -12,6 +12,7 @@ import {
 import { ApiError } from "../net/auth.js";
 import { useAuth } from "../game/auth.js";
 import { useI18n, useT } from "../i18n/i18n.js";
+import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
 import { Button, Screen } from "../ui/index.js";
@@ -30,22 +31,6 @@ type Tab = LeaderboardCategory | "daily" | "history";
 
 function isCareer(tab: Tab): tab is LeaderboardCategory {
   return (LEADERBOARD_CATEGORIES as readonly string[]).includes(tab);
-}
-
-/**
- * A daily challenge's date, rendered in the reader's own timezone.
- *
- * Built from the parts rather than `new Date("2026-08-12")`, which JavaScript
- * reads as UTC midnight — and anywhere west of London that prints as the day
- * before, which would put every run on the wrong date.
- */
-function formatDay(day: string): string {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {

@@ -10,6 +10,7 @@
 import { query } from "./db.js";
 import { AccountError } from "./accounts.js";
 import { onlineAmong } from "./presence.js";
+import { closedDayPlacings } from "./daily.js";
 import type { StoredProfile } from "./accounts.js";
 
 export interface FriendSummary {
@@ -174,6 +175,8 @@ export interface PublicProfile {
   /** Best daily-challenge score, and how many dailies they've played. */
   dailyBest: number | null;
   dailyRuns: number;
+  /** Daily challenges won outright, on days that have closed. */
+  dailyWins: number;
   /** This viewer's relationship to them. */
   relation: "self" | "friends" | "incoming" | "outgoing" | "none";
 }
@@ -200,6 +203,10 @@ export async function publicProfile(viewerId: string, username: unknown): Promis
     `SELECT MAX(score) AS best, COUNT(*)::text AS runs FROM daily_runs WHERE user_id = $1`,
     [target.id],
   );
+  // Derived from the runs themselves rather than read off their profile: the
+  // profile's copy only refreshes when THEY next open the daily screen, and a
+  // card someone else is looking at should not be waiting on that.
+  const placings = await closedDayPlacings([target.id]);
 
   const p = target.profile ?? {};
   return {
@@ -215,6 +222,7 @@ export async function publicProfile(viewerId: string, username: unknown): Promis
     dice: p.dice ?? "ivory",
     dailyBest: daily.rows[0]?.best ?? null,
     dailyRuns: Number(daily.rows[0]?.runs ?? 0),
+    dailyWins: placings.get(target.id)?.wins ?? 0,
     relation,
   };
 }

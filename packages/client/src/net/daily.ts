@@ -19,12 +19,29 @@ export interface DailyRunView {
 
 export interface DailyEntry {
   username: string;
+  /** Their equipped avatar id ("" to derive one from the name). */
+  avatar: string;
   score: number;
   turns: number;
   bestTurn: number;
   busts: number;
+  hotDice: number;
+  /** Daily challenges this player has won outright. */
+  wins: number;
   rank: number;
   you?: boolean;
+  /** The reigning champion — whoever took the last day that finished. */
+  crown?: true;
+}
+
+/** Who took a day, once that day was over. */
+export interface DailyChampion {
+  /** YYYY-MM-DD. A date, not an instant: an ISO timestamp would land on the
+   *  wrong day west of UTC. */
+  day: string;
+  username: string;
+  avatar: string;
+  score: number;
 }
 
 export interface DailyStatus {
@@ -39,6 +56,12 @@ export interface DailyStatus {
    * decides this: where you stand on today's board is not the same claim.
    */
   eliteEarned: boolean;
+  /** Daily challenges the viewer has won outright. */
+  wins: number;
+  /** Whoever took the most recent day that has finished. Closed days only, so
+   *  this arrives before the viewer's own run as well as after. */
+  champion: DailyChampion | null;
+  champions: DailyChampion[];
 }
 
 export function fetchDaily(): Promise<DailyStatus> {

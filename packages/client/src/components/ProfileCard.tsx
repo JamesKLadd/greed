@@ -106,6 +106,10 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
               <span className="stat-tile__value">{profile.dailyBest ?? "—"}</span>
               <span className="stat-tile__label">{t("social.dailyBest")}</span>
             </div>
+            <div className="stat-tile">
+              <span className="stat-tile__value">{profile.dailyWins}</span>
+              <span className="stat-tile__label">{t("social.dailyWins")}</span>
+            </div>
           </div>
 
           {earned.length > 0 && (

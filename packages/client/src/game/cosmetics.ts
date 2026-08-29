@@ -195,6 +195,60 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(40,55,72,0.28)",
     },
   },
+  // Streak rewards. Earned by coming back, not by any one good game, so they
+  // run from first light through to a total eclipse.
+  {
+    id: "sunrise",
+    name: "Sunrise",
+    requirement: "Three days of dailies in a row",
+    unlock: (p) => p.achievements.includes("daily-streak-3"),
+    vars: {
+      "--die-c1": "#ffe4c4",
+      "--die-c2": "#ff9f68",
+      "--die-c3": "#d2622f",
+      "--die-pip": "#3a1405",
+      "--die-pip2": "#fff1e2",
+      "--die-lip": "rgba(100,40,10,0.3)",
+    },
+  },
+  {
+    id: "comet",
+    name: "Comet",
+    requirement: "Ten days of dailies in a row",
+    unlock: (p) => p.achievements.includes("daily-streak-10"),
+    vars: {
+      "--die-c1": "#eaf4ff",
+      "--die-c2": "#8fb4e8",
+      "--die-c3": "#4a6bb0",
+      "--die-pip": "#101a3a",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(20,30,80,0.3)",
+    },
+  },
+  {
+    id: "eclipse",
+    name: "Eclipse",
+    // The longest ask in the game: twenty separate days.
+    requirement: "Twenty days of dailies in a row",
+    unlock: (p) => p.achievements.includes("daily-streak-20"),
+    vars: {
+      "--die-c1": "#2c2a33",
+      "--die-c2": "#16151b",
+      "--die-c3": "#08080b",
+      "--die-pip": "#ffcf6b",
+      "--die-pip2": "#fff0c4",
+      "--die-lip": "rgba(0,0,0,0.6)",
+      // A dark face with a burning corona: the usual pale-gold scoring wash
+      // would erase the whole point of the skin, so a scoring die goes the
+      // other way and lights up.
+      "--score-1": "#ffdf9a",
+      "--score-2": "#f0a83c",
+      "--score-3": "#b35f10",
+      "--score-pip": "#2a1500",
+      "--score-pip2": "#fff3d4",
+      "--score-lip": "rgba(90,45,0,0.4)",
+    },
+  },
   {
     id: "laurel",
     name: "Laurel",
@@ -353,6 +407,19 @@ export const TABLE_THEMES: Cosmetic[] = [
       "--felt-edge": "#04242c",
       "--rail-1": "#8a7340",
       "--rail-2": "#463a20",
+    },
+  },
+  {
+    id: "daybreak",
+    name: "Daybreak",
+    requirement: "Five days of dailies in a row",
+    unlock: (p) => p.achievements.includes("daily-streak-5"),
+    vars: {
+      "--felt-1": "#7a4a6a",
+      "--felt-2": "#3e2a52",
+      "--felt-edge": "#1e1430",
+      "--rail-1": "#c98a5a",
+      "--rail-2": "#6a4028",
     },
   },
   {

@@ -22,6 +22,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.6.2",
+    date: "2026-08-28",
+    notes: [
+      "By default, a local game will start with 3 bots now, with each different variant",
+      "Fixed some grammatical errors in the local game menu",
+      'Daily Challenge turns can now count toward the "Best Turn" leaderboard',
+      'Fixed the "Top 10 Daily Challenge" achievement to only award if you are in the top 10 at the end of the day',
+      "You can now click/tap on players on the Daily Challenge leaderboard to see information about their run",
+      "Added some new achievements regarding Daily Challenge streaks",
+      "Added a new stat that will track how many 1st place finishes you have in the Daily Challenge",
+      "Added an announcement when entering the Daily Challenge congratulating who won the previous day",
+      "Added a crown on the daily challenge leaderboard to who won the previous day",
+    ],
+  },
+  {
     version: "0.6.1",
     date: "2026-08-18",
     notes: [

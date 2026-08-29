@@ -29,6 +29,9 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
     { label: t("stats.bestTurn"), value: profile.bestTurn },
     { label: t("stats.bestTotal"), value: profile.bestTotal },
     { label: t("stats.avgBank"), value: averageBank(profile) },
+    // Won on the server, where the whole day's board is visible; the profile
+    // carries the count back (see raiseDailyWins).
+    { label: t("stats.dailyWins"), value: profile.dailyWins },
   ];
 
   const reset = () => {

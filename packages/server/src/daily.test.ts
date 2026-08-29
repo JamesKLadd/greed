@@ -25,6 +25,8 @@ const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
 /** Career best turn per user, as the users table would hold it. */
 const bestTurns = new Map<string, number>();
+/** Daily first places written back onto the account. */
+const dailyWins = new Map<string, number>();
 
 /** Finished runs for a day, best first — the order the board is built in. */
 function finished(day: string): { user: string; row: Row }[] {
@@ -34,25 +36,72 @@ function finished(day: string): { user: string; row: Row }[] {
     .sort((a, b) => b.row.score - a.row.score);
 }
 
+/**
+ * Every day that has CLOSED, as its final board.
+ *
+ * Days strictly before `today`, scoreless runs dropped — the same filter the
+ * ranking statements apply. Sorting is stable, so equal scores keep insertion
+ * order, which stands in for the real query's created_at tiebreak.
+ */
+function closedBoards(today: string): Map<string, { user: string; row: Row }[]> {
+  const days = new Set(
+    [...rows.entries()]
+      .filter(([, row]) => row.complete && row.score > 0)
+      .map(([k]) => k.split("|")[1])
+      .filter((d) => d < today),
+  );
+  const out = new Map<string, { user: string; row: Row }[]>();
+  for (const day of days) {
+    out.set(
+      day,
+      finished(day).filter((e) => e.row.score > 0),
+    );
+  }
+  return out;
+}
+
 // A stub that understands only the handful of statements daily.ts issues.
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     const [user, day] = params as [string, string];
     // ---- dailyStatus reads (their params are NOT [user, day]) ----
-    if (sql.includes("PARTITION BY day")) {
-      // "Have they ever placed on a board that has closed?": [userId, today, cap].
-      const [id, today, cap] = params as [string, string, number];
-      const placed = [...rows.entries()].some(([k, row]) => {
-        const [user, rowDay] = k.split("|");
-        if (user !== id || !row.complete || row.score <= 0) return false;
-        if (rowDay >= today) return false; // today's board is still open
-        const sameDay = [...rows.entries()].filter(
-          ([k2, r2]) => k2.endsWith("|" + rowDay) && r2.complete && r2.score > 0,
-        );
-        const better = sameDay.filter(([, r2]) => r2.score > row.score).length;
-        return better + 1 <= cap;
-      });
-      return { rows: placed ? [{ ok: 1 }] : [] };
+    // Two statements rank across every closed day; they are told apart by what
+    // they select, NOT by the shared "PARTITION BY day" they both contain.
+    if (sql.includes("FILTER (WHERE rank = 1)")) {
+      // Wins and podiums per account: [userIds, today, podiumCap].
+      const [ids, today, cap] = params as [string[], string, number];
+      return {
+        rows: ids
+          .map((id) => {
+            let wins = 0;
+            let podiums = 0;
+            for (const [rowDay, board] of closedBoards(today)) {
+              void rowDay;
+              const at = board.findIndex((e) => e.user === id);
+              if (at < 0) continue;
+              if (at === 0) wins += 1;
+              if (at + 1 <= cap) podiums += 1;
+            }
+            return { user_id: id, wins: String(wins), podiums: String(podiums) };
+          })
+          .filter((r) => r.wins !== "0" || r.podiums !== "0"),
+      };
+    }
+    if (sql.includes("WHERE k.rank = 1")) {
+      // Every closed day's winner, newest day first: [today, limit].
+      const [today, limit] = params as [string, number];
+      return {
+        rows: [...closedBoards(today)]
+          .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+          .slice(0, limit)
+          .map(([day, board]) => ({
+            username: `player-${board[0].user}`,
+            avatar: null,
+            day,
+            score: board[0].row.score,
+            user_id: board[0].user,
+          })),
+      };
     }
     if (sql.includes("FROM ranked WHERE user_id")) {
       // The requesting player's own standing: params are [day, userId].
@@ -80,10 +129,12 @@ vi.mock("./db.js", () => ({
       return {
         rows: finished(params[0] as string).map((e, i) => ({
           username: `player-${e.user}`,
+          avatar: null,
           score: e.row.score,
           turns: e.row.turns,
           best_turn: 0,
           busts: 0,
+          hot_dice: 0,
           user_id: e.user,
           rank: String(i + 1),
         })),
@@ -107,6 +158,11 @@ vi.mock("./db.js", () => ({
       if (!rows.has(k)) {
         rows.set(k, { moves: "", seed: Number(params[2]), complete: false, score: 0, turns: 0 });
       }
+      return { rows: [] };
+    }
+    if (sql.includes("UPDATE users") && sql.includes("dailyWins")) {
+      const [id, wins] = params as [string, number];
+      dailyWins.set(id, Math.max(dailyWins.get(id) ?? 0, wins));
       return { rows: [] };
     }
     if (sql.includes("UPDATE users") && sql.includes("bestTurn")) {
@@ -147,6 +203,7 @@ async function playOut(user = USER) {
 beforeEach(() => {
   rows.clear();
   bestTurns.clear();
+  dailyWins.clear();
 });
 
 describe("claiming a run", () => {
@@ -463,5 +520,133 @@ describe("the podium badge settles when the day does", () => {
   it("ignores a scoreless run", async () => {
     record(USER, YESTERDAY, 0);
     expect((await dailyStatus(USER, DAY)).eliteEarned).toBe(false);
+  });
+});
+
+describe("winning a day", () => {
+  const YESTERDAY = "2026-08-11";
+  const BEFORE = "2026-08-10";
+
+  /** A finished run on a given day, at a given score. */
+  function record(user: string, day: string, score: number) {
+    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  }
+
+  it("counts a first place on a day that has closed", async () => {
+    record(USER, YESTERDAY, 3000);
+    record("rival", YESTERDAY, 2000);
+    expect((await dailyStatus(USER, DAY)).wins).toBe(1);
+  });
+
+  it("does not count leading a day that is still open", async () => {
+    // The same cheese the podium badge closes: top of today means little at
+    // 00:05, and today's board can still change.
+    record(USER, DAY, 9000);
+    expect((await dailyStatus(USER, DAY)).wins).toBe(0);
+  });
+
+  it("does not count second place", async () => {
+    record("rival", YESTERDAY, 5000);
+    record(USER, YESTERDAY, 4999);
+    expect((await dailyStatus(USER, DAY)).wins).toBe(0);
+  });
+
+  it("adds up across days", async () => {
+    record(USER, YESTERDAY, 3000);
+    record("rival", YESTERDAY, 100);
+    record(USER, BEFORE, 2000);
+    record("rival", BEFORE, 1900);
+    expect((await dailyStatus(USER, DAY)).wins).toBe(2);
+  });
+
+  it("writes the count onto the account, so it reaches the Stats screen", async () => {
+    record(USER, YESTERDAY, 3000);
+    await dailyStatus(USER, DAY);
+    expect(dailyWins.get(USER)).toBe(1);
+  });
+
+  it("ignores a scoreless day nobody won", async () => {
+    record(USER, YESTERDAY, 0);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.wins).toBe(0);
+    expect(status.champion).toBe(null);
+  });
+});
+
+describe("the reigning champion", () => {
+  const YESTERDAY = "2026-08-11";
+  const BEFORE = "2026-08-10";
+
+  function record(user: string, day: string, score: number) {
+    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  }
+
+  it("is whoever took the most recent day that finished", async () => {
+    record("winner", YESTERDAY, 4000);
+    record("runner-up", YESTERDAY, 3000);
+    record("old-winner", BEFORE, 9000);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.champion?.username).toBe("player-winner");
+    expect(status.champion?.score).toBe(4000);
+    expect(status.champion?.day).toBe(YESTERDAY);
+  });
+
+  it("lists every past winner, newest day first", async () => {
+    record("a", YESTERDAY, 4000);
+    record("b", BEFORE, 9000);
+    const { champions } = await dailyStatus(USER, DAY);
+    expect(champions.map((c) => c.day)).toEqual([YESTERDAY, BEFORE]);
+    expect(champions.map((c) => c.username)).toEqual(["player-a", "player-b"]);
+  });
+
+  it("names nobody before any day has closed", async () => {
+    record(USER, DAY, 5000);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.champion).toBe(null);
+    expect(status.champions).toEqual([]);
+  });
+
+  it("is announced before this player's own run is in", async () => {
+    // The roll of champions is drawn from CLOSED days only, so it gives nothing
+    // away about today — unlike the board, which stays withheld.
+    record("winner", YESTERDAY, 4000);
+    record("someone", DAY, 2500);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.run).toBe(null);
+    expect(status.leaderboard).toEqual([]);
+    expect(status.champion?.username).toBe("player-winner");
+  });
+
+  it("wears the crown on today's board", async () => {
+    record("winner", YESTERDAY, 4000);
+    record("winner", DAY, 1000);
+    record(USER, DAY, 500);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.leaderboard.find((e) => e.username === "player-winner")?.crown).toBe(true);
+    expect(status.leaderboard.find((e) => e.you)?.crown).toBeUndefined();
+  });
+});
+
+describe("reading another player's run", () => {
+  const YESTERDAY = "2026-08-11";
+
+  function record(user: string, day: string, score: number) {
+    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  }
+
+  it("carries what the close-up shows: their best turn, busts, hot dice and wins", async () => {
+    record("rival", YESTERDAY, 4000);
+    record("rival", DAY, 3000);
+    record(USER, DAY, 2000);
+    const row = (await dailyStatus(USER, DAY)).leaderboard.find(
+      (e) => e.username === "player-rival",
+    );
+    expect(row).toBeDefined();
+    expect(row).toMatchObject({ busts: 0, hotDice: 0, bestTurn: 0, wins: 1 });
+  });
+
+  it("stays withheld until this player's own run is in", async () => {
+    record("rival", DAY, 3000);
+    expect((await dailyStatus(USER, DAY)).leaderboard).toEqual([]);
   });
 });

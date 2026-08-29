@@ -31,14 +31,31 @@ const MAX_MOVES = 2000;
 
 export interface DailyEntry {
   username: string;
+  /** Their equipped avatar id, so the row shows the face they chose rather
+   *  than one derived from their name. */
+  avatar: string;
   score: number;
   turns: number;
   bestTurn: number;
   busts: number;
+  hotDice: number;
+  /** How many daily challenges this player has won outright. */
+  wins: number;
   /** Position on the board, 1-based. */
   rank: number;
   /** True for the requesting player's own row. */
   you?: boolean;
+  /** True for the reigning champion — see `champion`. */
+  crown?: true;
+}
+
+/** Who took a day, once that day was over. */
+export interface DailyChampion {
+  /** The challenge's day, as YYYY-MM-DD; formatted by the client. */
+  day: string;
+  username: string;
+  avatar: string;
+  score: number;
 }
 
 export interface DailyStatus {
@@ -66,10 +83,26 @@ export interface DailyStatus {
    * a closed board cannot change again.
    */
   eliteEarned: boolean;
+  /** How many daily challenges this player has won outright. */
+  wins: number;
+  /**
+   * Who took the most recent day that has finished, or null before anyone has.
+   *
+   * Almost always yesterday's winner; on a day nobody played it reaches further
+   * back rather than going blank, which is why it carries its own date. The
+   * crown on today's board goes to this player.
+   */
+  champion: DailyChampion | null;
+  /** Every past winner, newest first. Closed days only, so it gives nothing
+   *  away about today and is shown before the run as well as after. */
+  champions: DailyChampion[];
 }
 
 /** How high on a FINISHED daily board earns the badge. */
 const PODIUM_RANK = 10;
+
+/** How many past champions the daily screen lists. */
+const CHAMPIONS_LIMIT = 200;
 
 /** The run as the client is allowed to see it: the position, nothing more. */
 export interface DailyRunView {
@@ -170,6 +203,113 @@ async function raiseBestTurn(userId: string, points: number): Promise<void> {
       WHERE id = $1`,
     [userId, points],
   );
+}
+
+/**
+ * Record a player's daily first places on their account, if it beats what is
+ * stored. Same GREATEST-in-the-statement rule as the best turn above.
+ *
+ * The count is DERIVED — it can always be recomputed from daily_runs, and is,
+ * every time a status is read. This copy exists so the figure reaches the Stats
+ * screen and the profile sync like any other career stat, instead of only
+ * existing on the one screen that queried for it.
+ */
+async function raiseDailyWins(userId: string, wins: number): Promise<void> {
+  await query(
+    `UPDATE users
+        SET profile = jsonb_set(
+              profile,
+              '{dailyWins}',
+              to_jsonb(GREATEST(COALESCE((profile ->> 'dailyWins')::numeric, 0), $2::numeric)),
+              true
+            ),
+            updated_at = now()
+      WHERE id = $1`,
+    [userId, wins],
+  );
+}
+
+/** What a player has to show for the daily boards that have CLOSED. */
+export interface DailyPlacings {
+  /** Days taken outright. */
+  wins: number;
+  /** Days finished in the top `PODIUM_RANK`. */
+  podiums: number;
+}
+
+/**
+ * First places and top-ten finishes on closed days, for the given accounts.
+ *
+ * Days strictly before `today` only: a board fills up over the course of its
+ * day, so neither figure means anything until the day it was won on is over.
+ * Ties break on who got there first, the same order the board itself is drawn
+ * in — so every day has exactly one winner, and the crown has one owner.
+ */
+export async function closedDayPlacings(
+  userIds: string[],
+  today = dailyKey(),
+): Promise<Map<string, DailyPlacings>> {
+  const out = new Map<string, DailyPlacings>();
+  if (userIds.length === 0) return out;
+  const { rows } = await query<{ user_id: string; wins: string; podiums: string }>(
+    `WITH ranked AS (
+       SELECT user_id,
+              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+         FROM daily_runs
+        WHERE complete AND score > 0 AND day < $2::date
+     )
+     SELECT user_id,
+            count(*) FILTER (WHERE rank = 1)::text AS wins,
+            count(*) FILTER (WHERE rank <= $3)::text AS podiums
+       FROM ranked
+      WHERE user_id = ANY($1::uuid[])
+      GROUP BY user_id`,
+    [[...new Set(userIds)], today, PODIUM_RANK],
+  );
+  for (const r of rows) {
+    out.set(r.user_id, { wins: Number(r.wins), podiums: Number(r.podiums) });
+  }
+  return out;
+}
+
+/** A champion as the client sees them — the account id stays here. */
+function strip(c: DailyChampion & { userId: string }): DailyChampion {
+  return { day: c.day, username: c.username, avatar: c.avatar, score: c.score };
+}
+
+/** Every day's winner, newest first. Closed days only. */
+async function dailyChampions(
+  today: string,
+  limit = CHAMPIONS_LIMIT,
+): Promise<(DailyChampion & { userId: string })[]> {
+  const { rows } = await query<{
+    username: string;
+    avatar: string | null;
+    day: string;
+    score: number;
+    user_id: string;
+  }>(
+    `WITH ranked AS (
+       SELECT user_id, day, score,
+              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+         FROM daily_runs
+        WHERE complete AND score > 0 AND day < $1::date
+     )
+     SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            to_char(k.day, 'YYYY-MM-DD') AS day, k.score, k.user_id
+       FROM ranked k JOIN users u ON u.id = k.user_id
+      WHERE k.rank = 1
+      ORDER BY k.day DESC
+      LIMIT $2`,
+    [today, limit],
+  );
+  return rows.map((r) => ({
+    day: r.day,
+    username: r.username,
+    avatar: r.avatar ?? "",
+    score: r.score,
+    userId: r.user_id,
+  }));
 }
 
 /**
@@ -326,14 +466,17 @@ export async function dailyStatus(
   const board = own
     ? await query<{
         username: string;
+        avatar: string | null;
         score: number;
         turns: number;
         best_turn: number;
         busts: number;
+        hot_dice: number;
         rank: string;
         user_id: string;
       }>(
-        `SELECT u.username, r.score, r.turns, r.best_turn, r.busts, r.user_id,
+        `SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            r.score, r.turns, r.best_turn, r.busts, r.hot_dice, r.user_id,
             RANK() OVER (ORDER BY r.score DESC, r.created_at ASC) AS rank
        FROM daily_runs r JOIN users u ON u.id = r.user_id
       WHERE r.day = $1 AND r.complete
@@ -348,19 +491,20 @@ export async function dailyStatus(
     [day],
   );
 
-  // Has this player ever placed on a board that has since closed? Days strictly
-  // before today only — today's is still being written, and where they stand on
-  // it now says as much about the hour as about the run.
-  const podium = await query<{ ok: number }>(
-    `WITH ranked AS (
-       SELECT user_id,
-              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
-         FROM daily_runs
-        WHERE complete AND score > 0 AND day < $2::date
-     )
-     SELECT 1 AS ok FROM ranked WHERE user_id = $1 AND rank <= $3 LIMIT 1`,
-    [userId, day, PODIUM_RANK],
-  );
+  // What this player, and everyone on the board with them, has to show for the
+  // days that have already CLOSED: first places and top-ten finishes. Today's
+  // standings say as much about the hour as about the run, so neither figure
+  // counts a day that is still being written.
+  const placings = await closedDayPlacings([userId, ...board.rows.map((r) => r.user_id)], day);
+  const mineClosed = placings.get(userId) ?? { wins: 0, podiums: 0 };
+
+  // Past winners. Closed days only, so this is safe to send before the run.
+  const champions = await dailyChampions(day);
+  const reigning = champions[0] ?? null;
+
+  // Keep the account's copy in step, so the count reaches the Stats screen and
+  // the leaderboards rather than living only in this response.
+  if (mineClosed.wins > 0) await raiseDailyWins(userId, mineClosed.wins);
 
   return {
     day,
@@ -378,15 +522,22 @@ export async function dailyStatus(
     streak: await currentStreak(userId, day),
     leaderboard: board.rows.map((r) => ({
       username: r.username,
+      avatar: r.avatar ?? "",
       score: r.score,
       turns: r.turns,
       bestTurn: r.best_turn,
       busts: r.busts,
+      hotDice: r.hot_dice,
+      wins: placings.get(r.user_id)?.wins ?? 0,
       rank: Number(r.rank),
       you: r.user_id === userId ? true : undefined,
+      crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
     })),
     yourRank: own ? Number(own.rank) : null,
     players: Number(total.rows[0]?.n ?? 0),
-    eliteEarned: podium.rows.length > 0,
+    eliteEarned: mineClosed.podiums > 0,
+    wins: mineClosed.wins,
+    champion: reigning && strip(reigning),
+    champions: champions.map(strip),
   };
 }
