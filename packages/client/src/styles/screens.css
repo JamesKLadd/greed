@@ -176,6 +176,36 @@
     box-shadow: 0 0 18px 2px rgba(106, 183, 255, 0.45);
   }
 }
+/* The update log, after a release nobody on this device has read yet. Warm
+   rather than the practice button's blue, because this is news and not a
+   nudge — and it stops the two ever pulsing at each other on a first run. */
+.home-menu__updates--new {
+  border-color: var(--gold-deep);
+  color: var(--gold);
+  animation: updates-pulse 2.4s ease-in-out infinite;
+}
+@keyframes updates-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(214, 158, 46, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgba(214, 158, 46, 0.5);
+  }
+}
+/* Static, so the notice still reads with motion turned off — the blanket
+   reduced-motion rules collapse the pulse above to a single millisecond. */
+.home-menu__newDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(214, 158, 46, 0.9);
+  /* A flex item, so it shrinks with the row unless told not to — at 7px that
+     is the difference between a dot and an oval. The 8px gap on
+     `.home-menu__foot .btn` already spaces it off the label. */
+  flex: none;
+}
 .home-menu__foot {
   display: flex;
   flex-wrap: wrap;

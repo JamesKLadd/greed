@@ -3,6 +3,7 @@ import { RulesModal } from "../components/RulesModal.js";
 import { useInstallPrompt } from "../game/pwa.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
+import { hasUnreadRelease, markReleaseSeen } from "../game/changelog.js";
 import { Button, Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
@@ -49,12 +50,17 @@ export function HomeScreen({
   const { canInstall, promptInstall } = useInstallPrompt();
   // First-time visitors get the practice button gently highlighted.
   const [firstRun, setFirstRun] = useState(false);
+  // And everyone gets the update log highlighted after a release they haven't
+  // read. Read in an effect rather than in the initial state so the storage
+  // access happens off the first paint, like the onboarding flag above.
+  const [newRelease, setNewRelease] = useState(false);
   useEffect(() => {
     try {
       setFirstRun(localStorage.getItem(SEEN_KEY) !== "1");
     } catch {
       /* ignore */
     }
+    setNewRelease(hasUnreadRelease());
   }, []);
 
   const markSeen = () => {
@@ -174,10 +180,29 @@ export function HomeScreen({
             {t("home.settings")}
           </Button>
           {/* Last in the row: it is the one thing here you read once per
-              release rather than per session. */}
-          <Button variant="ghost" onClick={onUpdates}>
+              release rather than per session — which is also why it is the one
+              thing that asks to be noticed when it changes. */}
+          <Button
+            variant="ghost"
+            className={newRelease ? "home-menu__updates--new" : undefined}
+            onClick={() => {
+              // Opening it is what counts as reading it, so the highlight goes
+              // now and does not come back until the next release.
+              markReleaseSeen();
+              setNewRelease(false);
+              onUpdates();
+            }}
+          >
             <Icon name="book" />
             {t("home.updates")}
+            {newRelease && (
+              /* A dot as well as the pulse: the pulse is what catches the eye,
+                 but reduced motion collapses every animation in the sheet, and
+                 the notice has to survive that. Labelled rather than hidden, so
+                 it is announced too — the whole point is that it says
+                 something. */
+              <span className="home-menu__newDot" role="img" aria-label={t("home.updates.new")} />
+            )}
           </Button>
         </div>
 

@@ -12,6 +12,8 @@
  * translated as usual.
  */
 
+import { loadProfile } from "./profile.js";
+
 export interface Release {
   /** Matches the version in package.json, which is what the home screen shows. */
   version: string;
@@ -34,6 +36,7 @@ export const RELEASES: Release[] = [
       "Added a new stat that will track how many 1st place finishes you have in the Daily Challenge",
       "Added an announcement when entering the Daily Challenge congratulating who won the previous day",
       "Added a crown on the daily challenge leaderboard to who won the previous day",
+      "The Update Log button now lights up once when there's a new version you haven't read",
     ],
   },
   {
@@ -66,3 +69,62 @@ export const RELEASES: Release[] = [
     ],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// "There's something new here"
+// ---------------------------------------------------------------------------
+
+/** The version the log opens on — what the game is running. */
+export const LATEST_VERSION = RELEASES[0]?.version ?? "";
+
+/** The newest release this device has actually opened the log for. */
+const SEEN_KEY = "greed:seenVersion";
+
+function readSeen(): string | null {
+  try {
+    return localStorage.getItem(SEEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remember that the log has been read up to `version`.
+ *
+ * Called when the Update Log is opened, which is what makes the highlight fire
+ * once per release rather than every time the home screen is drawn.
+ */
+export function markReleaseSeen(version = LATEST_VERSION): void {
+  try {
+    localStorage.setItem(SEEN_KEY, version);
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
+/**
+ * Is there a release this device hasn't read the notes for?
+ *
+ * NOT a pure read: with no record at all it decides which kind of player this
+ * is and may write one. A brand-new install has not MISSED anything — nothing
+ * about the game is old news to someone seeing it for the first time — so its
+ * record is seeded quietly and the highlight stays off. A device that has
+ * played before genuinely hasn't seen this release, so it lights up, and
+ * nothing is written until they open the log: bouncing off the home screen
+ * must not count as having read it.
+ *
+ * The distinction matters exactly once, on the release that introduces this,
+ * where NOBODY has a record yet. Without it the choice is between every
+ * existing player missing the first notice and every new player getting a
+ * false one.
+ */
+export function hasUnreadRelease(): boolean {
+  if (!LATEST_VERSION) return false;
+  const seen = readSeen();
+  if (seen === null) {
+    if (loadProfile().gamesPlayed > 0) return true;
+    markReleaseSeen();
+    return false;
+  }
+  return seen !== LATEST_VERSION;
+}
