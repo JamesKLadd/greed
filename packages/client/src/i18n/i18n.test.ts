@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { catalogs, en, es, fr, LOCALES, type Locale } from "./catalog.js";
 import { translate } from "./translate.js";
+import { DICE_SKINS, TABLE_THEMES } from "../game/cosmetics.js";
+import { AVATARS } from "../game/avatars.js";
+import { ACHIEVEMENTS } from "../game/profile.js";
 
 /** Every `{param}` a string expects, so two locales can be compared. */
 function placeholders(value: string): string[] {
@@ -48,6 +51,43 @@ describe("catalog", () => {
       expect(identical.length, `${code} has ${identical.length} untranslated strings`).toBeLessThan(
         40,
       );
+    }
+  });
+});
+
+/**
+ * Keys built from an id at the call site, which the type system cannot see.
+ *
+ * The locker asks for `cosmetic.${c.id}.name` and the stats grid for
+ * `ach.${a.id}.title`, both through an `as MsgKey` cast — so adding an item to
+ * one of these lists and forgetting the catalog compiles, passes every other
+ * test, and ships a locker that reads "cosmetic.sunrise.name". Which is exactly
+ * what happened, twice over, the day the streak rewards went in.
+ *
+ * Only `en` is checked: the catalog test above already holds every locale to
+ * the same keys.
+ */
+describe("keys built from ids", () => {
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(en, key);
+
+  it("names every cosmetic, and says how each locked one is earned", () => {
+    for (const c of [...DICE_SKINS, ...TABLE_THEMES]) {
+      expect(has(`cosmetic.${c.id}.name`), `cosmetic.${c.id}.name`).toBe(true);
+      if (c.unlock) expect(has(`cosmetic.${c.id}.req`), `cosmetic.${c.id}.req`).toBe(true);
+    }
+  });
+
+  it("names every avatar, and says how each locked one is earned", () => {
+    for (const a of AVATARS) {
+      expect(has(`cosmetic.${a.id}.name`), `cosmetic.${a.id}.name`).toBe(true);
+      if (a.unlock) expect(has(`cosmetic.${a.id}.req`), `cosmetic.${a.id}.req`).toBe(true);
+    }
+  });
+
+  it("titles and describes every achievement", () => {
+    for (const a of ACHIEVEMENTS) {
+      expect(has(`ach.${a.id}.title`), `ach.${a.id}.title`).toBe(true);
+      expect(has(`ach.${a.id}.desc`), `ach.${a.id}.desc`).toBe(true);
     }
   });
 });
