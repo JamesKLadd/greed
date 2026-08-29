@@ -64,8 +64,34 @@ export interface DailyStatus {
   champions: DailyChampion[];
 }
 
-export function fetchDaily(): Promise<DailyStatus> {
-  return api<DailyStatus>("/api/daily", { auth: true });
+/**
+ * Fill in anything an OLDER SERVER doesn't send.
+ *
+ * The client and the server ship separately — the web build goes out the moment
+ * a change lands, the game server when it is redeployed — so for a while a new
+ * screen is talking to an old API. Without this, `status.champions.length` on a
+ * response that predates champions is a TypeError, and the daily screen is a
+ * blank page rather than a screen missing one panel. The types say these fields
+ * are always there because from here on they will be; this is what makes that
+ * true on the way in.
+ */
+function fill(raw: DailyStatus): DailyStatus {
+  return {
+    ...raw,
+    wins: raw.wins ?? 0,
+    champion: raw.champion ?? null,
+    champions: raw.champions ?? [],
+    leaderboard: (raw.leaderboard ?? []).map((e) => ({
+      ...e,
+      avatar: e.avatar ?? "",
+      hotDice: e.hotDice ?? 0,
+      wins: e.wins ?? 0,
+    })),
+  };
+}
+
+export async function fetchDaily(): Promise<DailyStatus> {
+  return fill(await api<DailyStatus>("/api/daily", { auth: true }));
 }
 
 /** Claim today's run and get the opening position. Idempotent: starting twice
