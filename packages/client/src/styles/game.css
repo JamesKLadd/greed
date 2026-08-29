@@ -625,28 +625,28 @@
 .pseat--compact .pseat__cash {
   font-size: 1.05rem;
 }
-/* The seat whose turn closes the round: pinned to the bottom-left of the pod. */
+/* The seat whose turn closes the round: pinned to the top-left of the pod. */
 .pseat__last {
   position: absolute;
   /* Clear of the edge on both axes: .pseat clips its overflow, so a badge hung
      off the corner gets its edge sliced off rather than hanging out. */
   left: 3px;
-  bottom: 2px;
+  top: 2px;
   font-size: 0.8rem;
   line-height: 1;
   /* The flag is a fine checkerboard, so it needs separating from whatever is
-     behind it — the progress bar runs along this edge — or it turns to grey
-     mush at this size. */
+     behind it — up here that is the avatar disc on a full pod — or it turns to
+     grey mush at this size. */
   filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.9));
   pointer-events: none;
   z-index: 4;
 }
-/* Both badges want the bottom-left corner. The flag was asked for there, so the
+/* Both badges want the top-left corner. The flag was asked for there, so the
    dollar sign steps aside rather than the two overlapping into a blur. Clear of
    the flag's right edge (~20px in, and it renders wider than it looks) plus a
    few px of air — the flag is the same size on compact and full pods, so one
    offset covers both. */
-.pseat--last .pseat__cash--bl {
+.pseat--last .pseat__cash--tl {
   left: 25px;
 }
 @keyframes cash-bob {

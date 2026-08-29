@@ -37,6 +37,7 @@ export const RELEASES: Release[] = [
       "Added an announcement when entering the Daily Challenge congratulating who won the previous day",
       "Added a crown on the daily challenge leaderboard to who won the previous day",
       "The Update Log button now lights up once when there's a new version you haven't read",
+      "Moved the flag indicator on a player's card from the bottom left to the top left",
     ],
   },
   {
