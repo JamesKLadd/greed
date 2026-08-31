@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalogs, en, es, fr, LOCALES, type Locale } from "./catalog.js";
+import { loadLocale } from "./i18n.js";
 import { translate } from "./translate.js";
 import { DICE_SKINS, TABLE_THEMES } from "../game/cosmetics.js";
 import { AVATARS } from "../game/avatars.js";
@@ -111,5 +112,39 @@ describe("translate", () => {
 
   it("leaves unknown placeholders intact", () => {
     expect(translate("en", "controls.waiting", {})).toBe("Waiting for {name}…");
+  });
+});
+
+describe("the saved language", () => {
+  /** A localStorage stub, since vitest runs these in node. */
+  function withStored(value: string | null, run: () => void) {
+    const store = new Map<string, string>();
+    if (value !== null) store.set("greed:locale", value);
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    try {
+      run();
+    } finally {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  }
+
+  it("restores every language the switcher offers", () => {
+    // The bug this guards: the check was `=== "es" ? "es" : "en"`, so French
+    // could be chosen in Settings and applied live, but a reload silently put
+    // the player back into English. Driven off LOCALES so a fourth language
+    // cannot reintroduce it.
+    for (const { code } of LOCALES) {
+      withStored(code, () => expect(loadLocale(), code).toBe(code));
+    }
+  });
+
+  it("falls back to English for nothing saved, or nonsense", () => {
+    withStored(null, () => expect(loadLocale()).toBe("en"));
+    withStored("kl", () => expect(loadLocale()).toBe("en"));
+    withStored("constructor", () => expect(loadLocale()).toBe("en"));
   });
 });

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Locale, MsgKey } from "./catalog.js";
+import { catalogs, type Locale, type MsgKey } from "./catalog.js";
 import { translate, type Params } from "./translate.js";
 
 export type { Locale, MsgKey } from "./catalog.js";
@@ -17,9 +17,21 @@ export { translate } from "./translate.js";
 
 const LOCALE_KEY = "greed:locale";
 
+/**
+ * The saved language, or English.
+ *
+ * Checked against the catalogs rather than against a hardcoded list: this used
+ * to read `=== "es" ? "es" : "en"`, so when French was added it could be chosen
+ * in Settings and applied live, but every reload silently put the player back
+ * into English — the one locale that was written and then unreachable. Asking
+ * the catalogs means a fourth language cannot bring that back.
+ */
 export function loadLocale(): Locale {
   try {
-    return localStorage.getItem(LOCALE_KEY) === "es" ? "es" : "en";
+    const saved = localStorage.getItem(LOCALE_KEY);
+    return saved !== null && Object.prototype.hasOwnProperty.call(catalogs, saved)
+      ? (saved as Locale)
+      : "en";
   } catch {
     return "en";
   }
