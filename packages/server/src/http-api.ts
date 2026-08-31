@@ -8,9 +8,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
 import { verifySession } from "./auth.js";
-import { dailyKey } from "@greed/core";
+import { dailyKey, weekKey } from "@greed/core";
 import { clientKey, rateLimit } from "./rate-limit.js";
 import { dailyStatus, playDailyMove, resumeDailyRun, startDailyRun } from "./daily.js";
+import { playWeeklyMove, resumeWeeklyRun, startWeeklyRun, weeklyStatus } from "./weekly.js";
 import { acceptFriend, friendsView, publicProfile, removeFriend, requestFriend } from "./social.js";
 import {
   AccountError,
@@ -26,7 +27,13 @@ import {
   deleteAccount,
 } from "./accounts.js";
 import { verificationRequired } from "./email.js";
-import { dailyBest, isLeaderboardCategory, leaderboard, matchHistory } from "./leaderboards.js";
+import {
+  dailyBest,
+  isLeaderboardCategory,
+  leaderboard,
+  matchHistory,
+  weeklyBest,
+} from "./leaderboards.js";
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
 
@@ -147,6 +154,12 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     // A run is a few dozen moves; this only stops a hammering client.
     "/api/daily/move": { limit: 400, windowMs: 60 * 60_000 },
     "/api/daily/start": { limit: 20, windowMs: 60 * 60_000 },
+    // The weekly is unlimited by design, so its caps are sized for someone
+    // genuinely grinding a score rather than for one run a day: a ten-turn
+    // attempt is a few dozen moves, and a determined player might play dozens
+    // of attempts in an evening. These only stop a client hammering the API.
+    "/api/weekly/move": { limit: 6000, windowMs: 60 * 60_000 },
+    "/api/weekly/start": { limit: 300, windowMs: 60 * 60_000 },
     // Friend requests are the one social action that reaches another person,
     // so cap them; browsing profiles and lists is unrestricted.
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
@@ -210,6 +223,23 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     } else if (method === "GET" && path === "/api/daily/resume") {
       const { id } = await requireUser(req);
       json(res, 200, { run: await resumeDailyRun(id) });
+    } else if (method === "GET" && path === "/api/weekly") {
+      const { id } = await requireUser(req);
+      json(res, 200, await weeklyStatus(id));
+    } else if (method === "POST" && path === "/api/weekly/start") {
+      const { id } = await requireUser(req);
+      json(res, 200, await startWeeklyRun(id));
+    } else if (method === "POST" && path === "/api/weekly/move") {
+      const { id } = await requireUser(req);
+      const b = (await readBody(req)) as Record<string, unknown>;
+      // Same shape as the daily: the server owns the dice, appends the move,
+      // replays from the seed and returns the position. A finished attempt
+      // carries the refreshed status so the board updates in one round trip.
+      const view = await playWeeklyMove(id, b.move);
+      json(res, 200, { ...view, status: view.complete ? await weeklyStatus(id) : undefined });
+    } else if (method === "GET" && path === "/api/weekly/resume") {
+      const { id } = await requireUser(req);
+      json(res, 200, { run: await resumeWeeklyRun(id) });
     } else if (method === "GET" && path === "/api/leaderboard") {
       // Signed-out callers can browse the boards; they just have no own-rank.
       const viewer = await optionalUser(req);
@@ -221,6 +251,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       // runs are held back from anyone who hasn't finished today's yet.
       const viewer = await optionalUser(req);
       json(res, 200, await dailyBest(viewer?.id ?? null, dailyKey()));
+    } else if (method === "GET" && path === "/api/leaderboard/weekly") {
+      // The best weekly attempts ever played. Fully public: this week's board
+      // is open from the start, so there is nothing here to hold back.
+      const viewer = await optionalUser(req);
+      json(res, 200, await weeklyBest(viewer?.id ?? null, weekKey()));
     } else if (method === "GET" && path === "/api/me/matches") {
       const { id } = await requireUser(req);
       json(res, 200, { matches: await matchHistory(id) });

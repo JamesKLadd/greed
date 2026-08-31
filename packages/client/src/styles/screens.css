@@ -1595,6 +1595,15 @@
 .home-menu__daily:hover:not(:disabled) {
   background: linear-gradient(178deg, #473b28, #342c1d);
 }
+/* Weekly entry: the same card stock in a cooler ink, so the two challenges
+   read as a pair without the eye having to tell two golds apart. */
+.home-menu__weekly {
+  background: linear-gradient(178deg, #1f2f34, #182428);
+  border-color: #35555c;
+}
+.home-menu__weekly:hover:not(:disabled) {
+  background: linear-gradient(178deg, #273b41, #1d2c31);
+}
 
 /* ---------- Friends & profiles ---------- */
 .friends__add {

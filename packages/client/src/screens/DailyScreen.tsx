@@ -9,9 +9,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
-import { DailyRun } from "../components/DailyRun.js";
+import { ChallengeRun } from "../components/ChallengeRun.js";
 import {
   fetchDaily,
+  playDailyMove,
   resumeDaily,
   startDaily,
   type DailyEntry,
@@ -256,7 +257,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
 
           {/* ---- the run itself ---- */}
           {!loading && runView && (
-            <DailyRun initial={runView} dice3d={dice3d} onFinished={onFinished} />
+            <ChallengeRun
+              initial={runView}
+              dice3d={dice3d}
+              playMove={playDailyMove}
+              onFinished={onFinished}
+            />
           )}
 
           {/* ---- today's result ---- */}

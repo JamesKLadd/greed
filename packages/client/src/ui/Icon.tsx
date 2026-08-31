@@ -33,7 +33,8 @@ export type IconName =
   | "user"
   | "check"
   | "plus"
-  | "minus";
+  | "minus"
+  | "trophy";
 
 /** Stroke paths on a 24x24 grid. */
 const PATHS: Record<IconName, string> = {
@@ -60,6 +61,10 @@ const PATHS: Record<IconName, string> = {
   check: "M4 12.5l5 5L20 6.5",
   plus: "M12 5v14M5 12h14",
   minus: "M5 12h14",
+  // A cup with handles, on a plinth: the weekly's mark, since it is the one
+  // challenge you win against everyone else rather than simply complete.
+  trophy:
+    "M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a2.5 2.5 0 0 0 2.5 2.5M17 6h2.5a2.5 2.5 0 0 1-2.5 2.5M12 14v3M9 20h6M10 17h4",
 };
 
 export interface IconProps {

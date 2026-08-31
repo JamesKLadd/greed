@@ -296,3 +296,109 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
     todayHidden: !includeToday,
   };
 }
+
+// ---------------------------------------------------------------------------
+// All-time weekly challenge
+// ---------------------------------------------------------------------------
+
+/** One attempt on the all-time weekly board: who, which week, what they scored. */
+export interface WeeklyBestEntry {
+  username: string;
+  /** The challenge week's Monday, as YYYY-MM-DD. Formatted by the client, in
+   *  its own timezone — an ISO instant would land on the wrong date west of UTC. */
+  week: string;
+  score: number;
+  rank: number;
+  you?: boolean;
+}
+
+export interface WeeklyBestView {
+  entries: WeeklyBestEntry[];
+  /** The viewer's own best week ever, even if it is nowhere near the top. */
+  yourBest: WeeklyBestEntry | null;
+  /** Total weeks the board is drawn from. */
+  runs: number;
+}
+
+/** How many rows the all-time weekly board shows. */
+const WEEKLY_BOARD_SIZE = 25;
+
+/**
+ * The best weekly scores ever posted.
+ *
+ * A row is a PLAYER'S WEEK, not an attempt: `weekly_runs` already keeps only
+ * the best attempt of each week, so a great week appears once however many
+ * tries it took. The date is half of what makes a score worth reading, and
+ * someone who has had two blinding weeks has earned both of them.
+ *
+ * Unlike the all-time daily board, this one has no current-period filter.
+ * That board hides today because the daily withholds today's scores until your
+ * run is in, and an all-time board would hand back exactly what was withheld.
+ * The weekly's board is public from the first moment of the week, so there is
+ * nothing to protect and this week ranks alongside every other.
+ */
+export async function weeklyBest(
+  userId: string | null,
+  _thisWeek: string,
+): Promise<WeeklyBestView> {
+  void _thisWeek; // kept in the signature: see the note above about filtering
+  const { rows } = await query<{
+    username: string;
+    week: string;
+    score: number;
+    rank: string;
+    user_id: string;
+  }>(
+    `SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
+            RANK() OVER (ORDER BY r.score DESC, r.week ASC) AS rank
+       FROM weekly_runs r JOIN users u ON u.id = r.user_id
+      WHERE r.score > 0
+      ORDER BY rank
+      LIMIT ${WEEKLY_BOARD_SIZE}`,
+  );
+
+  const { rows: totals } = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM weekly_runs r WHERE r.score > 0`,
+  );
+
+  let yourBest: WeeklyBestEntry | null = null;
+  if (userId) {
+    const { rows: own } = await query<{
+      username: string;
+      week: string;
+      score: number;
+      rank: string;
+    }>(
+      `WITH ranked AS (
+         SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
+                RANK() OVER (ORDER BY r.score DESC, r.week ASC) AS rank
+           FROM weekly_runs r JOIN users u ON u.id = r.user_id
+          WHERE r.score > 0
+       )
+       SELECT * FROM ranked WHERE user_id = $1 ORDER BY rank LIMIT 1`,
+      [userId],
+    );
+    const r = own[0];
+    if (r) {
+      yourBest = {
+        username: r.username,
+        week: r.week,
+        score: r.score,
+        rank: Number(r.rank),
+        you: true,
+      };
+    }
+  }
+
+  return {
+    entries: rows.map((r) => ({
+      username: r.username,
+      week: r.week,
+      score: r.score,
+      rank: Number(r.rank),
+      you: userId != null && r.user_id === userId ? true : undefined,
+    })),
+    yourBest,
+    runs: Number(totals[0]?.n ?? 0),
+  };
+}

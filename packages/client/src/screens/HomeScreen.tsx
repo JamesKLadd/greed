@@ -9,6 +9,7 @@ import { useT } from "../i18n/i18n.js";
 
 interface HomeScreenProps {
   onDaily: () => void;
+  onWeekly: () => void;
   onLocal: () => void;
   onOnline: () => void;
   onPractice: () => void;
@@ -29,6 +30,7 @@ const SEEN_KEY = "greed:onboarded";
 
 export function HomeScreen({
   onDaily,
+  onWeekly,
   onLocal,
   onOnline,
   onPractice,
@@ -122,6 +124,13 @@ export function HomeScreen({
             {t("daily.home")}
           </span>
           <span className="home-menu__sub">{t("daily.home.sub")}</span>
+        </button>
+        <button className="btn btn--big home-menu__btn home-menu__weekly" onClick={onWeekly}>
+          <span className="home-menu__label">
+            <Icon name="trophy" />
+            {t("weekly.home")}
+          </span>
+          <span className="home-menu__sub">{t("weekly.home.sub")}</span>
         </button>
         <button className="btn btn--roll btn--big home-menu__btn" onClick={onLocal}>
           <span className="home-menu__label">

@@ -3,11 +3,13 @@ import {
   fetchDailyBest,
   fetchLeaderboard,
   fetchMatches,
+  fetchWeeklyBest,
   LEADERBOARD_CATEGORIES,
   type LeaderboardCategory,
   type DailyBestView,
   type LeaderboardView,
   type MatchRecord,
+  type WeeklyBestView,
 } from "../net/leaderboards.js";
 import { ApiError } from "../net/auth.js";
 import { useAuth } from "../game/auth.js";
@@ -27,7 +29,7 @@ import { Button, Screen } from "../ui/index.js";
  * a ranked ladder.
  */
 
-type Tab = LeaderboardCategory | "daily" | "history";
+type Tab = LeaderboardCategory | "daily" | "weekly" | "history";
 
 function isCareer(tab: Tab): tab is LeaderboardCategory {
   return (LEADERBOARD_CATEGORIES as readonly string[]).includes(tab);
@@ -40,6 +42,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>("wins");
   const [board, setBoard] = useState<LeaderboardView | null>(null);
   const [daily, setDaily] = useState<DailyBestView | null>(null);
+  const [weekly, setWeekly] = useState<WeeklyBestView | null>(null);
   const [matches, setMatches] = useState<MatchRecord[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           .finally(done);
       } else if (which === "daily") {
         fetchDailyBest().then(setDaily).catch(fail).finally(done);
+      } else if (which === "weekly") {
+        // A server that predates the weekly 404s here; the shared `fail` shows
+        // that as a message rather than an empty board with no explanation.
+        fetchWeeklyBest().then(setWeekly).catch(fail).finally(done);
       } else {
         fetchLeaderboard(which).then(setBoard).catch(fail).finally(done);
       }
@@ -91,6 +98,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           onClick={() => setTab("daily")}
         >
           {t("board.cat.daily")}
+        </button>
+        <button
+          className={tab === "weekly" ? "segmented__btn segmented__btn--on" : "segmented__btn"}
+          onClick={() => setTab("weekly")}
+        >
+          {t("board.cat.weekly")}
         </button>
         {/* History needs an account — it is your own games, not a public board. */}
         {!signedOut && (
@@ -172,6 +185,44 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           {/* Said plainly, because a board that quietly omits today is worse
               than one that says it is doing so. */}
           {daily.todayHidden && <p className="daily__status">{t("board.dailyTodayHidden")}</p>}
+          {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}
+        </>
+      )}
+
+      {/* A row here is a player's WEEK, not an attempt: weekly_runs already keeps
+          only the best attempt of each week, so a great week appears once
+          however many tries it took. */}
+      {!loading && tab === "weekly" && weekly && (
+        <>
+          {weekly.entries.length === 0 ? (
+            <p className="daily__status">{t("board.empty")}</p>
+          ) : (
+            <ol className="board">
+              {weekly.entries.map((e) => (
+                <li
+                  key={`${e.rank}-${e.username}-${e.week}`}
+                  className={e.you ? "board__row board__row--you" : "board__row"}
+                >
+                  <span className="board__rank">#{e.rank}</span>
+                  <span className="board__name">
+                    {e.username}
+                    <span className="board__when">{formatDay(e.week)}</span>
+                  </span>
+                  <span className="board__value">{n(e.score)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {weekly.yourBest && (
+            <p className="daily__note">
+              {t("board.yourBestWeek", {
+                score: n(weekly.yourBest.score),
+                date: formatDay(weekly.yourBest.week),
+                rank: weekly.yourBest.rank,
+                runs: weekly.runs,
+              })}
+            </p>
+          )}
           {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}
         </>
       )}

@@ -28,6 +28,12 @@ export interface Profile {
    * finished); this is the copy that rides along with the profile.
    */
   dailyWins: number;
+  /**
+   * Weekly challenges won outright — highest score on a week, once that week
+   * is over. Derived on the server, for the same reason as `dailyWins`: a
+   * client cannot know where everyone else finished.
+   */
+  weeklyWins: number;
   /** Unlocked achievement ids. */
   achievements: string[];
   /** Equipped cosmetic ids. */
@@ -324,6 +330,45 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: "Play the daily challenge twenty days in a row.",
     tier: "gold",
   },
+  // The weekly. Won differently from the daily on purpose: a week can be
+  // attempted as often as you like, so turning up is not the ask — being the
+  // best of everyone who spent the week trying is.
+  {
+    id: "weekly-champion",
+    icon: "👑",
+    title: "Week's Best",
+    desc: "Finish first on a weekly challenge board.",
+    tier: "gold",
+    // No predicate: granted from the weekly result, not from a game.
+  },
+  {
+    id: "weekly-elite",
+    icon: "🎗️",
+    title: "Week in Hand",
+    desc: "Be in the top ten of a weekly board when the week ends.",
+    tier: "silver",
+  },
+  {
+    id: "weekly-streak-2",
+    icon: "🗓️",
+    title: "Regular",
+    desc: "Play the weekly challenge two weeks in a row.",
+    tier: "bronze",
+  },
+  {
+    id: "weekly-streak-4",
+    icon: "🧭",
+    title: "Fixture",
+    desc: "Play the weekly challenge four weeks in a row.",
+    tier: "silver",
+  },
+  {
+    id: "weekly-streak-8",
+    icon: "🏛️",
+    title: "Institution",
+    desc: "Play the weekly challenge eight weeks in a row.",
+    tier: "gold",
+  },
 ];
 
 /**
@@ -340,6 +385,18 @@ export const DAILY_STREAK_BADGES: { days: number; id: string }[] = [
   { days: 20, id: "daily-streak-20" },
 ];
 
+/**
+ * The same ladder for the weekly, in weeks.
+ *
+ * Shorter than the daily's on purpose: eight weeks in a row is two months of
+ * turning up, which asks more of a player than twenty consecutive days does.
+ */
+export const WEEKLY_STREAK_BADGES: { weeks: number; id: string }[] = [
+  { weeks: 2, id: "weekly-streak-2" },
+  { weeks: 4, id: "weekly-streak-4" },
+  { weeks: 8, id: "weekly-streak-8" },
+];
+
 function emptyProfile(): Profile {
   return {
     gamesPlayed: 0,
@@ -352,6 +409,7 @@ function emptyProfile(): Profile {
     totalBankedPoints: 0,
     hotDiceTotal: 0,
     dailyWins: 0,
+    weeklyWins: 0,
     achievements: [],
     dice: "ivory",
     table: "classic",
@@ -432,6 +490,19 @@ export function raiseDailyWins(wins: number): boolean {
   return true;
 }
 
+/**
+ * Raise the recorded weekly-challenge wins, if `wins` beats what is stored.
+ * Returns true if it moved. The server owns this figure, exactly as it owns
+ * `dailyWins`; this is the local copy catching up.
+ */
+export function raiseWeeklyWins(wins: number): boolean {
+  const p = loadProfile();
+  if (!(wins > p.weeklyWins)) return false;
+  p.weeklyWins = wins;
+  saveProfile(p);
+  return true;
+}
+
 /** Overwrite the whole saved profile (used when adopting a synced account profile). */
 export function replaceProfile(p: Profile): void {
   saveProfile({ ...emptyProfile(), ...p });
@@ -456,6 +527,7 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     totalBankedPoints: max(a.totalBankedPoints, b.totalBankedPoints),
     hotDiceTotal: max(a.hotDiceTotal, b.hotDiceTotal),
     dailyWins: max(a.dailyWins, b.dailyWins),
+    weeklyWins: max(a.weeklyWins, b.weeklyWins),
     achievements: [...new Set([...a.achievements, ...b.achievements])],
     dice: b.dice || a.dice,
     table: b.table || a.table,

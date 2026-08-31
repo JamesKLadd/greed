@@ -12,6 +12,7 @@ import { AuthScreen } from "./screens/AuthScreen.js";
 import { AccountScreen } from "./screens/AccountScreen.js";
 import { UiGallery } from "./screens/UiGallery.js";
 import { DailyScreen } from "./screens/DailyScreen.js";
+import { WeeklyScreen } from "./screens/WeeklyScreen.js";
 import { FriendsScreen } from "./screens/FriendsScreen.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
@@ -26,6 +27,7 @@ type Mode =
   | "local"
   | "online"
   | "daily"
+  | "weekly"
   | "friends"
   | "stats"
   | "boards"
@@ -154,6 +156,18 @@ export function App() {
       );
     }
 
+    if (mode === "weekly") {
+      return (
+        <WeeklyScreen
+          onBack={() => setMode("home")}
+          onSignIn={() => {
+            setAuthNext("weekly");
+            setMode("auth");
+          }}
+        />
+      );
+    }
+
     if (mode === "friends") {
       return (
         <FriendsScreen
@@ -201,6 +215,7 @@ export function App() {
         flash={flash}
         onDismissFlash={() => setFlash(null)}
         onDaily={() => setMode("daily")}
+        onWeekly={() => setMode("weekly")}
         onLocal={() => setMode("local")}
         onOnline={() => setMode("online")}
         onPractice={startPractice}

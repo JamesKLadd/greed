@@ -14,6 +14,7 @@ function profile(over: Partial<Profile> = {}): Profile {
     totalBankedPoints: 0,
     hotDiceTotal: 0,
     dailyWins: 0,
+    weeklyWins: 0,
     achievements: [],
     dice: "ivory",
     table: "classic",

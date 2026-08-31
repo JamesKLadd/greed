@@ -1,33 +1,35 @@
 import { useEffect } from "react";
-import { DAILY_TURNS } from "@greed/core";
-import { useDailyRun } from "../game/useDailyRun.js";
+import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
-import type { DailyRunView } from "../net/daily.js";
 import { Die } from "./Die.js";
 import { Button } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
 /**
- * The board for a daily run in progress.
+ * The board for a scored solo run in progress — a daily run or a weekly
+ * attempt. The two are the same ten turns played the same way; all that differs
+ * is where the moves are sent, which arrives as `playMove`.
  *
- * Split out of DailyScreen because the run is driven by the server: the hook
+ * Split out of the screens because the run is driven by the server: the hook
  * needs a dealt position to start from, and a hook cannot be called
  * conditionally. Mounting this only once the server has handed over a run keeps
  * that straightforward — and unmounting it when the run ends disposes of the
  * position rather than leaving a stale board behind.
  */
 
-interface DailyRunProps {
+interface ChallengeRunProps {
   /** The position the server dealt — a fresh run, or one being resumed. */
-  initial: DailyRunView;
+  initial: RunView;
   dice3d: boolean;
-  /** Called when the tenth turn resolves, with the finished run. */
+  /** Sends a move to whichever challenge this run belongs to. */
+  playMove: PlayMove;
+  /** Called when the last turn resolves. */
   onFinished: () => void;
 }
 
-export function DailyRun({ initial, dice3d, onFinished }: DailyRunProps) {
+export function ChallengeRun({ initial, dice3d, playMove, onFinished }: ChallengeRunProps) {
   const t = useT();
-  const run = useDailyRun(initial);
+  const run = useChallengeRun(initial, playMove);
   useGameSounds(run.state);
   useRollSound(run.isRolling);
 
@@ -43,13 +45,13 @@ export function DailyRun({ initial, dice3d, onFinished }: DailyRunProps) {
 
       <div className="daily__meters">
         <div className="meter">
-          <span className="meter__label">{t("daily.turn")}</span>
+          <span className="meter__label">{t("run.turn")}</span>
           <span className="meter__value">
-            {Math.min(run.turn + 1, DAILY_TURNS)}/{run.totalTurns}
+            {Math.min(run.turn + 1, run.totalTurns)}/{run.totalTurns}
           </span>
         </div>
         <div className="meter">
-          <span className="meter__label">{t("daily.banked")}</span>
+          <span className="meter__label">{t("run.banked")}</span>
           <span className="meter__value">{run.state.players[0].total}</span>
         </div>
         <div className="meter">
@@ -92,7 +94,7 @@ export function DailyRun({ initial, dice3d, onFinished }: DailyRunProps) {
 
       <p className="daily__status">
         {run.state.turn.outcome === "busted"
-          ? t("daily.busted")
+          ? t("run.busted")
           : run.state.turn.hotDice
             ? t("controls.hotDice")
             : run.state.turn.lastRoll === null

@@ -265,6 +265,38 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(70,60,20,0.3)",
     },
   },
+  // The weekly rewards. A week is won against everyone who spent it trying,
+  // so its prize is the loudest thing in the locker.
+  {
+    id: "regalia",
+    name: "Regalia",
+    requirement: "Finish first on a weekly board",
+    unlock: (p) => p.achievements.includes("weekly-champion"),
+    vars: {
+      "--die-c1": "#fff6da",
+      "--die-c2": "#f0c65a",
+      "--die-c3": "#a8791a",
+      "--die-pip": "#3d2a02",
+      "--die-pip2": "#fffaeb",
+      "--die-lip": "rgba(90,64,4,0.34)",
+    },
+  },
+  {
+    id: "keystone",
+    name: "Keystone",
+    // Eight weeks running: the longest ask in the game, and the only one that
+    // cannot be hurried by playing more in a day.
+    requirement: "Eight weeks of weeklies in a row",
+    unlock: (p) => p.achievements.includes("weekly-streak-8"),
+    vars: {
+      "--die-c1": "#eceff3",
+      "--die-c2": "#9fa8b4",
+      "--die-c3": "#5b6472",
+      "--die-pip": "#161a20",
+      "--die-pip2": "#f7f9fb",
+      "--die-lip": "rgba(25,30,38,0.34)",
+    },
+  },
 ];
 
 export const TABLE_THEMES: Cosmetic[] = [
@@ -433,6 +465,21 @@ export const TABLE_THEMES: Cosmetic[] = [
       "--felt-edge": "#6b8ba0",
       "--rail-1": "#7c8894",
       "--rail-2": "#3c454e",
+    },
+  },
+  {
+    id: "longhall",
+    name: "Long Hall",
+    // The weekly's own mat: earned by standing on a board that has closed,
+    // which depends on everyone who spent that week trying to beat you.
+    requirement: "Top ten on a weekly board at week's end",
+    unlock: (p) => p.achievements.includes("weekly-elite"),
+    vars: {
+      "--felt-1": "#2f5c52",
+      "--felt-2": "#173630",
+      "--felt-edge": "#0c1f1b",
+      "--rail-1": "#9c7b46",
+      "--rail-2": "#4e3c20",
     },
   },
 ];

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyAction,
-  dailyMoveStart,
   diceToRoll,
   getLegalActions,
-  type DailyMove,
+  runMoveStart,
   type DieValue,
   type GameState,
+  type RunMove,
 } from "@greed/core";
-import { playDailyMove, type DailyRunView } from "../net/daily.js";
 
 /**
- * Drives a daily run against the server.
+ * Drives a scored solo run against the server — the daily challenge or the
+ * weekly one, which differ only in which endpoint their moves are sent to.
  *
  * The server deals: it owns the move list and the seed, applies each move to its
  * own copy and hands back the resulting position. This hook renders that
@@ -23,7 +23,9 @@ import { playDailyMove, type DailyRunView } from "../net/daily.js";
  * SAME dice again — so a player could bail out of a bad turn, replay it knowing
  * what was coming, and keep going until the run looked good. A run is now
  * claimed on the server the moment it starts, and the only way to reach the
- * next throw is to ask for it.
+ * next throw is to ask for it. The weekly grants the retry the daily withholds,
+ * but on the server's terms: a fresh secret seed, and only after the run in
+ * hand has been played out.
  *
  * The ONE thing this hook applies locally is clearing a finished turn: the
  * server leaves the turn that just ended on screen and advances past it when the
@@ -31,6 +33,17 @@ import { playDailyMove, type DailyRunView } from "../net/daily.js";
  * still showing the last turn while the next one is being played. Advancing
  * deals nothing and needs no seed, so it can be done here safely.
  */
+
+/** A run position as any of the challenge endpoints hands it over. */
+export interface RunView {
+  state: GameState;
+  turns: number;
+  totalTurns: number;
+  complete: boolean;
+}
+
+/** Sends one move and returns the position it reached. */
+export type PlayMove = (move: RunMove) => Promise<RunView>;
 
 /** How long a busted turn stays on screen before the board clears for the next. */
 const RESOLVE_MS = 1900;
@@ -41,7 +54,7 @@ const RESOLVE_MS = 1900;
  */
 const ROLL_ANIM_MS = 650;
 
-export interface DailyRunController {
+export interface ChallengeRunController {
   state: GameState;
   /** Completed turns, 0..totalTurns. */
   turn: number;
@@ -61,8 +74,8 @@ export interface DailyRunController {
   toggleDie: (index: number) => void;
 }
 
-export function useDailyRun(initial: DailyRunView): DailyRunController {
-  const [view, setView] = useState<DailyRunView>(initial);
+export function useChallengeRun(initial: RunView, playMove: PlayMove): ChallengeRunController {
+  const [view, setView] = useState<RunView>(initial);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
@@ -115,7 +128,7 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
    * what the next move would have started from anyway.
    */
   const land = useCallback(
-    (next: DailyRunView) => {
+    (next: RunView) => {
       const outcome = next.state.turn.outcome;
       if (!outcome || next.complete) {
         setView(next);
@@ -123,7 +136,7 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
         return;
       }
       if (outcome === "banked") {
-        setView({ ...next, state: dailyMoveStart(next.state) });
+        setView({ ...next, state: runMoveStart(next.state) });
         release();
         return;
       }
@@ -131,7 +144,7 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
       // The server has already recorded the turn, so nothing is riding on this
       // timer beyond how long the bust stays readable.
       after(RESOLVE_MS, () => {
-        setView((v) => (v.state === next.state ? { ...v, state: dailyMoveStart(v.state) } : v));
+        setView((v) => (v.state === next.state ? { ...v, state: runMoveStart(v.state) } : v));
         release();
       });
     },
@@ -155,7 +168,7 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
 
       setView((v) => ({ ...v, state: applyAction(v.state, { type: "TOGGLE_LOCK", index }) }));
       const seq = ++holdSeq.current;
-      playDailyMove(("H" + index) as DailyMove)
+      playMove(("H" + index) as RunMove)
         .then((next) => {
           // A reply to a tap that has already been overtaken describes a board
           // two taps ago; the newest request is the only one worth adopting.
@@ -165,11 +178,11 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
           setError(err instanceof Error ? err.message : "Couldn't play that move.");
         });
     },
-    [state, finished],
+    [state, finished, playMove],
   );
 
   const act = useCallback(
-    (move: DailyMove) => {
+    (move: RunMove) => {
       if (busyRef.current || finished) return;
       busyRef.current = true;
       setBusy(true);
@@ -180,10 +193,10 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
       // rolling from the old one threw the new turn against the last turn's
       // board: dice that locked when it ended sat there lit and motionless while
       // only the ones that happened to be free tumbled.
-      const from = dailyMoveStart(state);
+      const from = runMoveStart(state);
       if (from !== state) setView((v) => ({ ...v, state: from }));
 
-      playDailyMove(move)
+      playMove(move)
         .then((next) => {
           if (move !== "ROLL") {
             land(next);
@@ -215,7 +228,7 @@ export function useDailyRun(initial: DailyRunView): DailyRunController {
           setError(err instanceof Error ? err.message : "Couldn't play that move.");
         });
     },
-    [state, finished, after, land, release],
+    [state, finished, after, land, release, playMove],
   );
 
   // Mirrors the server's own legality probe: a finished turn may still be

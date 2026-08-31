@@ -44,6 +44,11 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   "daily-streak-5": "ACH_DAILY_STREAK_FIVE",
   "daily-streak-10": "ACH_DAILY_STREAK_TEN",
   "daily-streak-20": "ACH_DAILY_STREAK_TWENTY",
+  "weekly-champion": "ACH_WEEKLY_CHAMPION",
+  "weekly-elite": "ACH_WEEKLY_ELITE",
+  "weekly-streak-2": "ACH_WEEKLY_STREAK_TWO",
+  "weekly-streak-4": "ACH_WEEKLY_STREAK_FOUR",
+  "weekly-streak-8": "ACH_WEEKLY_STREAK_EIGHT",
 };
 
 interface TauriInternals {

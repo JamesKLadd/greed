@@ -97,6 +97,18 @@ export const AVATARS: Avatar[] = [
     requirement: "Win ten games in a row",
     unlock: (p) => p.achievements.includes("unstoppable"),
   },
+  {
+    id: "falcon",
+    emoji: "🦅",
+    requirement: "Two weeks of weeklies in a row",
+    unlock: (p) => p.achievements.includes("weekly-streak-2"),
+  },
+  {
+    id: "stag",
+    emoji: "🦌",
+    requirement: "Four weeks of weeklies in a row",
+    unlock: (p) => p.achievements.includes("weekly-streak-4"),
+  },
 ];
 
 /** The faces anyone can have — the pool auto-assignment draws from. */

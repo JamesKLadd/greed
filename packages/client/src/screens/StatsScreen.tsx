@@ -32,6 +32,7 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
     // Won on the server, where the whole day's board is visible; the profile
     // carries the count back (see raiseDailyWins).
     { label: t("stats.dailyWins"), value: profile.dailyWins },
+    { label: t("stats.weeklyWins"), value: profile.weeklyWins },
   ];
 
   const reset = () => {

@@ -30,6 +30,9 @@ export interface StoredProfile {
   /** Daily challenges won outright. Derived server-side (see daily.ts) and
    *  kept here so it travels with the profile like any other career stat. */
   dailyWins: number;
+  /** Weekly challenges won outright — the same, from weekly.ts. Optional so a
+   *  profile stored before the weekly existed still normalizes. */
+  weeklyWins?: number;
   achievements: string[];
   dice: string;
   table: string;
@@ -90,6 +93,7 @@ export function emptyProfile(): StoredProfile {
     totalBankedPoints: 0,
     hotDiceTotal: 0,
     dailyWins: 0,
+    weeklyWins: 0,
     achievements: [],
     dice: "ivory",
     table: "classic",
@@ -136,6 +140,7 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
     totalBankedPoints: max(existing.totalBankedPoints, incoming.totalBankedPoints),
     hotDiceTotal: max(existing.hotDiceTotal, incoming.hotDiceTotal),
     dailyWins: max(existing.dailyWins, incoming.dailyWins),
+    weeklyWins: max(existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
     achievements: [...new Set([...existing.achievements, ...incoming.achievements])],
     dice: incoming.dice || existing.dice,
     table: incoming.table || existing.table,

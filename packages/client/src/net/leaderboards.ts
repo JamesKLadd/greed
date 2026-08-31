@@ -62,3 +62,37 @@ export interface DailyBestView {
 export function fetchDailyBest(): Promise<DailyBestView> {
   return api<DailyBestView>("/api/leaderboard/daily", { auth: true });
 }
+
+/** One player's week on the all-time weekly board. */
+export interface WeeklyBestEntry {
+  username: string;
+  /** The week's Monday, as YYYY-MM-DD — see formatDay in the screen. */
+  week: string;
+  score: number;
+  rank: number;
+  you?: boolean;
+}
+
+export interface WeeklyBestView {
+  entries: WeeklyBestEntry[];
+  yourBest: WeeklyBestEntry | null;
+  runs: number;
+}
+
+/**
+ * The best weekly scores ever posted.
+ *
+ * No "this week is hidden" flag, unlike the daily board: a week's scores are
+ * public while it is being played, so there is nothing here to hold back.
+ * `fill` guards the arrays because a server that predates the weekly answers
+ * this route with a 404 and the screen must survive it.
+ */
+export async function fetchWeeklyBest(): Promise<WeeklyBestView> {
+  const raw = await api<WeeklyBestView>("/api/leaderboard/weekly", { auth: true });
+  return {
+    ...raw,
+    entries: raw.entries ?? [],
+    yourBest: raw.yourBest ?? null,
+    runs: raw.runs ?? 0,
+  };
+}

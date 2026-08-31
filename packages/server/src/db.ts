@@ -101,6 +101,54 @@ export async function migrate(): Promise<void> {
   await query(
     `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,
   );
+  // ---- The weekly challenge -------------------------------------------------
+  // One row per player per week, holding their BEST attempt: its seed and moves
+  // (so it can always be re-verified, like a daily run), the stats of that run,
+  // and how many attempts they have finished this week. A row exists only once
+  // a player has COMPLETED an attempt, which is what makes "complete" a column
+  // the daily needs and this one doesn't.
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_runs (
+      user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      /** The Monday the challenge week starts on. */
+      week       date NOT NULL,
+      score      integer NOT NULL,
+      turns      integer NOT NULL,
+      banks      integer NOT NULL,
+      busts      integer NOT NULL,
+      hot_dice   integer NOT NULL,
+      best_turn  integer NOT NULL,
+      seed       bigint  NOT NULL,
+      moves      text    NOT NULL,
+      /** Attempts finished this week, best and beaten alike. */
+      attempts   integer NOT NULL DEFAULT 0,
+      /**
+       * When the standing best score was FIRST reached. The board's tiebreak,
+       * so matching a score never displaces the player who got there first —
+       * and beating your own best does not cost you the ground it won.
+       */
+      best_at    timestamptz NOT NULL DEFAULT now(),
+      created_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (user_id, week)
+    );
+  `);
+  await query(
+    `CREATE INDEX IF NOT EXISTS weekly_runs_week_score_idx ON weekly_runs (week, score DESC);`,
+  );
+  // The one attempt a player has open, if any. Its own table rather than a flag
+  // on the row above, because an attempt in progress has no score yet and must
+  // never be visible to the board — and because the PRIMARY KEY on user_id is
+  // what enforces the rule that you finish a run before you start another.
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_open (
+      user_id    uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      week       date NOT NULL,
+      seed       bigint NOT NULL,
+      moves      text NOT NULL,
+      started_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+
   // One row per friendship, owned by whoever asked. A friendship is mutual only
   // once accepted, so nobody can add themselves to someone else's list.
   await query(`
