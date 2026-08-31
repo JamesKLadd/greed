@@ -24,6 +24,15 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.6.3",
+    date: "2026-08-31",
+    notes: [
+      "Added a new gamemode called Weekly Challenge which works similarly to the Daily Challenge however you can attempt the challenge as many times as you'd like throughout the week",
+      "Added new Achievements, Stats, and Locker items associated with the Weekly Challenge",
+      "Fixed the game forgetting your language setting if you had it set to French",
+    ],
+  },
+  {
     version: "0.6.2",
     date: "2026-08-28",
     notes: [
