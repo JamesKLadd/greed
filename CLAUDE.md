@@ -1,0 +1,136 @@
+# Greed — working notes
+
+A push-your-luck 5-dice game. TypeScript monorepo: a pure rules engine that the
+local UI, the bots, the authoritative online server, and both timed challenges
+all share. Read this before exploring — most of what a session re-derives by
+reading files is written down here.
+
+## Commands
+
+```bash
+npm run dev          # client at localhost:5173
+npm run server       # ws + http server on :8787
+npm test             # vitest, whole repo
+npm run typecheck    # tsc --noEmit per package
+npm run lint         # eslint
+npm run format:check # prettier (CI runs this — run `npm run format` first)
+npm run build        # production client
+```
+
+CI (`.github/workflows/ci.yml`) runs typecheck → lint → format check → test →
+build on every push. Node 20.
+
+## Layout
+
+- `packages/core` — the engine. Pure, no rendering, no network, seeded RNG
+  threaded through state. `run.ts` + `zone.ts` are the pieces the daily and
+  weekly challenges share; `daily.ts` and `weekly.ts` are just calendars on top.
+- `packages/bots` — exhaustive roll model computed from the real `scoreRoll`,
+  plus a DP for the optimal turn.
+- `packages/protocol` — client↔server message contracts.
+- `packages/server` — authoritative WebSocket server + the REST API for
+  accounts, friends, leaderboards and both challenges.
+- `packages/client` — React + Vite. Plain CSS in `src/styles/*.css`.
+
+## Settled rules (easy to get wrong — do not re-litigate)
+
+- Scoring: 1 = 100, 5 = 50, three of a kind = 100 × face, straight = 500.
+  Five of a kind = 1000 and **replaces** what those dice were paying rather than
+  adding to it; it is the one hand that can be built across several throws.
+- Per face the engine takes max(triple, all-individual) — three 1s = 300,
+  four 5s = 550, five 1s = 500.
+- **Default goal is 3000** (`GOAL_DEFAULT`). It was 2000 once; that was wrong.
+- Turn order comes from an opening roll-off: lowest pip total goes FIRST,
+  highest goes LAST. **The last seat is the anchor** — it takes the final turn.
+  If the last seat is first to the goal it wins outright; otherwise the round
+  plays out through the last seat and the highest total wins. Ties → sudden death.
+- Scoring dice auto-lock, and the player may overrule that by tapping a die.
+  **Once anything has been thrown, at least one die must stay held** — releasing
+  the last one is refused, or a throw would be free. The single rule is
+  `canToggleLock` in `core/src/turn.ts`; four callers ask it rather than
+  restating it.
+- Bots have ONE skill level. What differs is temperament
+  (cautious/balanced/reckless). There is no difficulty setting.
+- Daily challenge: one run per day, 10 turns. The server generates a secret seed,
+  owns the move list, and replays it to derive the score. The client never sees a
+  seed and never reports a score.
+- Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
+  unlimited attempts, best one stands. Every attempt gets a fresh secret seed,
+  and only one attempt may be open at a time. Unlike the daily, this week's board
+  is public from the start.
+
+## Deploying — two tracks, one automatic
+
+- **Client → Vercel.** Auto-deploys on every push to `main`. Public URL
+  `playgreed.vercel.app`.
+- **Server → Render, free plan, MANUAL.** `greed-server.onrender.com`. A push
+  does _not_ deploy it; someone redeploys from the dashboard. Free tier sleeps
+  after ~15 min idle (~30-50 s cold start).
+- **Database → Neon Postgres.** Credentials only in the gitignored `.env.local`
+  and in Render's env. `migrate()` runs on boot and is idempotent.
+
+**The consequence that keeps biting:** new client code sits in front of the OLD
+server for as long as the redeploy is outstanding — a real interval, not a
+theoretical one. So:
+
+> Any screen reading a field the deployed server has never sent must survive
+> getting `undefined`. Normalise once at the network boundary rather than
+> guarding at each use — `fill()` in `net/daily.ts` and `net/weekly.ts` are the
+> worked examples. A whole feature the old server has never heard of should say
+> so plainly (`WeeklyUnavailable`), not throw.
+
+Before saying a feature "works", ask which half is actually live.
+
+## Releases
+
+The user drives them. They name the version and the date and supply the
+update-log bullets **already written**. Paste those verbatim into
+`RELEASES[0].notes` in `client/src/game/changelog.ts` — do not rewrite them, and
+do not invent a version or date.
+
+Bump the version in the root `package.json` and all five `packages/*/package.json`,
+then regenerate the lockfile with `npm install --package-lock-only` (it records
+workspace versions; a stale one once caused a Render `E404`).
+
+If a change lands in an already-named version that their bullets don't cover,
+add a line for it **and say so**. It is their list.
+
+## Verification depth
+
+Match the effort to the change. The repo's history rewards thorough checking,
+but it is easy to spend far more than a change is worth.
+
+- **Small / local** (a predicate, a string, a style): the affected test files,
+  plus typecheck. Full suite once before committing.
+- **A feature**: full suite, and drive the real app — `npm run dev` plus a
+  browser. Vitest runs in node with no DOM, so nothing renders in tests; the
+  dev-only UI gallery at `?ui` and a real browser are the only things that can
+  check layout.
+- **Anything touching the database**: a real Postgres is worth standing up.
+  `DATABASE_URL` unset degrades to guest play, which is also a useful test.
+- Don't re-run the whole suite after every edit — it takes ~30 s, most of it the
+  bots' win-rate tests.
+
+## Contract tests that catch omissions
+
+These exist because each of them shipped broken once. If one fails, it is
+telling you about a missed step, not asking to be edited:
+
+- `i18n.test.ts` — every English key exists in `es` and `fr` with the same
+  `{placeholders}`, and every id-built key (`ach.*`, `cosmetic.*`) exists.
+  Adding an achievement, cosmetic or avatar means adding catalog entries in all
+  three languages.
+- `steam.test.ts` — every achievement maps to a distinct `ACH_*` Steam name.
+- `changelog.test.ts` — `RELEASES[0].version` must equal the client's
+  `package.json` version.
+- `styles.contract.test.ts` — cosmetic CSS variables, no malformed hex.
+- `tableGeometry.test.ts` — the seat pods don't collide or leave the screen, at
+  2-8 players across several screen sizes. Keep it in step with `game.css`.
+
+## Conventions
+
+- Comments explain _why_, especially where a simpler-looking approach was tried
+  and failed. Commit messages do the same at length.
+- Player names are data and are never translated. Release notes are deliberately
+  untranslated too — they are a record of what was done on a date.
+- `.claude/` and `.env*` are gitignored. Never commit credentials.
