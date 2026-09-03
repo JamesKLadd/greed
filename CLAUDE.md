@@ -59,27 +59,34 @@ build on every push. Node 20.
   and only one attempt may be open at a time. Unlike the daily, this week's board
   is public from the start.
 
-## Deploying — two tracks, one automatic
+## Deploying — both halves ship on a push to `main`
 
 - **Client → Vercel.** Auto-deploys on every push to `main`. Public URL
   `playgreed.vercel.app`.
-- **Server → Render, free plan, MANUAL.** `greed-server.onrender.com`. A push
-  does _not_ deploy it; someone redeploys from the dashboard. Free tier sleeps
-  after ~15 min idle (~30-50 s cold start).
+- **Server → Render.** **Also auto-deploys on every push** — `render.yaml` sets
+  no `autoDeploy: false`, so Render's default applies. `greed-server.onrender.com`.
+  Free plan, so it sleeps after ~15 min idle (~30-50 s cold start) and its build
+  takes a few minutes.
 - **Database → Neon Postgres.** Credentials only in the gitignored `.env.local`
-  and in Render's env. `migrate()` runs on boot and is idempotent.
+  and in Render's env. `migrate()` runs on the server's boot and is idempotent,
+  so schema changes land with the deploy that carries them.
 
-**The consequence that keeps biting:** new client code sits in front of the OLD
-server for as long as the redeploy is outstanding — a real interval, not a
-theoretical one. So:
+Nothing here needs doing by hand. **Do not tell the user a redeploy is
+outstanding, or that a server change is waiting on them** — an old note claimed
+Render was manual and it is not.
 
-> Any screen reading a field the deployed server has never sent must survive
+The two do not finish together, though: Vercel is quick and Render's free-tier
+build plus boot is not, so for a few minutes after a push the new client is
+talking to the old server. Hence:
+
+> Any screen reading a field the deployed server has not sent yet must survive
 > getting `undefined`. Normalise once at the network boundary rather than
 > guarding at each use — `fill()` in `net/daily.ts` and `net/weekly.ts` are the
-> worked examples. A whole feature the old server has never heard of should say
-> so plainly (`WeeklyUnavailable`), not throw.
+> worked examples. A whole feature the running server has never heard of should
+> say so plainly (`WeeklyUnavailable`), not throw.
 
-Before saying a feature "works", ask which half is actually live.
+It is a short window rather than an open-ended one, but it is every push, it
+covers the slowest half of a deploy, and a cold start widens it.
 
 ## Releases
 
