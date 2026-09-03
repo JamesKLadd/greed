@@ -1,3 +1,4 @@
+import { canToggleLock } from "@greed/core";
 import type { DieValue, TurnState } from "@greed/core";
 import { Die } from "./Die.js";
 import { useT } from "../i18n/i18n.js";
@@ -55,7 +56,11 @@ export function DiceTray({
             // switched OFF by `toggleDisabled` — see the note on that prop for
             // why this must not become undefined mid-throw.
             onToggle={onToggle ? () => onToggle(i) : undefined}
-            toggleDisabled={isRolling || turn.outcome !== null}
+            // Asked of the engine rather than re-derived, so a die the rules
+            // will not move is drawn as one you cannot move — including the
+            // last held die, which cannot be put back. A tap that would be
+            // silently ignored is worse than one that is plainly unavailable.
+            toggleDisabled={isRolling || !canToggleLock(turn, i)}
             toggleLabel={turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
         );

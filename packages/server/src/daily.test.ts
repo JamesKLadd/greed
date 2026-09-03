@@ -430,10 +430,40 @@ describe("holding dice in a daily run", () => {
     const paying = run!.state.turn.locked.findIndex(Boolean);
     if (paying < 0) return;
     const before = run!.state.turn.turnScore;
+
+    // A die can only go back while another is held — the last one stays put, or
+    // the throw would be free. So if this throw paid a single die, pick up a
+    // loose one first.
+    if (run!.state.turn.locked.filter(Boolean).length === 1) {
+      const loose = run!.state.turn.locked.findIndex((l) => !l);
+      await playDailyMove(USER, ("H" + loose) as "H0", DAY);
+    }
+
     await playDailyMove(USER, ("H" + paying) as "H0", DAY);
     const after = await resumeDailyRun(USER, DAY);
     expect(after!.state.turn.locked[paying]).toBe(false);
     expect(after!.state.turn.turnScore).toBeLessThan(before);
+  });
+
+  it("refuses to put back the last held die", async () => {
+    // The rule the engine applies, enforced on the server too: the daily is one
+    // of the two modes whose dice the server owns, so it must not be the place
+    // a free throw is still available.
+    await startDailyRun(USER, DAY);
+    let view = await playDailyMove(USER, "ROLL", DAY);
+    for (let i = 0; i < 8; i++) {
+      if (view.complete) break;
+      if (!view.state.turn.outcome && view.state.turn.locked.some(Boolean)) break;
+      view = await playDailyMove(USER, "ROLL", DAY);
+    }
+    // Release down to a single held die; each of those taps is legal.
+    for (let i = 0; i < 5; i++) {
+      if (view.state.turn.locked.filter(Boolean).length === 1) break;
+      if (view.state.turn.locked[i]) view = await playDailyMove(USER, ("H" + i) as "H0", DAY);
+    }
+    expect(view.state.turn.locked.filter(Boolean).length).toBe(1);
+    const only = view.state.turn.locked.findIndex(Boolean);
+    await expect(playDailyMove(USER, ("H" + only) as "H0", DAY)).rejects.toThrow(/isn't legal/i);
   });
 
   it("refuses a hold before the first throw, and anything that is not a move", async () => {

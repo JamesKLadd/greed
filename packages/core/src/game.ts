@@ -19,7 +19,14 @@
 
 import { rollDice, nextInt } from "./rng.js";
 import { scoreRoll } from "./scoring.js";
-import { createTurn, diceToRoll, heldScore, refreshTurn, turnLegalActions } from "./turn.js";
+import {
+  canToggleLock,
+  createTurn,
+  diceToRoll,
+  heldScore,
+  refreshTurn,
+  turnLegalActions,
+} from "./turn.js";
 import { GOAL_DEFAULT, TEAM_TABLE_SIZES } from "./types.js";
 import { clone } from "./util.js";
 import type {
@@ -335,14 +342,14 @@ function doRoll(state: GameState): GameState {
  * it. Unlocking takes back whatever that die was earning: any award it belonged
  * to stops counting (see heldScore), which can also mean a mat that was clear no
  * longer is.
+ *
+ * A tap that isn't allowed leaves the position exactly as it was — see
+ * `canToggleLock` for which those are, and why releasing the last held die is
+ * one of them.
  */
 function doToggleLock(state: GameState, index: number): GameState {
   const turn = state.turn;
-  if (turn.outcome) return state;
-  if (!Number.isInteger(index) || index < 0 || index >= turn.dice.length) return state;
-  // Nothing on the mat to hold before the first throw.
-  if (turn.rollCount === 0) return state;
-
+  if (!canToggleLock(turn, index)) return state;
   turn.locked[index] = !turn.locked[index];
   refreshTurn(turn);
   return state;

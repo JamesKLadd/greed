@@ -429,6 +429,31 @@ describe("the move list is the server's", () => {
     await expect(playWeeklyMove(USER, "H5", WEEK)).rejects.toThrow(/invalid move/i);
   });
 
+  it("refuses to put back the last held die", async () => {
+    // The same rule a local game applies, enforced here too — otherwise the one
+    // mode whose dice the server owns would be the one place a free throw was
+    // still available.
+    await startWeeklyRun(USER, WEEK);
+    let view = await playWeeklyMove(USER, "ROLL", WEEK);
+    for (let i = 0; i < 8; i++) {
+      if (view.complete) break;
+      if (!view.state.turn.outcome && view.state.turn.locked.some(Boolean)) break;
+      view = await playWeeklyMove(USER, "ROLL", WEEK);
+    }
+    // Release down to a single held die. Every one of THOSE taps is legal.
+    for (let i = 0; i < 5; i++) {
+      if (view.state.turn.locked.filter(Boolean).length === 1) break;
+      if (view.state.turn.locked[i]) view = await playWeeklyMove(USER, ("H" + i) as "H0", WEEK);
+    }
+    expect(view.state.turn.locked.filter(Boolean).length).toBe(1);
+
+    const only = view.state.turn.locked.findIndex(Boolean);
+    await expect(playWeeklyMove(USER, ("H" + only) as "H0", WEEK)).rejects.toThrow(/isn't legal/i);
+    // Refused, not dropped: the move never reached the stored list, so a replay
+    // sees the position the player is actually looking at.
+    expect(open.get(USER)!.moves.split(",")).not.toContain(`H${only}`);
+  });
+
   it("rejects holding a die before anything has been thrown", async () => {
     await startWeeklyRun(USER, WEEK);
     await expect(playWeeklyMove(USER, "H0", WEEK)).rejects.toThrow(/isn't legal/i);
@@ -447,6 +472,15 @@ describe("the move list is the server's", () => {
     }
     const held = view.state.turn.locked.findIndex(Boolean);
     expect(held).toBeGreaterThanOrEqual(0);
+
+    // Two dice have to be held before one can be released, since the last held
+    // die stays put. If the throw only paid one, pick a loose one up first —
+    // which is a recorded move in its own right.
+    if (view.state.turn.locked.filter(Boolean).length === 1) {
+      const loose = view.state.turn.locked.findIndex((l) => !l);
+      view = await playWeeklyMove(USER, ("H" + loose) as "H0", WEEK);
+      expect(view.state.turn.locked[loose]).toBe(true);
+    }
 
     const afterHold = await playWeeklyMove(USER, ("H" + held) as "H0", WEEK);
     // Putting a scoring die back gives up what it was paying for...

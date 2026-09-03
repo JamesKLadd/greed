@@ -29,6 +29,7 @@ export const RELEASES: Release[] = [
     notes: [
       "Added a new gamemode called Weekly Challenge which works similarly to the Daily Challenge however you can attempt the challenge as many times as you'd like throughout the week",
       "Added new Achievements, Stats, and Locker items associated with the Weekly Challenge",
+      "NEW RULE: After your first roll you must keep at least one die held, so you can no longer unhold every die and reroll all 5",
       "Fixed the game forgetting your language setting if you had it set to French",
     ],
   },

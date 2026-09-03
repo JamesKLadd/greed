@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { applyAction, createGame, getLegalActions } from "./game.js";
-import { diceToRoll, heldScore, refreshTurn } from "./turn.js";
+import { canToggleLock, diceToRoll, heldScore, refreshTurn } from "./turn.js";
 import type { DieValue, GameState, TurnAward } from "./types.js";
 
 const players = [
@@ -157,13 +157,87 @@ describe("a mat that only looks clear", () => {
     expect(getLegalActions(g).canBank).toBe(true);
   });
 
-  it("has nothing to bank once the last paying die is freed", () => {
-    let g = position([1, 2, 3, 4, 6], [true, false, false, false, false], ones([0]));
+  it("keeps the last paying die, so there is always something to bank", () => {
+    // This used to read the other way: the tap went through, the turn dropped
+    // to nothing, and rolling all five again was on offer. That was a free
+    // throw — see "a throw is never free" below.
+    const g = position([1, 2, 3, 4, 6], [true, false, false, false, false], ones([0]));
     expect(getLegalActions(g).canBank).toBe(true);
-    g = tap(g, 0);
-    expect(g.turn.turnScore).toBe(0);
+    const after = tap(g, 0);
+    expect(after.turn.locked).toEqual([true, false, false, false, false]);
+    expect(after.turn.turnScore).toBe(100);
+    expect(getLegalActions(after).canBank).toBe(true);
+  });
+});
+
+describe("a throw is never free", () => {
+  it("refuses to put back the last held die", () => {
+    // The whole rule. Releasing this 1 would empty the mat and leave a fresh
+    // five to throw having lost nothing, because there was nothing on the mat
+    // to lose.
+    const g = position([1, 2, 3, 4, 6], [true, false, false, false, false], ones([0]));
+    expect(canToggleLock(g.turn, 0)).toBe(false);
+    // The loose dice are still the player's to pick up.
+    expect(canToggleLock(g.turn, 1)).toBe(true);
+  });
+
+  it("will not roll from a mat with nothing held", () => {
+    // The rule stated where legality lives, not only where the taps are — so a
+    // position that arrives from somewhere else (an older server's broadcast)
+    // is refused too rather than trusted.
+    const g = position([1, 2, 3, 4, 6], [false, false, false, false, false]);
+    expect(getLegalActions(g).canRoll).toBe(false);
     expect(getLegalActions(g).canBank).toBe(false);
+  });
+
+  it("still throws all five to open a turn", () => {
+    const g = createGame(players, { goal: 10000, seed: 1 });
+    expect(g.turn.rollCount).toBe(0);
+    expect(g.turn.locked.some(Boolean)).toBe(false);
     expect(getLegalActions(g).canRoll).toBe(true);
+    expect(diceToRoll(g.turn)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("still throws a fresh five off a cleared mat", () => {
+    // Everything held and paying, so the mat is clear and the next throw is
+    // five new dice — the held-die rule is satisfied by all of them at once.
+    const g = position(
+      [1, 1, 5, 5, 5],
+      [true, true, true, true, true],
+      [...ones([0, 1]), { kind: "triple", face: 5, dice: [2, 3, 4], points: 500 }],
+    );
+    expect(g.turn.hotDice).toBe(true);
+    expect(getLegalActions(g).canRoll).toBe(true);
+    expect(diceToRoll(g.turn)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("lets the kept die be swapped, by holding the new one first", () => {
+    // No hand a player might want is unreachable: only passing THROUGH
+    // nothing-held is refused, never any destination.
+    let g = position([1, 2, 3, 4, 6], [true, false, false, false, false], ones([0]));
+    g = tap(g, 1); // pick the dud 2 up as well
+    g = tap(g, 0); // now the 1 can go back
+    expect(g.turn.locked).toEqual([false, true, false, false, false]);
+    expect(g.turn.turnScore).toBe(0);
+    expect(getLegalActions(g).canRoll).toBe(true);
+    expect(diceToRoll(g.turn)).toEqual([0, 2, 3, 4]);
+  });
+
+  it("cannot be talked out of it by releasing the dice one at a time", () => {
+    // Real rolls: whatever a player does with the taps after a throw, they
+    // cannot arrive at an empty mat with a roll on offer.
+    for (let seed = 1; seed <= 200; seed++) {
+      let g = createGame(players, { goal: 100000, seed });
+      g = applyAction(g, { type: "ROLL" });
+      if (g.turn.outcome) continue; // the throw busted; there is nothing held
+      for (let i = 0; i < 5; i++) {
+        if (g.turn.locked[i]) g = tap(g, i);
+      }
+      const held = g.turn.locked.filter(Boolean).length;
+      expect(held, "seed " + seed).toBe(1);
+      expect(getLegalActions(g).canRoll, "seed " + seed).toBe(true);
+      expect(diceToRoll(g.turn).length, "seed " + seed).toBe(4);
+    }
   });
 });
 

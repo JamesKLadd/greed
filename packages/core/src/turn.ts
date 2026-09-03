@@ -46,6 +46,37 @@ export function diceRemaining(turn: TurnState): number {
   return diceToRoll(turn).length;
 }
 
+/** How many dice are being held. */
+function heldCount(turn: TurnState): number {
+  return turn.locked.reduce((n, held) => n + (held ? 1 : 0), 0);
+}
+
+/**
+ * May the player tap this die — to hold it, or to put it back?
+ *
+ * The single rule for a tap, shared by the engine, the challenge servers that
+ * replay a move list, and the tray that draws the dice, so none of the three
+ * can offer something the others refuse.
+ *
+ * Nothing is tappable before the first throw: there is no hand yet to change.
+ * Nothing is tappable once the turn is over. And the LAST held die cannot be
+ * put back, which is the rule that keeps a throw from being free — see
+ * `turnLegalActions`.
+ *
+ * Note that no legitimate hand is unreachable because of it: to swap which die
+ * you are keeping, hold the new one first and release the old one second. Only
+ * passing through nothing-held is refused, never any destination.
+ */
+export function canToggleLock(turn: TurnState, index: number): boolean {
+  if (turn.outcome) return false;
+  if (!Number.isInteger(index) || index < 0 || index >= turn.dice.length) return false;
+  // Nothing on the mat to hold before the first throw.
+  if (turn.rollCount === 0) return false;
+  // Releasing the last held die would empty the mat; see turnLegalActions.
+  if (turn.locked[index] && heldCount(turn) === 1) return false;
+  return true;
+}
+
 export function turnLegalActions(turn: TurnState): LegalActions {
   // A finished turn only waits to be advanced.
   if (turn.outcome) return { canRoll: false, canBank: false, canAdvance: true };
@@ -53,7 +84,20 @@ export function turnLegalActions(turn: TurnState): LegalActions {
     // There has to be something to throw. Holding all five without clearing them
     // is a position a player can now put themselves in by hand, and rolling an
     // empty cup would score nothing and read as a bust.
-    canRoll: diceToRoll(turn).length > 0,
+    //
+    // And once anything HAS been thrown, at least one die has to stay held.
+    // Otherwise a throw is free: putting every die back drops the turn to
+    // nothing, which sounds like a cost until you notice there was nothing on
+    // the mat to lose — so a player who disliked their opening throw could
+    // release all five, throw a fresh five, and repeat until the dice came up
+    // the way they wanted, at no risk at all. A turn is meant to be one throw
+    // and then decisions about it; this is what makes the throw you get the
+    // throw you have to build on.
+    //
+    // A fresh turn is unaffected (nothing thrown, nothing held, the opening
+    // throw is always legal), and so is a cleared mat, where every die is held
+    // and the next throw is a fresh five.
+    canRoll: diceToRoll(turn).length > 0 && (turn.rollCount === 0 || heldCount(turn) > 0),
     // Must roll before there is anything to bank — and unlocking dice can take
     // the turn's points back down to nothing.
     canBank: turn.turnScore > 0,

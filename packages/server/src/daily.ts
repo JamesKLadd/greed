@@ -12,6 +12,7 @@
 
 import {
   DAILY_TURNS,
+  canToggleLock,
   dailyKey,
   dailyMoveStart,
   dailyPosition,
@@ -340,11 +341,11 @@ export async function playDailyMove(
   if (before.result.complete) throw new AccountError(409, "You've already played today.");
 
   // Holding a die is judged against the turn as it stands — it does not start a
-  // new one — and only while there is a turn in play to hold dice in.
+  // new one — and by the engine's own rule, so the server refuses exactly the
+  // taps a local game refuses (including putting back the last held die).
   const held = holdIndex(move);
   if (held !== null) {
-    const turn = before.state.turn;
-    if (turn.outcome || turn.rollCount === 0) {
+    if (!canToggleLock(before.state.turn, held)) {
       throw new AccountError(400, "That move isn't legal.");
     }
   } else {
