@@ -67,9 +67,9 @@ export interface DailyStatus {
 /**
  * Fill in anything an OLDER SERVER doesn't send.
  *
- * The client and the server ship separately — the web build goes out the moment
- * a change lands, the game server when it is redeployed — so for a while a new
- * screen is talking to an old API. Without this, `status.champions.length` on a
+ * Both halves auto-deploy on a push, but they do not land together: Vercel is
+ * quick and the server's free-tier build plus boot is not, so for a few minutes
+ * after every push a new screen is talking to the old API. Without this, `status.champions.length` on a
  * response that predates champions is a TypeError, and the daily screen is a
  * blank page rather than a screen missing one panel. The types say these fields
  * are always there because from here on they will be; this is what makes that

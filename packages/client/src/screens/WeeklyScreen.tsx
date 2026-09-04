@@ -188,9 +188,9 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
     );
   }
 
-  // The client ships ahead of the game server every release, so between the two
-  // deploys this screen is talking to an API that has never heard of it. Said
-  // plainly rather than as an error, because nothing is wrong.
+  // Both halves auto-deploy on a push, but the client lands first — so for a few
+  // minutes after a release this screen is talking to an API that has never
+  // heard of it. Said plainly rather than as an error, because nothing is wrong.
   if (unavailable) {
     return (
       <div className="setup">
