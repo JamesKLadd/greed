@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Profile } from "./profile.js";
-import { DICE_SKINS, TABLE_THEMES, cosmeticVars, isUnlocked } from "./cosmetics.js";
+import { DICE_SKINS, TABLE_THEMES, cosmeticVars, isUnlocked, tableVars } from "./cosmetics.js";
 
 function profile(over: Partial<Profile> = {}): Profile {
   return {
@@ -56,5 +56,40 @@ describe("cosmeticVars", () => {
     const equippedLocked = cosmeticVars(profile({ dice: "obsidian" })) as Record<string, string>;
     const ivory = cosmeticVars(profile({ dice: "ivory" })) as Record<string, string>;
     expect(equippedLocked["--die-c1"]).toBe(ivory["--die-c1"]);
+  });
+});
+
+describe("tableVars", () => {
+  /** The themes a fresh profile can equip, for picking a locked one. */
+  const locked = TABLE_THEMES.find((c) => c.unlock)!;
+
+  it("returns the mat without any of the dice skin", () => {
+    // Online this is composed with ANOTHER player's dice vars, so anything
+    // die-shaped leaking out of here would repaint their dice with this
+    // viewer's colours — including the scoring-die overrides "eclipse" sets.
+    const vars = tableVars(profile({ table: "midnight", dice: "eclipse" })) as Record<
+      string,
+      string
+    >;
+    for (const key of Object.keys(vars)) {
+      expect(key.startsWith("--felt") || key.startsWith("--rail"), key).toBe(true);
+    }
+  });
+
+  it("falls back to the default mat when the equipped one is not unlocked", () => {
+    const equipped = tableVars(profile({ table: locked.id })) as Record<string, string>;
+    const fallback = tableVars(profile({ table: TABLE_THEMES[0].id })) as Record<string, string>;
+    expect(equipped).toEqual(fallback);
+  });
+
+  it("agrees with cosmeticVars about the mat", () => {
+    // Offline reads the whole profile through cosmeticVars; online reads the mat
+    // through here. The two must not drift, or the felt would change when you
+    // moved between a local game and an online one.
+    const p = profile({ table: "midnight" });
+    const whole = cosmeticVars(p) as Record<string, string>;
+    for (const [key, value] of Object.entries(tableVars(p) as Record<string, string>)) {
+      expect(whole[key], key).toBe(value);
+    }
   });
 });

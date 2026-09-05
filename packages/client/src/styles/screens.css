@@ -1758,19 +1758,47 @@
   transform: translateY(2px);
   box-shadow: var(--e-flat);
 }
-/* A reaction pops above the seat that sent it, then fades. */
+/*
+ * A reaction pops on the seat that sent it, then fades.
+ *
+ * INSIDE the frame, like every other seat badge. It used to hang above the pod
+ * (top: -18px), and `.pseat` clips its overflow to protect the fixed pod height
+ * tableGeometry.ts stacks rows by — so a quarter of every reaction was sliced
+ * off and what reached the screen was a smudge in the corner. It looked fine
+ * while it was being built because the bottom pod, your own seat, is the one
+ * pod allowed to overflow: you could see your reactions and nobody else's.
+ */
 .pseat__emote {
   position: absolute;
-  top: -18px;
-  right: -6px;
-  font-size: 1.5rem;
+  top: 2px;
+  right: 3px;
+  font-size: 1.25rem;
+  line-height: 1;
+  /* Over the pod's own content and the corner badges it lands beside. */
+  z-index: 5;
+  /* It sits on top of the avatar disc and the name, so it needs separating
+     from them — the same reason the plays-last flag carries a shadow. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
   pointer-events: none;
   animation: emote-pop 2.2s ease forwards;
 }
+/* Same reasoning as the cash glyphs: a compact pod is the smallest frame this
+   has to work on, so the glyph gives back a little rather than swamping it. */
+.pseat--compact .pseat__emote {
+  font-size: 1.05rem;
+}
+/* Both want the top-right corner. The reaction is the transient one and the
+   louder signal, so the dollar sign steps aside for the 2.2s it is up — the
+   same resolution the flag and the top-left dollar already use. */
+.pseat:has(.pseat__emote) .pseat__cash--tr {
+  right: 25px;
+}
+/* The travel stays inside the frame at both ends: a rise of 12px, which is what
+   this used to end on, is exactly the kind of overhang that gets clipped. */
 @keyframes emote-pop {
   0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.6);
+    transform: translateY(4px) scale(0.6);
   }
   15% {
     opacity: 1;
@@ -1784,7 +1812,7 @@
   }
   100% {
     opacity: 0;
-    transform: translateY(-12px) scale(0.95);
+    transform: translateY(-4px) scale(0.95);
   }
 }
 

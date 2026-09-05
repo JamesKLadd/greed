@@ -506,9 +506,31 @@ export function cosmeticVars(profile: Profile): CSSProperties {
  * Dice-only CSS variables (no table theme) for a given skin id. Used online: the
  * server broadcasts each player's equipped skin, and every client renders the
  * CURRENT player's dice with it (so a skin shows on its owner's turn for everyone).
- * Unknown ids fall back to the default — the shared felt is never themed here.
+ * Unknown ids fall back to the default; the mat comes from `tableVars` instead.
  */
 export function diceVarsById(id: string): CSSProperties {
   const dice = DICE_SKINS.find((c) => c.id === id) ?? DICE_SKINS[0];
   return { ...dice.vars } as CSSProperties;
+}
+
+/**
+ * Table-only CSS variables (no dice skin) for a profile.
+ *
+ * The mirror of `diceVarsById`, and online they answer two different questions.
+ * The dice on the mat belong to whoever is throwing them, so they change hands
+ * every turn. The mat is furniture: it is yours, it stays yours for the whole
+ * game, and nobody else sees it — swapping the room's colour every time the turn
+ * moved would make it flicker through five people's taste, and a player who
+ * unlocked a theme would spend most of the game looking at somebody else's.
+ *
+ * Kept separate from `cosmeticVars` rather than filtered out of it, because a
+ * dice skin may also set the scoring-die colours (see "eclipse"): spreading a
+ * whole profile and then overriding the dice half would leave this viewer's
+ * `--score-*` painted onto another player's dice.
+ */
+export function tableVars(profile: Profile): CSSProperties {
+  const table = find(TABLE_THEMES, profile.table);
+  // Equipped-but-locked (e.g. after a reset) falls back to the default.
+  const vars = isUnlocked(table, profile) ? table.vars : TABLE_THEMES[0].vars;
+  return { ...vars } as CSSProperties;
 }

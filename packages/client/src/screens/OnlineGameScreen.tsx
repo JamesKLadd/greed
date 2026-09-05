@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { getLegalActions } from "@greed/core";
 import type { OnlineController } from "../net/useOnlineGame.js";
 import { GameShell } from "./GameShell.js";
@@ -7,7 +8,8 @@ import { TurnHistory } from "../components/TurnHistory.js";
 import { EmoteBar } from "../components/EmoteBar.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { useGameChrome } from "../game/useGameChrome.js";
-import { diceVarsById } from "../game/cosmetics.js";
+import { diceVarsById, tableVars } from "../game/cosmetics.js";
+import { loadProfile } from "../game/profile.js";
 import { loadSettings } from "../game/settings.js";
 import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
@@ -23,10 +25,14 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const votes = net.rematchState?.votes.length ?? 0;
   const needed = net.rematchState?.needed ?? 0;
   const votedRematch = net.youId != null && (net.rematchState?.votes.includes(net.youId) ?? false);
-  // Online: the dice in the center belong to whoever's turn it is, so render the
-  // CURRENT player's equipped skin (broadcast by the server) for every viewer.
-  // Never a table theme — the felt stays shared/identical for everyone.
+  // Online, the two halves of a cosmetic answer different questions. The dice in
+  // the centre belong to whoever is throwing them, so every viewer renders the
+  // CURRENT player's equipped skin (broadcast by the server). The mat is the
+  // viewer's own and holds still for the whole game — it is never broadcast, so
+  // nobody else's screen changes with it.
+  const [myTable] = useState(() => tableVars(loadProfile()));
   const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
+  const cosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
 
   const chrome = useGameChrome({
     state,
@@ -50,7 +56,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       onBank={net.bank}
       onToggleDie={net.toggleDie}
       toast={net.toast}
-      cosmetics={diceVars}
+      cosmetics={cosmetics}
       perspectiveId={net.youId}
       presence={net.presence}
       emotes={net.emotes}
