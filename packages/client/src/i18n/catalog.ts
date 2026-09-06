@@ -159,6 +159,7 @@ export const en = {
   "emote.think": "Hmm…",
   "emote.unlucky": "Unlucky!",
   "emote.nice": "Good move",
+  "emote.aww": "Aww!",
   // Daily challenge.
   "daily.title": "DAILY",
   "daily.tagline": "Your own dice. One run a day.",
@@ -818,6 +819,7 @@ export const es: Record<MsgKey, string> = {
   "emote.think": "Mmm…",
   "emote.unlucky": "¡Mala suerte!",
   "emote.nice": "Buena jugada",
+  "emote.aww": "¡Qué tierno!",
   // Daily challenge.
   "daily.title": "DIARIO",
   "daily.tagline": "Tus propios dados. Una partida al día.",
@@ -1455,6 +1457,7 @@ export const fr: Record<MsgKey, string> = {
   "emote.think": "Hmm…",
   "emote.unlucky": "Pas de chance !",
   "emote.nice": "Beau coup",
+  "emote.aww": "Trop mignon !",
   "daily.title": "QUOTIDIEN",
   "daily.tagline": "Vos propres dés. Une tentative par jour.",
   "daily.home": "Défi quotidien",

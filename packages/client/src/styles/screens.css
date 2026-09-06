@@ -1725,7 +1725,10 @@
   right: 0;
   bottom: 52px;
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  /* Four across: the set is seven now, which is three tidy-plus-one over three
+     columns and two even rows over four. At 42px a side it still clears the
+     narrowest phone by a wide margin. */
+  grid-template-columns: repeat(4, auto);
   gap: 8px;
   padding: 10px;
   border-radius: var(--r-lg);

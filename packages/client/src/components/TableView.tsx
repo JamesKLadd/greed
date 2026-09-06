@@ -10,7 +10,7 @@ import { rollCall } from "../game/rollCall.js";
 import { TurnRing } from "./TurnRing.js";
 import { useLayoutMode } from "../game/useLayoutMode.js";
 import type { EmoteId } from "@greed/protocol";
-import { EMOTE_GLYPH } from "./EmoteBar.js";
+import { emoteGlyph } from "./EmoteBar.js";
 import { useT } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
 
@@ -196,7 +196,7 @@ export function TableView({
                   // Keyed by timestamp so re-sending the same reaction remounts
                   // the element and replays the pop animation.
                   <span key={emotes[p.id].at} className="pseat__emote" aria-hidden="true">
-                    {EMOTE_GLYPH[emotes[p.id].emote]}
+                    {emoteGlyph(emotes[p.id].emote)}
                   </span>
                 )}
                 <div className="pseat__head">

@@ -23,7 +23,21 @@ export const EMOTE_GLYPH: Record<EmoteId, string> = {
   think: "🤔",
   unlucky: "😬",
   nice: "👍",
+  aww: "🥹",
 };
+
+/**
+ * The glyph for a reaction, or a neutral one for an id this build doesn't know.
+ *
+ * The set is shared through the protocol, but the two halves of a game are not
+ * always the same build: for a few minutes after a release a player on the new
+ * client can send a reaction that another player's cached client has never
+ * heard of, and an undefined glyph renders as nothing at all — a reaction that
+ * simply doesn't arrive. A dot is not the right face, but it is a reaction.
+ */
+export function emoteGlyph(id: EmoteId): string {
+  return EMOTE_GLYPH[id] ?? "💬";
+}
 
 export function EmoteBar({ onSend }: { onSend: (emote: EmoteId) => void }) {
   const t = useT();

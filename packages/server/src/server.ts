@@ -52,7 +52,17 @@ export interface GreedServerOptions {
   disconnectAutoplayMs: number;
   /** Hold showing the opening roll-off before play begins. */
   rollOffMs: number;
-  /** How long a connected player has to start their turn before it's forfeited. */
+  /**
+   * How long a connected player has to start their turn before it's forfeited.
+   *
+   * Generous on purpose. This clock only ever runs for a seat the server can
+   * still see, so the players it catches are the ones whose phone is awake and
+   * whose socket is fine — someone who glanced at another tab, took a message,
+   * or looked something up. Three forfeits removes them from the table, and at
+   * ten seconds a player could lose their seat over half a minute's inattention
+   * spread across a whole game. A genuinely absent seat is handled by the other
+   * path anyway: drop the connection and a bot plays for you.
+   */
   turnIdleMs: number;
   /** Forfeit this many turns in one game and the player is kicked. */
   maxMissedTurns: number;
@@ -118,7 +128,7 @@ const DEFAULT_OPTIONS: GreedServerOptions = {
   botThinkMs: 1300,
   disconnectAutoplayMs: 1200,
   rollOffMs: 4200,
-  turnIdleMs: 10000,
+  turnIdleMs: 30000,
   maxMissedTurns: 3,
   heartbeatMs: 20000,
 };

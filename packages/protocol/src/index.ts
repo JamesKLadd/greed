@@ -18,7 +18,7 @@ export const DEFAULT_SERVER_PORT = 8787;
  * without opening a channel that would need moderation — which matters for a
  * game meant to be played with family, including children.
  */
-export const EMOTES = ["clap", "wow", "laugh", "think", "unlucky", "nice"] as const;
+export const EMOTES = ["clap", "wow", "laugh", "think", "unlucky", "nice", "aww"] as const;
 export type EmoteId = (typeof EMOTES)[number];
 
 export function isEmoteId(value: unknown): value is EmoteId {
