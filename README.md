@@ -1,17 +1,23 @@
 # Greed 🎲
 
-A push-your-luck 5-dice game — web edition. Play local co-op (pass-and-play) or
-against bots. Built as a TypeScript monorepo so the same rules engine powers the
-local UI, the bots, and (later) an online server.
+A push-your-luck 5-dice game — web edition. Play solo against bots, pass-and-play
+locally, take on the daily and weekly challenges, or play online against other
+people. Built as a TypeScript monorepo so **one rules engine** powers the local
+UI, the bots, the authoritative online server, and both timed challenges.
+
+Live at **[playgreed.vercel.app](https://playgreed.vercel.app)**.
 
 ## Quick start
 
 ```bash
 npm install        # install all workspace dependencies
 npm run dev        # start the client at http://localhost:5173
-npm test           # run the engine + bot + client test suites
+npm test           # run every package's test suite
 npm run build      # production build of the client
 ```
+
+The client runs on its own: solo, local and the "learn to play" game need no
+server. Accounts, online play, the daily and the weekly do.
 
 ### Code quality
 
@@ -38,7 +44,7 @@ Don't want to remember commands? Double-click these files in the project folder:
 Online play needs the authoritative server running alongside the client:
 
 ```bash
-npm run server    # start the WebSocket server on ws://localhost:8787
+npm run server    # WebSocket + REST server on http://localhost:8787
 npm run dev       # in another terminal, start the client
 ```
 
@@ -46,30 +52,134 @@ Then choose **Play online** → Quick match, Create private room (share the 4-le
 code), or Join by code. The client connects to `ws://<host>:8787` by default;
 override with the `VITE_SERVER_URL` env var when building the client.
 
+With no `DATABASE_URL` set the server still runs — it degrades to guest play, so
+rooms and matches work while accounts, leaderboards and the challenges are
+switched off. That is a useful way to test the online loop without standing up
+Postgres.
+
+## How to play
+
+Roll 5 dice and press your luck:
+
+- **Scoring:** a `1` = 100, a `5` = 50, three of a kind = 100 × the face
+  (three 6s = 600), a straight (1-2-3-4-5 or 2-3-4-5-6) = 500. Per face the
+  engine pays whichever is better, the triple or the dice counted singly — so
+  three 1s are 300, not 100. **Five of a kind = 1000 and replaces** what those
+  dice were paying rather than adding to it; it is the one hand you can build
+  across several throws.
+- **Holding dice:** scoring dice are kept automatically, and you can overrule
+  that by tapping a die to hold or release it. Once you have thrown, **at least
+  one die must stay held** — otherwise a throw would be free, and you could keep
+  re-throwing all five until you liked the result.
+- **Roll or bank?** Roll again to add more — but if a throw scores nothing you
+  **bust** and lose the turn's points. If all 5 dice are held and scoring
+  ("hot dice") you throw a fresh 5 and keep going.
+- **Winning:** reach the goal (**default 3000**) to trigger the finish. Turn
+  order comes from an opening roll-off — lowest pip total goes first, highest
+  goes last — and **the last seat is the anchor**: it takes the final turn. If
+  the last seat is first to the goal it wins outright; otherwise the round plays
+  out through the last seat and the highest total wins. Ties are settled by a
+  sudden-death round.
+
+## What's in the game
+
+- **Modes:** learn-to-play (a guided game with a coach hint bar), solo vs bots,
+  local pass-and-play up to 8 seats, teams, online matchmaking and private rooms
+  with spectating and rematch, plus two timed challenges.
+- **Daily challenge:** one 10-turn run per day, same dice for everybody.
+- **Weekly challenge:** the same 10-turn run, reset **Monday 00:00
+  America/Chicago**, unlimited attempts with your best one standing. Fresh dice
+  every attempt; this week's board is public from the start.
+  Both challenges are server-authoritative — the server keeps the seed secret,
+  owns the move list and replays it to derive the score, so the client never
+  sees a seed and never reports a score.
+- **Bots:** one skill level, three temperaments (cautious / balanced /
+  reckless). There is no difficulty setting — what differs is nerve. The
+  strategy is built on an exhaustive roll model computed from the real scoring
+  function, plus a dynamic program for the optimal turn.
+- **Accounts and social:** signup/login with optional email verification,
+  friends, per-account match history and profiles.
+- **Leaderboards:** all-time, daily and weekly boards, with past champions.
+- **Progression:** 33 achievements, a stats screen, and a Locker of 18 dice
+  skins and 14 table themes earned by playing.
+- **Presentation:** seats around an oval felt in turn order, 3-D dice tumble,
+  synthesized sound and music (no audio assets to ship), reactions in online
+  games, English / Spanish / French, larger-text, high-contrast, colorblind-safe
+  and reduce-motion settings, and an installable PWA that plays offline.
+
+The in-app **Update log** (`packages/client/src/game/changelog.ts`) is the
+release-by-release record; this section is only a snapshot of where the game is.
+
+## Project layout
+
+```
+packages/
+  core/     Pure, dependency-free rules engine (scoring, turn + game state
+            machines, seeded RNG threaded through state, roll-off, teams).
+            `run.ts` + `zone.ts` are the challenge machinery the daily and the
+            weekly share; `daily.ts` and `weekly.ts` are calendars on top of it.
+            No rendering, no network. Fully unit-tested.
+  bots/     Exhaustive roll model computed from the real `scoreRoll`, plus a DP
+            for the optimal turn. One skill level, three temperaments.
+            Win-rate + behavior tests.
+  protocol/ Shared client<->server message contracts.
+  server/   Authoritative Node WebSocket server (rooms, lobby, matchmaking, the
+            game loop — reusing @greed/core to validate every action, and
+            driving bot turns and pacing so all clients stay in sync) plus the
+            REST API for accounts, friends, leaderboards and both challenges.
+            Postgres, with an idempotent migration that runs on boot.
+  client/   React + Vite web app. Drives the engine and bots for offline play,
+            and talks to the server for everything online. Plain CSS in
+            `src/styles/*.css`. `src-tauri/` wraps this same build as a native
+            desktop app.
+```
+
+The engine is deliberately isolated from rendering and networking. That is what
+keeps the bots, the offline client, the online server and both challenges all
+sharing one validated source of truth for the rules.
+
 ## Production build & deploy
 
-The client is a static site; the server is a small Node WebSocket process.
+The client is a static site; the server is a Node process with a Postgres
+database.
 
 ```bash
 # 1. Build the static client (outputs packages/client/dist/)
 VITE_SERVER_URL=wss://greed.example.com npm run build
 
-# 2. Serve packages/client/dist/ from any static host (Netlify, Vercel,
+# 2. Serve packages/client/dist/ from any static host (Vercel, Netlify,
 #    GitHub Pages, nginx, `npx serve packages/client/dist`, …)
 
-# 3. Run the authoritative server on a Node host (offline-only play needs no server)
+# 3. Run the server on a Node host (offline-only play needs no server)
 npm run server            # listens on port 8787 (set PORT to change)
 ```
 
-Notes:
+**Client build var**
 
-- **`VITE_SERVER_URL`** is baked into the build — point it at your server's public
-  WebSocket URL. Use **`wss://`** (secure) when the site is served over HTTPS, or
+- **`VITE_SERVER_URL`** is baked into the build — point it at your server's
+  public URL. Use **`wss://`** (secure) when the site is served over HTTPS, or
   browsers will block the connection. Omit it for an offline-only static deploy.
-- The client is fully self-contained (no external requests, no audio/image assets),
-  so it also runs from `file://` or inside a desktop wrapper (e.g. Tauri) later.
-- Everything is client-side except online play; **stats, unlocks, and settings live
-  in the browser's localStorage.**
+
+**Server env**
+
+- **`DATABASE_URL`** — Postgres. Unset degrades to guest play (see above).
+- **`JWT_SECRET`** — signs session tokens. Set it in any real deployment.
+- **`PORT`**, **`ALLOWED_ORIGINS`**, **`APP_URL`** — listen port, CORS allow-list,
+  and the base URL used in verification and password-reset links.
+- **`RESEND_API_KEY`**, **`EMAIL_FROM`**, **`REQUIRE_EMAIL_VERIFICATION`** —
+  outbound email. Without a key the server logs the link instead of sending it.
+
+Never commit any of these: `.env*` is gitignored.
+
+**How this repo deploys.** A push to `main` ships both halves automatically —
+the client to Vercel, the server to Render (`render.yaml`), against a Neon
+Postgres whose `migrate()` runs on boot. Nothing needs doing by hand. They do
+not finish together, though: Vercel is quick and the server's build plus boot is
+not, so for a few minutes after every push the new client is talking to the old
+server. Anything reading a field the deployed server has not sent yet must
+survive `undefined` — normalise once at the network boundary (`fill()` in
+`net/daily.ts` and `net/weekly.ts` are the worked examples) rather than guarding
+at each use.
 
 ## Desktop app (Tauri)
 
@@ -106,105 +216,9 @@ npm run tauri:build:steam   # desktop build WITH Steam achievements (needs the S
 - `steam/store-copy.md`, `steam/assets/`, the ContentBuilder `.vdf` templates, and
   `steam/LAUNCH_CHECKLIST.md` cover the store page and upload pipeline.
 
-## How to play
+## Contributing
 
-Roll 5 dice and press your luck:
-
-- **Scoring:** a `1` = 100, a `5` = 50, three of a kind = 100 × the face
-  (three 6s = 600), a straight (1-2-3-4-5 or 2-3-4-5-6) = 500. Everything in a
-  throw adds together.
-- Every scoring die is **kept automatically**; only the non-scoring dice can be
-  rerolled.
-- **Reroll or bank?** Reroll to add more — but if a reroll scores nothing you
-  **bust** and lose the turn's points. If all 5 dice score ("hot dice") you roll
-  a fresh 5 and keep going.
-- **Winning:** reach the goal (default 2000) to trigger the finish. If the
-  starting player is first to the goal they win outright; otherwise the round
-  plays out to its end — the last seat takes the final turn — and the highest
-  total wins (the starting player, who already opened the round, does not go
-  again). Ties are settled by a sudden-death round.
-
-## Project layout
-
-```
-packages/
-  core/    Pure, dependency-free rules engine (scoring, turn + game state
-           machines, seedable RNG). Fully unit-tested. No rendering/network.
-  bots/    Easy / medium / hard / expert AI, each with a cautious/balanced/reckless
-           personality. Uses roll statistics + a full transition model computed from
-           the exact engine; medium and up are endgame-aware, and expert solves the
-           turn as a dynamic program over the model. Win-rate + behavior tests.
-  client/  React + Vite web app (2-D table, dice, HUD, menus). Drives the engine
-           and bots for offline play, and talks to the server for online play.
-           `src-tauri/` wraps this same build as a native desktop app.
-  protocol/ Shared client<->server message contracts.
-  server/  Authoritative Node WebSocket server: rooms, lobby, matchmaking, and the
-           game loop (reuses @greed/core to validate every action). Drives bot
-           turns and pacing on the server so all clients stay in sync.
-```
-
-The engine is deliberately isolated from rendering and networking. That is what
-keeps the bots, the offline client, and the authoritative online server all
-sharing one validated source of truth for the rules.
-
-## Status
-
-- **v1 (done):** complete rules engine + tests, bots, offline client
-  (local co-op + vs bots).
-- **v2 (done):** online matchmaking + private rooms via an authoritative Node
-  WebSocket server that reuses `@greed/core`; server-driven bots and pacing;
-  basic reconnection after a refresh.
-- **Polish (done):** seat-around-the-table layout — players sit around an oval
-  felt in **turn order** (clockwise; the local player at the bottom online), dice
-  in the middle, controls below; collapses to a stacked layout on narrow screens
-  (`TableView.tsx`). Art & theme depth: a wood-rail / vignette / textured felt,
-  per-player color identity with initial avatars (`src/game/theme.ts`), a richer
-  glossy dice material, and punchier animations (3-D dice tumble, lock-pop,
-  hot-dice glow, active-seat breathe). Synthesized sound effects (roll / bank /
-  bust / hot dice / endgame / win) with a persisted mute toggle (on by default),
-  plus `prefers-reduced-motion` support. Sounds are generated live via the Web
-  Audio API — no audio assets to ship. Shared by offline and online play
-  (`src/game/sfx.ts`, `useGameSounds.ts`).
-- **Bots (done):** four difficulty tiers (easy < medium < hard ≤ expert, a
-  measured ladder) plus cautious/balanced/reckless personalities, selectable per
-  bot in offline setup and the online lobby. Expert plays the risk-neutral optimal
-  turn policy via a dynamic program over the exact roll model.
-- **Onboarding (done):** a "Learn to play" guided practice game (you vs one easy
-  bot) with a contextual coach hint bar that narrates the roll-vs-bank loop; a
-  hints toggle available in any local game; a visual scoring reference in the
-  rules screen; and a first-run highlight for new players.
-- **Stats & progression (done):** a local (localStorage) profile tracking games,
-  wins, streaks, best turn/total and average bank across solo games; eight
-  achievements; a post-game summary with any newly-unlocked badges; and a Stats
-  screen from the home menu.
-- **Customization (done):** unlockable dice skins and table themes earned via
-  achievements/milestones, equipped in a Locker screen and applied in-game (offline
-  and online) as CSS-variable overrides on the dice and felt.
-- **Online polish (done):** live presence dots (connected/disconnected) on seats
-  with disconnect/reconnect toasts, an "is thinking…" cue on the seat the server is
-  playing, dice roll animation reconstructed from broadcast state diffs, and online
-  games recorded into the stats profile with a post-game summary. (Spectator mode is
-  the remaining online item.)
-- **Accessibility & settings (done):** a Settings screen with larger-text mode,
-  high-contrast mode, a colorblind-safe seat palette, reduce-motion, and separate
-  SFX/Music volume sliders — persisted to localStorage and applied live via
-  document-root data attributes plus audio/palette hooks.
-- **Sound & music (done):** a synthesized ambient background-music loop (its own
-  volume, no audio assets), separate SFX/Music buses under one mute, subtle pitch
-  variation so repeated cues differ, and a soft UI click on every button.
-- **Release prep (done):** an SVG favicon + page metadata (description, theme-color,
-  Open Graph), a pre-React loading splash, a React error boundary with a graceful
-  crash screen, a build-injected version footer, and a production build & deploy
-  guide (above).
-- **PWA / installable (done):** a web app manifest + maskable icon, a service
-  worker that caches the app shell (so local & vs-bots play works offline), and an
-  "Install app" button when the browser offers it. The service worker registers in
-  production builds only.
-- **Desktop app (done):** packaged as a native app via Tauri (`packages/client/src-tauri`);
-  builds real Windows installers (see "Desktop app (Tauri)" above).
-- **Internationalization (done):** a lightweight in-house i18n (string catalog +
-  `t()` + React context, no library) with an English/Spanish language switcher in
-  Settings (persisted). Home, Settings, and the in-game UI are translated; add
-  locales by extending `src/i18n/catalog.ts`.
-- **Later:** desktop/Steam build by wrapping the web client (e.g. Tauri); richer
-  online polish (roll animations from state diffs, spectating, presence).
+[`CLAUDE.md`](CLAUDE.md) is the working notes for this repo: the settled rules
+that are easy to get wrong, how much verification a change is worth, and the
+contract tests that exist because each of them shipped broken once. Read it
+before making changes.

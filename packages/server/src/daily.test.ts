@@ -344,8 +344,17 @@ describe("moves only ever append", () => {
     await startDailyRun(USER, DAY);
     await playDailyMove(USER, "ROLL", DAY);
     expect(rows.get(key(USER, DAY))!.moves).toBe("ROLL");
-    await playDailyMove(USER, "BANK", DAY);
-    expect(rows.get(key(USER, DAY))!.moves).toBe("ROLL,BANK");
+
+    // Which second move is legal depends on how the opening throw fell, so read
+    // the position rather than assume it. This used to bank unconditionally,
+    // and the seed a run is dealt is the server's own `randomInt` — about one
+    // opening throw in ten busts, leaving nothing to bank, and the test failed
+    // on a run that was behaving perfectly. A test that is red one push in ten
+    // for no reason teaches you to ignore the build.
+    const run = (await resumeDailyRun(USER, DAY))!;
+    const second = run.state.turn.turnScore > 0 && !run.state.turn.outcome ? "BANK" : "ROLL";
+    await playDailyMove(USER, second, DAY);
+    expect(rows.get(key(USER, DAY))!.moves).toBe(`ROLL,${second}`);
   });
 
   it("rejects an illegal move instead of silently dropping it", async () => {

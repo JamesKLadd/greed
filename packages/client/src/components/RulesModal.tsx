@@ -46,6 +46,18 @@ export function RulesModal({ onClose }: RulesModalProps) {
         </p>
         <ul>
           <li>{t("rules.li.autoLock")}</li>
+          {/* Both of these are rules a player meets by being refused: tapping a
+              die is not discoverable, and releasing the last held one silently
+              does nothing. They belong here rather than only in canToggleLock's
+              comment, which no player will ever read. */}
+          <li>
+            <strong>{t("rules.li.tapLead")}</strong>
+            {t("rules.li.tapText")}
+          </li>
+          <li>
+            <strong>{t("rules.li.keepOneLead")}</strong>
+            {t("rules.li.keepOneText")}
+          </li>
           <li>
             <strong>{t("rules.li.rerollLead")}</strong>
             {t("rules.li.rerollText")}

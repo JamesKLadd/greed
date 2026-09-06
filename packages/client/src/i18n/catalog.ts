@@ -661,6 +661,12 @@ export const en = {
     " be the player with the highest banked total once someone reaches 3000. Roll five dice and press your luck.",
   "rules.li.autoLock":
     "Every scoring die is kept (locked) automatically; only the rest can be rerolled.",
+  "rules.li.tapLead": "Change your mind:",
+  "rules.li.tapText":
+    " tap a die to hold it or put it back — you don't have to keep what was kept for you.",
+  "rules.li.keepOneLead": "Keep at least one:",
+  "rules.li.keepOneText":
+    " once you have thrown, one die must stay held, so a throw is never free. To swap which die you are keeping, hold the new one first and release the old one after.",
   "rules.li.rerollLead": "Reroll or bank?",
   "rules.li.rerollText":
     " Reroll the non-scoring dice to add more — but if a reroll scores nothing, you bust and lose the turn's points. Bank to keep them for good.",
@@ -1302,6 +1308,12 @@ export const es: Record<MsgKey, string> = {
     " ser quien tenga el mayor total guardado en cuanto alguien llegue a 3000. Tira cinco dados y tienta a la suerte.",
   "rules.li.autoLock":
     "Cada dado que puntúa se conserva (bloquea) automáticamente; solo el resto se puede volver a tirar.",
+  "rules.li.tapLead": "Cambia de idea:",
+  "rules.li.tapText":
+    " toca un dado para conservarlo o devolverlo — no tienes por qué quedarte con lo que el juego conservó por ti.",
+  "rules.li.keepOneLead": "Conserva al menos uno:",
+  "rules.li.keepOneText":
+    " en cuanto hayas tirado, un dado debe seguir conservado, así que una tirada nunca sale gratis. Para cambiar cuál te quedas, conserva primero el nuevo y devuelve después el antiguo.",
   "rules.li.rerollLead": "¿Volver a tirar o guardar?",
   "rules.li.rerollText":
     " Vuelve a tirar los dados que no puntúan para sumar más — pero si una tirada no puntúa nada, te pasas y pierdes los puntos del turno. Guarda para conservarlos.",
@@ -1940,6 +1952,12 @@ export const fr: Record<MsgKey, string> = {
     " être celui qui a le plus gros total encaissé dès que quelqu'un atteint 3000. Lancez cinq dés et tentez votre chance.",
   "rules.li.autoLock":
     "Chaque dé qui marque est conservé (verrouillé) automatiquement ; seuls les autres peuvent être relancés.",
+  "rules.li.tapLead": "Changez d'avis :",
+  "rules.li.tapText":
+    " touchez un dé pour le conserver ou le remettre en jeu — rien ne vous oblige à garder ce que le jeu a conservé pour vous.",
+  "rules.li.keepOneLead": "Gardez-en au moins un :",
+  "rules.li.keepOneText":
+    " une fois que vous avez lancé, un dé doit rester conservé : un lancer n'est donc jamais gratuit. Pour changer de dé conservé, conservez d'abord le nouveau, puis relâchez l'ancien.",
   "rules.li.rerollLead": "Relancer ou encaisser ?",
   "rules.li.rerollText":
     " Relancez les dés qui ne marquent pas pour en ajouter — mais si un lancer ne marque rien, vous échouez et perdez les points du tour. Encaissez pour les garder définitivement.",
