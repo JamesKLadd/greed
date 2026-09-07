@@ -25,6 +25,7 @@ import {
   diceToRoll,
   heldScore,
   refreshTurn,
+  throwCompletesFiveOfAKind,
   turnLegalActions,
 } from "./turn.js";
 import { GOAL_DEFAULT, TEAM_TABLE_SIZES } from "./types.js";
@@ -292,7 +293,14 @@ function doRoll(state: GameState): GameState {
   const player = state.players[turn.playerIndex];
   state.log.push({ type: "roll", playerId: player.id, dice: thrown, result });
 
-  if (result.points === 0) {
+  // Five of a kind is the one hand built across several throws, and the die
+  // that completes it is worth nothing by itself on a 2, 3, 4 or 6 — so the
+  // throw scores zero and, read on its own, is indistinguishable from a bust.
+  // A player who held a fourth 2 and threw for the fifth got it, and was busted
+  // by the best hand in the game. The mat is what decides this, not the throw.
+  const madeFiveOfAKind = throwCompletesFiveOfAKind(turn, indices);
+
+  if (result.points === 0 && !madeFiveOfAKind) {
     // Bust: forfeit everything accumulated this turn. The turn stays visible
     // (outcome set) so players can see the losing roll before ADVANCE.
     const lost = turn.turnScore;
@@ -323,6 +331,10 @@ function doRoll(state: GameState): GameState {
   indices.forEach((diceIndex, k) => {
     if (result.scoringMask[k]) turn.locked[diceIndex] = true;
   });
+  // The completing die IS a scoring die — the hand it makes pays 1000 — even
+  // though its own face pays nothing. Holding it is what lets heldScore see
+  // five of a kind rather than four dice and a loose one.
+  if (madeFiveOfAKind) indices.forEach((diceIndex) => (turn.locked[diceIndex] = true));
 
   const wasHot = turn.hotDice;
   refreshTurn(turn);

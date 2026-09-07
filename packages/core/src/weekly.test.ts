@@ -134,4 +134,23 @@ describe("a weekly run", () => {
     expect(r.score).toBe(0);
     expect(r.complete).toBe(false);
   });
+
+  it("replays a five of a kind built by hand rather than busting on it", () => {
+    // The bug as a player met it, through the path the server actually uses:
+    // the opening throw of this seed is 3,3,3,3,2, the triple locks three of
+    // the 3s, and the fourth is held by hand (H3) before throwing the last die
+    // — which comes up 3. A single 3 pays nothing on its own, so the throw
+    // scored zero and the run was busted by five of a kind.
+    const SEED = 376;
+    expect(weeklyPosition(SEED, ["ROLL"]).state.turn.dice).toEqual([3, 3, 3, 3, 2]);
+
+    const pos = weeklyPosition(SEED, ["ROLL", "H3", "ROLL"]);
+    expect(pos.state.turn.dice).toEqual([3, 3, 3, 3, 3]);
+    expect(pos.state.turn.outcome).toBeNull();
+    expect(pos.state.turn.turnScore).toBe(1000);
+
+    // And it banks for what it is worth, since a score the server derives from
+    // a replay is the only score there is.
+    expect(scoreWeeklyRun(SEED, ["ROLL", "H3", "ROLL", "BANK"]).score).toBe(1000);
+  });
 });

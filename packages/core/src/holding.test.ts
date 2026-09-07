@@ -90,6 +90,117 @@ describe("five of a kind is built, not just rolled", () => {
   });
 });
 
+/**
+ * The throw that COMPLETES one, which is a different question from what the
+ * mat is worth once it has landed.
+ *
+ * Reported from a real weekly run: four 2s on the opening throw, the fourth 2
+ * held by hand, the last die thrown — and it came up 2. That is five of a kind.
+ * The player was busted.
+ *
+ * The RNG is pinned here rather than mocked: these seeds are the real mulberry32
+ * throwing the face each test needs, so the throw under test is a real throw.
+ */
+describe("completing a five of a kind on the last die", () => {
+  /** A seed whose next single die is a 2 — a face that pays nothing alone. */
+  const ROLLS_A_TWO = 9;
+  /** And one whose next single die is a 3, to check a second dead face. */
+  const ROLLS_A_THREE = 14;
+
+  /** Four of a face held — three by the triple, the fourth by hand. */
+  function fourHeld(face: DieValue, loose: DieValue): GameState {
+    const g = position(
+      [face, face, face, face, loose],
+      [true, true, true, true, false],
+      [{ kind: "triple", face, dice: [0, 1, 2], points: 100 * face }],
+    );
+    // The fourth die earns nothing on its own: 2s, 3s, 4s and 6s never do.
+    expect(g.turn.turnScore).toBe(100 * face);
+    expect(diceToRoll(g.turn)).toEqual([4]);
+    return g;
+  }
+
+  it("pays 1000 instead of busting when the completing face scores nothing alone", () => {
+    const g = fourHeld(2, 6);
+    g.rng = ROLLS_A_TWO;
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([2, 2, 2, 2, 2]);
+    expect(after.turn.busted).toBe(false);
+    expect(after.turn.outcome).toBeNull();
+    expect(after.turn.turnScore).toBe(1000);
+  });
+
+  it("holds the completing die, so the hand reads as five of a kind", () => {
+    const g = fourHeld(3, 6);
+    g.rng = ROLLS_A_THREE;
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([3, 3, 3, 3, 3]);
+    // Every die held and paying: the mat is clear, so the turn can go on with a
+    // fresh five carrying the 1000 — the same as any other cleared mat.
+    expect(after.turn.locked).toEqual([true, true, true, true, true]);
+    expect(after.turn.hotDice).toBe(true);
+    expect(getLegalActions(after).canRoll).toBe(true);
+    expect(getLegalActions(after).canBank).toBe(true);
+  });
+
+  it("carries the 1000 when the cleared mat is thrown again", () => {
+    let g = fourHeld(2, 6);
+    g.rng = ROLLS_A_TWO;
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.turnScore).toBe(1000);
+
+    // A fresh five off a clear mat: whatever it does, the 1000 is carried.
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.carried).toBe(1000);
+  });
+
+  it("still busts a throw that leaves the dice short of five", () => {
+    // The same position, but the last die is not the face being chased. This is
+    // the roll that SHOULD end the turn, and the fix must not save it.
+    const g = fourHeld(2, 6);
+    g.rng = ROLLS_A_THREE; // a 3 against four 2s
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([2, 2, 2, 2, 3]);
+    expect(after.turn.busted).toBe(true);
+    expect(after.turn.outcome).toBe("busted");
+    expect(after.turn.turnScore).toBe(0);
+  });
+
+  it("completes on two dice at once, not just the last one", () => {
+    // Three 6s held and TWO loose, both coming up 6. The same hand, arriving in
+    // one throw rather than one die — the throw is still worth nothing on its
+    // own, and the mat is still five of a kind.
+    const ROLLS_TWO_SIXES = 30;
+    const g = position(
+      [6, 6, 6, 1, 1],
+      [true, true, true, false, false],
+      [{ kind: "triple", face: 6, dice: [0, 1, 2], points: 600 }],
+    );
+    expect(diceToRoll(g.turn)).toEqual([3, 4]);
+    g.rng = ROLLS_TWO_SIXES;
+
+    const after = applyAction(g, { type: "ROLL" });
+    expect(after.turn.dice).toEqual([6, 6, 6, 6, 6]);
+    expect(after.turn.outcome).toBeNull();
+    expect(after.turn.turnScore).toBe(1000);
+  });
+
+  it("gives the completing die back to a player who takes it off again", () => {
+    // Nothing about the hand is special once it is on the mat: releasing a die
+    // drops it to what the other four are earning, exactly as it always has.
+    let g = fourHeld(2, 6);
+    g.rng = ROLLS_A_TWO;
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.turnScore).toBe(1000);
+
+    g = tap(g, 4);
+    expect(g.turn.turnScore).toBe(200); // four 2s: the triple, and nothing more
+  });
+});
+
 describe("taking a die back", () => {
   it("removes the points it was part of", () => {
     let g = position(

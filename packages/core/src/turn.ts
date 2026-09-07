@@ -77,6 +77,30 @@ export function canToggleLock(turn: TurnState, index: number): boolean {
   return true;
 }
 
+/**
+ * Does the throw that has just landed COMPLETE a five of a kind?
+ *
+ * `thrown` are the dice this throw put on the mat; everything else was being
+ * held. A different question from `isFiveOfAKind`, which reads a hand that has
+ * already been assembled — this one is asked at the moment the last die lands,
+ * before it has been locked.
+ *
+ * It exists because `scoreRoll` is only ever shown the dice that were thrown,
+ * deliberately: a throw is worth what it threw. But five of a kind is the one
+ * hand built ACROSS throws, and the die that completes it pays nothing on its
+ * own unless the face happens to be a 1 or a 5. So on 2s, 3s, 4s or 6s the
+ * throw that made the best hand in the game looks, to the throw's own scoring,
+ * exactly like a throw that scored nothing — and the turn busted on it. That is
+ * the bug this answers; the mat knows what the throw cannot.
+ */
+export function throwCompletesFiveOfAKind(turn: TurnState, thrown: number[]): boolean {
+  if (!turn.dice.every((d) => d === turn.dice[0])) return false;
+  // Everything that was not thrown must have been held, or these five faces
+  // are not a hand anyone is holding — just dice lying on the mat.
+  const justThrown = new Set(thrown);
+  return turn.locked.every((held, i) => held || justThrown.has(i));
+}
+
 export function turnLegalActions(turn: TurnState): LegalActions {
   // A finished turn only waits to be advanced.
   if (turn.outcome) return { canRoll: false, canBank: false, canAdvance: true };
