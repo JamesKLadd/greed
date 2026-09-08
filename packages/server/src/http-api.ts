@@ -218,8 +218,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const b = (await readBody(req)) as Record<string, unknown>;
       // The server owns the dice: it appends the move, replays from the seed
       // and returns the position. The client never sees the seed at all.
-      const view = await playDailyMove(id, b.move);
-      json(res, 200, { ...view, status: view.complete ? await dailyStatus(id) : undefined });
+      //
+      // The position and NOTHING else — see the weekly's move below for why the
+      // refreshed board is not bundled in here.
+      json(res, 200, await playDailyMove(id, b.move));
     } else if (method === "GET" && path === "/api/daily/resume") {
       const { id } = await requireUser(req);
       json(res, 200, { run: await resumeDailyRun(id) });
@@ -233,10 +235,22 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const { id } = await requireUser(req);
       const b = (await readBody(req)) as Record<string, unknown>;
       // Same shape as the daily: the server owns the dice, appends the move,
-      // replays from the seed and returns the position. A finished attempt
-      // carries the refreshed status so the board updates in one round trip.
-      const view = await playWeeklyMove(id, b.move);
-      json(res, 200, { ...view, status: view.complete ? await weeklyStatus(id) : undefined });
+      // replays from the seed and returns the position.
+      //
+      // The move that ENDS a run used to carry the refreshed board with it, to
+      // save a round trip. It cost one instead: weeklyStatus is seven queries
+      // run one after another (your row, the board, the count, closed-week
+      // placings, champions, the streak), and they landed in front of the only
+      // reply the player was waiting on. Worse, they landed SELECTIVELY — a
+      // roll only ends a run by busting it, so on the last turn the pause
+      // before the dice moved WAS the result. Players read it and knew they had
+      // busted before the throw played out.
+      //
+      // Nothing was gained for it, either: both screens re-read the board when
+      // the run finishes (`onFinished`), so the bundled copy was parsed and
+      // dropped. The board is fetched a moment later, while the result is being
+      // read, which is where that work belongs.
+      json(res, 200, await playWeeklyMove(id, b.move));
     } else if (method === "GET" && path === "/api/weekly/resume") {
       const { id } = await requireUser(req);
       json(res, 200, { run: await resumeWeeklyRun(id) });

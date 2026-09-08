@@ -100,8 +100,17 @@ export function startDaily(): Promise<DailyRunView> {
   return api<DailyRunView>("/api/daily/start", { method: "POST", body: {}, auth: true });
 }
 
-/** Play one move. The server appends it, replays, and returns the new position. */
-export function playDailyMove(move: DailyMove): Promise<DailyRunView & { status?: DailyStatus }> {
+/**
+ * Play one move. The server appends it, replays, and returns the new position —
+ * the position alone, even for the move that ends the run.
+ *
+ * It used to answer a finished run with the refreshed board attached, and this
+ * screen dropped it and re-read the board anyway (`onFinished`). What that
+ * bundle really did was make the last reply of a run the slow one, which on the
+ * final turn told the player they had busted before the dice had finished
+ * moving.
+ */
+export function playDailyMove(move: DailyMove): Promise<DailyRunView> {
   return api("/api/daily/move", { method: "POST", body: { move }, auth: true });
 }
 
