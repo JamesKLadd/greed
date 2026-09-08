@@ -93,7 +93,18 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
   const timers = useRef(new Set<number>());
 
   const state = view.state;
-  const finished = view.complete;
+  /**
+   * The run is over AND the board has finished showing how it ended.
+   *
+   * Not simply `view.complete`, because the screen acts on this: it swaps the
+   * run out for the results the moment it turns true. Reporting the server's
+   * answer the instant it lands meant the roll that ENDED a run was the one you
+   * got least time to look at — every other bust is held for a beat so the
+   * losing dice can be read, and the last one flashed past. `busy` already
+   * means "in flight, or being held on screen", so deferring to it gives the
+   * final turn the same beat as the rest without a second timer to keep in step.
+   */
+  const finished = view.complete && !busy;
 
   // Pending timers outlive a render, but not the screen.
   useEffect(() => {
@@ -126,17 +137,22 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
    * roll lit on the tray only made the next turn look like it was starting from
    * the last turn's dice. Either way the board ends up on a fresh turn, which is
    * what the next move would have started from anyway.
+   *
+   * The turn that ends the RUN is held on the same terms — it is the one a
+   * player most wants to see — but nothing is cleared afterwards. Clearing is
+   * for the turn that follows, a finished run has none, and the results view is
+   * about to take the board over anyway, so the last roll is left as it fell.
    */
   const land = useCallback(
     (next: RunView) => {
       const outcome = next.state.turn.outcome;
-      if (!outcome || next.complete) {
+      if (!outcome) {
         setView(next);
         release();
         return;
       }
       if (outcome === "banked") {
-        setView({ ...next, state: runMoveStart(next.state) });
+        setView(next.complete ? next : { ...next, state: runMoveStart(next.state) });
         release();
         return;
       }
@@ -144,7 +160,9 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
       // The server has already recorded the turn, so nothing is riding on this
       // timer beyond how long the bust stays readable.
       after(RESOLVE_MS, () => {
-        setView((v) => (v.state === next.state ? { ...v, state: runMoveStart(v.state) } : v));
+        if (!next.complete) {
+          setView((v) => (v.state === next.state ? { ...v, state: runMoveStart(v.state) } : v));
+        }
         release();
       });
     },
