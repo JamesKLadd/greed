@@ -9,7 +9,14 @@
 
 import { hasProfanity, BEST_TOTAL_CEILING } from "@greed/core";
 import { query } from "./db.js";
-import { hashPassword, hashToken, newSingleUseToken, signSession, verifyPassword } from "./auth.js";
+import {
+  forgetSessionCurrency,
+  hashPassword,
+  hashToken,
+  newSingleUseToken,
+  signSession,
+  verifyPassword,
+} from "./auth.js";
 import { sendResetEmail, sendVerifyEmail, emailEnabled, verificationRequired } from "./email.js";
 
 // ---------------------------------------------------------------------------
@@ -185,11 +192,75 @@ export function validateUsername(username: unknown): string {
   return u;
 }
 
+/**
+ * Passwords nobody should be allowed to choose.
+ *
+ * Length with no composition rules is the current advice, and it comes paired
+ * with the half that was missing: a list of the passwords that actually get
+ * tried. Held folded (lower-cased, digits and symbols stripped) so "P@ssw0rd!"
+ * and "password" are the same entry, which is how they are to an attacker.
+ */
+const COMMON_PASSWORDS = new Set([
+  "password",
+  "passwort",
+  "passord",
+  "qwerty",
+  "qwertyuiop",
+  "asdfghjkl",
+  "abcdef",
+  "abcdefg",
+  "letmein",
+  "welcome",
+  "monkey",
+  "dragon",
+  "football",
+  "baseball",
+  "sunshine",
+  "princess",
+  "iloveyou",
+  "admin",
+  "administrator",
+  "login",
+  "master",
+  "superman",
+  "trustno",
+  "whatever",
+  "starwars",
+  "computer",
+  "michael",
+  "jennifer",
+  "jordan",
+  "shadow",
+  "freedom",
+  "hunter",
+  "greed",
+  "greedgame",
+  "dice",
+  "diceroll",
+]);
+
+/** Fold a password the way the list is held: letters only, lower case. */
+function foldPassword(p: string): string {
+  return p.toLowerCase().replace(/[^a-z]/g, "");
+}
+
 function validatePassword(password: unknown): string {
   if (typeof password !== "string" || password.length < 8) {
     throw new AccountError(400, "Password must be at least 8 characters.");
   }
   if (password.length > 200) throw new AccountError(400, "Password is too long.");
+  const folded = foldPassword(password);
+  // Runs of one character, and the digits-only passwords, never survive folding
+  // into something meaningful — so check the raw shape for those.
+  if (/^(.)\1*$/.test(password) || /^[0-9]+$/.test(password)) {
+    throw new AccountError(400, "Please choose a less predictable password.");
+  }
+  if (
+    COMMON_PASSWORDS.has(folded) ||
+    (folded.length >= 4 && COMMON_PASSWORDS.has(folded.slice(0, -1)))
+  ) {
+    throw new AccountError(400, "That password is too common — please choose another.");
+  }
   return password;
 }
 
@@ -246,8 +317,19 @@ export async function signup(input: {
     [email, username],
   );
   for (const r of existing.rows as { email_taken: boolean; name_taken: boolean }[]) {
-    if (r.email_taken) throw new AccountError(409, "An account with that email already exists.");
+    // A taken USERNAME is safe to name: the game already answers that question
+    // on the signup form, and a username is public on every leaderboard.
     if (r.name_taken) throw new AccountError(409, "That username is taken.");
+    // A taken EMAIL is not. Saying so turns signup into a way to ask whether
+    // any given address has an account here, which is nobody's business. The
+    // person who owns it can find out the way they are supposed to, by
+    // resetting their password.
+    if (r.email_taken) {
+      throw new AccountError(
+        409,
+        "That email can't be used to sign up. If you already have an account, log in or reset your password.",
+      );
+    }
   }
 
   const passwordHash = await hashPassword(password);
@@ -284,12 +366,24 @@ export async function signup(input: {
   };
 }
 
+/**
+ * A real bcrypt hash of a value nobody knows, compared against when no account
+ * was found.
+ *
+ * Without it, a login for an address with no account skipped the hash entirely
+ * and answered in about 2ms where a real one took 90 — which is a reliable way
+ * to ask the server whether any given email has a Greed account. Both paths now
+ * do the same work.
+ */
+const DECOY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
 export async function login(input: { login: unknown; password: unknown }): Promise<AuthResult> {
   if (typeof input.login !== "string" || typeof input.password !== "string") {
     throw new AccountError(400, "Enter your email/username and password.");
   }
   const user = await findByEmailOrUsername(input.login.trim());
-  const ok = user ? await verifyPassword(input.password, user.password_hash) : false;
+  // Always hash, even when there is nothing to compare against.
+  const ok = await verifyPassword(input.password, user ? user.password_hash : DECOY_HASH);
   if (!user || !ok) throw new AccountError(401, "Incorrect email/username or password.");
 
   return {
@@ -375,10 +469,17 @@ export async function resetPassword(rawToken: unknown, newPassword: unknown): Pr
   }
   const userId = rows[0].user_id;
   const passwordHash = await hashPassword(password);
+  // Moving sessions_valid_from is what actually signs the other devices out.
+  // Resetting a password is the one thing a person does when they think
+  // somebody else is in their account, and it used to leave every token
+  // already issued working for the rest of its thirty days.
   const updated = await query<UserRow>(
-    `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2 RETURNING *`,
+    `UPDATE users
+        SET password_hash = $1, sessions_valid_from = now(), updated_at = now()
+      WHERE id = $2 RETURNING *`,
     [passwordHash, userId],
   );
+  forgetSessionCurrency(userId);
   // Invalidate any other outstanding reset tokens for this user.
   await query(`DELETE FROM auth_tokens WHERE user_id = $1 AND kind = 'reset'`, [userId]);
   const user = updated.rows[0];
@@ -423,6 +524,9 @@ export async function deleteAccount(userId: string, password: unknown): Promise<
     throw new AccountError(401, "That password is incorrect.");
   }
   await query(`DELETE FROM users WHERE id = $1`, [userId]);
+  // The row is gone, so any cached "this session is fine" answer for it must go
+  // too — otherwise the deleted account's token keeps working for a few seconds.
+  forgetSessionCurrency(userId);
 }
 
 /** Store a profile snapshot for a user, merged monotonically with what's saved. */

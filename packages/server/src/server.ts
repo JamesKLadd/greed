@@ -19,7 +19,7 @@ import type { GameAction } from "@greed/core";
 import { decide } from "@greed/bots";
 import { decode, encode, isEmoteId } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
-import { verifySession } from "./auth.js";
+import { sessionIsCurrent, verifySession } from "./auth.js";
 import { markOffline, markOnline } from "./presence.js";
 import { requireFriend } from "./social.js";
 import { recordMatch } from "./leaderboards.js";
@@ -435,8 +435,10 @@ export class GreedServer {
   private onHello(ws: WebSocket, auth: string): void {
     if (this.notifiers.has(ws)) return;
     verifySession(auth)
-      .then((claims) => {
-        if (!claims) return this.send(ws, { type: "error", message: "Please log in again." });
+      .then(async (claims) => {
+        if (!claims || !(await sessionIsCurrent(claims))) {
+          return this.send(ws, { type: "error", message: "Please log in again." });
+        }
         // The socket may have closed while the token was being verified.
         if (ws.readyState !== ws.OPEN) return;
         this.notifiers.set(ws, { userId: claims.sub, username: claims.username });
@@ -542,8 +544,13 @@ export class GreedServer {
     run: (id: { name?: string; userId?: string }) => void,
   ): void {
     const resolve = auth
-      ? verifySession(auth).then((claims) =>
-          claims ? { name: claims.username, userId: claims.sub } : {},
+      ? verifySession(auth).then(async (claims) =>
+          claims && (await sessionIsCurrent(claims))
+            ? { name: claims.username, userId: claims.sub }
+            : // A session the account no longer honours (password reset, account
+              // deleted) is not an error here — the player is joining a table,
+              // not reading an account — so they simply arrive as a guest.
+              {},
         )
       : Promise.resolve({});
     resolve

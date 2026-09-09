@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { DEFAULT_SERVER_PORT } from "@greed/protocol";
 import { GreedServer } from "./server.js";
-import { accountsEnabled, migrate } from "./db.js";
+import { accountsEnabled, disableAccounts, migrate, startPruning } from "./db.js";
 import { handleApi } from "./http-api.js";
 import { emailStatus, verificationStatus } from "./email.js";
 import { loadSecret, secretSource } from "./auth.js";
@@ -82,9 +82,16 @@ async function start(): Promise<void> {
   if (accountsEnabled()) {
     try {
       await migrate();
+      startPruning();
       console.log("Accounts: enabled (database ready).");
     } catch (err) {
+      // A database that cannot be migrated is one that cannot be used, and
+      // every account request would have 500'd against it. Fall back to the
+      // guest-play path the server already supports rather than looking like a
+      // working server that fails everything an account touches.
       console.error("Accounts: database migration failed —", (err as Error).message);
+      console.error("Accounts: DISABLED for this boot. Online play continues as guests.");
+      disableAccounts();
     }
   } else {
     console.log("Accounts: disabled (no DATABASE_URL). Guest play only.");

@@ -24,7 +24,10 @@ const playDailyMove = vi.fn(async () => finished);
 const playWeeklyMove = vi.fn(async () => finished);
 
 vi.mock("./db.js", () => ({ accountsEnabled: () => true, query: async () => ({ rows: [] }) }));
-vi.mock("./auth.js", () => ({ verifySession: () => ({ sub: "u1", username: "someone" }) }));
+vi.mock("./auth.js", () => ({
+  verifySession: () => ({ sub: "u1", username: "someone", issuedAt: 1 }),
+  sessionIsCurrent: async () => true,
+}));
 vi.mock("./daily.js", () => ({
   dailyStatus,
   playDailyMove,

@@ -13,19 +13,35 @@ const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
 
-/** True when a database is configured (accounts features are available). */
+/**
+ * Set when the database is configured but unusable, so the server stops
+ * claiming to have accounts it cannot serve. See the boot sequence in index.ts.
+ */
+let accountsBroken = false;
+
+/** Give up on accounts for this process; online play carries on as guests. */
+export function disableAccounts(): void {
+  accountsBroken = true;
+}
+
+/** True when a database is configured AND usable (accounts are available). */
 export function accountsEnabled(): boolean {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(process.env.DATABASE_URL) && !accountsBroken;
 }
 
 function makePool(): pg.Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is not set");
-  // Neon (and most managed Postgres) require TLS. We don't ship a CA bundle, so
-  // accept the provider's certificate without local verification.
-  const ssl = /sslmode=require|neon\.tech|render\.com|amazonaws\.com/.test(connectionString)
-    ? { rejectUnauthorized: false }
-    : undefined;
+  // Managed Postgres requires TLS. Verify the certificate against Node's own
+  // root store — Neon, Render and RDS all present publicly-signed certificates,
+  // so nothing needs shipping. This used to pass `rejectUnauthorized: false`,
+  // which encrypted the connection without authenticating the other end of it.
+  //
+  // DATABASE_SSL_INSECURE exists for a host that genuinely presents a private
+  // certificate; it is the old behaviour, and it says what it is.
+  const wantsTls = /sslmode=require|neon\.tech|render\.com|amazonaws\.com/.test(connectionString);
+  const insecure = process.env.DATABASE_SSL_INSECURE === "true";
+  const ssl = wantsTls ? { rejectUnauthorized: !insecure } : undefined;
   return new Pool({ connectionString, ssl, max: 5, idleTimeoutMillis: 30_000 });
 }
 
@@ -55,6 +71,10 @@ export async function migrate(): Promise<void> {
       updated_at     timestamptz NOT NULL DEFAULT now()
     );
   `);
+  // Sessions are stateless JWTs, so this is what makes a password reset or an
+  // account deletion actually END the sessions that were already out there:
+  // anything issued before this moment is refused. See auth.ts.
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_valid_from timestamptz;`);
   // Case-insensitive uniqueness for both email and username.
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (lower(email));`);
   await query(
@@ -213,4 +233,67 @@ export async function migrate(): Promise<void> {
       `Leaderboards: voided ${voided.rowCount} Best Total(s) above ${BEST_TOTAL_CEILING}.`,
     );
   }
+
+  await prune();
+}
+
+/** How long finished records are kept before they are cleared out. */
+export const RETENTION_DAYS = 30;
+
+/**
+ * Clear out what is no longer read.
+ *
+ * Three tables only ever grew: every finished online game, every daily run and
+ * every weekly attempt, kept forever for boards that never look further back
+ * than the current period. Thirty days is well past anything the game asks for
+ * and leaves a month of history on a player's profile.
+ *
+ * Expired verification and reset tokens go too. Those were already refused once
+ * `expires_at` passed — a link nobody ever clicked simply stayed in the table.
+ *
+ * Runs on boot, and again daily for a server that stays up (see `startPruning`).
+ * Everything here is a plain DELETE by date, so running it twice does nothing
+ * the first pass didn't.
+ */
+export async function prune(): Promise<void> {
+  const cutoff = `${RETENTION_DAYS} days`;
+  const jobs: [string, string, unknown[]][] = [
+    ["expired sign-in tokens", `DELETE FROM auth_tokens WHERE expires_at < now()`, []],
+    ["old matches", `DELETE FROM match_history WHERE played_at < now() - $1::interval`, [cutoff]],
+    ["old daily runs", `DELETE FROM daily_runs WHERE day < (now() - $1::interval)::date`, [cutoff]],
+    [
+      "old weekly runs",
+      `DELETE FROM weekly_runs WHERE week < (now() - $1::interval)::date`,
+      [cutoff],
+    ],
+    // An attempt left open for a month belongs to a week that closed long ago
+    // and can never be scored; it only holds its player's one open slot.
+    [
+      "abandoned weekly attempts",
+      `DELETE FROM weekly_open WHERE started_at < now() - $1::interval`,
+      [cutoff],
+    ],
+  ];
+  for (const [what, sql, params] of jobs) {
+    try {
+      const { rowCount } = await query(sql, params);
+      if (rowCount) console.log(`Retention: cleared ${rowCount} ${what}.`);
+    } catch (err) {
+      // One table missing or busy must not stop the others, and must never stop
+      // the server: this is housekeeping, not a boot requirement.
+      console.error(`Retention: could not clear ${what} —`, (err as Error).message);
+    }
+  }
+}
+
+/** Re-run the retention sweep once a day for a server that stays up. */
+export function startPruning(): NodeJS.Timeout {
+  const timer = setInterval(
+    () => {
+      void prune();
+    },
+    24 * 60 * 60 * 1000,
+  );
+  timer.unref?.();
+  return timer;
 }

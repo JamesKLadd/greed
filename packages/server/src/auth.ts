@@ -89,6 +89,8 @@ export interface SessionClaims {
   /** User id (JWT subject). */
   sub: string;
   username: string;
+  /** When this session was issued, in seconds — the JWT's own `iat`. */
+  issuedAt?: number;
 }
 
 export async function signSession(claims: SessionClaims): Promise<string> {
@@ -100,15 +102,73 @@ export async function signSession(claims: SessionClaims): Promise<string> {
     .sign(secret());
 }
 
-/** Verify a session JWT; returns the claims, or null if invalid/expired. */
+/**
+ * Verify a session JWT; returns the claims, or null if invalid/expired.
+ *
+ * Signature and expiry only — whether the ACCOUNT still honours this session is
+ * a separate question, asked by `sessionIsCurrent` below, because it needs the
+ * database and this is also called on the game socket's hot path.
+ */
 export async function verifySession(token: string): Promise<SessionClaims | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.sub !== "string" || typeof payload.username !== "string") return null;
-    return { sub: payload.sub, username: payload.username };
+    return {
+      sub: payload.sub,
+      username: payload.username,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
+    };
   } catch {
     return null;
   }
+}
+
+/**
+ * Does the account still stand behind this session?
+ *
+ * Sessions are stateless JWTs good for thirty days, which used to mean two
+ * things nobody wants. Changing your password — the one thing a person does
+ * when they think someone else is in their account — left every token already
+ * out there working. And a DELETED account's token kept authenticating until it
+ * expired, because nothing checked the user was still there.
+ *
+ * `sessions_valid_from` is moved forward on both, and a token issued before it
+ * is refused. A missing user is refused outright.
+ *
+ * Answers are cached briefly: this is asked on every API call, and the column
+ * only changes when a person resets or deletes, so a few seconds of staleness
+ * costs an attacker nothing and saves a query per request.
+ */
+const CURRENCY_TTL_MS = 15_000;
+const currency = new Map<string, { validFrom: number; checkedAt: number }>();
+
+/** Forget a cached answer — called when the account itself changes. */
+export function forgetSessionCurrency(userId: string): void {
+  currency.delete(userId);
+}
+
+export async function sessionIsCurrent(claims: SessionClaims): Promise<boolean> {
+  if (!accountsEnabled()) return true;
+  const now = Date.now();
+  let hit = currency.get(claims.sub);
+  if (!hit || now - hit.checkedAt > CURRENCY_TTL_MS) {
+    const { rows } = await query<{ valid_from: Date | null }>(
+      `SELECT sessions_valid_from AS valid_from FROM users WHERE id = $1`,
+      [claims.sub],
+    );
+    // No row at all: the account is gone, and so is anything signed for it.
+    if (rows.length === 0) {
+      currency.set(claims.sub, { validFrom: Infinity, checkedAt: now });
+      return false;
+    }
+    hit = { validFrom: rows[0].valid_from ? rows[0].valid_from.getTime() : 0, checkedAt: now };
+    currency.set(claims.sub, hit);
+  }
+  if (hit.validFrom === Infinity) return false;
+  if (!hit.validFrom) return true;
+  // `iat` is whole seconds, so allow the second it was issued in.
+  const issuedMs = (claims.issuedAt ?? 0) * 1000;
+  return issuedMs + 1000 >= hit.validFrom;
 }
 
 /** A fresh single-use token: the raw value goes in the email link; only its hash

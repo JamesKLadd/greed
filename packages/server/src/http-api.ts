@@ -7,7 +7,7 @@
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
-import { verifySession } from "./auth.js";
+import { sessionIsCurrent, verifySession } from "./auth.js";
 import { dailyKey, weekKey } from "@greed/core";
 import { clientKey, rateLimit } from "./rate-limit.js";
 import { dailyStatus, playDailyMove, resumeDailyRun, startDailyRun } from "./daily.js";
@@ -103,6 +103,11 @@ async function requireUser(req: IncomingMessage): Promise<{ id: string; username
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const claims = token ? await verifySession(token) : null;
   if (!claims) throw new AccountError(401, "Please log in again.");
+  // A valid signature is not the whole question. The account may have reset its
+  // password since — which is meant to end other sessions — or been deleted
+  // outright, in which case this token was still authenticating a user that no
+  // longer exists. See sessionIsCurrent.
+  if (!(await sessionIsCurrent(claims))) throw new AccountError(401, "Please log in again.");
   return { id: claims.sub, username: claims.username };
 }
 

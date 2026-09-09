@@ -113,7 +113,10 @@ describe("auth primitives", () => {
   it("signs and verifies a session round-trip", async () => {
     const token = await signSession({ sub: "u123", username: "Ada" });
     const claims = await verifySession(token);
-    expect(claims).toEqual({ sub: "u123", username: "Ada" });
+    expect(claims).toMatchObject({ sub: "u123", username: "Ada" });
+    // The issue time rides along so a session can be measured against an
+    // account that has since reset its password — see sessionIsCurrent.
+    expect(claims?.issuedAt).toBeTypeOf("number");
     expect(await verifySession(token + "tamper")).toBeNull();
     expect(await verifySession("garbage")).toBeNull();
   });
