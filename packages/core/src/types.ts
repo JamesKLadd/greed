@@ -200,9 +200,30 @@ export interface SuddenDeathState {
   pointer: number;
 }
 
+/**
+ * What a throw is worth, as the LOG keeps it.
+ *
+ * Deliberately narrower than the ScoreResult the turn carries. The log is
+ * append-only and the whole game state — log included — is broadcast to every
+ * player on every action, so anything kept here is paid for again on every
+ * roll, bank and advance for the rest of the game. Measured before this was
+ * narrowed: an eight-player game moved 27 MB, the log was 96% of the payload,
+ * and about two thirds of the log was `scoringMask` and `breakdown` that
+ * nothing ever read.
+ *
+ * The dice that scored are still on `turn.lastRoll` in full, which is where the
+ * roll-call banner reads them from; what the log is for is the turn history,
+ * the sounds and the end-of-game summary, and those want a number and a flag.
+ */
+export interface LoggedRoll {
+  points: number;
+  /** True when every die in the throw scored. */
+  isHotDice: boolean;
+}
+
 export type GameEvent =
   | { type: "game-start"; startPlayerId: string }
-  | { type: "roll"; playerId: string; dice: DieValue[]; result: ScoreResult }
+  | { type: "roll"; playerId: string; dice: DieValue[]; result: LoggedRoll }
   | { type: "bust"; playerId: string; lostPoints: number }
   | { type: "bank"; playerId: string; gained: number; total: number }
   | { type: "skip"; playerId: string }

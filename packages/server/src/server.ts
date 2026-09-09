@@ -312,10 +312,23 @@ export class GreedServer {
     if (ws.readyState === ws.OPEN) ws.send(encode(msg));
   }
 
+  /**
+   * Send an ALREADY-ENCODED message.
+   *
+   * A game snapshot is the same bytes for everyone — Greed has no hidden
+   * information — but `send` was encoding it again for each socket, so an
+   * eight-seat table serialised the same object eight times per action. On a
+   * table's busiest moment that is the one piece of work the server repeats for
+   * no reason.
+   */
+  private sendRaw(ws: WebSocket, payload: string): void {
+    if (ws.readyState === ws.OPEN) ws.send(payload);
+  }
+
   private broadcastLobby(room: Room): void {
-    const msg: ServerMessage = { type: "lobby", lobby: lobbyView(room) };
-    for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
-    for (const ws of room.spectators) this.send(ws, msg);
+    const payload = encode({ type: "lobby", lobby: lobbyView(room) });
+    for (const seat of room.seats) if (seat.ws) this.sendRaw(seat.ws, payload);
+    for (const ws of room.spectators) this.sendRaw(ws, payload);
   }
 
   /** Build the authoritative game snapshot (with presence) for a room, or null. */
@@ -357,8 +370,9 @@ export class GreedServer {
   private broadcastGame(room: Room): void {
     const msg = this.gameMessage(room);
     if (!msg) return;
-    for (const seat of room.seats) if (seat.ws) this.send(seat.ws, msg);
-    for (const ws of room.spectators) this.send(ws, msg);
+    const payload = encode(msg);
+    for (const seat of room.seats) if (seat.ws) this.sendRaw(seat.ws, payload);
+    for (const ws of room.spectators) this.sendRaw(ws, payload);
   }
 
   private welcome(ws: WebSocket, room: Room, seat: Seat): void {

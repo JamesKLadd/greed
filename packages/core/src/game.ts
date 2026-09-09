@@ -291,7 +291,14 @@ function doRoll(state: GameState): GameState {
   turn.rollCount += 1;
 
   const player = state.players[turn.playerIndex];
-  state.log.push({ type: "roll", playerId: player.id, dice: thrown, result });
+  // Only what the log is read for — see LoggedRoll. The full result stays on
+  // `turn.lastRoll`, which is where anything needing the breakdown looks.
+  state.log.push({
+    type: "roll",
+    playerId: player.id,
+    dice: thrown,
+    result: { points: result.points, isHotDice: result.isHotDice },
+  });
 
   // Five of a kind is the one hand built across several throws, and the die
   // that completes it is worth nothing by itself on a 2, 3, 4 or 6 — so the
