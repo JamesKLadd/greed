@@ -711,6 +711,22 @@
 .turn-ring--bad .turn-ring__drain {
   stroke: var(--bad);
 }
+/* The last few seconds, said as a number.
+   The ring alone is easy to miss on a small seat — which is what players
+   reported: a seat lost without ever noticing there was a clock. This only
+   appears once there are few enough seconds to be worth counting, so it costs
+   the seat nothing for the rest of the turn. */
+.turn-ring__count {
+  fill: var(--bad);
+  font-family: var(--ff-display);
+  font-size: 42px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--ink);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
 /* The clock stopped because the player started their turn in time. Complete the
    ring and fade it out, so it reads as "made it" rather than as a glitch. */
 .turn-ring--settling {

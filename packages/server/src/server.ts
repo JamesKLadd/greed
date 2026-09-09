@@ -1000,6 +1000,16 @@ export class GreedServer {
     // them a grace period; a time-out forfeits the turn and counts against them.
     // Unless the host turned the clock off, in which case the table simply
     // waits — the seat is still played for them if they actually drop.
+    // A turn actually played earns back a forfeited one. Three time-outs
+    // removes a player, and that used to be counted across the WHOLE game — so
+    // someone who lapsed twice in the first ten minutes was one distraction
+    // away from losing their seat an hour later, having played perfectly in
+    // between. The cap is about someone who has wandered off, not about a
+    // tally nobody can pay down.
+    if (seat && !seat.isBot && g.turn.rollCount > 0 && seat.missedTurns > 0) {
+      seat.missedTurns -= 1;
+    }
+
     if (seat && room.turnTimer && g.turn.rollCount === 0) {
       // The only clock the server actually keeps. Recorded on the room so the
       // next broadcast can tell clients how long is left, which is what the

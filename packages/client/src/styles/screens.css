@@ -1520,6 +1520,12 @@
   margin-bottom: 10px;
   opacity: 0.85;
 }
+/* The roll-call rides in a flex column here rather than on the felt, so it has
+   to be told to sit in the middle instead of stretching across the panel. */
+.daily__run .felt__call {
+  align-self: center;
+  margin: 0 auto 6px;
+}
 /* "That was your last attempt" — the one note here that says a door is shut,
    so it keeps full weight and takes the amber the rest of the UI warns in,
    rather than fading out like the footnotes above. */

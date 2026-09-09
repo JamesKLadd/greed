@@ -4,7 +4,9 @@ import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallen
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { Die } from "./Die.js";
 import { Button } from "../ui/index.js";
+import { rollCall } from "../game/rollCall.js";
 import { useT } from "../i18n/i18n.js";
+import type { MsgKey } from "../i18n/i18n.js";
 
 /**
  * The board for a scored solo run in progress — a daily run or a weekly
@@ -31,6 +33,7 @@ interface ChallengeRunProps {
 export function ChallengeRun({ initial, dice3d, playMove, onFinished }: ChallengeRunProps) {
   const t = useT();
   const run = useChallengeRun(initial, playMove);
+  const call = rollCall(run.state.turn);
   useGameSounds(run.state);
   useRollSound(run.isRolling);
 
@@ -60,6 +63,17 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
           <span className="meter__value">{run.state.turn.turnScore}</span>
         </div>
       </div>
+
+      {/* What the throw was, named — the same call the table gives a local game.
+          A five of a kind built across throws is the most exciting thing that
+          can happen in a run, and it used to pass here without a word, because
+          this banner was only ever drawn on the felt. Held back while the dice
+          are in the air, since the tray is still showing the previous throw. */}
+      {call && !run.isRolling && (
+        <div key={run.state.turn.rollCount} className={`felt__call felt__call--${call}`}>
+          {t(`call.${call}` as MsgKey)}
+        </div>
+      )}
 
       <div
         className={[

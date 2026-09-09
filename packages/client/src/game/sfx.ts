@@ -203,7 +203,8 @@ type Sound =
   | "streak"
   | "awww"
   | "cash"
-  | "tumble";
+  | "tumble"
+  | "timeShort";
 
 export interface PlayOptions {
   /**
@@ -263,6 +264,15 @@ export function play(sound: Sound, opts: PlayOptions = {}): void {
       tone(880 * v, t, 0.22, { type: "sine", gain: 0.22 });
       tone(1174.66 * v, t + 0.12, 0.34, { type: "sine", gain: 0.2 });
       tone(587.33 * v, t + 0.12, 0.34, { type: "triangle", gain: 0.08 });
+      break;
+    }
+    case "timeShort": {
+      // Two urgent taps, once, when a turn's clock is nearly out. Deliberately
+      // unlike "yourTurn": that one invites, this one prods. Short and dry so
+      // it cuts through whatever else is happening without being a siren — the
+      // player it exists for is the one who has looked away from the screen.
+      tone(1046.5 * v, t, 0.09, { type: "square", gain: 0.1 });
+      tone(1046.5 * v, t + 0.15, 0.09, { type: "square", gain: 0.11 });
       break;
     }
     case "streak": {

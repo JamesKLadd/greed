@@ -124,28 +124,74 @@ export function hasProfanity(raw: string): boolean {
   return tokens.some((t) => WORD.includes(t) || WORD.includes(t.replace(/(.)\1+/g, "$1")));
 }
 
+/**
+ * Scripts a name may be written in.
+ *
+ * The homoglyph dodge is a slur spelled with look-alike letters borrowed from
+ * another alphabet — ϝαɠɠσƚ, ѕhіt, а$$ — and what gives it away is not the
+ * script, it is the MIXING: real names are written in one alphabet, and a name
+ * that reaches into three to assemble a word is doing something else.
+ *
+ * This used to reject any non-Latin letter outright, which caught the dodge and
+ * also meant a player called 李明 or Даша could not use their own name. Now the
+ * rule is one script per name. Latin, Cyrillic, Greek, Han, Hiragana, Katakana,
+ * Hangul, Arabic, Hebrew, Devanagari, Thai — pick one.
+ *
+ * Common/Inherited characters (digits, spaces, the joiners this allows, and
+ * combining marks) belong to no script and are not counted, so "José 99" is a
+ * single-script name.
+ */
+const SCRIPTS = [
+  "Latin",
+  "Cyrillic",
+  "Greek",
+  "Han",
+  "Hiragana",
+  "Katakana",
+  "Hangul",
+  "Arabic",
+  "Hebrew",
+  "Devanagari",
+  "Thai",
+] as const;
+
+/** Which of the allowed scripts this character belongs to, if any. */
+function scriptOf(ch: string): string | null {
+  for (const script of SCRIPTS) {
+    if (new RegExp(`\\p{Script=${script}}`, "u").test(ch)) return script;
+  }
+  return null;
+}
+
+/**
+ * True when a name mixes alphabets, or uses one this game does not know.
+ *
+ * Japanese is the deliberate exception: it is normally written in Han,
+ * Hiragana and Katakana together, so those three count as one script here.
+ */
+function isMixedScript(s: string): boolean {
+  const seen = new Set<string>();
+  for (const ch of s) {
+    if (!/\p{L}/u.test(ch)) continue;
+    const script = scriptOf(ch);
+    if (!script) return true; // a letter from a script we do not accept
+    seen.add(["Han", "Hiragana", "Katakana"].includes(script) ? "Japanese" : script);
+  }
+  return seen.size > 1;
+}
+
 // Characters allowed in a display name: Latin-script letters (incl. accented),
 // digits, spaces, and a few safe joiners (' . _ -). Everything else — symbols,
 // punctuation, emoji, stray combining marks (zalgo), and letters from other
 // scripts — is stripped out.
-const DISALLOWED = /[^\p{Script=Latin}0-9 '._-]/gu;
+const DISALLOWED = new RegExp(
+  `[^${SCRIPTS.map((s) => `\\p{Script=${s}}`).join("")}\\p{M}0-9 '._-]`,
+  "gu",
+);
 
 /** Remove special characters (input is already NFKC-normalised by the caller). */
 function stripSpecialChars(s: string): string {
   return s.replace(DISALLOWED, "");
-}
-
-/**
- * True when the string carries a letter from a non-Latin script. This is the
- * usual homoglyph dodge — Cyrillic/Greek/CJK/Arabic look-alikes spelling a slur
- * (f卂وgᗝT, ϝαɠɠσƚ, ѕhіt) that no ASCII fold would catch — so such names are
- * rejected outright. (Accented Latin like José/Muñoz is Latin-script, so it stays.)
- */
-function hasNonLatinLetter(s: string): boolean {
-  for (const ch of s) {
-    if (/\p{L}/u.test(ch) && !/\p{Script=Latin}/u.test(ch)) return true;
-  }
-  return false;
 }
 
 /**
@@ -166,8 +212,9 @@ export function cleanPlayerName(raw: string, fallback = "Player"): string {
   if (!trimmed) return fallback;
   // Check profanity BEFORE stripping, so leet obfuscation (b!tch, $hit) is still caught.
   if (hasProfanity(trimmed)) return fallback;
-  // Reject cross-script homoglyph spellings outright (see hasNonLatinLetter).
-  if (hasNonLatinLetter(trimmed)) return fallback;
+  // Reject cross-script homoglyph spellings (see isMixedScript). A name written
+  // wholly in one alphabet is a name, whichever alphabet that is.
+  if (isMixedScript(trimmed)) return fallback;
   const cleaned = stripSpecialChars(trimmed).replace(/\s+/g, " ").trim();
   return cleaned || fallback;
 }

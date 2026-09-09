@@ -8,7 +8,7 @@
  */
 
 // Bump on every SHELL change, or the old cache keeps winning.
-const CACHE = "greed-shell-v2";
+const CACHE = "greed-shell-v3";
 const SHELL = [
   "/",
   "/index.html",
@@ -68,7 +68,7 @@ self.addEventListener("fetch", (event) => {
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
+            caches.open(CACHE).then((c) => c.put(req, copy).then(() => trim(c)));
           }
           return res;
         })
@@ -77,3 +77,40 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+/**
+ * Keep the cache from growing forever.
+ *
+ * Asset filenames are content-hashed, so every deploy adds a new set and the
+ * old set is never requested again — but nothing ever removed them either. The
+ * only cleanup was deleting caches with a DIFFERENT NAME, and the name only
+ * changes when someone remembers to bump it by hand, so a returning player
+ * accumulated every build they had ever loaded. On a phone, where per-origin
+ * storage is finite and eviction takes the whole cache when it comes, that
+ * eventually costs offline play.
+ *
+ * Oldest-first by insertion: the Cache API keeps keys in the order they were
+ * added, so the front of the list is the least recently added — which for
+ * hashed assets is the oldest build.
+ */
+const MAX_CACHED = 60;
+let trimming = false;
+
+async function trim(cache) {
+  if (trimming) return;
+  trimming = true;
+  try {
+    const keys = await cache.keys();
+    const over = keys.length - MAX_CACHED;
+    for (let i = 0; i < over; i++) {
+      // Never evict the shell: it is what makes an offline load work at all.
+      const url = new URL(keys[i].url);
+      if (SHELL.includes(url.pathname)) continue;
+      await cache.delete(keys[i]);
+    }
+  } catch {
+    /* a full or unavailable cache is not worth failing a request over */
+  } finally {
+    trimming = false;
+  }
+}

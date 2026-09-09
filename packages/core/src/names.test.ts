@@ -72,11 +72,29 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("ϝαɠɠσƚ")).toBe("Player");
   });
 
-  it("rejects names carrying letters from other scripts (mixed-script spoofing)", () => {
-    // CJK + Arabic + Canadian syllabics, Cyrillic look-alikes, plain other-script.
-    for (const bad of ["f卂وgᗝT", "Аlех", "ѕhіt", "大和", "Мoscow"]) {
+  it("rejects names that MIX scripts, which is what spoofing needs", () => {
+    // A slur assembled out of borrowed look-alikes always reaches into more
+    // than one alphabet: that is the tell, not the alphabet itself.
+    for (const bad of [
+      "f卂وgᗝT", // Latin + Han + Arabic + Canadian syllabics
+      "Аlех", // Cyrillic А and е hiding among Latin letters
+      "ѕhіt", // Cyrillic ѕ and і
+      "Мoscow", // one Cyrillic М, the rest Latin
+    ]) {
       expect(cleanPlayerName(bad), bad).toBe("Player");
     }
+  });
+
+  it("lets a player use their own name, whatever alphabet it is in", () => {
+    // This used to reject every non-Latin letter outright, so anyone whose name
+    // is not written in Latin script was renamed "Player" — which caught the
+    // spoofing and a great many real people with it.
+    for (const good of ["大和", "Даша", "李明", "Δήμητρα", "지민", "שרה", "आर्या", "สมชาย"]) {
+      expect(cleanPlayerName(good), good).toBe(good);
+    }
+    // And an alphabet the game does not know is still refused, rather than
+    // arriving stripped down to nothing.
+    expect(cleanPlayerName("ᗝᐁᒐ")).toBe("Player");
   });
 
   it("folds accented letters when screening (shít -> shit)", () => {
