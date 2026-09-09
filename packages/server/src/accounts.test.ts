@@ -79,6 +79,44 @@ describe("mergeProfile", () => {
     expect(m.table).toBe("midnight");
   });
 
+  it("bounds every figure it stores", () => {
+    // The merge only ever takes the maximum, so an absurd value used to be
+    // permanent — and it went straight onto the all-time boards. Those now rank
+    // the server's own career table, but a profile still feeds the Stats screen
+    // and a public profile card, and neither should show a number no amount of
+    // dice could produce.
+    const rigged = {
+      ...emptyProfile(),
+      wins: 999999999,
+      bestTurn: 888888888,
+      bestStreak: 777777,
+      gamesPlayed: Number.POSITIVE_INFINITY,
+      hotDiceTotal: -50,
+    };
+    const m = mergeProfile(emptyProfile(), rigged);
+    expect(m.wins).toBe(1_000_000);
+    expect(m.bestTurn).toBe(20_000);
+    expect(m.bestStreak).toBe(10_000);
+    expect(m.gamesPlayed).toBe(0); // not a number a game could reach
+    expect(m.hotDiceTotal).toBe(0); // never negative
+  });
+
+  it("keeps the achievements list a list of ids", () => {
+    const junk = {
+      ...emptyProfile(),
+      achievements: [
+        "first-win",
+        "NOT A SLUG!!",
+        "x".repeat(500),
+        ...Array.from({ length: 400 }, (_, i) => `junk-${i}`),
+      ],
+    };
+    const m = mergeProfile(emptyProfile(), junk);
+    expect(m.achievements).toContain("first-win");
+    expect(m.achievements.length).toBeLessThanOrEqual(200);
+    expect(m.achievements.some((a) => a.includes("!") || a.length > 40)).toBe(false);
+  });
+
   it("adopts the incoming live streak", () => {
     const a = { ...emptyProfile(), currentStreak: 5 };
     const b = { ...emptyProfile(), currentStreak: 1 };

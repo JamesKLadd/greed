@@ -124,6 +124,11 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           the last career board underneath it. */}
       {!loading && isCareer(tab) && board && (
         <>
+          {/* What these boards measure changed when they stopped ranking the
+              profile a client uploads and started ranking games the server ran
+              itself. Say so, rather than leaving a player to wonder why their
+              offline wins are missing. */}
+          <p className="daily__note daily__note--hint">{t("board.onlineOnly")}</p>
           {board.entries.length === 0 ? (
             <p className="daily__status">{t("board.empty")}</p>
           ) : (

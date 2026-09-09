@@ -908,6 +908,15 @@ export class GreedServer {
   private recordResults(room: Room): void {
     const g = room.game;
     if (!g || !accountsEnabled()) return;
+    // Best turn per player, read off the server's own log of the game it just
+    // ran. This is what the Best Turn board ranks, so it is derived here rather
+    // than taken from the profile a client uploads.
+    const bestTurns = new Map<string, number>();
+    for (const e of g.log) {
+      if (e.type === "bank") {
+        bestTurns.set(e.playerId, Math.max(bestTurns.get(e.playerId) ?? 0, e.gained));
+      }
+    }
     for (const seat of room.seats) {
       if (!seat.userId) continue;
       const me = g.players.find((p) => p.id === seat.id);
@@ -920,6 +929,7 @@ export class GreedServer {
         players: g.players.length,
         team: typeof me.team === "number" ? me.team : null,
         opponents: g.players.filter((p) => p.id !== seat.id).map((p) => p.name),
+        bestTurn: bestTurns.get(seat.id) ?? 0,
       }).catch(() => {
         /* history is a nicety; never let it break a finished game */
       });

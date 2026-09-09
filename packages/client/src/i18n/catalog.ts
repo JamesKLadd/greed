@@ -70,6 +70,8 @@ export const en = {
   "call.straight": "STRAIGHT",
   "board.title": "LEADERBOARDS",
   "board.tagline": "Career bests across everyone who plays.",
+  "board.onlineOnly":
+    "These four count games played online, scored by the server. Offline games against bots still count toward your own stats.",
   "board.home": "Leaderboards",
   "board.cat.wins": "Wins",
   "board.cat.bestTurn": "Best turn",
@@ -745,6 +747,8 @@ export const es: Record<MsgKey, string> = {
   "setup.unbalanced": "Ambos bandos necesitan el mismo número de jugadores.",
   "board.title": "CLASIFICACIONES",
   "board.tagline": "Los mejores registros de todos los que juegan.",
+  "board.onlineOnly":
+    "Estas cuatro cuentan las partidas jugadas en línea, puntuadas por el servidor. Las partidas contra bots siguen contando para tus propias estadísticas.",
   "board.home": "Clasificaciones",
   "board.cat.wins": "Victorias",
   "board.cat.bestTurn": "Mejor turno",
@@ -1398,6 +1402,8 @@ export const fr: Record<MsgKey, string> = {
   "setup.unbalanced": "Les deux camps doivent avoir le même nombre de joueurs.",
   "board.title": "CLASSEMENTS",
   "board.tagline": "Les meilleurs records de tous ceux qui jouent.",
+  "board.onlineOnly":
+    "Ces quatre-là comptent les parties jouées en ligne, calculées par le serveur. Les parties contre des bots comptent toujours pour vos propres statistiques.",
   "board.home": "Classements",
   "board.cat.wins": "Victoires",
   "board.cat.bestTurn": "Meilleur tour",

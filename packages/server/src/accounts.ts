@@ -120,11 +120,71 @@ function normalizeProfile(raw: Partial<StoredProfile> | null): StoredProfile {
   };
 }
 
+/**
+ * Ceilings for the figures a profile carries.
+ *
+ * A profile is a player's own record of their own play, offline games included,
+ * so the server cannot verify it — and for a long time it did not bound it
+ * either: 999,999,999 wins went in and, because the merge only ever takes the
+ * maximum, could never come back out. The boards no longer read this (see
+ * career_stats), but the Stats screen and a player's public profile still do,
+ * and neither should be able to show a number no amount of dice could produce.
+ *
+ * Set well above anything a real player will reach. They are a sanity rail, not
+ * a target.
+ */
+const PROFILE_CEILINGS: Record<string, number> = {
+  gamesPlayed: 1_000_000,
+  wins: 1_000_000,
+  currentStreak: 10_000,
+  bestStreak: 10_000,
+  bestTurn: 20_000,
+  totalBanks: 10_000_000,
+  totalBankedPoints: 1_000_000_000,
+  hotDiceTotal: 1_000_000,
+  dailyWins: 100_000,
+  weeklyWins: 100_000,
+};
+
+/**
+ * Achievement ids, bounded.
+ *
+ * Which achievements a player has is computed on their own device — the server
+ * has no way to check it and does not try. What it can insist on is that the
+ * list stays a list of ids: the union used to take any string at all, and it
+ * accumulated across every sync, so the array was an unbounded place to keep
+ * whatever you wanted. 400 invented ids went in and stayed there.
+ *
+ * The cap is well above the number of achievements the game has (33), so it
+ * only ever bites on something that was never an achievement.
+ */
+const MAX_ACHIEVEMENTS = 200;
+const ACHIEVEMENT_ID = /^[a-z0-9-]{1,40}$/;
+
+function boundedAchievements(ids: string[]): string[] {
+  const kept: string[] = [];
+  for (const id of new Set(ids)) {
+    if (typeof id === "string" && ACHIEVEMENT_ID.test(id)) kept.push(id);
+    if (kept.length >= MAX_ACHIEVEMENTS) break;
+  }
+  return kept;
+}
+
+/** A stored figure: finite, whole, not negative, and under its ceiling. */
+function bounded(field: string, value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(
+    PROFILE_CEILINGS[field] ?? Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.round(value)),
+  );
+}
+
 /** Merge an incoming snapshot into the stored one without ever losing progress:
  * cumulative counters and bests take the maximum; achievements union; the live
- * streak and equipped cosmetics take the incoming (most recent) value. */
+ * streak and equipped cosmetics take the incoming (most recent) value. Every
+ * figure is bounded on the way through — see PROFILE_CEILINGS. */
 export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): StoredProfile {
-  const max = (a: number, b: number) => Math.max(a || 0, b || 0);
+  const max = (field: string, a: number, b: number) => bounded(field, Math.max(a || 0, b || 0));
   /**
    * The one figure that is checked rather than simply kept.
    *
@@ -135,20 +195,24 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
    * monotonic, so without it one old client with the old number in localStorage
    * would push it straight back up after every clean-up.
    */
-  const total = max(existing.bestTotal, incoming.bestTotal);
+  const total = Math.max(existing.bestTotal || 0, incoming.bestTotal || 0);
   return {
-    gamesPlayed: max(existing.gamesPlayed, incoming.gamesPlayed),
-    wins: max(existing.wins, incoming.wins),
-    currentStreak: incoming.currentStreak ?? existing.currentStreak,
-    bestStreak: max(existing.bestStreak, incoming.bestStreak),
-    bestTurn: max(existing.bestTurn, incoming.bestTurn),
-    bestTotal: total > BEST_TOTAL_CEILING ? 0 : total,
-    totalBanks: max(existing.totalBanks, incoming.totalBanks),
-    totalBankedPoints: max(existing.totalBankedPoints, incoming.totalBankedPoints),
-    hotDiceTotal: max(existing.hotDiceTotal, incoming.hotDiceTotal),
-    dailyWins: max(existing.dailyWins, incoming.dailyWins),
-    weeklyWins: max(existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
-    achievements: [...new Set([...existing.achievements, ...incoming.achievements])],
+    gamesPlayed: max("gamesPlayed", existing.gamesPlayed, incoming.gamesPlayed),
+    wins: max("wins", existing.wins, incoming.wins),
+    currentStreak: bounded("currentStreak", incoming.currentStreak ?? existing.currentStreak),
+    bestStreak: max("bestStreak", existing.bestStreak, incoming.bestStreak),
+    bestTurn: max("bestTurn", existing.bestTurn, incoming.bestTurn),
+    bestTotal: total > BEST_TOTAL_CEILING || !Number.isFinite(total) ? 0 : Math.round(total),
+    totalBanks: max("totalBanks", existing.totalBanks, incoming.totalBanks),
+    totalBankedPoints: max(
+      "totalBankedPoints",
+      existing.totalBankedPoints,
+      incoming.totalBankedPoints,
+    ),
+    hotDiceTotal: max("hotDiceTotal", existing.hotDiceTotal, incoming.hotDiceTotal),
+    dailyWins: max("dailyWins", existing.dailyWins, incoming.dailyWins),
+    weeklyWins: max("weeklyWins", existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
+    achievements: boundedAchievements([...existing.achievements, ...incoming.achievements]),
     dice: incoming.dice || existing.dice,
     table: incoming.table || existing.table,
     avatar: incoming.avatar || existing.avatar || "",

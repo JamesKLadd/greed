@@ -25,6 +25,7 @@ import {
 } from "@greed/core";
 import { randomInt } from "node:crypto";
 import { query } from "./db.js";
+import { raiseCareerBestTurn } from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
 
 /** Cap on submitted move lists — a legitimate 10-turn run is far shorter. */
@@ -204,6 +205,8 @@ async function raiseBestTurn(userId: string, points: number): Promise<void> {
       WHERE id = $1`,
     [userId, points],
   );
+  // The boards rank the server's own figures, not the synced profile.
+  await raiseCareerBestTurn(userId, points);
 }
 
 /**

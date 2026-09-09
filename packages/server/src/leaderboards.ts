@@ -13,6 +13,7 @@
  * are labelled as such.
  */
 
+import { GOAL_DEFAULT } from "@greed/core";
 import { query } from "./db.js";
 
 /** The career stats a board can be built on. */
@@ -43,31 +44,35 @@ export interface LeaderboardView {
 const BOARD_SIZE = 25;
 
 /**
- * The jsonb key each category reads. Whitelisted through this map rather than
- * interpolated from the request: the key lands inside the SQL text (jsonb path
- * extraction can't be a bind parameter), so it must never be caller-controlled.
+ * The career_stats column each category ranks.
+ *
+ * Whitelisted through this map rather than interpolated from the request: the
+ * column name lands inside the SQL text, so it must never be caller-controlled.
+ *
+ * These used to be jsonb keys on `users.profile` — a snapshot the CLIENT
+ * uploads — which meant the boards ranked whatever a client claimed. They now
+ * read a table only the server writes, from games it ran itself. What a board
+ * measures changed with that: `wins` is online wins, because an offline game
+ * against bots is not something anyone but the player can vouch for.
  */
 const FIELD: Record<LeaderboardCategory, string> = {
-  wins: "wins",
-  bestTurn: "bestTurn",
-  bestStreak: "bestStreak",
-  bestTotal: "bestTotal",
+  wins: "online_wins",
+  bestTurn: "best_turn",
+  bestStreak: "best_streak",
+  bestTotal: "best_total",
 };
 
 export async function leaderboard(
   category: LeaderboardCategory,
   userId: string | null,
 ): Promise<LeaderboardView> {
-  const field = FIELD[category];
-  // COALESCE so a profile that predates a field still ranks (at zero) rather
-  // than dropping out of the board entirely.
-  const value = `COALESCE((profile ->> '${field}')::numeric, 0)`;
+  const value = `c.${FIELD[category]}`;
 
   const { rows } = await query<{ username: string; value: string; rank: string; id: string }>(
     `WITH ranked AS (
-       SELECT id, username, ${value} AS value,
-              RANK() OVER (ORDER BY ${value} DESC, created_at ASC) AS rank
-       FROM users
+       SELECT u.id, u.username, ${value} AS value,
+              RANK() OVER (ORDER BY ${value} DESC, u.created_at ASC) AS rank
+       FROM career_stats c JOIN users u ON u.id = c.user_id
        WHERE ${value} > 0
      )
      SELECT * FROM ranked ORDER BY rank LIMIT $1`,
@@ -75,7 +80,7 @@ export async function leaderboard(
   );
 
   const { rows: totals } = await query<{ count: string }>(
-    `SELECT count(*)::text AS count FROM users WHERE ${value} > 0`,
+    `SELECT count(*)::text AS count FROM career_stats c WHERE ${value} > 0`,
   );
 
   let yourRank: number | null = null;
@@ -83,9 +88,9 @@ export async function leaderboard(
   if (userId) {
     const { rows: own } = await query<{ value: string; rank: string }>(
       `WITH ranked AS (
-         SELECT id, ${value} AS value,
-                RANK() OVER (ORDER BY ${value} DESC, created_at ASC) AS rank
-         FROM users
+         SELECT u.id, ${value} AS value,
+                RANK() OVER (ORDER BY ${value} DESC, u.created_at ASC) AS rank
+         FROM career_stats c JOIN users u ON u.id = c.user_id
          WHERE ${value} > 0
        )
        SELECT value, rank FROM ranked WHERE id = $1`,
@@ -136,14 +141,62 @@ export interface FinishedMatch {
   players: number;
   team: number | null;
   opponents: string[];
+  /** Their best single turn in this game, derived from the server's own log. */
+  bestTurn: number;
 }
 
-/** Record one finished online game for one signed-in player. */
+/**
+ * Record one finished online game for one signed-in player: the row in their
+ * history, and the same game folded into their career figures.
+ *
+ * The career half is what the all-time boards rank, so it is written HERE —
+ * from a game this server ran and scored — rather than accepted from a client.
+ *
+ * Best Total only counts a game played to the standard goal: the goal is a
+ * setting, and a table set to 20,000 would otherwise post a finishing total no
+ * ordinary game could approach.
+ */
 export async function recordMatch(m: FinishedMatch): Promise<void> {
   await query(
     `INSERT INTO match_history (user_id, won, score, goal, players, team, opponents)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [m.userId, m.won, m.score, m.goal, m.players, m.team, m.opponents],
+  );
+  const eligibleTotal = m.goal === GOAL_DEFAULT ? m.score : 0;
+  await query(
+    `INSERT INTO career_stats
+       (user_id, online_games, online_wins, current_streak, best_streak, best_turn, best_total)
+     VALUES ($1, 1, $2, $2, $2, $3, $4)
+     ON CONFLICT (user_id) DO UPDATE SET
+       online_games   = career_stats.online_games + 1,
+       online_wins    = career_stats.online_wins + $2,
+       -- A loss ends the run; a win extends it.
+       current_streak = CASE WHEN $2 = 1 THEN career_stats.current_streak + 1 ELSE 0 END,
+       best_streak    = GREATEST(
+                          career_stats.best_streak,
+                          CASE WHEN $2 = 1 THEN career_stats.current_streak + 1 ELSE 0 END),
+       best_turn      = GREATEST(career_stats.best_turn, $3),
+       best_total     = GREATEST(career_stats.best_total, $4),
+       updated_at     = now()`,
+    [m.userId, m.won ? 1 : 0, Math.max(0, Math.round(m.bestTurn)), Math.max(0, eligibleTotal)],
+  );
+}
+
+/**
+ * Raise a player's career best turn, from wherever the server scored it.
+ *
+ * The daily and weekly both derive a best turn by replaying a run's moves, and
+ * that is as much the server's own figure as an online game is — so it belongs
+ * on the same row the boards read.
+ */
+export async function raiseCareerBestTurn(userId: string, points: number): Promise<void> {
+  if (!(points > 0)) return;
+  await query(
+    `INSERT INTO career_stats (user_id, best_turn) VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE
+       SET best_turn = GREATEST(career_stats.best_turn, EXCLUDED.best_turn),
+           updated_at = now()`,
+    [userId, Math.round(points)],
   );
 }
 

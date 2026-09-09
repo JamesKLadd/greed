@@ -209,6 +209,64 @@ export async function migrate(): Promise<void> {
        ON match_history (user_id, played_at DESC);`,
   );
 
+  /**
+   * Career figures the SERVER owns.
+   *
+   * The all-time boards used to rank `users.profile`, which is a snapshot the
+   * client uploads — so they ranked whatever a client claimed. One PUT put a
+   * brand-new account at the top of three of them with 999,999,999 wins, and
+   * because the profile merge only ever takes the maximum, a forged figure
+   * could never be walked back.
+   *
+   * These rows are written only from finished games the server itself ran, and
+   * from challenge runs it scored by replaying the moves. The profile sync
+   * stays as it was — it is a player's own record of their own play, including
+   * offline games nobody else can see — but it no longer decides the boards.
+   *
+   * Kept apart from match_history because that is a LOG and now expires after
+   * thirty days, while a career total is a career total.
+   */
+  await query(`
+    CREATE TABLE IF NOT EXISTS career_stats (
+      user_id        uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      online_games   integer NOT NULL DEFAULT 0,
+      online_wins    integer NOT NULL DEFAULT 0,
+      /** Live run of wins, and the longest one ever held. */
+      current_streak integer NOT NULL DEFAULT 0,
+      best_streak    integer NOT NULL DEFAULT 0,
+      /** Best single turn, from online games AND scored challenge runs. */
+      best_turn      integer NOT NULL DEFAULT 0,
+      /** Highest finishing total, standard-goal games only. */
+      best_total     integer NOT NULL DEFAULT 0,
+      updated_at     timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  for (const [col, dir] of [
+    ["online_wins", "DESC"],
+    ["best_turn", "DESC"],
+    ["best_streak", "DESC"],
+    ["best_total", "DESC"],
+  ]) {
+    await query(
+      `CREATE INDEX IF NOT EXISTS career_stats_${col}_idx ON career_stats (${col} ${dir});`,
+    );
+  }
+  // Carry across what players had before the boards moved, clamped to figures a
+  // real game could produce. Runs once: after the first pass every account has
+  // a row and the WHERE NOT EXISTS matches nothing. Honest players keep their
+  // standing; anything absurd arrives capped rather than banked.
+  await query(
+    `INSERT INTO career_stats (user_id, online_wins, best_turn, best_streak, best_total)
+     SELECT id,
+            LEAST(GREATEST(COALESCE((profile ->> 'wins')::numeric, 0), 0), 100000)::int,
+            LEAST(GREATEST(COALESCE((profile ->> 'bestTurn')::numeric, 0), 0), 20000)::int,
+            LEAST(GREATEST(COALESCE((profile ->> 'bestStreak')::numeric, 0), 0), 1000)::int,
+            LEAST(GREATEST(COALESCE((profile ->> 'bestTotal')::numeric, 0), 0), $1)::int
+       FROM users u
+      WHERE NOT EXISTS (SELECT 1 FROM career_stats c WHERE c.user_id = u.id)`,
+    [BEST_TOTAL_CEILING],
+  );
+
   // Void Best Totals that no standard game could have produced.
   //
   // Best Total came up from the client as a career best over ANY game, and a
