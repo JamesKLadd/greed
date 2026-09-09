@@ -101,6 +101,20 @@ export function throwCompletesFiveOfAKind(turn: TurnState, thrown: number[]): bo
   return turn.locked.every((held, i) => held || justThrown.has(i));
 }
 
+/**
+ * Is this die the only one being held?
+ *
+ * The one refusal a player can do something about: releasing it would empty the
+ * mat, which the rules forbid because it would make the next throw free. Asked
+ * by the tray so the die can say WHY it will not move, instead of being drawn
+ * as unavailable and leaving the player to guess.
+ */
+export function isLastHeldDie(turn: TurnState, index: number): boolean {
+  return (
+    turn.rollCount > 0 && !turn.outcome && Boolean(turn.locked[index]) && heldCount(turn) === 1
+  );
+}
+
 export function turnLegalActions(turn: TurnState): LegalActions {
   // A finished turn only waits to be advanced.
   if (turn.outcome) return { canRoll: false, canBank: false, canAdvance: true };

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { canToggleLock } from "@greed/core";
+import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { Die } from "./Die.js";
@@ -90,6 +90,7 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
             // Same rule the engine applies, so the last held die reads as
             // unavailable instead of ignoring the tap.
             toggleDisabled={run.isRolling || run.finished || !canToggleLock(run.state.turn, i)}
+            refusedReason={lastHeld(run.state.turn, i) ? t("dice.keepOneHeld") : undefined}
             toggleLabel={run.state.turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
         ))}

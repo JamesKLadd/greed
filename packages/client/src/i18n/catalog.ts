@@ -63,6 +63,7 @@ export const en = {
   "lobby.turnClockOff": "Off",
   "net.reconnecting": "Connection lost — reconnecting…",
   // Called out under the dice when a throw lands one of the two big patterns.
+  "dice.keepOneHeld": "Keep at least one die held to roll again",
   "aria.hold": "Tap to hold this die",
   "aria.unhold": "Tap to put this die back",
   "call.five": "5 OF A KIND",
@@ -738,6 +739,7 @@ export const es: Record<MsgKey, string> = {
   "lobby.turnClockOn": "Activado",
   "lobby.turnClockOff": "Desactivado",
   "net.reconnecting": "Conexión perdida — reconectando…",
+  "dice.keepOneHeld": "Conserva al menos un dado para volver a tirar",
   "aria.hold": "Toca para guardar este dado",
   "aria.unhold": "Toca para devolver este dado",
   "call.five": "REPÓKER",
@@ -1393,6 +1395,7 @@ export const fr: Record<MsgKey, string> = {
   "lobby.turnClockOn": "Activé",
   "lobby.turnClockOff": "Désactivé",
   "net.reconnecting": "Connexion perdue — reconnexion…",
+  "dice.keepOneHeld": "Gardez au moins un dé pour relancer",
   "aria.hold": "Touchez pour garder ce dé",
   "aria.unhold": "Touchez pour remettre ce dé",
   "call.five": "QUINTE",

@@ -10,6 +10,15 @@ import type { BotPersonality, GameState, PlayerConfig } from "@greed/core";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
 
 export interface SeatSetup {
+  /**
+   * Stable identity for this row, for React's benefit.
+   *
+   * The seat list used to be keyed by array index. The inputs are controlled so
+   * the VALUES stayed right, but focus did not: deleting a seat above the one
+   * being typed in left the caret in the same DOM node, which was now a
+   * different player.
+   */
+  id: string;
   name: string;
   isBot: boolean;
   /** Bots all play at one standard level; this is what makes them differ. */
@@ -39,6 +48,12 @@ export interface MatchSetup {
   seed?: number;
 }
 
+/** A fresh seat id. Only ever used as a React key, never stored or sent. */
+let seatSeq = 0;
+export function newSeatId(): string {
+  return `seat-${++seatSeq}`;
+}
+
 /** Sides alternate down the seat list, so a fresh table is already balanced. */
 export function defaultTeam(seatIndex: number): number {
   return seatIndex % 2;
@@ -57,10 +72,10 @@ export function defaultSetup(): MatchSetup {
     goal: GOAL_DEFAULT,
     teams: false,
     seats: [
-      { name: "You", isBot: false, personality: "balanced", team: 0 },
-      { name: "Robo 1", isBot: true, personality: "cautious", team: 1 },
-      { name: "Robo 2", isBot: true, personality: "balanced", team: 0 },
-      { name: "Robo 3", isBot: true, personality: "reckless", team: 1 },
+      { id: newSeatId(), name: "You", isBot: false, personality: "balanced", team: 0 },
+      { id: newSeatId(), name: "Robo 1", isBot: true, personality: "cautious", team: 1 },
+      { id: newSeatId(), name: "Robo 2", isBot: true, personality: "balanced", team: 0 },
+      { id: newSeatId(), name: "Robo 3", isBot: true, personality: "reckless", team: 1 },
     ],
   };
 }
@@ -71,8 +86,8 @@ export function practiceSetup(): MatchSetup {
     goal: 1000,
     teams: false,
     seats: [
-      { name: "You", isBot: false, personality: "balanced", team: 0 },
-      { name: "Rookie", isBot: true, personality: "cautious", team: 1 },
+      { id: newSeatId(), name: "You", isBot: false, personality: "balanced", team: 0 },
+      { id: newSeatId(), name: "Rookie", isBot: true, personality: "cautious", team: 1 },
     ],
   };
 }

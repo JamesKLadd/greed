@@ -5,6 +5,7 @@ import {
   PERSONALITIES,
   defaultSetup,
   defaultTeam,
+  newSeatId,
   randomPersonality,
   rebalanceTeams,
   teamsAvailable,
@@ -77,6 +78,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
 
   const addSeat = () =>
     addBots(1, (n) => ({
+      id: newSeatId(),
       name: `Robo ${n}`,
       isBot: true,
       personality: "balanced",
@@ -85,6 +87,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
 
   const addRandomBots = (count: number) => {
     addBots(count, (n) => ({
+      id: newSeatId(),
       name: `Robo ${n}`,
       isBot: true,
       personality: randomPersonality(),
@@ -122,7 +125,7 @@ export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
 
       <ul className="seats-config">
         {setup.seats.map((seat, i) => (
-          <li key={i} className="seats-config__row seats-config__row--edit">
+          <li key={seat.id} className="seats-config__row seats-config__row--edit">
             <span className="seats-config__num">{i + 1}</span>
             <input
               className="seats-config__name"

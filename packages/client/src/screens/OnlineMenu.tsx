@@ -13,16 +13,41 @@ const NAME_KEY = "greed-name";
 const CREATE_CD_KEY = "greed-create-cd";
 const CREATE_COOLDOWN_MS = 8000;
 
+/**
+ * Remembered display name and room-creation cooldown.
+ *
+ * Guarded because a browser with site data blocked throws on every access, and
+ * the name read below runs in a useState initialiser — so the whole Online
+ * screen threw during its first render and landed in the crash boundary. The
+ * cooldown is a courtesy anyway: the server keeps the same rule (see
+ * CREATE_COOLDOWN_MS in server.ts), so losing it here changes nothing.
+ */
+function readStored(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function writeStored(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore storage failures */
+  }
+}
+
 /** Whole seconds left before another private room may be created (0 when ready). */
 function createCooldownLeft(): number {
-  const last = Number(localStorage.getItem(CREATE_CD_KEY) ?? 0);
+  const last = Number(readStored(CREATE_CD_KEY) ?? 0);
+  if (!Number.isFinite(last)) return 0;
   return Math.max(0, Math.ceil((last + CREATE_COOLDOWN_MS - Date.now()) / 1000));
 }
 
 export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
   const t = useT();
   const { user } = useAuth();
-  const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? "");
+  const [name, setName] = useState(() => readStored(NAME_KEY) ?? "");
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(() => createCooldownLeft());
   // Signed-in players always play under their account username.
@@ -35,7 +60,7 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
   }, []);
 
   const rememberName = () => {
-    if (!locked) localStorage.setItem(NAME_KEY, name.trim());
+    if (!locked) writeStored(NAME_KEY, name.trim());
   };
   // When signed in, the server uses the account username regardless of this value,
   // but we send it for a correct pre-connect display.
@@ -43,7 +68,7 @@ export function OnlineMenu({ net, onBack }: OnlineMenuProps) {
 
   const createRoom = () => {
     if (createCooldownLeft() > 0) return; // rate-limit spam-creating rooms
-    localStorage.setItem(CREATE_CD_KEY, String(Date.now()));
+    writeStored(CREATE_CD_KEY, String(Date.now()));
     setCooldown(createCooldownLeft());
     rememberName();
     net.createRoom(displayName);

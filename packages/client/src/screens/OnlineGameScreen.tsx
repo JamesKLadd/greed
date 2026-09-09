@@ -42,6 +42,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
     youId: net.youId,
     onRoll: net.roll,
     onBank: net.bank,
+    onToggleDie: net.toggleDie,
   });
 
   return (

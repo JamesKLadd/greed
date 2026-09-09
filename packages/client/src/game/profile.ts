@@ -426,7 +426,40 @@ function emptyProfile(): Profile {
  * on the next sync. Zero rather than a trim, since there is no way to know what
  * the player's real best was.
  */
+/** Numeric fields on a Profile — everything that must survive as a number. */
+const NUMERIC_FIELDS = [
+  "gamesPlayed",
+  "wins",
+  "currentStreak",
+  "bestStreak",
+  "bestTurn",
+  "bestTotal",
+  "totalBanks",
+  "totalBankedPoints",
+  "hotDiceTotal",
+  "dailyWins",
+  "weeklyWins",
+] as const;
+
+/**
+ * Make a loaded profile safe to do arithmetic with.
+ *
+ * localStorage is a text file a person can edit, and a half-written or
+ * hand-edited value used to survive straight into the stats: a string where a
+ * number belonged turned every total that touched it into NaN, and the screen
+ * showed it. Spreading over `emptyProfile()` fills MISSING fields; this is
+ * about fields that are present and wrong.
+ */
 function sane(p: Profile): Profile {
+  for (const field of NUMERIC_FIELDS) {
+    const v = p[field] as unknown;
+    p[field] = typeof v === "number" && Number.isFinite(v) ? Math.max(0, v) : 0;
+  }
+  if (!Array.isArray(p.achievements)) p.achievements = [];
+  else p.achievements = p.achievements.filter((a): a is string => typeof a === "string");
+  for (const field of ["dice", "table", "avatar"] as const) {
+    if (typeof p[field] !== "string") p[field] = emptyProfile()[field];
+  }
   if (p.bestTotal > BEST_TOTAL_CEILING) p.bestTotal = 0;
   return p;
 }

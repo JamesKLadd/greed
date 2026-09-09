@@ -30,6 +30,8 @@ interface GameChromeOptions {
   rollOffActive?: boolean;
   onRoll: () => void;
   onBank: () => void;
+  /** Hold or release a die, when the local player is allowed to. */
+  onToggleDie?: (index: number) => void;
 }
 
 export interface GameChrome {
@@ -52,6 +54,7 @@ export function useGameChrome({
   rollOffActive = false,
   onRoll,
   onBank,
+  onToggleDie,
 }: GameChromeOptions): GameChrome {
   const [showRules, setShowRules] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -90,6 +93,7 @@ export function useGameChrome({
     onRoll,
     onBank,
     onToggleHistory: () => setShowHistory((h) => !h),
+    onToggleDie: canAct ? onToggleDie : undefined,
   });
 
   return { showRules, setShowRules, showHistory, setShowHistory, summary, unlocked };

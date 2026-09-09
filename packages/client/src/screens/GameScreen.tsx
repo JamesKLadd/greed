@@ -48,6 +48,7 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
     rollOffActive: ctl.rollOffActive,
     onRoll: ctl.roll,
     onBank: ctl.bank,
+    onToggleDie: ctl.toggleDie,
   });
 
   return (

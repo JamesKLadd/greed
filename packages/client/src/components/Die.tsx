@@ -107,6 +107,18 @@ interface DieProps {
   toggleDisabled?: boolean;
   /** What tapping would do, for the tooltip and screen reader. */
   toggleLabel?: string;
+  /**
+   * Why tapping is refused, when it is for a reason a player can act on.
+   *
+   * The one case is the last held die: releasing it would empty the mat and
+   * make the next throw free, so the rules refuse it. The die was drawn as
+   * unavailable and said nothing about why, which reads as the game being
+   * broken rather than as a rule. Given a reason, the die is marked
+   * `aria-disabled` rather than `disabled` — same appearance, same refusal, but
+   * it can still be hovered for the tooltip and reached by a screen reader,
+   * which a `disabled` button cannot be.
+   */
+  refusedReason?: string;
 }
 
 function Face({ value, className = "" }: { value: number; className?: string }) {
@@ -130,6 +142,7 @@ export function Die({
   onToggle,
   toggleDisabled = false,
   toggleLabel,
+  refusedReason,
 }: DieProps) {
   const t = useT();
   const [shown, setShown] = useState<number>(value);
@@ -215,19 +228,27 @@ export function Die({
   // A die you can act on is a button, not a picture: it has to be reachable by
   // keyboard and announced as something that does something.
   const Tag = onToggle ? "button" : "div";
+  // A refusal with a reason stays reachable and says why; every other disabled
+  // state (mid-throw, turn over) is genuinely inert and takes the native
+  // `disabled`, which correctly takes it out of the tab order.
+  const explained = toggleDisabled && Boolean(refusedReason);
+  const hint = explained ? refusedReason : toggleDisabled ? undefined : toggleLabel;
   return (
     <Tag
       className={classes}
       {...(onToggle
         ? {
             type: "button" as const,
+            // Refusing is the engine's job either way — canToggleLock is what
+            // decides, and a tap that reaches it while refused does nothing.
             onClick: onToggle,
-            disabled: toggleDisabled,
-            title: toggleDisabled ? undefined : toggleLabel,
+            disabled: toggleDisabled && !explained,
+            "aria-disabled": explained || undefined,
+            title: hint,
             "aria-pressed": locked,
           }
         : { role: "img" })}
-      aria-label={onToggle && !toggleDisabled && toggleLabel ? face + " — " + toggleLabel : face}
+      aria-label={onToggle && hint ? face + " — " + hint : face}
       style={style}
     >
       {dimensional ? (

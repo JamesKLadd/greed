@@ -18,6 +18,38 @@ import { getToken } from "./auth.js";
 
 const TOKEN_KEY = "greed-token";
 
+/**
+ * Reconnect-token storage, guarded.
+ *
+ * Every other file in the client wraps localStorage, because a browser with
+ * site data blocked — private windows, "block all cookies", some in-app
+ * browsers — makes every access throw. These seven did not, and one of them
+ * ran inside a message handler, so online play failed outright rather than
+ * failing to remember a session. Losing the token costs a reconnect; throwing
+ * costs the game.
+ */
+function readToken(): string | null {
+  try {
+    return readToken();
+  } catch {
+    return null;
+  }
+}
+function writeToken(token: string): void {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* the session just won't survive a refresh */
+  }
+}
+function dropToken(): void {
+  try {
+    dropToken();
+  } catch {
+    /* nothing to forget */
+  }
+}
+
 /** How long the dice tumble before their result is revealed. */
 const ROLL_ANIM_MS = 600;
 
@@ -291,7 +323,14 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
       // of the queue entirely rather than re-showing the position it repeats.
       if (lastQueuedRef.current && boardKey(lastQueuedRef.current) === boardKey(next)) return;
 
-      const roll = next.log.slice(queuedLogLen.current).some((e) => e.type === "roll");
+      // Which entries are NEW to us decides whether the dice tumble. After a
+      // resync — a reconnect, or a spectator arriving mid-game — the counter is
+      // back at zero, so the whole game's log read as new and the board threw
+      // all five dice for a roll nobody had just made. The first snapshot after
+      // a resync is a position to paint, not a throw to animate.
+      const resyncing = queuedLogLen.current === 0 && displayedRef.current === null;
+      const roll =
+        !resyncing && next.log.slice(queuedLogLen.current).some((e) => e.type === "roll");
       queuedLogLen.current = next.log.length;
       lastQueuedRef.current = next;
       pendingRef.current.push({ state: next, roll });
@@ -347,7 +386,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const resumeMessage = useCallback((): ClientMessage | null => {
     const watching = spectateCodeRef.current;
     if (watching) return { type: "spectate", code: watching };
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = readToken();
     return token ? { type: "reconnect", token } : null;
   }, []);
 
@@ -394,7 +433,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           setCode(msg.code);
           setIsSpectator(false);
           spectateCodeRef.current = null;
-          localStorage.setItem(TOKEN_KEY, msg.token);
+          writeToken(msg.token);
           // We are seated (again). Anything still queued was assembled before
           // the gap and describes a game that has moved on since; the snapshot
           // arriving behind this one is the truth.
@@ -472,14 +511,14 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
             // The server turned our resume away — the room is gone, or the
             // session expired while we were away. Staying put would leave a
             // board that can never move again; say so and go back to the menu.
-            localStorage.removeItem(TOKEN_KEY);
+            dropToken();
             resetToMenu();
           } else {
             setStatus((s) => (s === "connecting" ? "menu" : s));
           }
           break;
         case "left":
-          localStorage.removeItem(TOKEN_KEY);
+          dropToken();
           resetToMenu();
           break;
         case "pong":
@@ -563,7 +602,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     const timer = window.setTimeout(() => {
       const invited = autoJoinRef.current;
       if (invited) {
-        localStorage.removeItem(TOKEN_KEY);
+        dropToken();
         setStatus("connecting");
         send({
           type: "join-room",
@@ -575,7 +614,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         });
         return;
       }
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = readToken();
       if (token) {
         setStatus("connecting");
         send({ type: "reconnect", token });
@@ -617,7 +656,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
 
   const leave = useCallback(() => {
     send({ type: "leave" });
-    localStorage.removeItem(TOKEN_KEY);
+    dropToken();
     resetToMenu();
   }, [send, resetToMenu]);
 
