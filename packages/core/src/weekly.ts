@@ -1,15 +1,14 @@
 /**
  * The weekly challenge: the same ten-turn solo run as the daily, but a player
- * may attempt it as many times as they like and only their best score stands.
+ * gets a whole week's worth of attempts at it and only their best score stands.
  *
  * Like the daily, this lives in the engine because the client and the server
  * must agree exactly on which week it is. The run itself is the shared
  * machinery in `run.ts`; what is weekly about the weekly is the calendar below.
  *
- * Every attempt is dealt its own secret seed, so a week cannot be scouted: the
- * unlimited retries buy more rolls of the dice, never a second look at the same
- * ones. What a week rewards is therefore playing well often, not memorising a
- * board.
+ * Every attempt is dealt its own secret seed, so a week cannot be scouted: a
+ * retry buys another roll of the dice, never a second look at the same ones.
+ * What a week rewards is therefore playing well, not memorising a board.
  */
 
 import { runMoveStart, runPosition, scoreRun, createRunGame } from "./run.js";
@@ -20,6 +19,39 @@ import type { GameState } from "./types.js";
 /** Turns in a weekly run — the same ten as the daily, so a score means the
  *  same thing in both modes and a run still fits in a sitting. */
 export const WEEKLY_TURNS = 10;
+
+/**
+ * Attempts a player gets in a week.
+ *
+ * The mode opened with no limit at all, which made "how many times can you be
+ * bothered" part of the score — a week went to whoever ground it hardest rather
+ * than to whoever played it best. Fifty is meant to be more than anyone needs
+ * to have a proper go at a week and few enough that an attempt is worth
+ * something. They can be spent whenever across the week; nothing is doled out
+ * per day.
+ */
+export const WEEKLY_ATTEMPTS = 50;
+
+/**
+ * The first week the cap applies to — the Monday it starts on.
+ *
+ * The weeks before it were played under the old promise of unlimited tries, and
+ * players spent them accordingly: some already hold more than fifty attempts on
+ * a week in progress. Capping those retroactively would take back a mode people
+ * were part-way through, so the limit begins at a week boundary and every week
+ * before it stays as it was played.
+ */
+export const WEEKLY_CAP_FROM = "2026-09-14";
+
+/**
+ * How many attempts a given week allows, or null where a week is unlimited.
+ *
+ * Week keys are YYYY-MM-DD, so they compare as strings in calendar order — the
+ * same property that lets the board's queries say `week < today`.
+ */
+export function weeklyAttemptLimit(week: string = weekKey()): number | null {
+  return week >= WEEKLY_CAP_FROM ? WEEKLY_ATTEMPTS : null;
+}
 
 export type WeeklyMove = RunMove;
 export type WeeklyResult = RunResult;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RulesModal } from "../components/RulesModal.js";
+import { weeklyAttemptLimit } from "@greed/core";
 import { useInstallPrompt } from "../game/pwa.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
@@ -48,6 +49,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const t = useT();
   const { status, user } = useAuth();
+  const weeklyLimit = weeklyAttemptLimit();
   const [showRules, setShowRules] = useState(false);
   const { canInstall, promptInstall } = useInstallPrompt();
   // First-time visitors get the practice button gently highlighted.
@@ -130,7 +132,15 @@ export function HomeScreen({
             <Icon name="trophy" />
             {t("weekly.home")}
           </span>
-          <span className="home-menu__sub">{t("weekly.home.sub")}</span>
+          {/* The mode's own promise, not this player's remaining attempts —
+              the home menu holds no weekly status and fetching one for a
+              subtitle would put a round trip in front of the front door. The
+              rule is a pure function of the week, so it can be answered here. */}
+          <span className="home-menu__sub">
+            {weeklyLimit === null
+              ? t("weekly.home.sub")
+              : t("weekly.home.subCapped", { n: weeklyLimit })}
+          </span>
         </button>
         <button className="btn btn--roll btn--big home-menu__btn" onClick={onLocal}>
           <span className="home-menu__label">

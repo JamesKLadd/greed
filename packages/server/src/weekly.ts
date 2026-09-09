@@ -6,16 +6,18 @@
  * a week may be attempted as often as a player likes, and only their best
  * attempt stands.
  *
- * Two rules do the work of keeping that honest. Every attempt is dealt a FRESH
- * secret seed, so retrying buys another roll of the dice and never a second
- * look at the same ones: a week cannot be scouted, learned, or solved. And a
- * player may only have ONE attempt open at a time, so an attempt is finished
+ * Three rules do the work of keeping that honest. Every attempt is dealt a
+ * FRESH secret seed, so retrying buys another roll of the dice and never a
+ * second look at the same ones: a week cannot be scouted, learned, or solved.
+ * A player may only have ONE attempt open at a time, so an attempt is finished
  * rather than abandoned the moment it goes badly — which is what stops the mode
- * collapsing into "reroll the first turn until it's good".
+ * collapsing into "reroll the first turn until it's good". And a week grants a
+ * fixed number of attempts (see `weeklyAttemptLimit`), so a board is won by
+ * playing well rather than by playing longest.
  *
- * Unlike the daily, this week's board is public from the start. With unlimited
- * retries a score to chase is the point of the mode rather than something that
- * spoils a single attempt, so there is nothing to withhold.
+ * Unlike the daily, this week's board is public from the start. With a week's
+ * worth of attempts a score to chase is the point of the mode rather than
+ * something that spoils a single attempt, so there is nothing to withhold.
  */
 
 import {
@@ -25,6 +27,7 @@ import {
   holdIndex,
   isRunMove,
   weekKey,
+  weeklyAttemptLimit,
   weeklyMoveStart,
   weeklyPosition,
   type GameState,
@@ -81,6 +84,17 @@ export interface WeeklyStatus {
   best: WeeklyResult | null;
   /** Attempts the player has finished this week. */
   attempts: number;
+  /**
+   * Attempts this week grants, or null on a week that is unlimited.
+   *
+   * Sent rather than left for the client to derive, even though the rule is a
+   * pure function of the week both halves can compute. The server is what
+   * actually enforces it, so this is the client being told what it will be held
+   * to instead of guessing — and during the minutes after a release when the
+   * running server is the older one, guessing would mean a screen refusing
+   * attempts the server would happily have dealt.
+   */
+  attemptLimit: number | null;
   /** Current streak of consecutive weeks played, including this one. */
   streak: number;
   /**
@@ -148,6 +162,23 @@ async function clearOpenRun(userId: string): Promise<void> {
   await query(`DELETE FROM weekly_open WHERE user_id = $1`, [userId]);
 }
 
+/**
+ * Attempts this player has SPENT on a week.
+ *
+ * Counted off the settled row, which is where `settle` increments it, so an
+ * attempt costs a player nothing until it has been played out. That is the
+ * honest reading of a cap on attempts, and it is also the only one the
+ * one-open-run rule can support: a player who could burn an attempt by opening
+ * one and walking away would be paying for dice they never rolled.
+ */
+async function attemptsUsed(userId: string, week: string): Promise<number> {
+  const { rows } = await query<{ attempts: number }>(
+    `SELECT attempts FROM weekly_runs WHERE user_id = $1 AND week = $2`,
+    [userId, week],
+  );
+  return rows[0]?.attempts ?? 0;
+}
+
 function viewOf(run: OpenRun): WeeklyRunView {
   const pos = weeklyPosition(run.seed, run.moves);
   return {
@@ -167,6 +198,11 @@ function viewOf(run: OpenRun): WeeklyRunView {
  * end. An attempt left open when the week turned over is a different matter: it
  * belongs to a week that has closed and can no longer be scored, so it is
  * discarded here and the player gets a clean start on the new week.
+ *
+ * Refuses once the week's attempts are spent. The order below is the point:
+ * a finished-but-unsettled run is settled FIRST, so the count this checks
+ * includes it. Checking before settling would hand out a fifty-first attempt to
+ * anyone whose fiftieth had not been folded in yet.
  */
 export async function startWeeklyRun(userId: string, week = weekKey()): Promise<WeeklyRunView> {
   const open = await openRun(userId);
@@ -174,6 +210,10 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
     const view = viewOf(open);
     // Self-healing: a run that is already played out but whose row outlived its
     // settlement is finished, not resumable. Settle it and deal a new one.
+    //
+    // Note this returns BEFORE the cap is consulted. An attempt already open is
+    // one the player has been granted; the cap decides whether a new one may be
+    // dealt, never whether a run in progress may be finished.
     if (!view.complete) return view;
     await settle(userId, open);
   } else if (open) {
@@ -182,9 +222,17 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
     await clearOpenRun(userId);
   }
 
+  const limit = weeklyAttemptLimit(week);
+  if (limit !== null && (await attemptsUsed(userId, week)) >= limit) {
+    throw new AccountError(
+      409,
+      `You have used all ${limit} attempts for this week. New dice on Monday.`,
+    );
+  }
+
   // A fresh, unguessable seed per ATTEMPT. Deriving it from the week or the
-  // player would make every retry the same dice, which is exactly what makes
-  // unlimited attempts worth having only once.
+  // player would make every retry the same dice, which is exactly what makes a
+  // second attempt worth having.
   const seed = randomInt(0, 2 ** 31);
   await query(
     `INSERT INTO weekly_open (user_id, week, seed, moves, started_at)
@@ -585,6 +633,7 @@ export async function weeklyStatus(
         }
       : null,
     attempts: own?.attempts ?? 0,
+    attemptLimit: weeklyAttemptLimit(week),
     streak: await currentStreak(userId, week),
     leaderboard: board.rows.map((r) => ({
       username: r.username,

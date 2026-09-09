@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  WEEKLY_ATTEMPTS,
+  WEEKLY_CAP_FROM,
   WEEKLY_TURNS,
   msUntilNextWeek,
   scoreWeeklyRun,
   weekKey,
+  weeklyAttemptLimit,
   weeklyPosition,
   type WeeklyMove,
 } from "./weekly.js";
@@ -152,5 +155,28 @@ describe("a weekly run", () => {
     // And it banks for what it is worth, since a score the server derives from
     // a replay is the only score there is.
     expect(scoreWeeklyRun(SEED, ["ROLL", "H3", "ROLL", "BANK"]).score).toBe(1000);
+  });
+});
+
+describe("weeklyAttemptLimit", () => {
+  it("allows fifty attempts from the week the cap starts", () => {
+    expect(weeklyAttemptLimit(WEEKLY_CAP_FROM)).toBe(WEEKLY_ATTEMPTS);
+    expect(weeklyAttemptLimit("2026-09-21")).toBe(WEEKLY_ATTEMPTS);
+    expect(weeklyAttemptLimit("2027-01-04")).toBe(WEEKLY_ATTEMPTS);
+  });
+
+  it("leaves every week before it unlimited", () => {
+    // Weeks played under the old promise keep it. Someone part-way through the
+    // week the cap was written in may already hold more than fifty attempts,
+    // and taking those back is not something a rule change gets to do.
+    expect(weeklyAttemptLimit("2026-09-07")).toBeNull();
+    expect(weeklyAttemptLimit("2026-08-31")).toBeNull();
+  });
+
+  it("turns over on a Monday, like everything else about a week", () => {
+    // The cutover is a week key rather than a date, so it can only ever land on
+    // a boundary — a cap that began mid-week would change the rules of a week
+    // already being played.
+    expect(weekKey(new Date(`${WEEKLY_CAP_FROM}T12:00:00Z`))).toBe(WEEKLY_CAP_FROM);
   });
 });

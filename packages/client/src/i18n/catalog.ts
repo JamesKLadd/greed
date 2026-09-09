@@ -192,12 +192,20 @@ export const en = {
   "daily.theirRank": "Placed #{rank} of {players} today.",
   "weekly.title": "WEEKLY",
   "weekly.tagline": "As many tries as you like. Your best run stands.",
+  "weekly.tagline.capped": "{n} attempts a week. Your best run stands.",
   "weekly.home": "Weekly challenge",
   "weekly.home.sub": "Unlimited tries · your best score counts",
+  "weekly.home.subCapped": "{n} attempts a week · your best score counts",
   "weekly.intro":
     "A {turns}-turn run against your own dice. Play it as often as you like this week — only your best score goes on the board.",
-  "weekly.unlimited":
+  "weekly.intro.capped":
+    "A {turns}-turn run against your own dice. You get {n} attempts this week, to spend whenever you like — only your best score goes on the board.",
+  "weekly.freshDice":
     "Every attempt gets fresh dice, so a good week has to be played, not memorised.",
+  "weekly.attemptsLeft": "{n} of {total} attempts left",
+  "weekly.attemptsLast": "Last attempt of the week — make it count.",
+  "weekly.attemptsGone": "That was your {total}th attempt this week. Fresh dice on Monday.",
+  "weekly.attemptsMadeOf": "{n} of {total} attempts this week",
   "weekly.play": "Start an attempt",
   "weekly.playAgain": "Try again",
   "weekly.resume": "Finish your attempt",
@@ -856,12 +864,20 @@ export const es: Record<MsgKey, string> = {
   "daily.theirRank": "Quedó #{rank} de {players} hoy.",
   "weekly.title": "SEMANAL",
   "weekly.tagline": "Tantos intentos como quieras. Cuenta tu mejor partida.",
+  "weekly.tagline.capped": "{n} intentos por semana. Cuenta tu mejor partida.",
   "weekly.home": "Reto semanal",
   "weekly.home.sub": "Intentos ilimitados · cuenta tu mejor puntuación",
+  "weekly.home.subCapped": "{n} intentos por semana · cuenta tu mejor puntuación",
   "weekly.intro":
     "Una partida de {turns} turnos con tus propios dados. Juégala tantas veces como quieras esta semana — solo tu mejor puntuación entra en la tabla.",
-  "weekly.unlimited":
+  "weekly.intro.capped":
+    "Una partida de {turns} turnos con tus propios dados. Tienes {n} intentos esta semana, para gastarlos cuando quieras — solo tu mejor puntuación entra en la tabla.",
+  "weekly.freshDice":
     "Cada intento reparte dados nuevos, así que una buena semana hay que jugarla, no memorizarla.",
+  "weekly.attemptsLeft": "Te quedan {n} de {total} intentos",
+  "weekly.attemptsLast": "Último intento de la semana — que valga la pena.",
+  "weekly.attemptsGone": "Ese fue tu intento {total} de la semana. Dados nuevos el lunes.",
+  "weekly.attemptsMadeOf": "{n} de {total} intentos esta semana",
   "weekly.play": "Empezar un intento",
   "weekly.playAgain": "Intentar de nuevo",
   "weekly.resume": "Termina tu intento",
@@ -1500,12 +1516,20 @@ export const fr: Record<MsgKey, string> = {
   "daily.theirRank": "{rank}e sur {players} aujourd'hui.",
   "weekly.title": "HEBDO",
   "weekly.tagline": "Autant d’essais que vous voulez. Votre meilleure partie compte.",
+  "weekly.tagline.capped": "{n} essais par semaine. Votre meilleure partie compte.",
   "weekly.home": "Défi hebdomadaire",
   "weekly.home.sub": "Essais illimités · votre meilleur score compte",
+  "weekly.home.subCapped": "{n} essais par semaine · votre meilleur score compte",
   "weekly.intro":
     "Une partie de {turns} tours avec vos propres dés. Rejouez-la autant que vous voulez cette semaine — seul votre meilleur score entre au classement.",
-  "weekly.unlimited":
+  "weekly.intro.capped":
+    "Une partie de {turns} tours avec vos propres dés. Vous avez {n} essais cette semaine, à dépenser quand vous voulez — seul votre meilleur score entre au classement.",
+  "weekly.freshDice":
     "Chaque essai distribue de nouveaux dés : une bonne semaine se joue, elle ne se retient pas.",
+  "weekly.attemptsLeft": "Il vous reste {n} essais sur {total}",
+  "weekly.attemptsLast": "Dernier essai de la semaine — faites-le compter.",
+  "weekly.attemptsGone": "C’était votre {total}e essai de la semaine. De nouveaux dés lundi.",
+  "weekly.attemptsMadeOf": "{n} essais sur {total} cette semaine",
   "weekly.play": "Lancer un essai",
   "weekly.playAgain": "Réessayer",
   "weekly.resume": "Terminez votre essai",

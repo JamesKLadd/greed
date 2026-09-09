@@ -1520,6 +1520,15 @@
   margin-bottom: 10px;
   opacity: 0.85;
 }
+/* "That was your last attempt" — the one note here that says a door is shut,
+   so it keeps full weight and takes the amber the rest of the UI warns in,
+   rather than fading out like the footnotes above. */
+.daily__note--warn {
+  font-size: var(--fs-sm);
+  margin-bottom: 10px;
+  color: var(--warn);
+  font-weight: 600;
+}
 /* ---- The roll of past champions ---- */
 .daily-hall {
   flex: 0 1 260px;

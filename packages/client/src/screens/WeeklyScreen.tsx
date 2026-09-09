@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WEEKLY_TURNS, msUntilNextWeek, weekKey } from "@greed/core";
+import { WEEKLY_TURNS, msUntilNextWeek, weekKey, weeklyAttemptLimit } from "@greed/core";
 import { ChallengeRun } from "../components/ChallengeRun.js";
 import {
   fetchWeekly,
@@ -52,6 +52,16 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   // effect on the way back rather than on the next attempt.
   const { dice3d } = loadSettings();
   const [week, setWeek] = useState(() => weekKey());
+  /**
+   * What the MODE grants this week, worked out from the week itself.
+   *
+   * Separate from the limit the status reports, and used only for the tagline —
+   * which is drawn on screens that have no status to read at all: signed out,
+   * or talking to an API that has never heard of the weekly. The rule is a pure
+   * function of the calendar, so those screens can still say what the mode is.
+   * Anything about what THIS player has left comes from the server instead.
+   */
+  const weekLimit = weeklyAttemptLimit(week);
   const [status, setStatus] = useState<WeeklyStatus | null>(null);
   const [unlocked, setUnlocked] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +181,11 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
       <div className="setup">
         <div className="setup__hero">
           <h1 className="setup__logo">{t("weekly.title")}</h1>
-          <p className="setup__tagline">{t("weekly.tagline")}</p>
+          <p className="setup__tagline">
+            {weekLimit === null
+              ? t("weekly.tagline")
+              : t("weekly.tagline.capped", { n: weekLimit })}
+          </p>
         </div>
         <div className="setup__panel daily">
           <p className="daily__note">{t("weekly.signInRequired")}</p>
@@ -196,7 +210,11 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
       <div className="setup">
         <div className="setup__hero">
           <h1 className="setup__logo">{t("weekly.title")}</h1>
-          <p className="setup__tagline">{t("weekly.tagline")}</p>
+          <p className="setup__tagline">
+            {weekLimit === null
+              ? t("weekly.tagline")
+              : t("weekly.tagline.capped", { n: weekLimit })}
+          </p>
         </div>
         <div className="setup__panel daily">
           <p className="daily__note">{t("weekly.notReady")}</p>
@@ -213,11 +231,21 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   const champion = status?.champion ?? null;
   const best = status?.best ?? null;
 
+  // What the week grants, as the SERVER reports it — null on a week with no
+  // cap, which is every week before the limit began and any server that
+  // predates it. `left` is only meaningful alongside a limit.
+  const limit = status?.attemptLimit ?? null;
+  const used = status?.attempts ?? 0;
+  const left = limit === null ? null : Math.max(0, limit - used);
+  const spent = left === 0;
+
   return (
     <div className="setup">
       <div className="setup__hero">
         <h1 className="setup__logo">{t("weekly.title")}</h1>
-        <p className="setup__tagline">{t("weekly.tagline")}</p>
+        <p className="setup__tagline">
+          {weekLimit === null ? t("weekly.tagline") : t("weekly.tagline.capped", { n: weekLimit })}
+        </p>
       </div>
 
       <div className="daily__layout">
@@ -305,7 +333,9 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                           rank: status.yourRank,
                           players: status.players,
                         })
-                      : t("weekly.attemptsMade", { n: status?.attempts ?? 0 })}
+                      : limit === null
+                        ? t("weekly.attemptsMade", { n: used })
+                        : t("weekly.attemptsMadeOf", { n: used, total: limit })}
                   </p>
                   <div className="summary">
                     <div className="summary__stat">
@@ -318,18 +348,53 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                     </div>
                     <div className="summary__stat">
                       <span className="summary__label">{t("weekly.attempts")}</span>
-                      <span className="summary__value">{status?.attempts ?? 0}</span>
+                      {/* Numerals and a slash read the same in every language,
+                          so this needs no catalog entry of its own. */}
+                      <span className="summary__value">
+                        {limit === null ? used : `${used}/${limit}`}
+                      </span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="daily__note">{t("weekly.intro", { turns: WEEKLY_TURNS })}</p>
-                  <p className="daily__note daily__note--hint">{t("weekly.unlimited")}</p>
+                  <p className="daily__note">
+                    {limit === null
+                      ? t("weekly.intro", { turns: WEEKLY_TURNS })
+                      : t("weekly.intro.capped", { turns: WEEKLY_TURNS, n: limit })}
+                  </p>
+                  <p className="daily__note daily__note--hint">{t("weekly.freshDice")}</p>
                 </>
               )}
 
-              <Button variant="roll" size="lg" disabled={starting} onClick={() => void begin()}>
+              {/* What is left, said once, wherever the player is in the week —
+                  under the result when they have one, under the intro when they
+                  do not. The button below reads the same state, so the count and
+                  whether it can be pressed can never disagree. */}
+              {limit !== null && (
+                <p
+                  className={
+                    spent ? "daily__note daily__note--warn" : "daily__note daily__note--hint"
+                  }
+                >
+                  {spent
+                    ? t("weekly.attemptsGone", { total: limit })
+                    : left === 1
+                      ? t("weekly.attemptsLast")
+                      : t("weekly.attemptsLeft", { n: left ?? 0, total: limit })}
+                </p>
+              )}
+
+              {/* Disabled rather than hidden once the attempts are gone: the
+                  button is where a player looks to find out whether they may
+                  play, and a missing one reads as a broken screen. The server
+                  refuses either way — this is only so the press is not wasted. */}
+              <Button
+                variant="roll"
+                size="lg"
+                disabled={starting || spent}
+                onClick={() => void begin()}
+              >
                 {starting ? t("weekly.loading") : best ? t("weekly.playAgain") : t("weekly.play")}
               </Button>
 

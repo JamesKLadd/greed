@@ -52,6 +52,8 @@ export interface WeeklyStatus {
   week: string;
   best: RunResult | null;
   attempts: number;
+  /** Attempts this week grants, or null where a week is unlimited. */
+  attemptLimit: number | null;
   streak: number;
   leaderboard: WeeklyEntry[];
   yourRank: number | null;
@@ -78,6 +80,11 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
   return {
     ...raw,
     attempts: raw.attempts ?? 0,
+    // A server that has never heard of the cap is a server that is not
+    // enforcing one, so the honest reading of a missing limit is "unlimited".
+    // Guessing 50 here would have this screen refuse attempts the server
+    // would have dealt, for the few minutes a release takes to land.
+    attemptLimit: raw.attemptLimit ?? null,
     streak: raw.streak ?? 0,
     wins: raw.wins ?? 0,
     players: raw.players ?? 0,

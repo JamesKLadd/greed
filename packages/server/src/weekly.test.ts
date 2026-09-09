@@ -10,7 +10,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { weeklyPosition, type WeeklyMove } from "@greed/core";
+import { WEEKLY_ATTEMPTS, WEEKLY_CAP_FROM, weeklyPosition, type WeeklyMove } from "@greed/core";
 
 /** The one attempt a player has open, keyed by user. */
 interface Open {
@@ -149,6 +149,12 @@ vi.mock("./db.js", () => ({
     if (sql.includes("COUNT(*)::text")) {
       return { rows: [{ n: String(boardFor(params[0] as string).length) }] };
     }
+    if (sql.includes("SELECT attempts FROM weekly_runs")) {
+      // What a week has cost this player so far: [userId, week].
+      const [user, week] = params as [string, string];
+      const row = best.get(key(user, week));
+      return { rows: row ? [{ attempts: row.attempts }] : [] };
+    }
     if (sql.includes("week <= $2")) {
       // The streak read: every week this player has finished, newest first.
       const [user, thisWeek] = params as [string, string];
@@ -231,6 +237,14 @@ const { startWeeklyRun, playWeeklyMove, resumeWeeklyRun, weeklyStatus } =
 const WEEK = "2026-08-24"; // a Monday
 const LAST_WEEK = "2026-08-17";
 const USER = "player-1";
+/**
+ * A week the attempt cap applies to.
+ *
+ * Every other test in this file runs on WEEK, which is before the cap started —
+ * so the suite as a whole is also the check that weeks played under the old
+ * unlimited rule still behave that way.
+ */
+const CAPPED_WEEK = WEEKLY_CAP_FROM;
 
 beforeEach(() => {
   open.clear();
@@ -262,7 +276,7 @@ async function playAttempt(user: string, bankAt: number, week = WEEK): Promise<n
  * instead of rolling for them, so what they check is the ranking rule rather
  * than the luck of a seed.
  */
-function record(user: string, week: string, score: number): void {
+function record(user: string, week: string, score: number, attempts = 1): void {
   best.set(key(user, week), {
     score,
     turns: 10,
@@ -272,7 +286,7 @@ function record(user: string, week: string, score: number): void {
     bestTurn: 400,
     seed: 1,
     moves: "",
-    attempts: 1,
+    attempts,
     bestAt: ++clock,
   });
 }
@@ -615,5 +629,83 @@ describe("career stats", () => {
       previous = now;
     }
     expect(previous).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A move list that plays a seed all the way out, banking at 300.
+ *
+ * Written straight into the open row by the tests below, which need an attempt
+ * that is FINISHED but not yet settled — the state a row is in when settlement
+ * did not complete. Playing one through the server instead would settle it, so
+ * the state under test would never exist.
+ */
+function playedOut(seed: number): string {
+  const moves: WeeklyMove[] = [];
+  for (let guard = 0; guard < 400; guard++) {
+    const pos = weeklyPosition(seed, moves);
+    if (pos.result.complete) break;
+    const turn = pos.state.turn;
+    moves.push(!turn.outcome && turn.turnScore >= 300 ? "BANK" : "ROLL");
+  }
+  return moves.join(",");
+}
+
+describe("a week's worth of attempts", () => {
+  it("deals the last one and refuses the one after it", async () => {
+    record(USER, CAPPED_WEEK, 2000, WEEKLY_ATTEMPTS - 1);
+    // The fiftieth is still owed, so it is dealt.
+    await expect(startWeeklyRun(USER, CAPPED_WEEK)).resolves.toBeTruthy();
+
+    // Play it out. That settles it, which is what spends it.
+    await playAttempt(USER, 300, CAPPED_WEEK);
+    expect(best.get(key(USER, CAPPED_WEEK))!.attempts).toBe(WEEKLY_ATTEMPTS);
+
+    await expect(startWeeklyRun(USER, CAPPED_WEEK)).rejects.toThrow(/all 50 attempts/i);
+    // And nothing was dealt on the way to refusing.
+    expect(open.has(USER)).toBe(false);
+  });
+
+  it("still lets a player finish the attempt in their hands", async () => {
+    // The cap decides whether a NEW attempt may be dealt. A run already open
+    // was granted before the count ran out and is the player's to play out —
+    // otherwise the fiftieth attempt could never be finished, only started.
+    const view = await startWeeklyRun(USER, CAPPED_WEEK);
+    expect(view.complete).toBe(false);
+    record(USER, CAPPED_WEEK, 2000, WEEKLY_ATTEMPTS);
+
+    const again = await startWeeklyRun(USER, CAPPED_WEEK);
+    expect(again.complete).toBe(false);
+    expect(await resumeWeeklyRun(USER, CAPPED_WEEK)).not.toBeNull();
+  });
+
+  it("counts a played-out attempt before deciding, not after", async () => {
+    // The fiftieth attempt, finished but never folded in — settlement died
+    // between writing the run and clearing the open row. Checking the count
+    // before settling would read 49 and hand out a fifty-first.
+    record(USER, CAPPED_WEEK, 2000, WEEKLY_ATTEMPTS - 1);
+    const seed = 4242;
+    open.set(USER, { week: CAPPED_WEEK, seed, moves: playedOut(seed) });
+
+    await expect(startWeeklyRun(USER, CAPPED_WEEK)).rejects.toThrow(/all 50 attempts/i);
+    // Settled on the way past, so the attempt is counted and the row is gone.
+    expect(best.get(key(USER, CAPPED_WEEK))!.attempts).toBe(WEEKLY_ATTEMPTS);
+    expect(open.has(USER)).toBe(false);
+  });
+
+  it("leaves a week from before the cap unlimited", async () => {
+    // Far past fifty, on a week that was played under the old promise.
+    record(USER, WEEK, 2000, 500);
+    await expect(startWeeklyRun(USER, WEEK)).resolves.toBeTruthy();
+  });
+
+  it("tells the screen what the week grants", async () => {
+    record(USER, CAPPED_WEEK, 2000, 3);
+    const capped = await weeklyStatus(USER, CAPPED_WEEK);
+    expect(capped.attemptLimit).toBe(WEEKLY_ATTEMPTS);
+    expect(capped.attempts).toBe(3);
+
+    const uncapped = await weeklyStatus(USER, WEEK);
+    expect(uncapped.attemptLimit).toBeNull();
   });
 });
