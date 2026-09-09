@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.6.4",
+    date: "2026-09-09",
+    notes: [
+      "The Weekly Challenge now gives you 50 attempts per week instead of unlimited attempts, starting with the week of September 14th. You can still use them whenever you like during the week",
+      "Fixed a bug where building a 5-of-a-kind across several rolls would bust you instead of scoring 1000, when the number wasn't a 1 or a 5",
+      "Fixed a pause before the dice rolled on the last turn of a Daily or Weekly Challenge that gave away that you had busted",
+      "The roll that ends a Daily or Weekly Challenge now stays on screen as long as every other roll instead of disappearing straight away",
+      "Players in Online games now get 30 seconds to take their turn instead of 10, so briefly switching apps won't cost you your seat",
+      "Fixed emotes in Online games being cut off on mobile",
+      "Your equipped table style is now shown to you for the whole of an Online game, instead of changing to whoever's turn it is",
+      "Added 🥹 as an emote in Online games",
+      "How to play now covers holding dice, including the rule that you must keep at least one die held after your first roll",
+    ],
+  },
+  {
     version: "0.6.3",
     date: "2026-08-31",
     notes: [
