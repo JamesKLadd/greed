@@ -31,12 +31,13 @@ import {
   type Achievement,
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
-import { ApiError, syncProfileUp } from "../net/auth.js";
+import { syncProfileUp } from "../net/auth.js";
 import { Button, Icon, Modal } from "../ui/index.js";
 import { resolveAvatar } from "../game/avatars.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -110,7 +111,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
         setUnavailable(true);
         return;
       }
-      setError(err instanceof ApiError ? err.message : t("weekly.loadFailed"));
+      setError(apiErrorText(t, err, "weekly.loadFailed"));
     },
     [t],
   );

@@ -472,11 +472,17 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
               if (prev[p.id] === true && next[p.id] === false) {
                 setToast({
                   id: Math.random(),
-                  text: `${p.name} disconnected — autoplaying.`,
+                  key: "toast.disconnected",
+                  params: { name: p.name },
                   tone: "bad",
                 });
               } else if (prev[p.id] === false && next[p.id] === true) {
-                setToast({ id: Math.random(), text: `${p.name} reconnected.`, tone: "good" });
+                setToast({
+                  id: Math.random(),
+                  key: "toast.reconnected",
+                  params: { name: p.name },
+                  tone: "good",
+                });
               }
             }
           }

@@ -11,7 +11,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Icon, Screen, TextField } from "../ui/index.js";
 import { ProfileCard } from "../components/ProfileCard.js";
-import { ApiError } from "../net/auth.js";
 import {
   acceptFriend,
   fetchFriends,
@@ -24,6 +23,7 @@ import { useChallenges } from "../net/challenges.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 
 /** How often the list refreshes itself while the screen is open. */
 const REFRESH_MS = 5000;
@@ -53,7 +53,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
       try {
         setView(await fetchFriends());
       } catch (err) {
-        if (!quiet) setError(err instanceof ApiError ? err.message : t("social.loadFailed"));
+        if (!quiet) setError(apiErrorText(t, err, "social.loadFailed"));
       } finally {
         inFlight.current = false;
       }
@@ -92,7 +92,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
     try {
       setView(await fn());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("social.addFailed"));
+      setError(apiErrorText(t, err, "social.addFailed"));
     } finally {
       setBusy(false);
     }

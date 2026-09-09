@@ -56,6 +56,15 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /**
+     * A stable id for what went wrong, when the server sent one.
+     *
+     * `message` is the server's own English. Screens translate the CODE and
+     * fall back to the message, so a code this build has no wording for still
+     * says something true — which is what a release needs, since the two halves
+     * do not deploy together and either can be the newer one.
+     */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -91,8 +100,9 @@ export async function api<T>(
     /* some responses (204) have no body */
   }
   if (!res.ok) {
-    const msg = (data as { error?: string })?.error ?? "Something went wrong. Please try again.";
-    throw new ApiError(res.status, msg);
+    const body = data as { error?: string; code?: string } | null;
+    const msg = body?.error ?? "Something went wrong. Please try again.";
+    throw new ApiError(res.status, msg, body?.code);
   }
   return data as T;
 }

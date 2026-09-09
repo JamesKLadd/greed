@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../game/auth.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 import {
   ApiError,
   checkUsername,
@@ -71,7 +72,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("auth.errorGeneric"));
+      setError(apiErrorText(t, err, "auth.errorGeneric"));
     } finally {
       setBusy(false);
     }

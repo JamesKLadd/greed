@@ -181,7 +181,7 @@ export async function startDailyRun(userId: string, day = dailyKey()): Promise<D
   // Re-read rather than trusting the insert: a second start returns the run
   // already in progress, on its original seed.
   const run = await storedRun(userId, day);
-  if (!run) throw new AccountError(500, "Couldn't start today's run.");
+  if (!run) throw new AccountError(500, "Couldn't start today's run.", "daily.startFailed");
   return viewOf(run);
 }
 
@@ -331,17 +331,20 @@ export async function playDailyMove(
   rawMove: unknown,
   day = dailyKey(),
 ): Promise<DailyRunView> {
-  if (!isDailyMove(rawMove)) throw new AccountError(400, "Invalid move.");
+  if (!isDailyMove(rawMove)) throw new AccountError(400, "Invalid move.", "move.invalid");
   const move: DailyMove = rawMove;
 
   const run = await storedRun(userId, day);
-  if (run === null) throw new AccountError(400, "Start today's run first.");
+  if (run === null) throw new AccountError(400, "Start today's run first.", "daily.notStarted");
   const { seed, moves } = run;
-  if (run.complete) throw new AccountError(409, "You've already played today.");
-  if (moves.length >= MAX_MOVES) throw new AccountError(400, "That run is too long.");
+  if (run.complete)
+    throw new AccountError(409, "You've already played today.", "daily.alreadyPlayed");
+  if (moves.length >= MAX_MOVES)
+    throw new AccountError(400, "That run is too long.", "run.tooLong");
 
   const before = dailyPosition(seed, moves);
-  if (before.result.complete) throw new AccountError(409, "You've already played today.");
+  if (before.result.complete)
+    throw new AccountError(409, "You've already played today.", "daily.alreadyPlayed");
 
   // Holding a die is judged against the turn as it stands — it does not start a
   // new one — and by the engine's own rule, so the server refuses exactly the
@@ -349,14 +352,16 @@ export async function playDailyMove(
   const held = holdIndex(move);
   if (held !== null) {
     if (!canToggleLock(before.state.turn, held)) {
-      throw new AccountError(400, "That move isn't legal.");
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
     }
   } else {
     // Legality is checked against the position the NEXT move actually starts
     // from — a finished turn is advanced past first, exactly as the replay does.
     const legal = getLegalActions(dailyMoveStart(before.state));
-    if (move === "ROLL" && !legal.canRoll) throw new AccountError(400, "That move isn't legal.");
-    if (move === "BANK" && !legal.canBank) throw new AccountError(400, "That move isn't legal.");
+    if (move === "ROLL" && !legal.canRoll)
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
+    if (move === "BANK" && !legal.canBank)
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
   }
 
   const next = [...moves, move];

@@ -29,12 +29,12 @@ import {
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
 
-import { ApiError } from "../net/auth.js";
 import { Button, Icon, Modal } from "../ui/index.js";
 import { resolveAvatar } from "../game/avatars.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -106,7 +106,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       // A run left half-played picks up exactly where it was left.
       setRunView(open.run);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
+      setError(apiErrorText(t, err, "daily.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -131,7 +131,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
       if (improved) void syncProfileUp();
       claim(next);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
+      setError(apiErrorText(t, err, "daily.loadFailed"));
     }
   }, [t, claim]);
 
@@ -142,7 +142,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     try {
       setRunView(await startDaily());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("daily.loadFailed"));
+      setError(apiErrorText(t, err, "daily.loadFailed"));
     } finally {
       setStarting(false);
     }

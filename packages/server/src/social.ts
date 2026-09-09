@@ -38,13 +38,14 @@ interface UserRow {
 
 async function findByUsername(username: unknown): Promise<UserRow> {
   if (typeof username !== "string" || !username.trim()) {
-    throw new AccountError(400, "Enter a username.");
+    throw new AccountError(400, "Enter a username.", "username.missing");
   }
   const { rows } = await query<UserRow>(
     `SELECT id, username, profile FROM users WHERE lower(username) = lower($1) LIMIT 1`,
     [username.trim()],
   );
-  if (rows.length === 0) throw new AccountError(404, "No player with that username.");
+  if (rows.length === 0)
+    throw new AccountError(404, "No player with that username.", "user.unknown");
   return rows[0];
 }
 
@@ -89,7 +90,8 @@ export async function friendsView(userId: string): Promise<FriendsView> {
  */
 export async function requestFriend(userId: string, username: unknown): Promise<FriendsView> {
   const target = await findByUsername(username);
-  if (target.id === userId) throw new AccountError(400, "You can't add yourself.");
+  if (target.id === userId)
+    throw new AccountError(400, "You can't add yourself.", "friend.selfAdd");
 
   const existing = await query<{ requester_id: string; status: string }>(
     `SELECT requester_id, status FROM friendships
@@ -99,9 +101,11 @@ export async function requestFriend(userId: string, username: unknown): Promise<
   );
 
   const row = existing.rows[0];
-  if (row?.status === "accepted") throw new AccountError(409, "You're already friends.");
+  if (row?.status === "accepted")
+    throw new AccountError(409, "You're already friends.", "friend.already");
   if (row) {
-    if (row.requester_id === userId) throw new AccountError(409, "Request already sent.");
+    if (row.requester_id === userId)
+      throw new AccountError(409, "Request already sent.", "friend.pending");
     return acceptFriend(userId, username);
   }
 
@@ -120,7 +124,8 @@ export async function acceptFriend(userId: string, username: unknown): Promise<F
       WHERE requester_id = $1 AND addressee_id = $2 AND status = 'pending'`,
     [target.id, userId],
   );
-  if (!rowCount) throw new AccountError(404, "No pending request from that player.");
+  if (!rowCount)
+    throw new AccountError(404, "No pending request from that player.", "friend.noRequest");
   return friendsView(userId);
 }
 
@@ -148,7 +153,8 @@ export async function requireFriend(
   username: unknown,
 ): Promise<{ id: string; username: string }> {
   const target = await findByUsername(username);
-  if (target.id === userId) throw new AccountError(400, "You can't challenge yourself.");
+  if (target.id === userId)
+    throw new AccountError(400, "You can't challenge yourself.", "friend.selfChallenge");
   const { rows } = await query<{ status: string }>(
     `SELECT status FROM friendships
       WHERE ((requester_id = $1 AND addressee_id = $2)
@@ -156,7 +162,8 @@ export async function requireFriend(
         AND status = 'accepted'`,
     [userId, target.id],
   );
-  if (rows.length === 0) throw new AccountError(403, "You can only challenge friends.");
+  if (rows.length === 0)
+    throw new AccountError(403, "You can only challenge friends.", "friend.notFriend");
   return { id: target.id, username: target.username };
 }
 

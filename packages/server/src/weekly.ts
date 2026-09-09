@@ -228,6 +228,7 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
     throw new AccountError(
       409,
       `You have used all ${limit} attempts for this week. New dice on Monday.`,
+      "weekly.spent",
     );
   }
 
@@ -368,26 +369,31 @@ export async function playWeeklyMove(
   rawMove: unknown,
   week = weekKey(),
 ): Promise<WeeklyRunView & { settled?: WeeklyResult }> {
-  if (!isRunMove(rawMove)) throw new AccountError(400, "Invalid move.");
+  if (!isRunMove(rawMove)) throw new AccountError(400, "Invalid move.", "move.invalid");
   const move: WeeklyMove = rawMove;
 
   const run = await openRun(userId);
-  if (run === null) throw new AccountError(400, "Start a run first.");
+  if (run === null) throw new AccountError(400, "Start a run first.", "run.notStarted");
   if (run.week !== week) {
     // The week turned over mid-run. Scoring it now would rewrite a board that
     // has already closed — and with it a champion someone has been crowned —
     // so the attempt is void and the player starts the new week fresh.
     await clearOpenRun(userId);
-    throw new AccountError(409, "That run belonged to last week. Start a new one.");
+    throw new AccountError(
+      409,
+      "That run belonged to last week. Start a new one.",
+      "weekly.staleRun",
+    );
   }
-  if (run.moves.length >= MAX_MOVES) throw new AccountError(400, "That run is too long.");
+  if (run.moves.length >= MAX_MOVES)
+    throw new AccountError(400, "That run is too long.", "run.tooLong");
 
   const before = weeklyPosition(run.seed, run.moves);
   if (before.result.complete) {
     // An attempt that outlived its settlement (see startWeeklyRun). Settle it
     // rather than letting another move onto a finished run.
     await settle(userId, run);
-    throw new AccountError(409, "That run is already finished.");
+    throw new AccountError(409, "That run is already finished.", "run.finished");
   }
 
   // Holding a die is judged against the turn as it stands — it does not start a
@@ -396,14 +402,16 @@ export async function playWeeklyMove(
   const held = holdIndex(move);
   if (held !== null) {
     if (!canToggleLock(before.state.turn, held)) {
-      throw new AccountError(400, "That move isn't legal.");
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
     }
   } else {
     // Legality is checked against the position the NEXT move actually starts
     // from — a finished turn is advanced past first, exactly as the replay does.
     const legal = getLegalActions(weeklyMoveStart(before.state));
-    if (move === "ROLL" && !legal.canRoll) throw new AccountError(400, "That move isn't legal.");
-    if (move === "BANK" && !legal.canBank) throw new AccountError(400, "That move isn't legal.");
+    if (move === "ROLL" && !legal.canRoll)
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
+    if (move === "BANK" && !legal.canBank)
+      throw new AccountError(400, "That move isn't legal.", "move.illegal");
   }
 
   const next = [...run.moves, move];

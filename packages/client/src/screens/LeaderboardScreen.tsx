@@ -11,9 +11,9 @@ import {
   type MatchRecord,
   type WeeklyBestView,
 } from "../net/leaderboards.js";
-import { ApiError } from "../net/auth.js";
 import { useAuth } from "../game/auth.js";
 import { useI18n, useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
@@ -52,8 +52,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       setLoading(true);
       setError(null);
       const done = () => setLoading(false);
-      const fail = (err: unknown) =>
-        setError(err instanceof ApiError ? err.message : t("board.loadFailed"));
+      const fail = (err: unknown) => setError(apiErrorText(t, err, "board.loadFailed"));
       if (which === "history") {
         fetchMatches()
           .then((r) => setMatches(r.matches))

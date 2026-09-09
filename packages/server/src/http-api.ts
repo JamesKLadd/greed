@@ -78,7 +78,7 @@ function readBody(req: IncomingMessage): Promise<unknown> {
     req.on("data", (c: Buffer) => {
       size += c.length;
       if (size > MAX_BODY) {
-        reject(new AccountError(413, "Request too large."));
+        reject(new AccountError(413, "Request too large.", "body.tooLarge"));
         req.destroy();
         return;
       }
@@ -90,7 +90,7 @@ function readBody(req: IncomingMessage): Promise<unknown> {
       try {
         resolve(JSON.parse(raw));
       } catch {
-        reject(new AccountError(400, "Malformed JSON body."));
+        reject(new AccountError(400, "Malformed JSON body.", "body.malformed"));
       }
     });
     req.on("error", reject);
@@ -102,12 +102,13 @@ async function requireUser(req: IncomingMessage): Promise<{ id: string; username
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const claims = token ? await verifySession(token) : null;
-  if (!claims) throw new AccountError(401, "Please log in again.");
+  if (!claims) throw new AccountError(401, "Please log in again.", "auth.expired");
   // A valid signature is not the whole question. The account may have reset its
   // password since — which is meant to end other sessions — or been deleted
   // outright, in which case this token was still authenticating a user that no
   // longer exists. See sessionIsCurrent.
-  if (!(await sessionIsCurrent(claims))) throw new AccountError(401, "Please log in again.");
+  if (!(await sessionIsCurrent(claims)))
+    throw new AccountError(401, "Please log in again.", "auth.expired");
   return { id: claims.sub, username: claims.username };
 }
 
@@ -263,7 +264,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       // Signed-out callers can browse the boards; they just have no own-rank.
       const viewer = await optionalUser(req);
       const raw = url.searchParams.get("category") ?? "wins";
-      if (!isLeaderboardCategory(raw)) throw new AccountError(400, "Unknown leaderboard.");
+      if (!isLeaderboardCategory(raw))
+        throw new AccountError(400, "Unknown leaderboard.", "board.unknown");
       json(res, 200, await leaderboard(raw, viewer?.id ?? null));
     } else if (method === "GET" && path === "/api/leaderboard/daily") {
       // The best daily runs ever played. Public like the other boards; today's
@@ -300,7 +302,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     } else if (method === "GET" && path === "/api/me") {
       const { id } = await requireUser(req);
       const account = await getAccount(id);
-      if (!account) throw new AccountError(404, "Account not found.");
+      if (!account) throw new AccountError(404, "Account not found.", "account.missing");
       // The client can't infer this from the account alone, and it decides
       // whether any verification UI is worth showing at all.
       json(res, 200, { ...account, verificationRequired: verificationRequired() });
@@ -319,7 +321,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     }
   } catch (err) {
     if (err instanceof AccountError) {
-      json(res, err.status, { error: err.message });
+      json(res, err.status, { error: err.message, code: err.code });
     } else {
       console.error("[api] error:", err);
       json(res, 500, { error: "Something went wrong. Please try again." });

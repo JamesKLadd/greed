@@ -73,11 +73,22 @@ interface UserRow {
   created_at: Date;
 }
 
-/** A validation / conflict failure the HTTP layer maps to a status code. */
+/**
+ * A validation / conflict failure the HTTP layer maps to a status code.
+ *
+ * Carries a stable `code` alongside the message. Every one of these is shown to
+ * a player verbatim, and every one of them is English — so a French player who
+ * mistyped their password read about it in English. The client translates by
+ * code and falls back to this message for a code it does not know, which is
+ * also what keeps the few minutes after a release working, when the client is
+ * the newer half and may meet a code that predates it, or the older half and
+ * meet one that postdates it.
+ */
 export class AccountError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "AccountError";
@@ -238,13 +249,14 @@ const USERNAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,14}[a-zA-Z0-9]$/; // 3–16 cha
 
 export function normalizeEmail(email: unknown): string {
   if (typeof email !== "string" || !EMAIL_RE.test(email.trim()) || email.length > 254) {
-    throw new AccountError(400, "Enter a valid email address.");
+    throw new AccountError(400, "Enter a valid email address.", "email.invalid");
   }
   return email.trim().toLowerCase();
 }
 
 export function validateUsername(username: unknown): string {
-  if (typeof username !== "string") throw new AccountError(400, "Enter a username.");
+  if (typeof username !== "string")
+    throw new AccountError(400, "Enter a username.", "username.missing");
   const u = username.trim();
   if (!USERNAME_RE.test(u)) {
     throw new AccountError(
@@ -252,7 +264,8 @@ export function validateUsername(username: unknown): string {
       "Username must be 3–16 characters: letters, numbers, hyphen or underscore.",
     );
   }
-  if (hasProfanity(u)) throw new AccountError(400, "Please choose a different username.");
+  if (hasProfanity(u))
+    throw new AccountError(400, "Please choose a different username.", "username.rejected");
   return u;
 }
 
@@ -310,20 +323,24 @@ function foldPassword(p: string): string {
 
 function validatePassword(password: unknown): string {
   if (typeof password !== "string" || password.length < 8) {
-    throw new AccountError(400, "Password must be at least 8 characters.");
+    throw new AccountError(400, "Password must be at least 8 characters.", "password.short");
   }
-  if (password.length > 200) throw new AccountError(400, "Password is too long.");
+  if (password.length > 200) throw new AccountError(400, "Password is too long.", "password.long");
   const folded = foldPassword(password);
   // Runs of one character, and the digits-only passwords, never survive folding
   // into something meaningful — so check the raw shape for those.
   if (/^(.)\1*$/.test(password) || /^[0-9]+$/.test(password)) {
-    throw new AccountError(400, "Please choose a less predictable password.");
+    throw new AccountError(400, "Please choose a less predictable password.", "password.weak");
   }
   if (
     COMMON_PASSWORDS.has(folded) ||
     (folded.length >= 4 && COMMON_PASSWORDS.has(folded.slice(0, -1)))
   ) {
-    throw new AccountError(400, "That password is too common — please choose another.");
+    throw new AccountError(
+      400,
+      "That password is too common — please choose another.",
+      "password.common",
+    );
   }
   return password;
 }
@@ -383,7 +400,7 @@ export async function signup(input: {
   for (const r of existing.rows as { email_taken: boolean; name_taken: boolean }[]) {
     // A taken USERNAME is safe to name: the game already answers that question
     // on the signup form, and a username is public on every leaderboard.
-    if (r.name_taken) throw new AccountError(409, "That username is taken.");
+    if (r.name_taken) throw new AccountError(409, "That username is taken.", "username.taken");
     // A taken EMAIL is not. Saying so turns signup into a way to ask whether
     // any given address has an account here, which is nobody's business. The
     // person who owns it can find out the way they are supposed to, by
@@ -392,6 +409,7 @@ export async function signup(input: {
       throw new AccountError(
         409,
         "That email can't be used to sign up. If you already have an account, log in or reset your password.",
+        "signup.emailUnavailable",
       );
     }
   }
@@ -411,7 +429,7 @@ export async function signup(input: {
   } catch (err) {
     // Lost a race against a concurrent signup on the unique index.
     if ((err as { code?: string }).code === "23505") {
-      throw new AccountError(409, "That email or username is already taken.");
+      throw new AccountError(409, "That email or username is already taken.", "signup.taken");
     }
     throw err;
   }
@@ -443,12 +461,13 @@ const DECOY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 
 export async function login(input: { login: unknown; password: unknown }): Promise<AuthResult> {
   if (typeof input.login !== "string" || typeof input.password !== "string") {
-    throw new AccountError(400, "Enter your email/username and password.");
+    throw new AccountError(400, "Enter your email/username and password.", "login.missing");
   }
   const user = await findByEmailOrUsername(input.login.trim());
   // Always hash, even when there is nothing to compare against.
   const ok = await verifyPassword(input.password, user ? user.password_hash : DECOY_HASH);
-  if (!user || !ok) throw new AccountError(401, "Incorrect email/username or password.");
+  if (!user || !ok)
+    throw new AccountError(401, "Incorrect email/username or password.", "login.bad");
 
   return {
     token: await signSession({ sub: user.id, username: user.username }),
@@ -481,7 +500,7 @@ export async function resendVerification(
 ): Promise<{ emailSent: boolean; alreadyVerified: boolean }> {
   const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
   const user = rows[0];
-  if (!user) throw new AccountError(404, "Account not found.");
+  if (!user) throw new AccountError(404, "Account not found.", "account.missing");
   // Nothing to confirm when verification is switched off.
   if (!verificationRequired()) return { emailSent: false, alreadyVerified: true };
   if (user.email_verified) return { emailSent: false, alreadyVerified: true };
@@ -520,7 +539,7 @@ export async function requestReset(email: unknown): Promise<{ emailSent: boolean
 export async function resetPassword(rawToken: unknown, newPassword: unknown): Promise<AuthResult> {
   const password = validatePassword(newPassword);
   if (typeof rawToken !== "string" || !rawToken) {
-    throw new AccountError(400, "This reset link is invalid or has expired.");
+    throw new AccountError(400, "This reset link is invalid or has expired.", "reset.badLink");
   }
   const { rows } = await query<{ user_id: string }>(
     `DELETE FROM auth_tokens
@@ -529,7 +548,7 @@ export async function resetPassword(rawToken: unknown, newPassword: unknown): Pr
     [hashToken(rawToken)],
   );
   if (rows.length === 0) {
-    throw new AccountError(400, "This reset link is invalid or has expired.");
+    throw new AccountError(400, "This reset link is invalid or has expired.", "reset.badLink");
   }
   const userId = rows[0].user_id;
   const passwordHash = await hashPassword(password);
@@ -579,13 +598,17 @@ export async function getAccount(
  */
 export async function deleteAccount(userId: string, password: unknown): Promise<void> {
   if (typeof password !== "string" || password.length === 0) {
-    throw new AccountError(400, "Enter your password to delete your account.");
+    throw new AccountError(
+      400,
+      "Enter your password to delete your account.",
+      "delete.needPassword",
+    );
   }
   const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
   const user = rows[0];
-  if (!user) throw new AccountError(404, "Account not found.");
+  if (!user) throw new AccountError(404, "Account not found.", "account.missing");
   if (!(await verifyPassword(password, user.password_hash))) {
-    throw new AccountError(401, "That password is incorrect.");
+    throw new AccountError(401, "That password is incorrect.", "password.wrong");
   }
   await query(`DELETE FROM users WHERE id = $1`, [userId]);
   // The row is gone, so any cached "this session is fine" answer for it must go
@@ -602,7 +625,7 @@ export async function saveProfile(
     `SELECT profile FROM users WHERE id = $1 LIMIT 1`,
     [userId],
   );
-  if (rows.length === 0) throw new AccountError(404, "Account not found.");
+  if (rows.length === 0) throw new AccountError(404, "Account not found.", "account.missing");
   const merged = mergeProfile(normalizeProfile(rows[0].profile), normalizeProfile(incoming));
   await query(`UPDATE users SET profile = $1, updated_at = now() WHERE id = $2`, [
     JSON.stringify(merged),

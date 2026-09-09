@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../game/auth.js";
-import { ApiError, deleteAccount, resendVerification } from "../net/auth.js";
+import { deleteAccount, resendVerification } from "../net/auth.js";
 import { Button, TextField } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 
 interface AccountScreenProps {
   onBack: () => void;
@@ -77,7 +78,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
         setCooldown(resendCooldownLeft());
       }
     } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : t("account.resendFailed"));
+      setNotice(apiErrorText(t, err, "account.resendFailed"));
     } finally {
       setBusy(false);
     }
@@ -93,7 +94,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
       logout();
       onBack();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : t("account.deleteFailed"));
+      setDeleteError(apiErrorText(t, err, "account.deleteFailed"));
     } finally {
       setBusy(false);
     }

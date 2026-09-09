@@ -5,9 +5,9 @@ import { Die } from "./Die.js";
 import { Button, Modal } from "../ui/index.js";
 import { ACHIEVEMENTS } from "../game/profile.js";
 import { DICE_SKINS } from "../game/cosmetics.js";
-import { ApiError } from "../net/auth.js";
 import { fetchProfile, requestFriend, type PublicProfile } from "../net/social.js";
 import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
 interface ProfileCardProps {
@@ -27,10 +27,7 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
     let cancelled = false;
     fetchProfile(username)
       .then((p) => !cancelled && setProfile(p))
-      .catch(
-        (err) =>
-          !cancelled && setError(err instanceof ApiError ? err.message : t("social.loadFailed")),
-      );
+      .catch((err) => !cancelled && setError(apiErrorText(t, err, "social.loadFailed")));
     return () => {
       cancelled = true;
     };
@@ -44,7 +41,7 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
       setProfile((p) => (p ? { ...p, relation: "outgoing" } : p));
       onChanged?.();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("social.addFailed"));
+      setError(apiErrorText(t, err, "social.addFailed"));
     } finally {
       setBusy(false);
     }
