@@ -44,7 +44,38 @@ const httpServer = createServer((req, res) => {
     });
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+/**
+ * Origins allowed to open a game socket.
+ *
+ * CORS does not apply to WebSockets, so without this any page on the internet
+ * could open a connection and drive the game server. Mirrors the HTTP API's
+ * allow-list; a request with no Origin header at all (a native client, a
+ * script, a health check) is allowed through, because there is nothing to
+ * protect it from — the browser is the only thing that sends one.
+ */
+function wsOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true;
+  const list = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const allow = [
+    process.env.APP_URL,
+    "http://localhost:5173",
+    "http://localhost:4173",
+    ...list,
+  ].filter((s): s is string => Boolean(s));
+  if (allow.includes(origin)) return true;
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+}
+
+const wss = new WebSocketServer({
+  server: httpServer,
+  // A game message is a few hundred bytes; the library's default ceiling is
+  // 100 MB, which is a lot of memory to hand an anonymous socket.
+  maxPayload: 64 * 1024,
+  verifyClient: ({ origin }, done) => done(wsOriginAllowed(origin)),
+});
 new GreedServer(wss);
 
 async function start(): Promise<void> {

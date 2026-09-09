@@ -78,16 +78,59 @@ export interface Room {
 const MAX_SEATS = 8;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusable chars
 
+/**
+ * The band a room's goal has to fall in.
+ *
+ * The setup screen only ever offers sensible numbers, but the goal arrives over
+ * a socket and the server was taking the screen's word for it: a negative goal
+ * ends the game on the first bank, a fractional one can never be reached
+ * exactly, and a billion never ends at all.
+ */
+const GOAL_MIN = 500;
+const GOAL_MAX = 20000;
+
+/** A goal a game can actually be played to, or the default when it isn't one. */
+export function cleanGoal(raw: unknown): number {
+  const n = typeof raw === "number" ? Math.round(raw) : NaN;
+  if (!Number.isFinite(n)) return GOAL_DEFAULT;
+  return Math.min(GOAL_MAX, Math.max(GOAL_MIN, n));
+}
+
+/**
+ * A cosmetic id, or the default.
+ *
+ * Not checked against the real catalogue, which lives in the client — this is
+ * the shape check that stops the field being used as a payload. It was
+ * unbounded, and every seat's id is echoed in the `skins` block of every game
+ * snapshot, so one player could make the whole table download whatever they
+ * liked on every roll.
+ */
+const COSMETIC_ID = /^[a-z0-9-]{1,32}$/;
+
+export function cleanCosmeticId(raw: unknown, fallback: string): string {
+  return typeof raw === "string" && COSMETIC_ID.test(raw) ? raw : fallback;
+}
+
 export class RoomStore {
   private rooms = new Map<string, Room>();
 
+  /**
+   * A fresh room code.
+   *
+   * Drawn from a CSPRNG rather than Math.random(). A private room is private
+   * only because nobody else knows its code, and Math.random() is a generator
+   * whose next output can be worked out from its previous ones — which is
+   * exactly the property a code has to lack. randomBytes was already imported
+   * here for seat tokens; this is the same reasoning applied to the other
+   * secret in the file.
+   *
+   * The modulo is unbiased because 256 is a whole multiple of the 32-character
+   * alphabet, so no byte value is more likely to be picked than another.
+   */
   private newCode(): string {
     let code = "";
     do {
-      code = Array.from(
-        { length: 4 },
-        () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)],
-      ).join("");
+      code = Array.from(randomBytes(4), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
     } while (this.rooms.has(code));
     return code;
   }
@@ -96,7 +139,7 @@ export class RoomStore {
     const room: Room = {
       code: this.newCode(),
       isPublic,
-      goal: goal || GOAL_DEFAULT,
+      goal: cleanGoal(goal),
       seats: [],
       phase: "lobby",
       game: null,
@@ -170,8 +213,8 @@ export function makeHumanSeat(
     ready: isHost, // host starts ready
     isHost,
     userId,
-    dice: dice || "ivory",
-    avatar,
+    dice: cleanCosmeticId(dice, "ivory"),
+    avatar: cleanCosmeticId(avatar, ""),
     missedTurns: 0,
     token: randomBytes(16).toString("hex"),
     team,

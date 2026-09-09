@@ -28,6 +28,7 @@ import { randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
   canStart,
+  cleanGoal,
   clearTimers,
   lobbyView,
   makeBotSeat,
@@ -82,6 +83,28 @@ export interface GreedServerOptions {
 
 /** Minimum gap between one seat's emotes. */
 const EMOTE_COOLDOWN_MS = 1500;
+
+/**
+ * Minimum gap between one socket's rooms.
+ *
+ * The client already enforces this, in OnlineMenu — but a rule the client keeps
+ * is a rule only well-behaved clients keep, and this one is what stands between
+ * a loop of `create-room` messages and a server full of rooms nobody is in.
+ */
+const CREATE_COOLDOWN_MS = 8000;
+
+/**
+ * Per-connection message budget: `MSG_BURST` messages, refilled at
+ * `MSG_PER_SEC`. Generous enough that no honest client will ever see it —
+ * a fast player sends a few messages a second — and low enough that a socket
+ * cannot be used as a firehose. Over budget, the message is dropped rather
+ * than answered, so a spammer gets silence instead of an error to amplify.
+ */
+const MSG_PER_SEC = 20;
+const MSG_BURST = 60;
+
+/** Failed joins allowed per socket before it is cut off — see `onJoin`. */
+const MAX_BAD_JOINS = 20;
 
 /** How long a challenge (and the empty room held for it) stays open. */
 const CHALLENGE_TTL_MS = 120_000;
@@ -147,6 +170,18 @@ export class GreedServer {
   private readonly cfg: GreedServerOptions;
   /** Sockets that have answered the most recent heartbeat. */
   private alive = new WeakSet<WebSocket>();
+  /**
+   * Per-connection limits: a message-rate token bucket, when this socket last
+   * made a room, and how many room codes it has guessed wrong.
+   *
+   * Kept per SOCKET rather than per account because none of this needs an
+   * account: every one of these could be done by a signed-out client, which is
+   * exactly how they were found.
+   */
+  private limits = new WeakMap<
+    WebSocket,
+    { tokens: number; last: number; lastCreateAt: number; badJoins: number }
+  >();
   private heartbeat: NodeJS.Timeout | null = null;
 
   constructor(wss: WebSocketServer, options: Partial<GreedServerOptions> = {}) {
@@ -187,6 +222,57 @@ export class GreedServer {
     this.heartbeat = null;
   }
 
+  /**
+   * Spend one message from this socket's budget. False means it is over.
+   *
+   * A plain token bucket: tokens refill with the clock, so a burst is allowed
+   * and a sustained flood is not.
+   */
+  private allowMessage(ws: WebSocket): boolean {
+    const now = Date.now();
+    const l = this.limits.get(ws);
+    if (!l) {
+      this.limits.set(ws, { tokens: MSG_BURST - 1, last: now, lastCreateAt: 0, badJoins: 0 });
+      return true;
+    }
+    l.tokens = Math.min(MSG_BURST, l.tokens + ((now - l.last) / 1000) * MSG_PER_SEC);
+    l.last = now;
+    if (l.tokens < 1) return false;
+    l.tokens -= 1;
+    return true;
+  }
+
+  /** This socket's limit bookkeeping, created on demand. */
+  private limitsFor(ws: WebSocket): {
+    tokens: number;
+    last: number;
+    lastCreateAt: number;
+    badJoins: number;
+  } {
+    let l = this.limits.get(ws);
+    if (!l)
+      this.limits.set(
+        ws,
+        (l = { tokens: MSG_BURST, last: Date.now(), lastCreateAt: 0, badJoins: 0 }),
+      );
+    return l;
+  }
+
+  /**
+   * Refuse a socket that is already seated or watching.
+   *
+   * Every door into a room needs this. Without it, a second `create-room` on a
+   * socket that already had one simply overwrote its entry in `conns` — and the
+   * room it left behind still held a seat pointing at the live socket, so it
+   * looked occupied forever and was never torn down. One connection could make
+   * unlimited permanent rooms; `onSpectate` was the only door that checked.
+   */
+  private alreadyInRoom(ws: WebSocket): boolean {
+    if (!this.conns.has(ws) && !this.spectators.has(ws)) return false;
+    this.send(ws, { type: "error", message: "You are already at a table." });
+    return true;
+  }
+
   private onConnection(ws: WebSocket): void {
     this.alive.add(ws);
     ws.on("pong", () => this.alive.add(ws));
@@ -194,6 +280,9 @@ export class GreedServer {
       // Any traffic at all proves the socket is live; a client that is chatting
       // must never be hung up on for missing a ping it never saw.
       this.alive.add(ws);
+      // Over its budget: drop the message on the floor. Answering would hand a
+      // flooder a reply per message, which is the opposite of a rate limit.
+      if (!this.allowMessage(ws)) return;
       let msg: ClientMessage;
       try {
         msg = decode<ClientMessage>(data.toString());
@@ -471,6 +560,17 @@ export class GreedServer {
     userId?: string,
     avatar?: string,
   ): void {
+    if (this.alreadyInRoom(ws)) return;
+    const l = this.limitsFor(ws);
+    const since = Date.now() - l.lastCreateAt;
+    if (l.lastCreateAt && since < CREATE_COOLDOWN_MS) {
+      const wait = Math.ceil((CREATE_COOLDOWN_MS - since) / 1000);
+      return this.send(ws, {
+        type: "error",
+        message: `Give it ${wait}s before making another room.`,
+      });
+    }
+    l.lastCreateAt = Date.now();
     const room = this.store.create(isPublic, goal);
     const seat = makeHumanSeat(name, true, dice, userId, avatar);
     room.seats.push(seat);
@@ -485,8 +585,16 @@ export class GreedServer {
     userId?: string,
     avatar?: string,
   ): void {
+    if (this.alreadyInRoom(ws)) return;
     const room = this.store.get(code);
-    if (!room) return this.send(ws, { type: "error", message: "No room with that code." });
+    if (!room) {
+      // Codes are four characters, so the whole space can be walked. Guessing
+      // is cheap for an attacker and never happens to an honest client, which
+      // is handed its code by whoever invited it.
+      const l = this.limitsFor(ws);
+      if (++l.badJoins > MAX_BAD_JOINS) return ws.close(4029, "Too many bad room codes.");
+      return this.send(ws, { type: "error", message: "No room with that code." });
+    }
     if (room.phase !== "lobby")
       return this.send(ws, { type: "error", message: "That game has already started." });
 
@@ -524,6 +632,7 @@ export class GreedServer {
     userId?: string,
     avatar?: string,
   ): void {
+    if (this.alreadyInRoom(ws)) return;
     const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
     const seat = makeHumanSeat(name, isHost, dice, userId, avatar);
@@ -546,6 +655,7 @@ export class GreedServer {
   }
 
   private onReconnect(ws: WebSocket, token: string): void {
+    if (this.alreadyInRoom(ws)) return;
     const found = this.store.findByToken(token);
     if (!found) return this.send(ws, { type: "error", message: "Session expired." });
     found.seat.ws = ws;
@@ -608,7 +718,7 @@ export class GreedServer {
 
       case "set-goal":
         if (!isHost || room.phase !== "lobby") return;
-        room.goal = msg.goal;
+        room.goal = cleanGoal(msg.goal);
         return this.broadcastLobby(room);
 
       case "add-bot": {
