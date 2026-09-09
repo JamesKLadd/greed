@@ -22,11 +22,16 @@ describe("update log", () => {
   });
 
   it("lists releases newest first", () => {
+    // Compare on the FIRST part that differs and stop there, the way version
+    // numbers actually order. The old predicate asked whether any part was
+    // greater and no part was lesser, which quietly held only while every
+    // release was a patch bump: the first minor bump, 0.7.0 after 0.6.4, has a
+    // patch that goes DOWN (0 after 4) and was read as going backwards.
     for (let i = 1; i < RELEASES.length; i++) {
       const [a, b] = [parts(RELEASES[i - 1].version), parts(RELEASES[i].version)];
-      // Strictly descending on the first part that differs.
-      const older = a.some((n, k) => n > b[k]) && !a.some((n, k) => n < b[k]);
-      expect(older, `${RELEASES[i - 1].version} should be newer than ${RELEASES[i].version}`).toBe(
+      const at = a.findIndex((n, k) => n !== b[k]);
+      const newer = at >= 0 && a[at] > b[at];
+      expect(newer, `${RELEASES[i - 1].version} should be newer than ${RELEASES[i].version}`).toBe(
         true,
       );
     }

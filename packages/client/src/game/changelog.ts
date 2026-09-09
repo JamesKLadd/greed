@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.7.0",
+    date: "2026-09-09",
+    notes: [
+      "The Wins, Best Turn, Best Streak and Best Total leaderboards are now worked out by the server from games you actually played online, so they can't be faked. Games against bots still count toward your own stats, and the Daily and Weekly boards are unchanged",
+      "Online games now use about half as much data, and the background music download is about half the size",
+      "Fixed online play not working at all in browsers with cookies or site data blocked",
+      "You can now hold and release dice with the keyboard — press 1 to 5, or tab to a die and press Enter. Pressing Enter on a die used to bank your turn instead",
+      "In-game messages and error messages are now translated — they were English no matter which language you had chosen",
+      "Players whose names aren't written in the Latin alphabet can now use their real names",
+      "Changing your password now signs you out on every other device",
+      "The last 5 seconds of your turn in an online game now show a countdown and play a sound",
+      "Missed turns in an online game now wear off as you keep playing, instead of counting against you for the whole game",
+      "The 3 of a kind / straight / 5 of a kind banner now appears in Daily and Weekly Challenges, not just at the table",
+      "A die you're not allowed to unhold now tells you why",
+      "Fixed a phantom dice roll that played when you reconnected to an online game or started watching one",
+      "Fixed the setup screen moving your cursor to the wrong player after removing a seat",
+      "Private room codes are now much harder to guess, and abandoned rooms are cleaned up properly",
+      "Very common passwords are now refused when you sign up, and signing up no longer reveals whether an email address already has an account",
+      "Match history and old Daily and Weekly runs are now cleared out after 30 days",
+    ],
+  },
+  {
     version: "0.6.4",
     date: "2026-09-09",
     notes: [
