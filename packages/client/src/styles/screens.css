@@ -1520,11 +1520,29 @@
   margin-bottom: 10px;
   opacity: 0.85;
 }
-/* The roll-call rides in a flex column here rather than on the felt, so it has
-   to be told to sit in the middle instead of stretching across the panel. */
-.daily__run .felt__call {
-  align-self: center;
-  margin: 0 auto 6px;
+/* The roll-call, in a challenge run.
+   It rides in a flex column here rather than on the felt, and needs two things
+   the felt never did.
+   The slot keeps its height whether or not a throw has been named, because
+   otherwise the dice, the status line and BOTH BUTTONS jumped 28px the moment
+   one was — measured — and they jumped back the moment the next throw wasn't.
+   Buttons that move under a thumb between glances are worse than a reserved
+   line, which is the same call `.felt__pot` already makes over the dice.
+   And it sits clear of the dice rather than beside them: a die's 3-D cube
+   overhangs its own layout box by about 11px at the top, so a 6px gap put the
+   cubes 5px inside the pill. The gap covers the overhang, and the stacking
+   order settles anything the glow does on top of that. */
+.daily__callSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+.daily__callSlot .felt__call {
+  margin: 0;
 }
 /* "That was your last attempt" — the one note here that says a door is shut,
    so it keeps full weight and takes the amber the rest of the UI warns in,

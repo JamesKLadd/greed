@@ -68,12 +68,17 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
           A five of a kind built across throws is the most exciting thing that
           can happen in a run, and it used to pass here without a word, because
           this banner was only ever drawn on the felt. Held back while the dice
-          are in the air, since the tray is still showing the previous throw. */}
-      {call && !run.isRolling && (
-        <div key={run.state.turn.rollCount} className={`felt__call felt__call--${call}`}>
-          {t(`call.${call}` as MsgKey)}
-        </div>
-      )}
+          are in the air, since the tray is still showing the previous throw.
+
+          The slot around it is always here, empty or not; see .daily__callSlot
+          for why a run cannot afford this one to change the layout. */}
+      <div className="daily__callSlot">
+        {call && !run.isRolling && (
+          <div key={run.state.turn.rollCount} className={`felt__call felt__call--${call}`}>
+            {t(`call.${call}` as MsgKey)}
+          </div>
+        )}
+      </div>
 
       <div
         className={[
