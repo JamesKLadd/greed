@@ -51,7 +51,15 @@ export function CelebrationArt({ cue, nonce }: { cue: Cue; nonce: number }) {
   );
 }
 
-export function GameCelebration({ state, isRolling }: { state: GameState; isRolling: boolean }) {
+export function GameCelebration({
+  state,
+  isRolling,
+  showVisuals = true,
+}: {
+  state: GameState;
+  isRolling: boolean;
+  showVisuals?: boolean;
+}) {
   const cursor = useRef<CelebrationCursor>();
   const [visible, setVisible] = useState<{ cue: Cue; nonce: number } | null>(null);
   const player = useRef<ReturnType<typeof createCelebrationPlayer>>();
@@ -73,5 +81,5 @@ export function GameCelebration({ state, isRolling }: { state: GameState; isRoll
     player.current?.push(result.cue);
   }, [state, isRolling]);
   useEffect(() => () => player.current?.dispose(), []);
-  return visible ? <CelebrationArt {...visible} /> : null;
+  return showVisuals && visible ? <CelebrationArt {...visible} /> : null;
 }
