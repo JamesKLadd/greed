@@ -1,3 +1,6 @@
+import { useBetaActive } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
+import { appearanceVars, normalizeAppearance } from "../beta/appearance.js";
 import { useMemo, useState } from "react";
 import { getLegalActions } from "@greed/core";
 import type { OnlineController } from "../net/useOnlineGame.js";
@@ -17,6 +20,8 @@ import { useT } from "../i18n/i18n.js";
 /** Online play: the server is authoritative and every seat is somebody else. */
 export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const t = useT();
+  const beta = useBetaActive();
+  const { appearance } = useAppearance();
   const state = net.game!;
   const current = state.players[state.turn.playerIndex];
   const canAct = current.id === net.youId && state.phase !== "game-over";
@@ -32,7 +37,15 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   // nobody else's screen changes with it.
   const [myTable] = useState(() => tableVars(loadProfile()));
   const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
-  const cosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
+  const classicCosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
+  const cosmetics = beta
+    ? appearanceVars(
+        normalizeAppearance({
+          ...appearance,
+          dice: net.betaLooks[current.id]?.dice ?? net.skins[current.id] ?? "ivory",
+        }),
+      )
+    : classicCosmetics;
 
   const chrome = useGameChrome({
     state,
@@ -62,6 +75,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
       presence={net.presence}
       emotes={net.emotes}
       avatars={net.avatars}
+      betaLooks={net.betaLooks}
       turnTimer={net.turnTimer}
       spectating={net.isSpectator}
       // The board keeps showing the last position it had while the connection

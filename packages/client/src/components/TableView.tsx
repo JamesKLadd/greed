@@ -1,3 +1,4 @@
+import type { BetaLook } from "@greed/protocol";
 import type { CSSProperties } from "react";
 import type { DieValue, GameState } from "@greed/core";
 import { isWinner as isWinningSeat, teamTotal } from "@greed/core";
@@ -11,9 +12,13 @@ import { TurnRing } from "./TurnRing.js";
 import { useLayoutMode } from "../game/useLayoutMode.js";
 import type { EmoteId } from "@greed/protocol";
 import { emoteGlyph } from "./EmoteBar.js";
-import { useT } from "../i18n/i18n.js";
+import { useT, type MsgKey } from "../i18n/i18n.js";
+import { ACHIEVEMENTS } from "../game/profile.js";
 import { teamName } from "../game/teams.js";
 import { useBetaActive } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
+import { DEFAULT_APPEARANCE, MASCOTS } from "../beta/appearance.js";
+import { Mascot } from "../beta/Mascot.js";
 
 interface TableViewProps {
   state: GameState;
@@ -30,6 +35,7 @@ interface TableViewProps {
   emotes?: Record<string, { emote: EmoteId; at: number }>;
   /** Equipped avatar id per player id. Anyone missing gets one from their name. */
   avatars?: Record<string, string>;
+  betaLooks?: Record<string, BetaLook>;
   /** Countdown for the active seat to start their turn (online only). */
   turnTimer?: { endsAt: number; total: number } | null;
   /** Show the running turn score above the dice (a display setting). */
@@ -57,6 +63,7 @@ export function TableView({
   perspectiveId,
   presence,
   avatars,
+  betaLooks,
   turnTimer,
   showTurnScore = true,
   dice3d = true,
@@ -65,6 +72,7 @@ export function TableView({
   const showPresence = presence != null;
   const t = useT();
   const betaActive = useBetaActive();
+  const { appearance } = useAppearance();
   const layout = useLayoutMode(betaActive);
   const landscape = layout === "wide";
   const goal = state.config.goal;
@@ -128,6 +136,10 @@ export function TableView({
             const pct = Math.min(100, (progress / goal) * 100);
             const turnScore = isCurrent ? state.turn.turnScore : 0;
             const isYou = p.id === perspectiveId;
+            const seatLook = betaLooks?.[p.id] ?? (isYou && !showPresence ? appearance : undefined);
+            const seatBadge = betaActive
+              ? ACHIEVEMENTS.find((a) => a.id === seatLook?.badge)
+              : undefined;
             const color = seatColor(i);
             const online = showPresence ? presence[p.id] !== false : true;
             const offline = showPresence && !p.isBot && !online;
@@ -166,6 +178,7 @@ export function TableView({
                   .join(" ")}
                 style={style}
                 data-team={side ?? undefined}
+                data-nameplate={betaActive ? seatLook?.nameplate : undefined}
               >
                 {/* Banked a thousand or more last turn: the seat wears dollar
                     signs at its corners until they're back on the clock.
@@ -208,7 +221,25 @@ export function TableView({
                 )}
                 <div className="pseat__head">
                   <span className="pseat__avatar" aria-hidden="true">
-                    {resolveAvatar(p.name, p.isBot, avatars?.[p.id])}
+                    {betaActive ? (
+                      <Mascot
+                        look={
+                          betaLooks?.[p.id] ??
+                          (isYou && !showPresence
+                            ? appearance
+                            : {
+                                ...DEFAULT_APPEARANCE,
+                                mascot: MASCOTS.includes(
+                                  avatars?.[p.id] as (typeof MASCOTS)[number],
+                                )
+                                  ? avatars![p.id]
+                                  : MASCOTS[state.players.indexOf(p) % MASCOTS.length],
+                              })
+                        }
+                      />
+                    ) : (
+                      resolveAvatar(p.name, p.isBot, avatars?.[p.id])
+                    )}
                     {showPresence && (
                       <span className={`pseat__conn${online ? " pseat__conn--on" : ""}`} />
                     )}
@@ -221,6 +252,15 @@ export function TableView({
                       </span>
                     )}
                     {p.name}
+                    {seatBadge && (
+                      <span
+                        title={t(`ach.${seatBadge.id}.title` as MsgKey)}
+                        aria-label={t(`ach.${seatBadge.id}.title` as MsgKey)}
+                      >
+                        {" "}
+                        {seatBadge.icon}
+                      </span>
+                    )}
                     {isYou && <span className="pseat__you"> {t("common.youParen")}</span>}
                   </span>
                 </div>

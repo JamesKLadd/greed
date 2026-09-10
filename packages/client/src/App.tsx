@@ -44,8 +44,11 @@ export function App() {
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
   const beta = useBeta();
-  // Online and challenges stay classic until the multiplayer presentation phase.
-  const betaActive = beta.enabled && !["online", "daily", "weekly"].includes(mode);
+  // All game modes share the opt-in presentation; controllers remain shared.
+  const betaActive = beta.enabled;
+  useEffect(() => {
+    if (betaActive) window.scrollTo({ top: 0, left: 0 });
+  }, [mode, betaActive]);
   useLayoutEffect(() => {
     document.documentElement.dataset.presentation = betaActive ? "beta" : "classic";
     return () => {

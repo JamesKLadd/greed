@@ -1,3 +1,4 @@
+import type { BetaIdentity } from "@greed/protocol";
 /** Friends and public profiles. */
 
 import { api } from "./auth.js";
@@ -17,6 +18,7 @@ export interface FriendsView {
 }
 
 export interface PublicProfile {
+  visualBeta?: BetaIdentity;
   username: string;
   online: boolean;
   memberSince: string;

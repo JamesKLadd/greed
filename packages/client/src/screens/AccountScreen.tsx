@@ -6,6 +6,9 @@ import { deleteAccount, resendVerification } from "../net/auth.js";
 import { Button, TextField } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 import { apiErrorText } from "../i18n/apiError.js";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
+import { Mascot } from "../beta/Mascot.js";
 
 interface AccountScreenProps {
   onBack: () => void;
@@ -28,6 +31,8 @@ function formatCountdown(secs: number): string {
 
 export function AccountScreen({ onBack }: AccountScreenProps) {
   const t = useT();
+  const beta = useBetaActive();
+  const { appearance } = useAppearance();
   const { user, logout, verificationRequired } = useAuth();
   const [cooldown, setCooldown] = useState(() => resendCooldownLeft());
   const [busy, setBusy] = useState(false);
@@ -109,7 +114,9 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
 
       <div className="setup__panel account">
         <div className="account__id">
-          <div className="account__avatar">{user.username.slice(0, 2).toUpperCase()}</div>
+          <div className="account__avatar">
+            {beta ? <Mascot look={appearance} /> : user.username.slice(0, 2).toUpperCase()}
+          </div>
           <div>
             <div className="account__name">{user.username}</div>
             <div className="account__email">{user.email}</div>

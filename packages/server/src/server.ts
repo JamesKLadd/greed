@@ -1,3 +1,4 @@
+import type { BetaLook } from "@greed/protocol";
 /**
  * Authoritative Greed server. The server owns every room's GameState and is the
  * only place actions are validated and applied (`@greed/core`), so clients can't
@@ -342,7 +343,12 @@ export class GreedServer {
     // Equipped dice skins, so every client can render the current player's dice.
     const skins = room.game.players.map((p) => {
       const seat = room.seats.find((s) => s.id === p.id);
-      return { id: p.id, dice: seat?.dice ?? "ivory", avatar: seat?.avatar ?? "" };
+      return {
+        id: p.id,
+        dice: seat?.dice ?? "ivory",
+        avatar: seat?.avatar ?? "",
+        beta: seat?.beta,
+      };
     });
     // Recomputed at send time, so the incidental re-broadcasts (a reconnect, a
     // disconnect) carry a correctly SHORTENED remainder rather than restarting
@@ -404,6 +410,7 @@ export class GreedServer {
             m.dice,
             id.userId,
             m.avatar,
+            m.beta,
           ),
         );
         return;
@@ -411,14 +418,14 @@ export class GreedServer {
       case "join-room": {
         const m = msg;
         this.withIdentity(ws, m.auth, (id) =>
-          this.onJoin(ws, m.code, id.name ?? m.name, m.dice, id.userId, m.avatar),
+          this.onJoin(ws, m.code, id.name ?? m.name, m.dice, id.userId, m.avatar, m.beta),
         );
         return;
       }
       case "quick-match": {
         const m = msg;
         this.withIdentity(ws, m.auth, (id) =>
-          this.onQuickMatch(ws, id.name ?? m.name, m.dice, id.userId, m.avatar),
+          this.onQuickMatch(ws, id.name ?? m.name, m.dice, id.userId, m.avatar, m.beta),
         );
         return;
       }
@@ -580,6 +587,7 @@ export class GreedServer {
     dice?: string,
     userId?: string,
     avatar?: string,
+    beta?: BetaLook,
   ): void {
     if (this.alreadyInRoom(ws)) return;
     const l = this.limitsFor(ws);
@@ -593,7 +601,7 @@ export class GreedServer {
     }
     l.lastCreateAt = Date.now();
     const room = this.store.create(isPublic, goal);
-    const seat = makeHumanSeat(name, true, dice, userId, avatar);
+    const seat = makeHumanSeat(name, true, dice, userId, avatar, 0, beta);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
   }
@@ -605,6 +613,7 @@ export class GreedServer {
     dice?: string,
     userId?: string,
     avatar?: string,
+    beta?: BetaLook,
   ): void {
     if (this.alreadyInRoom(ws)) return;
     const room = this.store.get(code);
@@ -640,7 +649,7 @@ export class GreedServer {
 
     if (room.seats.length >= MAX_SEATS)
       return this.send(ws, { type: "error", message: "That room is full." });
-    const seat = makeHumanSeat(name, isHost, dice, userId, avatar);
+    const seat = makeHumanSeat(name, isHost, dice, userId, avatar, 0, beta);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);
@@ -652,11 +661,12 @@ export class GreedServer {
     dice?: string,
     userId?: string,
     avatar?: string,
+    beta?: BetaLook,
   ): void {
     if (this.alreadyInRoom(ws)) return;
     const room = this.store.findOpenPublic() ?? this.store.create(true, GOAL_DEFAULT);
     const isHost = room.seats.length === 0;
-    const seat = makeHumanSeat(name, isHost, dice, userId, avatar);
+    const seat = makeHumanSeat(name, isHost, dice, userId, avatar, 0, beta);
     room.seats.push(seat);
     this.welcome(ws, room, seat);
     this.broadcastLobby(room);

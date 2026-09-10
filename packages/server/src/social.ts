@@ -1,3 +1,4 @@
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 /**
  * Friends and public profiles.
  *
@@ -168,6 +169,7 @@ export async function requireFriend(
 }
 
 export interface PublicProfile {
+  visualBeta?: BetaIdentity;
   username: string;
   online: boolean;
   memberSince: string;
@@ -226,6 +228,7 @@ export async function publicProfile(viewerId: string, username: unknown): Promis
     bestTotal: p.bestTotal ?? 0,
     bestStreak: p.bestStreak ?? 0,
     achievements: p.achievements ?? [],
+    visualBeta: cleanBetaIdentity(p.visualBeta),
     dice: p.dice ?? "ivory",
     dailyBest: daily.rows[0]?.best ?? null,
     dailyRuns: Number(daily.rows[0]?.runs ?? 0),

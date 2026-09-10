@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { GameState } from "@greed/core";
 import { useT } from "../i18n/i18n.js";
 import { playBetaCue } from "../game/sfx.js";
+import { createCelebrationPlayer } from "./celebrationPlayer.js";
 import {
   CELEBRATION_MS,
   readCelebration,
@@ -53,25 +54,24 @@ export function CelebrationArt({ cue, nonce }: { cue: Cue; nonce: number }) {
 export function GameCelebration({ state, isRolling }: { state: GameState; isRolling: boolean }) {
   const cursor = useRef<CelebrationCursor>();
   const [visible, setVisible] = useState<{ cue: Cue; nonce: number } | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const player = useRef<ReturnType<typeof createCelebrationPlayer>>();
+  if (!player.current)
+    player.current = createCelebrationPlayer((cue) => {
+      setVisible(cue ? { cue, nonce: Date.now() } : null);
+      if (cue) playBetaCue(cue.kind);
+    });
   useEffect(() => {
     if (isRolling) {
-      setVisible(null);
-      clearTimeout(timer.current);
       return;
     }
     if (cursor.current && state.log.length < cursor.current.length) {
-      setVisible(null);
-      clearTimeout(timer.current);
+      player.current?.reset();
     }
     const result = readCelebration(state, cursor.current);
     cursor.current = result.cursor;
     if (!result.cue) return;
-    clearTimeout(timer.current);
-    setVisible({ cue: result.cue, nonce: Date.now() });
-    playBetaCue(result.cue.kind);
-    timer.current = setTimeout(() => setVisible(null), CELEBRATION_MS[result.cue.kind]);
+    player.current?.push(result.cue);
   }, [state, isRolling]);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => () => player.current?.dispose(), []);
   return visible ? <CelebrationArt {...visible} /> : null;
 }

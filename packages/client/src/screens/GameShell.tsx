@@ -1,3 +1,4 @@
+import type { BetaLook } from "@greed/protocol";
 import type { CSSProperties, ReactNode } from "react";
 import type { DieValue, GameState, LegalActions } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
@@ -42,6 +43,7 @@ interface GameShellProps {
   presence?: Record<string, boolean>;
   emotes?: Record<string, { emote: EmoteId; at: number }>;
   avatars?: Record<string, string>;
+  betaLooks?: Record<string, BetaLook>;
   turnTimer?: { endsAt: number; total: number } | null;
 
   /** A message about the connection, shown above the game's own banners. */
@@ -75,6 +77,7 @@ export function GameShell({
   presence,
   emotes,
   avatars,
+  betaLooks,
   turnTimer,
   notice,
   barLeft,
@@ -128,6 +131,7 @@ export function GameShell({
             presence={presence}
             emotes={emotes}
             avatars={avatars}
+            betaLooks={betaLooks}
             turnTimer={turnTimer}
             showTurnScore={showTurnScore}
             dice3d={dice3d}

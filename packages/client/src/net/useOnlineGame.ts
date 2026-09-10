@@ -1,3 +1,6 @@
+import { cleanBetaLook, type BetaLook } from "@greed/protocol";
+import { useBeta } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BotPersonality, DieValue, GameState } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
@@ -28,9 +31,9 @@ const TOKEN_KEY = "greed-token";
  * failing to remember a session. Losing the token costs a reconnect; throwing
  * costs the game.
  */
-function readToken(): string | null {
+export function readToken(): string | null {
   try {
-    return readToken();
+    return localStorage.getItem(TOKEN_KEY);
   } catch {
     return null;
   }
@@ -42,9 +45,9 @@ function writeToken(token: string): void {
     /* the session just won't survive a refresh */
   }
 }
-function dropToken(): void {
+export function dropToken(): void {
   try {
-    dropToken();
+    localStorage.removeItem(TOKEN_KEY);
   } catch {
     /* nothing to forget */
   }
@@ -132,6 +135,7 @@ export interface OnlineController {
   skins: Record<string, string>;
   /** Equipped avatar id per player id. Missing/empty means "derive from name". */
   avatars: Record<string, string>;
+  betaLooks: Record<string, BetaLook>;
   /**
    * The active seat's countdown to START their turn, or null when no clock is
    * running. `endsAt` is on performance.now()'s monotonic clock, not the wall
@@ -183,6 +187,11 @@ export interface OnlineController {
  * explicit choice, and rejoining an old game as well would seat you twice.
  */
 export function useOnlineGame(autoJoin?: { code: string; name: string }): OnlineController {
+  const { enabled } = useBeta();
+  const { appearance } = useAppearance();
+  const presentation = useRef<BetaLook>();
+  presentation.current = enabled ? cleanBetaLook(appearance) : undefined;
+  const [betaLooks, setBetaLooks] = useState<Record<string, BetaLook>>({});
   const wsRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<ClientMessage[]>([]);
   const autoJoinRef = useRef(autoJoin);
@@ -490,15 +499,19 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           setPresence(next);
           setRematchState(msg.rematch ?? null);
           const nextSkins: Record<string, string> = {};
+          const nextLooks: Record<string, BetaLook> = {};
           const nextAvatars: Record<string, string> = {};
           for (const s of msg.skins ?? []) {
             nextSkins[s.id] = s.dice;
+            const look = cleanBetaLook(s.beta);
+            if (look) nextLooks[s.id] = look;
             // A server that predates avatars sends none; clients then fall back
             // to deriving a face from the name, which is identical everywhere.
             nextAvatars[s.id] = s.avatar ?? "";
           }
           setSkins(nextSkins);
           setAvatars(nextAvatars);
+          setBetaLooks(nextLooks);
           setTurnTimer(
             msg.turnTimerMs == null
               ? null
@@ -616,6 +629,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           name: invited.name,
           dice: loadProfile().dice,
           avatar: loadProfile().avatar,
+          beta: presentation.current,
           auth: getToken() ?? undefined,
         });
         return;
@@ -682,6 +696,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     presence,
     skins,
     avatars,
+    betaLooks,
     turnTimer,
     isSpectator,
     reconnecting,
@@ -695,6 +710,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         goal: opts?.goal,
         dice: loadProfile().dice,
         avatar: loadProfile().avatar,
+        beta: presentation.current,
         auth: getToken() ?? undefined,
       }),
     joinRoom: (roomCode, name) =>
@@ -704,6 +720,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         name,
         dice: loadProfile().dice,
         avatar: loadProfile().avatar,
+        beta: presentation.current,
         auth: getToken() ?? undefined,
       }),
     quickMatch: (name) =>
@@ -712,6 +729,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
         name,
         dice: loadProfile().dice,
         avatar: loadProfile().avatar,
+        beta: presentation.current,
         auth: getToken() ?? undefined,
       }),
     spectate: (roomCode) => {

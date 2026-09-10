@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx.js";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { Brand } from "../beta/Brand.js";
 
 /**
  * The standard page shell: wordmark + tagline over a card panel.
@@ -43,6 +45,7 @@ export function Screen({
   panelClassName,
   children,
 }: ScreenProps) {
+  const beta = useBetaActive();
   const body = (
     <>
       {children}
@@ -63,6 +66,11 @@ export function Screen({
 
   return (
     <div className="setup">
+      {beta && (
+        <div className="beta-screen-brand">
+          <Brand compact />
+        </div>
+      )}
       {headerRight != null && <div className="home-account">{headerRight}</div>}
 
       {hero && (

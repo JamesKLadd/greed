@@ -49,7 +49,8 @@ async function reconcileProfile(serverProfile: Profile): Promise<void> {
   replaceProfile(merged);
   try {
     const res = await pushProfile(merged);
-    replaceProfile(res.profile); // adopt the authoritative merged copy
+    // Older servers omit presentation fields during a staggered deployment.
+    replaceProfile({ ...res.profile, visualBeta: res.profile.visualBeta ?? merged.visualBeta });
   } catch {
     /* offline is fine — local keeps the merged copy until the next sync */
   }

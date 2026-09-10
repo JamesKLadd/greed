@@ -1,3 +1,4 @@
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import type { BotPersonality, GameState } from "@greed/core";
 import { isWinner, BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 
@@ -41,6 +42,7 @@ export interface Profile {
   table: string;
   /** Equipped avatar id, or "" to let it be derived from the player's name. */
   avatar: string;
+  visualBeta?: BetaIdentity;
 }
 
 /** One completed solo game, from the human's perspective. */
@@ -460,6 +462,8 @@ function sane(p: Profile): Profile {
   for (const field of ["dice", "table", "avatar"] as const) {
     if (typeof p[field] !== "string") p[field] = emptyProfile()[field];
   }
+  p.visualBeta = cleanBetaIdentity(p.visualBeta);
+  if (p.visualBeta && !p.achievements.includes(p.visualBeta.badge)) p.visualBeta.badge = "";
   if (p.bestTotal > BEST_TOTAL_CEILING) p.bestTotal = 0;
   return p;
 }
@@ -488,6 +492,7 @@ export function resetProfile(): void {
   } catch {
     /* ignore */
   }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("greed:profile-reset"));
 }
 
 /**
@@ -539,6 +544,7 @@ export function raiseWeeklyWins(wins: number): boolean {
 /** Overwrite the whole saved profile (used when adopting a synced account profile). */
 export function replaceProfile(p: Profile): void {
   saveProfile({ ...emptyProfile(), ...p });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("greed:profile-changed"));
 }
 
 /**
@@ -565,6 +571,7 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     dice: b.dice || a.dice,
     table: b.table || a.table,
     avatar: b.avatar || a.avatar,
+    visualBeta: cleanBetaIdentity(b.visualBeta) ?? cleanBetaIdentity(a.visualBeta),
   });
 }
 

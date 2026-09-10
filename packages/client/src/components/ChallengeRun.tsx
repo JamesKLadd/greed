@@ -1,3 +1,7 @@
+import { useBetaActive } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
+import { appearanceVars } from "../beta/appearance.js";
+import { GameCelebration } from "../beta/Celebration.js";
 import { useEffect } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
@@ -32,6 +36,8 @@ interface ChallengeRunProps {
 
 export function ChallengeRun({ initial, dice3d, playMove, onFinished }: ChallengeRunProps) {
   const t = useT();
+  const beta = useBetaActive();
+  const { appearance } = useAppearance();
   const run = useChallengeRun(initial, playMove);
   const call = rollCall(run.state.turn);
   useGameSounds(run.state);
@@ -40,11 +46,19 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
   // The server decides when the run is over; this only reports it upward, and
   // does it in an effect so the parent's state change isn't made during render.
   useEffect(() => {
-    if (run.finished) onFinished();
-  }, [run.finished, onFinished]);
+    if (!run.finished) return;
+    if (!beta) {
+      onFinished();
+      return;
+    }
+    // Keep the final result readable before replacing this board with results.
+    const timer = setTimeout(onFinished, 3400);
+    return () => clearTimeout(timer);
+  }, [run.finished, onFinished, beta]);
 
   return (
-    <div className="daily__run">
+    <div className="daily__run" style={beta ? appearanceVars(appearance) : undefined}>
+      {beta && <GameCelebration state={run.state} isRolling={run.isRolling} />}
       {run.error && <div className="banner banner--sd">{run.error}</div>}
 
       <div className="daily__meters">

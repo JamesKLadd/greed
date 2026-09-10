@@ -12,13 +12,13 @@ export interface CelebrationCursor {
   fiveRoll: number;
 }
 export const CELEBRATION_MS: Record<CelebrationKind, number> = {
-  score: 450,
-  bank: 700,
-  bigBank: 950,
-  hot: 1100,
-  five: 1400,
-  bust: 650,
-  win: 1800,
+  score: 1000,
+  bank: 2600,
+  bigBank: 3000,
+  hot: 3000,
+  five: 3400,
+  bust: 3000,
+  win: 3800,
 };
 
 /** Snapshot-only arrivals (mount, reset, reconnect bursts) must not replay applause. */

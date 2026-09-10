@@ -252,29 +252,36 @@ export function Die({
       style={style}
     >
       {dimensional ? (
-        <div
-          className="die__cube"
-          style={{
-            transform: `rotateX(var(--cube-tilt-x)) rotateY(var(--cube-tilt-y)) rotateX(${angle.current.x}deg) rotateY(${angle.current.y}deg)`,
-            transitionDelay: `${scatter.current.delay}ms`,
-            // The throw gets the long arc; the landing is a quick settle.
-            transitionDuration: rolling ? "var(--cube-roll-ms)" : "var(--cube-settle-ms)",
-          }}
-        >
-          {FACES.map((f) => (
-            <div
-              key={f.value}
-              // Only the face you're looking down on lights up when it scores —
-              // the sides stay unlit, so the scoring surface is unambiguous.
-              className={`die__side${f.value === target ? " die__side--up" : ""}`}
-              style={{ transform: `${f.place} translateZ(0.5em)` }}
-            >
-              <Face value={f.value} className={f.value === target ? "die__face--up" : ""} />
-            </div>
-          ))}
+        <div className="die__volume">
+          <div
+            className="die__cube"
+            style={{
+              transform: `rotateX(var(--cube-tilt-x)) rotateY(var(--cube-tilt-y)) rotateX(${angle.current.x}deg) rotateY(${angle.current.y}deg)`,
+              transitionDelay: `${scatter.current.delay}ms`,
+              // The throw gets the long arc; the landing is a quick settle.
+              transitionDuration: rolling ? "var(--cube-roll-ms)" : "var(--cube-settle-ms)",
+            }}
+          >
+            {FACES.map((f) => (
+              <div
+                key={f.value}
+                // Only the face you're looking down on lights up when it scores —
+                // the sides stay unlit, so the scoring surface is unambiguous.
+                className={`die__side${f.value === target ? " die__side--up" : ""}`}
+                style={{ transform: `${f.place} translateZ(0.5em)` }}
+              >
+                <Face value={f.value} className={f.value === target ? "die__face--up" : ""} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <Face value={v} />
+      )}
+      {locked && (
+        <span className="die__held-marker" aria-hidden="true">
+          ✓
+        </span>
       )}
     </Tag>
   );

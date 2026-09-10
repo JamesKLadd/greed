@@ -1,46 +1,77 @@
-# Visual beta — checkpoint through 4B
+# Visual beta — collection and compatibility checkpoint
 
-## Scope delivered
+## Authorization and scope
 
-- Casino direction selected: gold italic marquee, five-pip diamond mark, teal edge lights, midnight felt and dark lacquer materials. The compact table-token concept remains a future brand variant; the marquee is the implemented direction.
-- Phone-first home with a distinct desktop composition, a physical dice vignette, strong local-play action, mode cards and utility navigation.
-- Main-menu Visual Beta entry, casual code **2525**, session-scoped activation, Return to Classic, storage-failure tolerance and a classic recovery action on the crash screen.
-- Scoped beta tokens and controls. Existing earned cosmetics and profile data are untouched.
-- Solo/local table treatment, engraved brand detail, score plaque, dice material highlights, explicit held markers, banked-score response and a new victory trophy.
-- Unified scoring, bank, big-bank, bust, hot-dice, five-of-a-kind and victory cues. These respect the original game timing. Existing roll sounds and the 3D roll renderer are reused.
-- Original synthesized house motifs for the new event layer, using existing volume/mute settings. No new audio downloads or third-party media assets.
-- A presentation-only “Try the big moments” stage on the beta menu; sound is opt-in there. No awards, game records, inventory writes or fake challenge results.
-- English, Spanish and French strings; reduced-motion and high-contrast treatments.
-- Online, daily and weekly use classic presentation until their later integration phase. The beta menu labels those cards explicitly.
-- Service-worker cache revision for the new app shell. Site/install icons remain classic during this opt-in beta.
+James requested the two mobile fixes and continuation of the visual plan on September 9, 2026. The existing authorization to commit and publish the password-gated beta to main remains in effect. This checkpoint extends the first playable delivery (46ca63a) with Phases 5A, 5B, 6A and the Phase 6B implementation, plus an initial Phase 7 supporting-screen/material pass. It is not a claim that all optional collectible batches or real-device hardening are complete.
+
+## Mobile feedback fixed
+
+- Bank: 2.6 seconds; big bank and hot dice: 3 seconds; five of a kind: 3.4 seconds; bust: 3 seconds; victory: 3.8 seconds.
+- Starting the next roll no longer clears the result. A bounded presentation queue keeps important messages readable, drops intervening routine score popups and prioritizes victory. This does not delay local or online game actions.
+- The final challenge result remains visible before switching to the results screen.
+- Held checks now sit outside the cube's perspective layer. The classic cube keeps its previous perspective behavior.
+- Result signs were moved below the upper player pod in portrait play.
+
+## Locker and starter materials — 5A / 5B
+
+- Dedicated responsive Locker: large live table/portrait/dice preview, category controls, available-only filter, explicit equip, compare-current toggle, roll and hot/five previews, opt-in preview sound.
+- Locked items can be previewed, but cannot be equipped without their original unlock. Earned achievement badges remain earned-only.
+- Three session-only samples: House Ivory (engraved stock), Neon Circuit (grid inlays), Volcanic Glass (bright fracture veins). Sample particles vary in color, shape and duration.
+- Two sample tables: Emerald Club felt and After Hours star-patterned midnight fabric.
+- First legacy material batch: Obsidian facets, Gold brushing, Neon stripes and Molten fracture detail. IDs, requirements and Classic appearance remain intact.
+- Phone collection browsing has a sticky return-to-preview link.
+
+## Personal identity — 6A
+
+- Six original SVG portraits: fox, bear, owl, cat, frog and panda.
+- Four frames, four backgrounds, three nameplates, earned badges/titles.
+- Portraits render in local seats, beta online seats, account overview and public profile cards. Nameplate accents and selected badge icons appear on seats.
+- Sample dice/table equipment lives under the separate session key `greed:visual-beta:appearance:v1`.
+- Only the identity design is persisted as optional versioned `Profile.visualBeta`. Equipping a beta look leaves canonical dice/table/avatar selections and earned inventory unchanged.
+- Account reconciliation updates identity, logout resets the in-memory/session appearance, and malformed/unknown fields use safe fallbacks.
+
+## Multiplayer and challenges — 6B
+
+- Additive, bounded protocol identity/look fields. Classic IDs still travel alongside beta data; Classic clients ignore the extra field.
+- Active-player dice are broadcast; the table stays viewer-local.
+- Spectators receive the same looks. Reconnect retains them. Missing data from an old server falls back to legacy dice and a default portrait.
+- Optional identity is preserved across legacy profile merges; unsupported fields are sanitized. No schema migration or new database query was added.
+- Daily and weekly use the beta dice/effects adapter around their existing authoritative run controller. Seeds, results and scoring rules are unchanged.
+- Fixed an existing client reconnect-storage recursion in read/remove helpers, with regression tests.
+- The client and server deploy separately; the compatibility path supports that interval.
+
+## Supporting screens and accessibility — first Phase 7 / 8 pass
+
+- Shared secondary-screen branding, settings rows, statistic tiles, leaderboard surfaces, profile cards and challenge board treatment.
+- Beta navigation starts new screens at the top.
+- New interface strings in English, Spanish and French.
+- New Locker text respects the existing large-text setting; high-contrast borders and reduced-motion static results are supported.
+- Classic remains available through Return to Classic. Access code is still **2525**.
+- Service-worker cache updated to `greed-shell-v5-visual-collection`. Shared install icons remain Classic.
 
 ## Verification
 
-- Full workspace TypeScript checks: passed.
-- ESLint: passed.
-- Prettier check: passed.
-- Production Vite build: passed. CSS approximately 17.8 kB gzip; main JS 131.54 kB gzip; lazy beta-menu JS 1.76 kB gzip at this checkpoint. Existing music is approximately 2.9 MB; no new audio asset was added.
-- Full tests: **521 passed, 3 skipped**, across 37 files. The skipped account integration cases are pre-existing.
-- New tests cover incorrect codes, session persistence/removal, blocked storage, progression-key isolation, multi-throw five-of-a-kind, duplicate state/lock toggles, another completed hand, rematches, snapshot replay suppression, bank thresholds and win priority.
-- Browser review includes desktop/390 px menu, incorrect/correct code, local roll/bank, held markers, score plaque and five-of-a-kind preview. Eight-seat layouts were checked at 390×844 and 844×390. The short-landscape collision found during review was fixed and seven geometry regressions were added. A 360×640 larger-text/high-contrast check and Return to Classic were also exercised. Reduced motion was enabled through Settings; final real-device motion/audio tuning remains for mobile feedback.
+- All workspace TypeScript checks, ESLint and repository Prettier check pass.
+- Full suite: **532 passed, 3 skipped, 41 files**. The three skipped tests require a configured real Postgres account database; no disposable local Postgres was available. Account data merging/normalization was exercised without a database; a live account round-trip is still part of tester validation.
+- New coverage: banner dwell/queue/reset/disposal; sample storage isolation; locked equipment/badge enforcement; malformed identities; legacy account merges; mixed beta/Classic sockets; spectator snapshots and reconnect; client reconnect storage.
+- Browser checks: 390×844 local play and held markers, explicit sample/mascot/frame/table equip, locked Gold preview refusing equip, 1280×800 Locker comparison/layout, 360×640 French with large text/high contrast/reduced motion, and Return to Classic showing the original Ivory/Classic Green equipment.
+- Build: main JS 138.03 kB gzip; CSS 19.63 kB gzip; lazy Locker 1.83 kB gzip; lazy beta home 1.49 kB gzip. No downloaded art/audio or new dependency. Approximately 8.3 kB more initial JS/CSS than the previous beta.
+- Desktop-browser viewport tests do not substitute for an actual iPhone/Android frame-rate, audio and touch pass.
 
-## Intentional boundaries and next work
+## Mobile test checklist
 
-This is the first playable visual slice, not the finished Locker/profile overhaul. Existing cosmetics retain their IDs and requirements; starter collectible materials, temporary sample equipment, illustrated mascots and profile synchronization remain in Phases 5–6. Settings and supporting screens inherit the beta surface treatment but have not had their full Phase 7 layout pass.
+1. Refresh the live website, open Visual Beta and enter **2525**.
+2. In a local game, verify bank/bust/hot results remain readable and held checks stay above the dice.
+3. Open Locker. Preview all three starter dice and both tables. Try the roll and effect buttons.
+4. Choose a mascot, frame, background and nameplate; select **Equip beta look**. Confirm the design appears in the next game.
+5. Preview a locked earned item: equip should be unavailable. Return to an available item.
+6. Sign in and equip a portrait design; check its profile appearance on another signed-in device. Sample dice/table equipment is intentionally temporary, not an earned unlock.
+7. Test an online private table with one beta player and one Classic player, then a spectator/reconnect. Try daily/weekly presentation during a normal authorized run.
+8. Return to Classic and confirm existing cosmetics/progress remain intact.
 
-The phone viewport check is desktop-browser emulation. Actual iPhone Safari/Android touch behavior and audio quality need James’s mobile test. No claim of measured real-device frame rate or retention improvement is made. No paid assets, dependency upgrades, rules changes, database migrations or release-version changes were introduced.
+## Next production chunks
 
-## Mobile test script
-
-1. Open the deployed website and refresh once if it was already open.
-2. Scroll to **Visual Beta** on the classic main menu. Enter **2525**.
-3. Try **Local game** or **Learn to play**. Roll, hold/release eligible dice, bank, and observe the next turn.
-4. From the beta menu, open **Try the big moments** and preview hot dice/five-of-a-kind. Enable its sound checkbox to audition the cues.
-5. Try reduced motion/larger text in Settings and check that controls remain comfortable.
-6. Use **Return to Classic**. Verify the original presentation and earned items remain available.
-
-Useful feedback: phone/browser, whether text and dice are easy to read, any accidental taps, which effects feel rewarding or too busy, sound loudness, and whether the new direction feels like Greed.
-
-## Next checkpoint
-
-Collect mobile feedback and fix the first slice before beginning 5A (Locker). User approval covers publishing this delivery, but does not start later phases automatically.
+- Continue Phase 7 with the remaining legacy dice/table art in batches of 3–4, guided by feedback on this starter collection.
+- Complete device hardening: iPhone Safari and Android Chrome, smaller/older hardware, measured celebration frame times, audio mix on actual speakers/headphones, and live account/challenge UI round-trips.
+- Final cross-screen audit for online lobby/results/friends/leaderboards under real account data, all seat counts and accessibility modes.
+- Public store assets, final app icons and platform packaging remain Phase 9, a separate release-preparation decision. No release version/date was invented.

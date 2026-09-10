@@ -1,3 +1,4 @@
+import { cleanBetaLook, type BetaLook } from "@greed/protocol";
 /**
  * In-memory room + seat model for the online server. A room lives in the lobby
  * phase (players gather, add bots, ready up) and then in-game (an authoritative
@@ -25,6 +26,7 @@ export interface Seat {
   dice: string;
   /** Equipped avatar id, or "" to let clients derive one from the name. */
   avatar: string;
+  beta?: BetaLook;
   /** Turns this player let time out this game (kicked once it hits the cap). */
   missedTurns: number;
   /** When this seat last sent an emote, for the anti-spam cooldown. */
@@ -205,6 +207,7 @@ export function makeHumanSeat(
   userId?: string,
   avatar = "",
   team = 0,
+  beta?: BetaLook,
 ): Seat {
   return {
     id: `p_${randomUUID().slice(0, 8)}`,
@@ -215,6 +218,7 @@ export function makeHumanSeat(
     userId,
     dice: cleanCosmeticId(dice, "ivory"),
     avatar: cleanCosmeticId(avatar, ""),
+    beta: cleanBetaLook(beta),
     missedTurns: 0,
     token: randomBytes(16).toString("hex"),
     team,
