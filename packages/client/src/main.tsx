@@ -9,6 +9,7 @@ import { primeAudioOnFirstGesture, installUiClicks } from "./game/sfx.js";
 import { applySettings, loadSettings } from "./game/settings.js";
 import { registerServiceWorker, initInstallPrompt } from "./game/pwa.js";
 import "./styles.css";
+import { BetaProvider } from "./beta/BetaContext.js";
 
 // Apply saved accessibility/display preferences before first paint.
 applySettings(loadSettings());
@@ -28,7 +29,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <I18nProvider>
         <AuthProvider>
           <ChallengeProvider>
-            <App />
+            <BetaProvider>
+              <App />
+            </BetaProvider>
           </ChallengeProvider>
         </AuthProvider>
       </I18nProvider>

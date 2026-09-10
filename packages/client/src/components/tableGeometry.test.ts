@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   POD,
+  BETA_SHORT_WIDE,
   diceCorridor,
   podRects,
   seatSlots,
@@ -36,6 +37,27 @@ const WIDE = [
 ];
 
 const COUNTS = [2, 3, 4, 5, 6, 7, 8];
+
+describe("beta short landscape", () => {
+  for (const n of COUNTS) {
+    it(`fits ${n} seats on a short landscape phone without covering the dice`, () => {
+      const w = 620;
+      const h = 218;
+      const rects = seatSlots(n, true).map((slot) => ({
+        x: (parseFloat(slot.x) / 100) * w - BETA_SHORT_WIDE.w / 2,
+        y: (parseFloat(slot.y) / 100) * h - BETA_SHORT_WIDE.h / 2,
+        w: BETA_SHORT_WIDE.w,
+        h: BETA_SHORT_WIDE.h,
+      }));
+      expect(collisions(rects)).toEqual([]);
+      for (const rect of rects) {
+        expect(rect.x).toBeGreaterThanOrEqual(-60);
+        expect(rect.x + rect.w).toBeLessThanOrEqual(w + 60);
+        expect(overlaps(rect, { x: w / 2 - 120, y: h / 2 - 17, w: 240, h: 34 })).toBe(false);
+      }
+    });
+  }
+});
 
 function overlaps(a: PodRect, b: PodRect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;

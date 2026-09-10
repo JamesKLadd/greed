@@ -6,6 +6,7 @@ import { Button, Modal } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
+import { useBetaActive } from "../beta/BetaContext.js";
 
 /**
  * End-of-game results: standings, this game's personal summary, and any
@@ -57,6 +58,7 @@ export function GameOver({
   menuLabel,
 }: GameOverProps) {
   const t = useT();
+  const betaActive = useBetaActive();
   const winner = state.players.find((p) => p.id === state.winnerId);
   const sides = state.teams;
   // A team game is won by a side, so that is what the header names and what the
@@ -81,7 +83,25 @@ export function GameOver({
 
   return (
     <Modal
-      icon={youWon ? "🏆" : "🏁"}
+      icon={
+        betaActive ? (
+          <svg className="beta-trophy" viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M27 14h46v22c0 20-11 28-23 28S27 56 27 36Z" fill="currentColor" />
+            <path
+              d="M27 22H13v14c0 12 8 17 20 17M73 22h14v14c0 12-8 17-20 17M50 64v19M32 88h36"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+            />
+            <path d="m50 25 4 9 10 1-8 7 2 10-8-5-8 5 2-10-8-7 10-1Z" fill="#153a2e" />
+          </svg>
+        ) : youWon ? (
+          "🏆"
+        ) : (
+          "🏁"
+        )
+      }
       scroll
       title={
         titled

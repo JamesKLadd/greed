@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { SetupScreen } from "./screens/SetupScreen.js";
 import { GameScreen } from "./screens/GameScreen.js";
@@ -42,6 +43,15 @@ export function App() {
   const challenges = useChallenges();
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
+  const beta = useBeta();
+  // Online and challenges stay classic until the multiplayer presentation phase.
+  const betaActive = beta.enabled && !["online", "daily", "weekly"].includes(mode);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.presentation = betaActive ? "beta" : "classic";
+    return () => {
+      delete document.documentElement.dataset.presentation;
+    };
+  }, [betaActive]);
   // A password-reset token pulled from the email link (?reset=…).
   const [resetToken, setResetToken] = useState<string | undefined>(undefined);
   // Where to land after a successful sign-in (e.g. straight into online play when
@@ -239,7 +249,7 @@ export function App() {
   })();
 
   return (
-    <>
+    <BetaActiveContext.Provider value={betaActive}>
       {screen}
       {challenges.invite && (
         <ChallengeInvite
@@ -249,6 +259,6 @@ export function App() {
         />
       )}
       <Toast toast={challengeToast} />
-    </>
+    </BetaActiveContext.Provider>
   );
 }

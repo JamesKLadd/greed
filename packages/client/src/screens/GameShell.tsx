@@ -9,6 +9,8 @@ import { Toast } from "../components/Toast.js";
 import type { ToastMessage } from "../game/toasts.js";
 import { loadSettings } from "../game/settings.js";
 import { useT } from "../i18n/i18n.js";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { GameCelebration } from "../beta/Celebration.js";
 
 /**
  * The in-game screen's layout, shared by offline and online play.
@@ -83,6 +85,7 @@ export function GameShell({
   overlays,
 }: GameShellProps) {
   const t = useT();
+  const betaActive = useBetaActive();
   const lastPlayer = state.players[state.order[state.order.length - 1]];
   // Read per render rather than once on mount, so coming back from Settings
   // takes effect immediately instead of on the next game.
@@ -153,6 +156,7 @@ export function GameShell({
       </main>
 
       {floating}
+      {betaActive && <GameCelebration state={state} isRolling={isRolling} />}
       <Toast toast={toast} />
       {overlays}
     </div>

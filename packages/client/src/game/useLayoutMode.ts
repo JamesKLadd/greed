@@ -23,23 +23,24 @@ export type LayoutMode = "portrait" | "wide";
    keeps a short landscape phone from getting a wide oval it has no room for. */
 const WIDE = "(min-width: 760px), (orientation: landscape) and (min-height: 420px)";
 
-function read(): LayoutMode {
+function read(query: string): LayoutMode {
   if (typeof window === "undefined" || !window.matchMedia) return "portrait";
-  return window.matchMedia(WIDE).matches ? "wide" : "portrait";
+  return window.matchMedia(query).matches ? "wide" : "portrait";
 }
 
-export function useLayoutMode(): LayoutMode {
-  const [mode, setMode] = useState<LayoutMode>(read);
+export function useLayoutMode(compactLandscape = false): LayoutMode {
+  const query = compactLandscape ? "(min-width: 760px), (orientation: landscape)" : WIDE;
+  const [mode, setMode] = useState<LayoutMode>(() => read(query));
 
   useEffect(() => {
-    const mq = window.matchMedia(WIDE);
+    const mq = window.matchMedia(query);
     const onChange = () => setMode(mq.matches ? "wide" : "portrait");
     // Re-read on mount too: the query can have flipped between the initial
     // useState and the effect running (a rotation during first paint).
     onChange();
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
-  }, []);
+  }, [query]);
 
   return mode;
 }

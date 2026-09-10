@@ -206,6 +206,47 @@ type Sound =
   | "tumble"
   | "timeShort";
 
+/** Original five-note house signature. Shares the existing volume/mute bus. */
+export function playBetaCue(
+  kind: "score" | "bank" | "bigBank" | "hot" | "five" | "bust" | "win",
+): void {
+  if (muted || sfxVolume <= 0 || document.hidden) return;
+  const c = ensureContext();
+  if (!c || !sfxBus) return;
+  const start = c.currentTime;
+  const notes =
+    kind === "five"
+      ? [392, 494, 587, 784, 988]
+      : kind === "win"
+        ? [392, 494, 587, 784, 1175]
+        : kind === "hot"
+          ? [330, 440, 554, 660]
+          : kind === "bigBank"
+            ? [392, 587, 784]
+            : kind === "bank"
+              ? [392, 587]
+              : kind === "bust"
+                ? [196, 147]
+                : [660];
+  notes.forEach((hz, i) => {
+    tone(hz, start + i * 0.075, kind === "bust" ? 0.16 : 0.22, {
+      type: "triangle",
+      gain: kind === "score" ? 0.055 : 0.1,
+    });
+    if (kind === "five" || kind === "win")
+      tone(hz * 2, start + i * 0.075, 0.13, { type: "sine", gain: 0.025 });
+  });
+  if (kind === "bank" || kind === "bigBank") {
+    [0, 0.07, 0.12].forEach((offset, i) =>
+      noiseBurst(start + offset, 0.05, { freq: 1400 + i * 400, gain: 0.13 - i * 0.025 }),
+    );
+  }
+  if (["hot", "five", "win"].includes(kind)) {
+    noiseBurst(start, 0.18, { freq: 800, gain: 0.1 });
+    tone(98, start, 0.25, { type: "sine", gain: 0.12 });
+  }
+}
+
 export interface PlayOptions {
   /**
    * Escalation for "streak": 0 is the first cue (the 4th roll), 1 the next, and

@@ -13,6 +13,7 @@ import type { EmoteId } from "@greed/protocol";
 import { emoteGlyph } from "./EmoteBar.js";
 import { useT } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
+import { useBetaActive } from "../beta/BetaContext.js";
 
 interface TableViewProps {
   state: GameState;
@@ -63,7 +64,8 @@ export function TableView({
 }: TableViewProps) {
   const showPresence = presence != null;
   const t = useT();
-  const layout = useLayoutMode();
+  const betaActive = useBetaActive();
+  const layout = useLayoutMode(betaActive);
   const landscape = layout === "wide";
   const goal = state.config.goal;
   const n = state.players.length;
@@ -102,7 +104,12 @@ export function TableView({
 
   return (
     <div className="table-stage">
-      <div className="felt" data-layout={layout} data-seats={compact ? "compact" : undefined}>
+      <div
+        className="felt"
+        data-layout={layout}
+        data-seats={compact ? "compact" : undefined}
+        data-player-count={n}
+      >
         <div className="felt__seats">
           {state.players.map((p, i) => {
             // rel = 0 is the bottom seat; each later turn sits one step clockwise
@@ -223,7 +230,10 @@ export function TableView({
                   </div>
                 )}
                 <div className="pseat__meta">
-                  <span className="pseat__total">
+                  <span
+                    key={betaActive ? p.total : undefined}
+                    className={`pseat__total${betaActive && p.total > 0 ? " beta-total" : ""}`}
+                  >
                     {p.total}
                     {turnScore > 0 && <span className="pseat__turn"> +{turnScore}</span>}
                   </span>
@@ -237,10 +247,21 @@ export function TableView({
         </div>
 
         <div className="felt__center">
+          {betaActive && (
+            <div className="beta-table-brand" aria-hidden="true">
+              <span>GREED</span>
+              <i>◆ ◆ ◆ ◆ ◆</i>
+            </div>
+          )}
           {/* What the turn is worth right now, over the dice it is riding on —
               the number you are deciding whether to bank or gamble. Bust zeroes
               the turn score, so this simply disappears when the run ends. */}
           <div className="felt__pot" aria-live="polite">
+            {betaActive && showTurnScore && state.turn.turnScore > 0 && (
+              <span className="beta-pot-label">
+                {t(state.turn.outcome === "banked" ? "beta.event.bank" : "beta.atStake")}
+              </span>
+            )}
             {showTurnScore && state.turn.turnScore > 0 && state.phase !== "game-over" && (
               // Keyed by the value so each gain replays the little pop.
               <span key={state.turn.turnScore} className="felt__pot-value">

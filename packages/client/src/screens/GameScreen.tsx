@@ -12,6 +12,7 @@ import { RollOffView } from "../components/RollOffView.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { useBetaActive } from "../beta/BetaContext.js";
 
 interface GameScreenProps {
   setup: MatchSetup;
@@ -23,6 +24,7 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
   const ctl = useGreed(setup);
   const { state } = ctl;
   const t = useT();
+  const betaActive = useBetaActive();
 
   const canAct = !state.players[state.turn.playerIndex].isBot;
   // Seat the human at the bottom of the table. Without this the bottom seat is
@@ -63,7 +65,16 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
       onBank={ctl.bank}
       onToggleDie={ctl.toggleDie}
       toast={ctl.toast}
-      cosmetics={cosmetics}
+      cosmetics={
+        betaActive && profile.table === "classic"
+          ? ({
+              ...cosmetics,
+              "--felt-1": "#10523f",
+              "--felt-2": "#07352e",
+              "--felt-edge": "#051d20",
+            } as React.CSSProperties)
+          : cosmetics
+      }
       perspectiveId={viewerId}
       avatars={avatars}
       barLeft={
