@@ -8,7 +8,7 @@
  */
 
 // Bump on every SHELL change, or the old cache keeps winning.
-const CACHE = "greed-shell-v5-visual-collection";
+const CACHE = "greed-shell-v6-beta-audio";
 const SHELL = [
   "/",
   "/index.html",

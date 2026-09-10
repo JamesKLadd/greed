@@ -10,11 +10,11 @@ describe("readable result banners", () => {
     vi.advanceTimersByTime(600);
     p.push({ kind: "score" });
     p.push({ kind: "bank", player: "Bob" });
-    vi.advanceTimersByTime(2200);
+    vi.advanceTimersByTime(2700);
     expect(show).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(200);
     expect(show).toHaveBeenLastCalledWith({ kind: "bank", player: "Bob" });
-    vi.advanceTimersByTime(2600);
+    vi.advanceTimersByTime(3100);
     expect(show).toHaveBeenLastCalledWith(null);
   });
   it("prioritizes victory, bounds pending events and clears on rematch/unmount", () => {

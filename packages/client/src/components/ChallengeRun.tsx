@@ -2,6 +2,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { appearanceVars } from "../beta/appearance.js";
 import { GameCelebration } from "../beta/Celebration.js";
+import { CELEBRATION_MS } from "../beta/celebrations.js";
 import { useEffect } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
@@ -52,7 +53,7 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
       return;
     }
     // Keep the final result readable before replacing this board with results.
-    const timer = setTimeout(onFinished, 3400);
+    const timer = setTimeout(onFinished, CELEBRATION_MS.five);
     return () => clearTimeout(timer);
   }, [run.finished, onFinished, beta]);
 

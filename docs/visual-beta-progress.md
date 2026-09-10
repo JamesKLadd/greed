@@ -6,7 +6,8 @@ James requested the two mobile fixes and continuation of the visual plan on Sept
 
 ## Mobile feedback fixed
 
-- Bank: 2.6 seconds; big bank and hot dice: 3 seconds; five of a kind: 3.4 seconds; bust: 3 seconds; victory: 3.8 seconds.
+- Follow-up sound/timing feedback: beta event cues raised approximately 7 dB, retaining effects-volume and mute controls. Every result banner extended by 0.5 seconds.
+- Nice Roll: 1.5 seconds; bank: 3.1 seconds; big bank and hot dice: 3.5 seconds; five of a kind: 3.9 seconds; bust: 3.5 seconds; victory: 4.3 seconds.
 - Starting the next roll no longer clears the result. A bounded presentation queue keeps important messages readable, drops intervening routine score popups and prioritizes victory. This does not delay local or online game actions.
 - The final challenge result remains visible before switching to the results screen.
 - Held checks now sit outside the cube's perspective layer. The classic cube keeps its previous perspective behavior.
@@ -47,7 +48,7 @@ James requested the two mobile fixes and continuation of the visual plan on Sept
 - New interface strings in English, Spanish and French.
 - New Locker text respects the existing large-text setting; high-contrast borders and reduced-motion static results are supported.
 - Classic remains available through Return to Classic. Access code is still **2525**.
-- Service-worker cache updated to `greed-shell-v5-visual-collection`. Shared install icons remain Classic.
+- Service-worker cache updated to `greed-shell-v6-beta-audio`. Shared install icons remain Classic.
 
 ## Verification
 

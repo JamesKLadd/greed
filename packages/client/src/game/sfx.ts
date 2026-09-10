@@ -214,6 +214,9 @@ export function playBetaCue(
   const c = ensureContext();
   if (!c || !sfxBus) return;
   const start = c.currentTime;
+  // Raise the beta motifs about 7 dB so they read over the ambient music.
+  // The existing SFX slider and mute bus still control the final level.
+  const cueGain = 2.2;
   const notes =
     kind === "five"
       ? [392, 494, 587, 784, 988]
@@ -231,19 +234,22 @@ export function playBetaCue(
   notes.forEach((hz, i) => {
     tone(hz, start + i * 0.075, kind === "bust" ? 0.16 : 0.22, {
       type: "triangle",
-      gain: kind === "score" ? 0.055 : 0.1,
+      gain: (kind === "score" ? 0.055 : 0.1) * cueGain,
     });
     if (kind === "five" || kind === "win")
-      tone(hz * 2, start + i * 0.075, 0.13, { type: "sine", gain: 0.025 });
+      tone(hz * 2, start + i * 0.075, 0.13, { type: "sine", gain: 0.025 * cueGain });
   });
   if (kind === "bank" || kind === "bigBank") {
     [0, 0.07, 0.12].forEach((offset, i) =>
-      noiseBurst(start + offset, 0.05, { freq: 1400 + i * 400, gain: 0.13 - i * 0.025 }),
+      noiseBurst(start + offset, 0.05, {
+        freq: 1400 + i * 400,
+        gain: (0.13 - i * 0.025) * cueGain,
+      }),
     );
   }
   if (["hot", "five", "win"].includes(kind)) {
-    noiseBurst(start, 0.18, { freq: 800, gain: 0.1 });
-    tone(98, start, 0.25, { type: "sine", gain: 0.12 });
+    noiseBurst(start, 0.18, { freq: 800, gain: 0.1 * cueGain });
+    tone(98, start, 0.25, { type: "sine", gain: 0.12 * cueGain });
   }
 }
 
