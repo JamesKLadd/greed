@@ -23,7 +23,7 @@ import { GameCelebration } from "../beta/Celebration.js";
  * and nothing else.
  */
 
-interface GameShellProps {
+export interface GameShellProps {
   state: GameState;
   legal: LegalActions;
   isRolling: boolean;

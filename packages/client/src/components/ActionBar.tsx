@@ -10,6 +10,7 @@ interface ActionBarProps {
   canAct: boolean;
   onRoll: () => void;
   onBank: () => void;
+  variant?: "classic" | "scene";
 }
 
 /**
@@ -25,7 +26,15 @@ interface ActionBarProps {
  * (The third card, "last roll", is gone entirely — it's the score that just
  * flew up off the dice a second ago.)
  */
-export function ActionBar({ state, legal, isRolling, canAct, onRoll, onBank }: ActionBarProps) {
+export function ActionBar({
+  state,
+  legal,
+  isRolling,
+  canAct,
+  onRoll,
+  onBank,
+  variant = "classic",
+}: ActionBarProps) {
   const { t, n } = useI18n();
   const turn = state.turn;
   const busy = isRolling || state.phase === "game-over";
@@ -37,23 +46,34 @@ export function ActionBar({ state, legal, isRolling, canAct, onRoll, onBank }: A
   // already says that in a full sentence, and the bar keeping its shape stops
   // the whole board shifting every time play passes round.
   return (
-    <div className="actionbar">
+    <div className={variant === "scene" ? "scene-actions" : "actionbar"}>
       <button
-        className="btn btn--roll actionbar__btn"
+        className={
+          variant === "scene" ? "tp-action tp-action--roll" : "btn btn--roll actionbar__btn"
+        }
         onClick={onRoll}
         disabled={!canAct || busy || !legal.canRoll}
       >
-        <span className="actionbar__verb">{t("controls.rollDice")}</span>
+        <strong className="actionbar__verb">
+          {t(variant === "scene" ? "scene.roll" : "controls.rollDice")}
+        </strong>
         <span className="actionbar__num">
           {remaining === 1 ? t("action.diceCountOne") : t("action.diceCount", { count: remaining })}
         </span>
       </button>
       <button
-        className="btn btn--bank actionbar__btn"
+        className={
+          variant === "scene" ? "tp-action tp-action--bank" : "btn btn--bank actionbar__btn"
+        }
         onClick={onBank}
         disabled={!canAct || busy || !legal.canBank}
       >
-        <span className="actionbar__verb">{t("controls.bank")}</span>
+        <strong
+          className="actionbar__verb"
+          data-long-label={t("controls.bank").length > 6 || undefined}
+        >
+          {t("controls.bank")}
+        </strong>
         <span className="actionbar__num">{n(turn.turnScore)}</span>
       </button>
     </div>

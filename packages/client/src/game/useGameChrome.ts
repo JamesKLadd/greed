@@ -28,6 +28,8 @@ interface GameChromeOptions {
   youId: string | null;
   /** True while the opening roll-off overlay is up (suppresses the turn chime). */
   rollOffActive?: boolean;
+  /** A presentation-owned dialog, such as the table menu or player details. */
+  blockingOverlayActive?: boolean;
   onRoll: () => void;
   onBank: () => void;
   /** Hold or release a die, when the local player is allowed to. */
@@ -52,6 +54,7 @@ export function useGameChrome({
   youId,
   isRolling = false,
   rollOffActive = false,
+  blockingOverlayActive = false,
   onRoll,
   onBank,
   onToggleDie,
@@ -86,8 +89,14 @@ export function useGameChrome({
   }, [state.phase, state, youId]);
 
   useKeyboardShortcuts({
-    enabled: !showRules && !showHistory && !rollOffActive && state.phase !== "game-over",
-    blockedByDialog: showRules || rollOffActive || state.phase === "game-over",
+    enabled:
+      !blockingOverlayActive &&
+      !showRules &&
+      !showHistory &&
+      !rollOffActive &&
+      state.phase !== "game-over",
+    blockedByDialog:
+      blockingOverlayActive || showRules || rollOffActive || state.phase === "game-over",
     canRoll: canAct && legal.canRoll,
     canBank: canAct && legal.canBank,
     onRoll,

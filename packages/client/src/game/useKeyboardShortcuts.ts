@@ -35,7 +35,7 @@ function isTypingTarget(el: EventTarget | null): boolean {
 }
 
 /**
- * Is the player's focus on a die?
+ * Is the player's focus on a native interactive control?
  *
  * A die is a real button labelled "tap to hold this die", so a keyboard user
  * tabs to it and presses Enter — and Enter was claimed here for Bank, with
@@ -43,8 +43,8 @@ function isTypingTarget(el: EventTarget | null): boolean {
  * keyboard at all, and trying ENDED THE TURN. Space was taken by Roll the same
  * way. A focused die keeps its own keys.
  */
-function isDie(el: EventTarget | null): boolean {
-  return el instanceof HTMLElement && el.classList.contains("die");
+function ownsActivationKeys(el: EventTarget | null): boolean {
+  return el instanceof HTMLElement && Boolean(el.closest("button, a[href], [role='button']"));
 }
 
 /**
@@ -67,8 +67,8 @@ export function useKeyboardShortcuts({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (isTypingTarget(e.target)) return;
-      // A focused die answers Space and Enter itself, the way any button does.
-      if (isDie(e.target) && (e.key === " " || e.key === "Enter")) return;
+      // Preserve native activation for dice, menus, player details and actions.
+      if (ownsActivationKeys(e.target) && (e.key === " " || e.key === "Enter")) return;
       // Another dialog has the keyboard — let it handle its own keys.
       if (blockedByDialog) return;
 

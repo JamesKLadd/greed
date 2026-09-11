@@ -55,6 +55,8 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
   const [isRolling, setIsRolling] = useState(false);
   const isRollingRef = useRef(false);
   isRollingRef.current = isRolling;
+  const rollTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(rollTimer.current), []);
 
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
@@ -78,7 +80,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     setRollingIndices(diceToRoll(s.turn));
     setRollingDice(next.turn.dice);
     setIsRolling(true);
-    window.setTimeout(() => {
+    rollTimer.current = window.setTimeout(() => {
       setIsRolling(false);
       setRollingIndices([]);
       setRollingDice(null);
@@ -104,6 +106,8 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
 
   const restart = useCallback(
     (setup?: MatchSetup) => {
+      // A restart during the tumble must not land the old match 650ms later.
+      window.clearTimeout(rollTimer.current);
       const next = buildGame(setup ?? initialSetup);
       lastLogLen.current = next.state.log.length;
       setIsRolling(false);

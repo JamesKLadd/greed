@@ -12,4 +12,6 @@
 @import "./styles/game.css";
 @import "./styles/screens.css";
 @import "./styles/beta.css";
+@import "./beta/tableScene.css";
+@import "./beta/localTableGame.css";
 @import "./styles/a11y.css";

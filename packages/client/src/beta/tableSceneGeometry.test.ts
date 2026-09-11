@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+import {
+  SCENE_COUNTS,
+  sceneSeatOrder,
+  tableSceneGeometry,
+  type SceneRect,
+} from "./tableSceneGeometry.js";
+const overlaps = (a: SceneRect, b: SceneRect) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+describe("table scene identity", () => {
+  it("rotates display order without rotating authoritative last-seat ownership", () => {
+    const order = ["a", "b", "c", "d", "e"];
+    expect(sceneSeatOrder(order, "d")).toEqual(["d", "e", "a", "b", "c"]);
+    expect(order).toEqual(["a", "b", "c", "d", "e"]);
+    expect(sceneSeatOrder(order, "e")[0]).toBe(order.at(-1));
+    expect(sceneSeatOrder(order, "disconnected")).toEqual(order);
+    expect(sceneSeatOrder(order)).toEqual(order);
+  });
+  it("refuses incomplete or ambiguous seat orders", () => {
+    expect(() => sceneSeatOrder([])).toThrow();
+    expect(() => sceneSeatOrder(["a", "a"])).toThrow();
+    expect(() => sceneSeatOrder(Array.from({ length: 9 }, (_, i) => String(i)))).toThrow();
+  });
+});
+describe("table scene geometry", () => {
+  it("keeps near-name targets outside the live dice touch corridor on the narrow phone", () => {
+    const { seats } = tableSceneGeometry(8, 320, 474);
+    // Real tray fixture: five 44px touch areas, including held-die lift.
+    const left = seats.find((s) => s.slot === "left-near")!.name;
+    const right = seats.find((s) => s.slot === "right-near")!.name;
+    expect(left.width).toBeGreaterThanOrEqual(44);
+    expect(right.width).toBeGreaterThanOrEqual(44);
+    expect(left.x + left.width).toBeLessThanOrEqual(46);
+    expect(right.x).toBeGreaterThanOrEqual(274);
+  });
+  for (const [w, h] of [
+    [320, 474],
+    [360, 546],
+    [390, 736],
+    [844, 314],
+    [1120, 708],
+  ])
+    for (const count of SCENE_COUNTS) {
+      it(`${count} seats fit ${w}×${h} without colliding scores`, () => {
+        const layout = tableSceneGeometry(count, w, h);
+        expect(layout.seats).toHaveLength(count);
+        expect(new Set(layout.seats.map((s) => s.slot)).size).toBe(count);
+        expect(layout.seats[0].view).toBe("back");
+        expect(layout.seats.filter((s) => s.view === "front")).toHaveLength(
+          count % 2 === 0 ? 1 : 2,
+        );
+        for (const [i, seat] of layout.seats.entries()) {
+          expect(seat.mirrored).toBe(seat.slot.startsWith("left-"));
+          for (const r of [seat.name, seat.score, seat.flag]) {
+            expect(r.x).toBeGreaterThanOrEqual(0);
+            expect(r.y).toBeGreaterThanOrEqual(0);
+            expect(r.x + r.width).toBeLessThanOrEqual(w + 0.01);
+            expect(r.y + r.height).toBeLessThanOrEqual(h + 0.01);
+          }
+          expect(seat.name.height).toBeGreaterThanOrEqual(44);
+          for (const other of layout.seats.slice(i + 1))
+            expect(overlaps(seat.score, other.score)).toBe(false);
+          expect(overlaps(seat.flag, seat.score)).toBe(false);
+        }
+        expect(layout.dieEdge).toBeLessThanOrEqual(40);
+      });
+    }
+});

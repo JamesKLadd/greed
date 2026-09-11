@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { SetupScreen } from "./screens/SetupScreen.js";
@@ -22,6 +22,14 @@ import { useChallenges } from "./net/challenges.js";
 import { Toast } from "./components/Toast.js";
 import type { ToastMessage } from "./game/useGreed.js";
 import { useT } from "./i18n/i18n.js";
+
+// The composition study is deliberately excluded from shipped game code.
+const TablePrototype = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/TablePrototype.js"))
+  : null;
+const PlayableTableReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/PlayableTableReview.js"))
+  : null;
 
 type Mode =
   | "home"
@@ -117,6 +125,20 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (PlayableTableReview && new URLSearchParams(window.location.search).has("table-play")) {
+    return (
+      <Suspense fallback={<p>Opening local table…</p>}>
+        <PlayableTableReview />
+      </Suspense>
+    );
+  }
+  if (TablePrototype && new URLSearchParams(window.location.search).has("table-preview")) {
+    return (
+      <Suspense fallback={<p>Opening table preview…</p>}>
+        <TablePrototype />
+      </Suspense>
+    );
+  }
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui")) {
     return <UiGallery />;
   }

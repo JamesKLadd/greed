@@ -26,20 +26,47 @@ export function GuidanceLine({
   state,
   canAct,
   muted = false,
+  compact = false,
 }: {
   state: GameState;
   canAct: boolean;
   muted?: boolean;
+  /** Short felt copy; the full coaching sentence remains available to AT. */
+  compact?: boolean;
 }) {
   const t = useT();
   const hint = coachHint(state, canAct);
+  const name = state.players[state.turn.playerIndex].name;
+  const brief =
+    state.phase === "game-over"
+      ? t("controls.gameOver")
+      : state.turn.outcome === "busted"
+        ? t("controls.busted", { name })
+        : state.turn.outcome === "banked"
+          ? t("controls.banked", { name, points: state.turn.turnScore })
+          : !canAct
+            ? t("controls.waiting", { name })
+            : state.turn.hotDice
+              ? t("controls.hotDice")
+              : state.turn.lastRoll
+                ? t("controls.rollOrBank")
+                : t("controls.rollToStart");
   return (
     <p
       className={muted ? "guide guide--muted" : `guide guide--${hint?.tone ?? "info"}`}
       role="status"
       aria-live="polite"
     >
-      {hint ? t(hint.key, hint.params) : ""}
+      {compact ? (
+        <>
+          <span aria-hidden="true">{brief}</span>
+          <span className="guide--muted">{hint ? t(hint.key, hint.params) : ""}</span>
+        </>
+      ) : hint ? (
+        t(hint.key, hint.params)
+      ) : (
+        ""
+      )}
     </p>
   );
 }

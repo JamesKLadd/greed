@@ -17,6 +17,7 @@ interface DiceTrayProps {
    * is then exactly what it was before.
    */
   onToggle?: (index: number) => void;
+  disabled?: boolean;
 }
 
 export function DiceTray({
@@ -26,6 +27,7 @@ export function DiceTray({
   rollingDice,
   dice3d = true,
   onToggle,
+  disabled = false,
 }: DiceTrayProps) {
   const t = useT();
   const hasRolled = turn.lastRoll !== null || isRolling;
@@ -60,7 +62,7 @@ export function DiceTray({
             // will not move is drawn as one you cannot move — including the
             // last held die, which cannot be put back. A tap that would be
             // silently ignored is worse than one that is plainly unavailable.
-            toggleDisabled={isRolling || !canToggleLock(turn, i)}
+            toggleDisabled={disabled || isRolling || !canToggleLock(turn, i)}
             refusedReason={lastHeld(turn, i) ? t("dice.keepOneHeld") : undefined}
             toggleLabel={turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
