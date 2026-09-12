@@ -62,6 +62,22 @@ describe("rollCall", () => {
     expect(rollCall(turnAfter([1, 1, 5, 5, 3]))).toBe(null);
   });
 
+  it("calls a hand built across throws, not just one that was thrown", () => {
+    // The mat is what a call reads: 2,3,4,5 held and a 6 thrown is a straight,
+    // even though the throw on its own scored nothing at all. Same shape for
+    // the fifth 2 completing five of a kind.
+    const built = (dice: DieValue[], thrown: DieValue[]): TurnState => ({
+      ...turnAfter(null),
+      dice,
+      locked: [true, true, true, true, true],
+      rollCount: 2,
+      lastRoll: scoreRoll(thrown),
+      awaitingDecision: true,
+    });
+    expect(rollCall(built([2, 3, 4, 5, 6], [6]))).toBe("straight");
+    expect(rollCall(built([2, 2, 2, 2, 2], [2]))).toBe("five");
+  });
+
   it("says nothing for a plain scoring throw or a bust", () => {
     expect(rollCall(turnAfter([1, 5, 2, 3, 6]))).toBe(null);
     expect(rollCall(turnAfter([2, 3, 4, 6, 6]))).toBe(null);

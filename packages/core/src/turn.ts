@@ -9,8 +9,9 @@
  * RNG and applies scoring.
  */
 
-import { DICE_COUNT, FIVE_OF_A_KIND } from "./types.js";
-import type { DieValue, LegalActions, TurnState } from "./types.js";
+import { scoreRoll } from "./scoring.js";
+import { DICE_COUNT } from "./types.js";
+import type { DieValue, LegalActions, ScoreBreakdownEntry, TurnState } from "./types.js";
 
 export function createTurn(playerIndex: number): TurnState {
   return {
@@ -78,23 +79,28 @@ export function canToggleLock(turn: TurnState, index: number): boolean {
 }
 
 /**
- * Does the throw that has just landed COMPLETE a five of a kind?
+ * Does the throw that has just landed COMPLETE a whole-mat hand?
  *
  * `thrown` are the dice this throw put on the mat; everything else was being
- * held. A different question from `isFiveOfAKind`, which reads a hand that has
+ * held. A different question from `heldHand`, which reads a hand that has
  * already been assembled — this one is asked at the moment the last die lands,
  * before it has been locked.
  *
  * It exists because `scoreRoll` is only ever shown the dice that were thrown,
- * deliberately: a throw is worth what it threw. But five of a kind is the one
- * hand built ACROSS throws, and the die that completes it pays nothing on its
- * own unless the face happens to be a 1 or a 5. So on 2s, 3s, 4s or 6s the
- * throw that made the best hand in the game looks, to the throw's own scoring,
- * exactly like a throw that scored nothing — and the turn busted on it. That is
- * the bug this answers; the mat knows what the throw cannot.
+ * deliberately: a throw is worth what it threw. But a whole-mat hand is built
+ * ACROSS throws, and the die that completes it often pays nothing on its own —
+ * any 2, 3, 4 or 6. So the throw that made the best hand in the game looks, to
+ * the throw's own scoring, exactly like a throw that scored nothing, and the
+ * turn busted on it. That is the bug this answers; the mat knows what the
+ * throw cannot.
+ *
+ * It first showed up on five of a kind (four 2s held, the fifth thrown) and
+ * was fixed there alone. The straight has exactly the same shape — 2,3,4,5
+ * held and a 6 thrown — and was still busting, so the question is now asked of
+ * the hand rather than of one hand.
  */
-export function throwCompletesFiveOfAKind(turn: TurnState, thrown: number[]): boolean {
-  if (!turn.dice.every((d) => d === turn.dice[0])) return false;
+export function throwCompletesHand(turn: TurnState, thrown: number[]): boolean {
+  if (!fullHand(turn.dice)) return false;
   // Everything that was not thrown must have been held, or these five faces
   // are not a hand anyone is holding — just dice lying on the mat.
   const justThrown = new Set(thrown);
@@ -148,14 +154,37 @@ export function turnLegalActions(turn: TurnState): LegalActions {
 // ---------------------------------------------------------------------------
 
 /**
- * Are all five dice held, showing the same face?
+ * The hand these five faces make, if they make one at all.
  *
- * Read off the DICE rather than off the awards, because this is the one hand
- * that can be built across several throws: four 1s held from earlier throws and
- * a fifth arriving now is a five of a kind, even though no single throw was one.
+ * Five of a kind and a straight are the two hands that take all five dice at
+ * once, and taking all five is exactly what lets them be assembled over
+ * several throws: every other award is a face or three paying within the throw
+ * that produced them.
+ *
+ * Asked of `scoreRoll` rather than re-tested here, because a second definition
+ * of "that is a straight" is a second definition to keep in step — and the
+ * first one already ships in the rules screen and the bots' roll model. A hand
+ * is what scoreRoll would pay for these five dice thrown together, and nothing
+ * else: one award, covering the lot.
  */
-export function isFiveOfAKind(turn: TurnState): boolean {
-  return turn.locked.every(Boolean) && turn.dice.every((d) => d === turn.dice[0]);
+function fullHand(dice: DieValue[]): ScoreBreakdownEntry | null {
+  if (dice.length !== DICE_COUNT) return null;
+  const { breakdown } = scoreRoll(dice);
+  if (breakdown.length !== 1) return null;
+  const only = breakdown[0];
+  return only.kind === "five-of-a-kind" || only.kind === "straight" ? only : null;
+}
+
+/**
+ * The whole-mat hand currently being held, if there is one.
+ *
+ * Read off the DICE rather than off the awards, because these are the hands
+ * that can be built across several throws: four 1s held from earlier throws
+ * and a fifth arriving now is a five of a kind, and 2,3,4,5 held with a 1
+ * arriving now is a straight, though no single throw was either.
+ */
+export function heldHand(turn: TurnState): ScoreBreakdownEntry | null {
+  return turn.locked.every(Boolean) ? fullHand(turn.dice) : null;
 }
 
 /** The awards still standing: every die they used is still held. */
@@ -166,14 +195,17 @@ function standing(turn: TurnState) {
 /**
  * What the dice currently held are worth.
  *
- * A five of a kind REPLACES what those dice were paying rather than adding to
- * it — three 1s and then two more is 1000, not 1300. It is worth more than any
- * other way of scoring the same five dice, so replacing can never cost a player
- * anything, and the awards underneath are left intact: unlock one die and the
- * hand falls back to what the remaining four were earning on their own.
+ * A whole-mat hand REPLACES what those dice were paying rather than adding to
+ * it — three 1s and then two more is 1000, not 1300; a 1 and a 5 inside a
+ * straight is 500, not 650. Either hand is worth more than any other way of
+ * scoring the same five dice (the best a straight can be worth otherwise is
+ * the 150 of 1,2,3,4,5), so replacing can never cost a player anything, and
+ * the awards underneath are left intact: unlock one die and the hand falls
+ * back to what the remaining four were earning on their own.
  */
 export function heldScore(turn: TurnState): number {
-  if (isFiveOfAKind(turn)) return FIVE_OF_A_KIND;
+  const hand = heldHand(turn);
+  if (hand) return hand.points;
   return standing(turn).reduce((sum, a) => sum + a.points, 0);
 }
 
@@ -185,7 +217,7 @@ export function heldScore(turn: TurnState): number {
  * nothing, and five dice held with one of them dead is not a cleared mat.
  */
 export function allHeldScoring(turn: TurnState): boolean {
-  if (isFiveOfAKind(turn)) return true;
+  if (heldHand(turn)) return true;
   const paying = new Set(standing(turn).flatMap((a) => a.dice));
   return turn.locked.every((locked, i) => locked && paying.has(i));
 }

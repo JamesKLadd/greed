@@ -201,6 +201,164 @@ describe("completing a five of a kind on the last die", () => {
   });
 });
 
+describe("a straight is built, not just rolled", () => {
+  it("pays 500 for five held dice that run, whatever they were worth apart", () => {
+    // 1,2,3,4,5: the 1 and the 5 were paying 150 between them. The run is 500,
+    // not 650.
+    const g = position(
+      [1, 2, 3, 4, 5],
+      [true, true, true, true, true],
+      [...ones([0]), ...fives([4])],
+    );
+    expect(g.turn.turnScore).toBe(500);
+  });
+
+  it("pays 500 for the high run too, where only one die was paying", () => {
+    const g = position([2, 3, 4, 5, 6], [true, true, true, true, true], fives([3]));
+    expect(g.turn.turnScore).toBe(500);
+  });
+
+  it("falls back to what the rest are earning when one die is taken back", () => {
+    let g = position(
+      [1, 2, 3, 4, 5],
+      [true, true, true, true, true],
+      [...ones([0]), ...fives([4])],
+    );
+    expect(g.turn.turnScore).toBe(500);
+
+    // Put the 3 back and the run is gone: the 1 and the 5 are what is left.
+    g = tap(g, 2);
+    expect(g.turn.turnScore).toBe(150);
+
+    // And putting it back restores the hand: it has not been thrown since.
+    g = tap(g, 2);
+    expect(g.turn.turnScore).toBe(500);
+  });
+
+  it("is not claimed while one of the run is loose", () => {
+    // All five faces run, but the 1 is lying on the mat rather than held.
+    const g = position([1, 2, 3, 4, 5], [false, true, true, true, true], fives([4]));
+    expect(g.turn.turnScore).toBe(50);
+  });
+
+  it("does not pay for five held dice that do not run", () => {
+    const g = position([1, 2, 3, 4, 6], [true, true, true, true, true], ones([0]));
+    expect(g.turn.turnScore).toBe(100);
+  });
+});
+
+/**
+ * The throw that COMPLETES one.
+ *
+ * The same shape as the five-of-a-kind bug above, and reported the same way:
+ * 2,3,4,5,3 thrown, the 2, one 3, the 4 and the 5 held, the last die thrown —
+ * and it came up 1. Five dice running 1 to 5 on the mat, and the player was
+ * paid 150 for a 500 hand. Held one face along, 2,3,4,5 with a 6 arriving, the
+ * throw pays nothing at all and the turn busted on a straight.
+ *
+ * Seeds are pinned rather than mocked, as above: these are the real mulberry32
+ * throwing the face each test needs.
+ */
+describe("completing a straight on the last die", () => {
+  /** Seeds whose next single die is the face named. */
+  const ROLLS_A_ONE = 7;
+  const ROLLS_A_SIX = 4;
+  const ROLLS_A_THREE = 14;
+
+  /** 2,3,4,5 held — the 5 by its own award, the rest by hand — and one loose. */
+  function runHeld(loose: DieValue): GameState {
+    const g = position([2, 3, 4, 5, loose], [true, true, true, true, false], fives([3]));
+    // Only the 5 is paying: 2s, 3s and 4s never score on their own.
+    expect(g.turn.turnScore).toBe(50);
+    expect(diceToRoll(g.turn)).toEqual([4]);
+    return g;
+  }
+
+  it("pays 500 rather than the completing die's own 100", () => {
+    // The reported hand, exactly: the 1 arrives, and it is a straight.
+    const g = runHeld(3);
+    g.rng = ROLLS_A_ONE;
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([2, 3, 4, 5, 1]);
+    expect(after.turn.busted).toBe(false);
+    expect(after.turn.turnScore).toBe(500);
+  });
+
+  it("pays 500 instead of busting when the completing face scores nothing alone", () => {
+    const g = runHeld(2);
+    g.rng = ROLLS_A_SIX;
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([2, 3, 4, 5, 6]);
+    expect(after.turn.busted).toBe(false);
+    expect(after.turn.outcome).toBeNull();
+    expect(after.turn.turnScore).toBe(500);
+  });
+
+  it("holds the completing die, so the hand reads as a straight", () => {
+    const g = runHeld(2);
+    g.rng = ROLLS_A_SIX;
+    const after = applyAction(g, { type: "ROLL" });
+
+    // Every die held and paying: the mat is clear, so the turn can go on with a
+    // fresh five carrying the 500.
+    expect(after.turn.locked).toEqual([true, true, true, true, true]);
+    expect(after.turn.hotDice).toBe(true);
+    expect(getLegalActions(after).canRoll).toBe(true);
+    expect(getLegalActions(after).canBank).toBe(true);
+  });
+
+  it("carries the 500 when the cleared mat is thrown again", () => {
+    let g = runHeld(2);
+    g.rng = ROLLS_A_SIX;
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.turnScore).toBe(500);
+
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.carried).toBe(500);
+  });
+
+  it("still busts a throw that pairs a die already held", () => {
+    // The roll that SHOULD end the turn: a second 3 against 2,3,4,5 is four
+    // faces and a duplicate, not a run, and a 3 pays nothing alone.
+    const g = runHeld(2);
+    g.rng = ROLLS_A_THREE;
+    const after = applyAction(g, { type: "ROLL" });
+
+    expect(after.turn.dice).toEqual([2, 3, 4, 5, 3]);
+    expect(after.turn.busted).toBe(true);
+    expect(after.turn.outcome).toBe("busted");
+    expect(after.turn.turnScore).toBe(0);
+  });
+
+  it("completes on two dice at once, not just the last one", () => {
+    // 2,3,4 held and two loose, coming up 5 and 6. The throw is worth 50 on its
+    // own; the mat is a straight.
+    const ROLLS_A_FIVE_AND_A_SIX = 31;
+    const g = position([2, 3, 4, 1, 1], [true, true, true, false, false], ones([3, 4]));
+    // The 1s were paying, but they have been put back, so nothing is.
+    expect(g.turn.turnScore).toBe(0);
+    expect(diceToRoll(g.turn)).toEqual([3, 4]);
+    g.rng = ROLLS_A_FIVE_AND_A_SIX;
+
+    const after = applyAction(g, { type: "ROLL" });
+    expect(after.turn.dice).toEqual([2, 3, 4, 5, 6]);
+    expect(after.turn.outcome).toBeNull();
+    expect(after.turn.turnScore).toBe(500);
+  });
+
+  it("gives the completing die back to a player who takes it off again", () => {
+    let g = runHeld(2);
+    g.rng = ROLLS_A_SIX;
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.turnScore).toBe(500);
+
+    g = tap(g, 4);
+    expect(g.turn.turnScore).toBe(50); // back to the 5, and nothing more
+  });
+});
+
 describe("taking a die back", () => {
   it("removes the points it was part of", () => {
     let g = position(
@@ -255,9 +413,11 @@ describe("taking a die back", () => {
 
 describe("a mat that only looks clear", () => {
   it("is not hot dice when a held die is paying nothing", () => {
-    // A 1 and a 5 scored; the other three are duds held by hand.
+    // A 1 and a 5 scored; the other three are duds held by hand. The duds
+    // repeat a face deliberately: 1,5,2,3,4 is five faces running, which is a
+    // straight and therefore a clear mat — the opposite of what is under test.
     const g = position(
-      [1, 5, 2, 3, 4],
+      [1, 5, 2, 3, 3],
       [true, true, true, true, true],
       [...ones([0]), ...fives([1])],
     );

@@ -65,8 +65,10 @@ Roll 5 dice and press your luck:
   (three 6s = 600), a straight (1-2-3-4-5 or 2-3-4-5-6) = 500. Per face the
   engine pays whichever is better, the triple or the dice counted singly — so
   three 1s are 300, not 100. **Five of a kind = 1000 and replaces** what those
-  dice were paying rather than adding to it; it is the one hand you can build
-  across several throws.
+  dice were paying rather than adding to it. Both of these use all five dice,
+  and both can be **built across several throws** — hold 2-3-4-5 and throw for
+  the 1 or the 6, and the straight pays 500 even though the die that completed
+  it scores nothing on its own.
 - **Holding dice:** scoring dice are kept automatically, and you can overrule
   that by tapping a die to hold or release it. Once you have thrown, **at least
   one die must stay held** — otherwise a throw would be free, and you could keep

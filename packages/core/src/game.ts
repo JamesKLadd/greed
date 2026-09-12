@@ -25,7 +25,7 @@ import {
   diceToRoll,
   heldScore,
   refreshTurn,
-  throwCompletesFiveOfAKind,
+  throwCompletesHand,
   turnLegalActions,
 } from "./turn.js";
 import { GOAL_DEFAULT, TEAM_TABLE_SIZES } from "./types.js";
@@ -300,14 +300,15 @@ function doRoll(state: GameState): GameState {
     result: { points: result.points, isHotDice: result.isHotDice },
   });
 
-  // Five of a kind is the one hand built across several throws, and the die
-  // that completes it is worth nothing by itself on a 2, 3, 4 or 6 — so the
+  // Five of a kind and a straight are built across several throws, and the die
+  // that completes either is worth nothing by itself on a 2, 3, 4 or 6 — so the
   // throw scores zero and, read on its own, is indistinguishable from a bust.
   // A player who held a fourth 2 and threw for the fifth got it, and was busted
-  // by the best hand in the game. The mat is what decides this, not the throw.
-  const madeFiveOfAKind = throwCompletesFiveOfAKind(turn, indices);
+  // by the best hand in the game; a player holding 2,3,4,5 who threw the 6 was
+  // busted the same way. The mat is what decides this, not the throw.
+  const madeHand = throwCompletesHand(turn, indices);
 
-  if (result.points === 0 && !madeFiveOfAKind) {
+  if (result.points === 0 && !madeHand) {
     // Bust: forfeit everything accumulated this turn. The turn stays visible
     // (outcome set) so players can see the losing roll before ADVANCE.
     const lost = turn.turnScore;
@@ -338,10 +339,10 @@ function doRoll(state: GameState): GameState {
   indices.forEach((diceIndex, k) => {
     if (result.scoringMask[k]) turn.locked[diceIndex] = true;
   });
-  // The completing die IS a scoring die — the hand it makes pays 1000 — even
-  // though its own face pays nothing. Holding it is what lets heldScore see
-  // five of a kind rather than four dice and a loose one.
-  if (madeFiveOfAKind) indices.forEach((diceIndex) => (turn.locked[diceIndex] = true));
+  // The completing die IS a scoring die — the hand it makes pays 1000 or 500 —
+  // even though its own face may pay nothing. Holding it is what lets
+  // heldScore see the hand rather than four dice and a loose one.
+  if (madeHand) indices.forEach((diceIndex) => (turn.locked[diceIndex] = true));
 
   const wasHot = turn.hotDice;
   refreshTurn(turn);
@@ -356,11 +357,11 @@ function doRoll(state: GameState): GameState {
  * Hold a die, or put it back.
  *
  * The engine still locks scoring dice on its own; this is the player overruling
- * it — which they need, because a five of a kind is built up over several
- * throws and building one means being able to reject the die that isn't part of
- * it. Unlocking takes back whatever that die was earning: any award it belonged
- * to stops counting (see heldScore), which can also mean a mat that was clear no
- * longer is.
+ * it — which they need, because a five of a kind and a straight are both built
+ * up over several throws, and building one means being able to reject the die
+ * that isn't part of it. Unlocking takes back whatever that die was earning:
+ * any award it belonged to stops counting (see heldScore), which can also mean
+ * a mat that was clear no longer is.
  *
  * A tap that isn't allowed leaves the position exactly as it was — see
  * `canToggleLock` for which those are, and why releasing the last held die is

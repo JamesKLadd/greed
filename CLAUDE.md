@@ -35,8 +35,13 @@ build on every push. Node 20.
 ## Settled rules (easy to get wrong — do not re-litigate)
 
 - Scoring: 1 = 100, 5 = 50, three of a kind = 100 × face, straight = 500.
-  Five of a kind = 1000 and **replaces** what those dice were paying rather than
-  adding to it; it is the one hand that can be built across several throws.
+  Five of a kind = 1000. Both take all five dice, both **replace** what those
+  dice were paying rather than adding to it, and both are **built across several
+  throws** — the one place the engine reads the MAT rather than the throw. The
+  die that completes either often pays nothing alone (any 2, 3, 4 or 6), so
+  scoring the throw on its own busts the best hands in the game. `heldHand` and
+  `throwCompletesHand` in `core/src/turn.ts` are the single answer; five of a
+  kind had it first and the straight was still busting.
 - Per face the engine takes max(triple, all-individual) — three 1s = 300,
   four 5s = 550, five 1s = 500.
 - **Default goal is 3000** (`GOAL_DEFAULT`). It was 2000 once; that was wrong.

@@ -1,4 +1,4 @@
-import { isFiveOfAKind } from "@greed/core";
+import { heldHand } from "@greed/core";
 import type { TurnState } from "@greed/core";
 
 /**
@@ -21,10 +21,13 @@ export type RollCall = "five" | "straight" | "triple" | null;
 export function rollCall(turn: TurnState): RollCall {
   const roll = turn.lastRoll;
   if (!roll) return null;
-  // Read off the MAT, not the throw: five of a kind is the one hand that can be
-  // built up over several throws, so the throw that completes it may be a single
-  // die. It outranks the others, and cannot coexist with them anyway.
-  if (isFiveOfAKind(turn)) return "five";
+  // Read off the MAT, not the throw: five of a kind and a straight are both
+  // built up over several throws, so the throw that completes one may be a
+  // single die. Either outranks a triple, and cannot coexist with one anyway.
+  const hand = heldHand(turn);
+  if (hand) return hand.kind === "five-of-a-kind" ? "five" : "straight";
+  // A straight that has been thrown but since broken up by hand still gets its
+  // call: the player did roll it.
   if (roll.breakdown.some((b) => b.kind === "straight")) return "straight";
 
   // Three of a kind is three matching dice in the throw — whatever the engine

@@ -266,8 +266,9 @@ export type GameAction =
   | { type: "SKIP" }
   /**
    * Hold a die, or put it back in the cup. The player's call, not the engine's:
-   * scoring dice still lock themselves, but a five-of-a-kind can be built over
-   * several throws, and building one means being able to say "not that die".
+   * scoring dice still lock themselves, but a five of a kind and a straight are
+   * both built over several throws, and building one means being able to say
+   * "not that die".
    */
   | { type: "TOGGLE_LOCK"; index: number };
 

@@ -736,7 +736,7 @@ export const en = {
   "rules.ex.five": "a single 5 = 50",
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "three of a kind = 100 × face",
-  "rules.ex.straight": "a straight uses all five dice",
+  "rules.ex.straight": "a straight — build it over several throws",
   "rules.ex.fiveKind": "five of a kind — build it over several throws",
   "rules.note":
     "Three 1s = 300 (the singles beat the triple), three 5s = 500, four 6s = 600. Everything in a throw adds together.",
@@ -1442,7 +1442,7 @@ export const es: Record<MsgKey, string> = {
   "rules.ex.five": "un solo 5 = 50",
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "trío = 100 × valor",
-  "rules.ex.straight": "una escalera usa los cinco dados",
+  "rules.ex.straight": "una escalera — puedes formarla en varias tiradas",
   "rules.ex.fiveKind": "repóker — puedes formarlo en varias tiradas",
   "rules.note":
     "Tres 1 = 300 (los sueltos superan al trío), tres 5 = 500, cuatro 6 = 600. Todo lo de una tirada se suma.",
@@ -2145,7 +2145,7 @@ export const fr: Record<MsgKey, string> = {
   "rules.ex.five": "un seul 5 = 50",
   "rules.ex.onesFives": "100 + 100 + 50",
   "rules.ex.triple": "brelan = 100 × la face",
-  "rules.ex.straight": "une suite utilise les cinq dés",
+  "rules.ex.straight": "une suite — vous pouvez la construire en plusieurs lancers",
   "rules.ex.fiveKind": "quinte — vous pouvez la construire en plusieurs lancers",
   "rules.note":
     "Trois 1 = 300 (les unités battent le brelan), trois 5 = 500, quatre 6 = 600. Tout ce qu'un lancer marque s'additionne.",
