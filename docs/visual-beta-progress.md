@@ -76,3 +76,47 @@ James requested the two mobile fixes and continuation of the visual plan on Sept
 - Complete device hardening: iPhone Safari and Android Chrome, smaller/older hardware, measured celebration frame times, audio mix on actual speakers/headphones, and live account/challenge UI round-trips.
 - Final cross-screen audit for online lobby/results/friends/leaderboards under real account data, all seat counts and accessibility modes.
 - Public store assets, final app icons and platform packaging remain Phase 9, a separate release-preparation decision. No release version/date was invented.
+
+## Character table — Tables C through F
+
+The hand-drawn character table replaced the oval/pod layout for beta local, online
+and spectator matches. Classic and the timed challenges keep their existing
+screens. Full design and acceptance record: [table-scene-redesign-plan.md](table-scene-redesign-plan.md).
+
+- **Table C** connected real local gameplay to the scene: felt scores, active
+  player, player details, last-seat flag, team totals, the drawer and the blank
+  bottom strip.
+- **Table D** replaced the boxed celebration with unboxed felt lettering in a
+  clipped, noninteractive lane, sharing `rollCall(turn)` so three of a kind and
+  straight are classified once. Existing durations and the one-pending-event
+  queue are unchanged; daily and weekly still receive no lettering.
+- **Table E** put online and spectator matches on the same scene: per-player art,
+  active-player dice with a viewer-local table, spectator anchor without a "you"
+  label, reconnect and rematch. It also fixed a real bug — refreshing a host
+  during a game discarded the client-side lobby metadata and hid the host-only
+  return-to-lobby control.
+- **Table F** ran the delivery checks and merged to `main`. See
+  [table-f/README.md](table-f/README.md).
+
+### Verification
+
+- Typecheck, lint, format check and production build pass. Full suite:
+  **616 passed, 3 skipped, 48 files** (the three need a real Postgres).
+- `tableSceneGeometry.test.ts` grew to 45 tests: a tablet size was added, and
+  name-to-name non-overlap is now asserted at every seat count and size, because
+  name chips are buttons.
+- Seven render-forced browser samples across narrow phone, phone, tablet, short
+  landscape and desktop, at 2, 5, 7 and 8 seats, all clean.
+- Accessibility checked with French, large text, high contrast and reduced motion
+  applied together.
+- Payload: about 15 kB more gzipped initial JS+CSS than the previous beta, with
+  no new dependency and no downloaded art or audio.
+- Service worker cache is `greed-shell-v8-character-table`.
+
+### Still outstanding
+
+Real iPhone Safari and Android Chrome, measured animation frame times, actual
+screen-reader passes, and live account round-trips. Table F states each of these
+as unverified rather than leaving them implied. James's character artwork remains
+the planned later art pass; the character manifest exists so it can land without
+touching seat geometry.

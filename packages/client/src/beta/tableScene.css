@@ -602,6 +602,7 @@
 }
 .tp-score strong {
   line-height: 1;
+  font-size: var(--scene-score-font);
 }
 .tp-score > span,
 .tp-seat--self .tp-score > span {

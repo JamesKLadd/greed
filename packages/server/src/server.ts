@@ -387,8 +387,13 @@ export class GreedServer {
     // Signed-in players show as online to their friends while connected.
     if (seat.userId) markOnline(seat.userId);
     this.send(ws, { type: "welcome", youId: seat.id, token: seat.token, code: room.code });
-    if (room.phase === "in-game") this.broadcastGame(room);
-    else this.broadcastLobby(room);
+    if (room.phase === "in-game") {
+      // A refreshed client has no pre-game lobby in memory. Restore the room's
+      // existing seat/host metadata before its game snapshot, so host-only
+      // endgame controls survive reconnect without adding a protocol field.
+      this.send(ws, { type: "lobby", lobby: lobbyView(room) });
+      this.broadcastGame(room);
+    } else this.broadcastLobby(room);
   }
 
   // -------------------------------------------------------------------------
@@ -1063,7 +1068,12 @@ export class GreedServer {
     const ws = seat.ws;
     seat.ws = null;
     room.seats = room.seats.filter((s) => s.id !== seat.id);
-    if (seat.isHost) this.reassignHost(room);
+    if (seat.isHost) {
+      this.reassignHost(room);
+      // The game packet follows this metadata update. Connected clients must
+      // learn who inherited host controls without having to refresh first.
+      this.broadcastLobby(room);
+    }
     if (ws) {
       this.detach(ws, seat);
       this.send(ws, { type: "left" });

@@ -30,6 +30,9 @@ const TablePrototype = import.meta.env.DEV
 const PlayableTableReview = import.meta.env.DEV
   ? lazy(() => import("./dev/tablePrototype/PlayableTableReview.js"))
   : null;
+const TableEventReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/TableEventReview.js"))
+  : null;
 
 type Mode =
   | "home"
@@ -125,6 +128,25 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("table-online")) {
+    return (
+      <BetaActiveContext.Provider value={betaActive}>
+        <OnlineScreen
+          recordResults={false}
+          onExit={() => {
+            window.location.href = "/";
+          }}
+        />
+      </BetaActiveContext.Provider>
+    );
+  }
+  if (TableEventReview && new URLSearchParams(window.location.search).has("table-events")) {
+    return (
+      <Suspense fallback={<p>Opening table events…</p>}>
+        <TableEventReview />
+      </Suspense>
+    );
+  }
   if (PlayableTableReview && new URLSearchParams(window.location.search).has("table-play")) {
     return (
       <Suspense fallback={<p>Opening local table…</p>}>

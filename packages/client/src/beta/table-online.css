@@ -1,0 +1,121 @@
+/* Online scene additions share the local geometry and preserve its empty footer. */
+.scene-connection {
+  position: absolute;
+  z-index: 30;
+  top: calc(50px + env(safe-area-inset-top, 0px));
+  left: 10px;
+  right: 10px;
+  pointer-events: none;
+}
+.scene-connection .banner {
+  max-width: 520px;
+  margin: auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.tp-seat-status {
+  position: absolute;
+  z-index: 7;
+  pointer-events: none;
+}
+.scene-seat-status {
+  position: absolute;
+  right: 5%;
+  bottom: 30%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.scene-seat-status__offline {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: #fff0c7;
+  background: #38211c;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.scene-seat-status__offline svg {
+  width: 16px;
+  height: 16px;
+}
+.scene-seat-status__emote {
+  font-size: 26px;
+  animation: scene-emote 4s both;
+}
+.scene-game .tp-turn-label > .scene-turn-clock {
+  position: relative;
+  overflow: visible;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin-block: -5px;
+}
+.scene-turn-clock .turn-ring {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.scene-watching {
+  position: absolute;
+  z-index: 12;
+  left: 5%;
+  right: 5%;
+  bottom: 5%;
+  color: #fff1d2;
+  font-size: clamp(11px, 3cqw, 15px);
+  text-align: center;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+}
+.scene-menu__room {
+  overflow-wrap: anywhere;
+}
+.scene-menu__reactions {
+  margin-top: 18px;
+}
+.scene-menu__reactions .emotes {
+  position: relative;
+  inset: auto;
+}
+.scene-menu__reactions .emotes__pop {
+  position: static;
+  margin-top: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.scene-game [data-team="0"] .tp-name {
+  --scene-team-color: #9addff;
+}
+.scene-game [data-team="1"] .tp-name {
+  --scene-team-color: #ffd28b;
+}
+.scene-game [data-team] .tp-name > span {
+  border-bottom: 2px solid var(--scene-team-color);
+}
+@keyframes scene-emote {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-seat-status__emote {
+    animation: none !important;
+  }
+}
+:root[data-motion="reduced"] .scene-seat-status__emote {
+  animation: none !important;
+}

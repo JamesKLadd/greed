@@ -135,6 +135,46 @@ describe("turn timeout", () => {
     host.ws.close();
   }, 10000);
 
+  it("restores host controls to the surviving player after the host times out", async () => {
+    const host = await connect(url);
+    const peer = await connect(url);
+    host.send({ type: "create-room", name: "Idle host", goal: 50000 });
+    const original = (await host.waitFor((m) => m.type === "welcome")) as Extract<
+      ServerMessage,
+      { type: "welcome" }
+    >;
+    peer.send({ type: "join-room", name: "Active peer", code: original.code });
+    const joined = (await peer.waitFor((m) => m.type === "welcome")) as Extract<
+      ServerMessage,
+      { type: "welcome" }
+    >;
+    peer.send({ type: "set-ready", ready: true });
+    await host.waitFor((m) => m.type === "lobby" && m.lobby.seats.length === 2 && m.lobby.canStart);
+    peer.ws.on("message", (data) => {
+      const m = decode<ServerMessage>(data.toString());
+      if (m.type !== "game" || m.state.phase === "game-over") return;
+      const turn = m.state.turn;
+      if (m.state.players[turn.playerIndex].id !== joined.youId || turn.outcome) return;
+      peer.send({ type: "game-action", action: { type: turn.turnScore > 0 ? "BANK" : "ROLL" } });
+    });
+    host.send({ type: "start-game" });
+    await host.waitFor((m) => m.type === "left", 5000);
+    const metadata = (await peer.waitFor(
+      (m) => m.type === "lobby" && m.lobby.hostId === joined.youId,
+    )) as Extract<ServerMessage, { type: "lobby" }>;
+    expect(metadata.lobby.seats.find((seat) => seat.id === joined.youId)?.isHost).toBe(true);
+    expect(metadata.lobby.seats.some((seat) => seat.id === original.youId)).toBe(false);
+    peer.send({ type: "to-lobby" });
+    // A changed goal proves the new host's commands were accepted after the
+    // actual return to the lobby, rather than matching an old buffered packet.
+    peer.send({ type: "set-goal", goal: 1000 });
+    await peer.waitFor(
+      (m) => m.type === "lobby" && m.lobby.goal === 1000 && m.lobby.hostId === joined.youId,
+    );
+    host.ws.close();
+    peer.ws.close();
+  }, 10000);
+
   it("broadcasts the countdown only while a human's turn is unstarted", async () => {
     // What the countdown ring on the active seat draws. The server only limits
     // STARTING a turn, so the clock must appear when it's a connected human's

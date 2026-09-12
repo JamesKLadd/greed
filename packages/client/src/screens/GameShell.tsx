@@ -45,6 +45,8 @@ export interface GameShellProps {
   avatars?: Record<string, string>;
   betaLooks?: Record<string, BetaLook>;
   turnTimer?: { endsAt: number; total: number } | null;
+  /** Changes only when an authoritative snapshot replaces a disconnected session. */
+  presentationEpoch?: number;
 
   /** A message about the connection, shown above the game's own banners. */
   notice?: ReactNode;
@@ -79,6 +81,7 @@ export function GameShell({
   avatars,
   betaLooks,
   turnTimer,
+  presentationEpoch,
   notice,
   barLeft,
   barRight,
@@ -160,7 +163,9 @@ export function GameShell({
       </main>
 
       {floating}
-      {betaActive && <GameCelebration state={state} isRolling={isRolling} />}
+      {betaActive && (
+        <GameCelebration key={presentationEpoch} state={state} isRolling={isRolling} />
+      )}
       <Toast toast={toast} />
       {overlays}
     </div>

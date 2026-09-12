@@ -37,6 +37,9 @@ describe("table scene geometry", () => {
     [320, 474],
     [360, 546],
     [390, 736],
+    // Tablet portrait. Added for Table F: the plan's verification list asks for
+    // a tablet size and every other check ran without one.
+    [768, 940],
     [844, 314],
     [1120, 708],
   ])
@@ -58,8 +61,14 @@ describe("table scene geometry", () => {
             expect(r.y + r.height).toBeLessThanOrEqual(h + 0.01);
           }
           expect(seat.name.height).toBeGreaterThanOrEqual(44);
-          for (const other of layout.seats.slice(i + 1))
+          for (const other of layout.seats.slice(i + 1)) {
             expect(overlaps(seat.score, other.score)).toBe(false);
+            // Names are buttons — they open player details — so two of them
+            // sharing pixels is a hit-target conflict, not just a visual one.
+            // (Scores are inert text and are allowed to share a box edge with a
+            // name: the rendered glyphs are far narrower than the centred box.)
+            expect(overlaps(seat.name, other.name)).toBe(false);
+          }
           expect(overlaps(seat.flag, seat.score)).toBe(false);
         }
         expect(layout.dieEdge).toBeLessThanOrEqual(40);

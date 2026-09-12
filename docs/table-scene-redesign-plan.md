@@ -1,6 +1,6 @@
 # Greed — character-table redesign plan
 
-Status: Table C complete on the portable `codex/table-c-checkpoint` branch. See [Table C gameplay checks and screenshots](table-c/README.md). [Table B](table-b/README.md) and [Table A](table-a/README.md) preserve the earlier geometry and composition reviews. Local beta gameplay is connected; the live site is unchanged. Next chunk: Table D when requested.
+Status: **all six chunks complete and merged to `main`.** [Table F](table-f/README.md) carries the repository checks, the layout and accessibility audit, the payload measurement and the list of what was not verified. [Table E](table-e/README.md) covers online and spectators, [Table D](table-d/README.md) event presentation, and [Table C](table-c/README.md), [Table B](table-b/README.md) and [Table A](table-a/README.md) the playable slice, the scene contract and the composition review. The beta stays behind the existing 2525 gate; Classic is unchanged.
 Reference: James’s hand-drawn eight-player table, supplied September 11, 2026.
 This plan supersedes the old oval/card layout direction for beta local and online matches. The broader visual-beta plan remains the background roadmap.
 
@@ -275,9 +275,9 @@ Implement only the next authorized chunk, record its result, and stop at its sta
 | Table E — online and spectator validation       | Verify per-player art and dice ownership, viewer-local table, room controls, spectator anchor, reconnect and rematch.                                        | Mixed Classic/beta, old data, disconnect/takeover and spectator checks pass; no protocol change required.                                              | Medium       |
 | Table F — hardening and publication             | Phone/desktop/accessibility checks, performance capture, final art/spacing tuning, full repository checks, commit and publish when authorized.               | Test report and mobile checklist accompany a deployed beta checkpoint.                                                                                 | Medium       |
 
-Tables A, B and C are complete. Table B addressed the first review's dice size, checkered marker placement and text spacing. Table C connected local gameplay, added accessible menus/details, and corrected narrow-phone touch overlaps and focus-induced board scrolling. The next implementation chunk is **Table D**, refining event presentation.
+All six chunks are complete. Table B addressed the first review's dice size, checkered marker placement and text spacing. Table C connected local gameplay, added accessible menus/details, and corrected narrow-phone touch overlaps and focus-induced board scrolling. Table D replaced the boxed celebration with unboxed felt lettering sharing `rollCall`. Table E put online and spectator matches on the same scene and fixed a host-metadata loss on refresh. Table F ran the repository, layout, accessibility and payload checks and merged the work to `main`.
 
-Table C can be a second playable delivery before every animation is polished. Avoid shipping an incomplete online layout as if it were verified: use the previous beta table in unvalidated match contexts until Table E is ready.
+What remains is not a chunk of this plan: real-device Safari/Chrome validation, measured frame times, screen-reader passes and James's character artwork. Those are listed in [Table F](table-f/README.md) as explicitly unverified rather than assumed.
 
 ## 14. Verification plan
 
@@ -324,7 +324,7 @@ Repository:
 
 Confirmed decisions are in Section 1. The following defaults can be resolved during Table A without blocking this plan: exact camera steepness, character crop sizes, final empty-strip heights, glow colors and how much tabletop skew to apply to scores.
 
-Resume by reading this plan, the Table C handoff, the current visual-beta progress document, repository working notes and the latest git status. The development-only `?table-preview` route remains the static review; `?table-play` now runs real local matches without recording progression. Implement Table D only when requested; preserve the connected scene, controllers and tests.
+Resume by reading this plan, the [Table F](table-f/README.md) report, the current visual-beta progress document, repository working notes and the latest git status. The development-only routes remain: `?table-preview` is the static composition review, `?table-play` runs real local matches, `?table-events` replays the ten event fixtures and `?table-online` drives a real local server. None are included in production. `?old-table` still selects the previous beta layout during development.
 
 Keep a short progress entry for each completed chunk: files, screenshots, checks, unresolved problems, observed account usage and the next exact action. The allowance was **32% remaining at the start of this planning turn**; it is account-wide, and no exact future per-chunk usage can be guaranteed.
 

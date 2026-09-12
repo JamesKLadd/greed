@@ -1,6 +1,8 @@
 import { isFiveOfAKind, type GameState } from "@greed/core";
+import { rollCall } from "../game/rollCall.js";
 
-export type CelebrationKind = "score" | "bank" | "bigBank" | "hot" | "five" | "bust" | "win";
+export type CelebrationKind =
+  "score" | "bank" | "bigBank" | "hot" | "triple" | "straight" | "five" | "bust" | "win";
 export interface Celebration {
   kind: CelebrationKind;
   points?: number;
@@ -10,12 +12,15 @@ export interface CelebrationCursor {
   length: number;
   tail: string;
   fiveRoll: number;
+  game: string;
 }
 export const CELEBRATION_MS: Record<CelebrationKind, number> = {
   score: 1500,
   bank: 3100,
   bigBank: 3500,
   hot: 3500,
+  triple: 3500,
+  straight: 3500,
   five: 3900,
   bust: 3500,
   win: 4300,
@@ -36,12 +41,15 @@ export function readCelebration(
     }
   }
   const five = isFiveOfAKind(state.turn) && state.turn.lastRoll !== null;
+  const game = JSON.stringify([state.config.seed, state.players.map((p) => p.id), state.order]);
   const contiguous =
     previous &&
+    previous.game === game &&
     log.length >= previous.length &&
     JSON.stringify(log[previous.length - 1]) === previous.tail &&
     log.length - previous.length <= 4;
   const cursor = {
+    game,
     length: log.length,
     tail,
     fiveRoll: contiguous ? previous.fiveRoll : five ? lastRoll : -1,
@@ -65,9 +73,23 @@ export function readCelebration(
     if (e.type === "game-over" || e.type === "auto-win")
       cue = { kind: "win", player: playerName(e.type === "game-over" ? e.winnerId : e.playerId) };
   }
+  // A call describes this throw only. Held dice from an earlier throw must not
+  // manufacture another triple; the shared rollCall understands that distinction.
+  const rolled = events.some((e) => e.type === "roll");
+  const pattern = rolled ? rollCall(state.turn) : null;
+  if (state.turn.outcome === null && (cue?.kind === "score" || cue?.kind === "hot")) {
+    if (pattern === "straight" || (pattern === "triple" && cue.kind !== "hot"))
+      cue = { ...cue, kind: pattern };
+  }
   // The core understands a hand built across throws. Lock toggles may revisit
   // that same hand; celebrate at most once per completed roll, never per render.
-  if (five && cursor.fiveRoll !== lastRoll && state.turn.outcome === null) {
+  if (
+    rolled &&
+    five &&
+    cursor.fiveRoll !== lastRoll &&
+    state.turn.outcome === null &&
+    cue?.kind !== "win"
+  ) {
     cursor.fiveRoll = lastRoll;
     cue = { kind: "five", player: state.players[state.turn.playerIndex]?.name };
   }

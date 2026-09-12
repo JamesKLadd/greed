@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CharacterPlaceholder } from "./CharacterPlaceholder.js";
+import { loadCharacterImage, type LoadedCharacterImage } from "./loadCharacterImage.js";
 import {
   CHARACTER_CANVAS,
   getArtPlacement,
@@ -30,30 +31,11 @@ export function CharacterSprite({
   const kind = getCharacterKind(characterId);
   const selectedArt = art ?? getCharacterArt(characterId, view);
   const src = isCharacterArt(selectedArt) ? selectedArt.src : undefined;
-  const [loadedImage, setLoadedImage] = useState<{
-    src: string;
-    width: number;
-    height: number;
-  } | null>(null);
+  const [loadedImage, setLoadedImage] = useState<LoadedCharacterImage | null>(null);
 
   useEffect(() => {
     if (!src) return;
-    let active = true;
-    const image = new Image();
-    image.onload = () => {
-      if (active && image.naturalWidth > 0 && image.naturalHeight > 0) {
-        setLoadedImage({ src, width: image.naturalWidth, height: image.naturalHeight });
-      }
-    };
-    image.onerror = () => {
-      if (active) setLoadedImage(null);
-    };
-    image.src = src;
-    return () => {
-      active = false;
-      image.onload = null;
-      image.onerror = null;
-    };
+    return loadCharacterImage(src, setLoadedImage);
   }, [src]);
 
   const placement =

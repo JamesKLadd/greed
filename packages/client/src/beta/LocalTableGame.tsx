@@ -16,43 +16,64 @@ import { loadSettings } from "../game/settings.js";
 import { teamName } from "../game/teams.js";
 import { useI18n, type MsgKey } from "../i18n/i18n.js";
 import { ACHIEVEMENTS } from "../game/profile.js";
+import { TurnRing } from "../components/TurnRing.js";
+import { onlineScenePlayers } from "./onlineScene.js";
+import { OnlineSeatStatus } from "./OnlineSeatStatus.js";
+import { emoteGlyph } from "../components/EmoteBar.js";
+import { useTableFeedback } from "./tableFeedback.js";
 
 export type SceneOverlay = { kind: "menu" } | { kind: "player"; id: string } | null;
 interface LocalTableGameProps extends GameShellProps {
   sceneOverlay: SceneOverlay;
   onSceneOverlay: (overlay: SceneOverlay) => void;
+  /** Online identity comes from the server; local play uses the device's look. */
+  online?: boolean;
+  roomCode?: string | null;
 }
 
-/** Local controller adapter only. Online keeps GameShell until Table E. */
+/** Shared match scene. Controllers retain authority, action guards and overlay ownership. */
 export function LocalTableGame(props: LocalTableGameProps) {
   const { state, perspectiveId, isRolling, canAct, sceneOverlay, onSceneOverlay } = props;
   const { t, n } = useI18n();
   const { appearance } = useAppearance();
   const settings = loadSettings();
+  const suspended = Boolean(props.online && props.notice);
+  const feedback = useTableFeedback(state, suspended, props.presentationEpoch);
   const active = state.players[state.turn.playerIndex];
   const last = state.players[state.order[state.order.length - 1]];
-  const players: ScenePlayer[] = state.players.map((p, i) => ({
-    id: p.id,
-    name: p.name,
-    score: p.total,
-    characterId: p.id === perspectiveId ? appearance.mascot : MASCOTS[i % MASCOTS.length],
-    nameplate: p.id === perspectiveId ? appearance.nameplate : undefined,
-  }));
+  const onlinePlayers = props.online
+    ? onlineScenePlayers(state, props.avatars, props.betaLooks, props.presence)
+    : null;
+  const players: ScenePlayer[] =
+    onlinePlayers?.map((player) => ({
+      ...player,
+      status: <OnlineSeatStatus connected={player.connected} emote={props.emotes?.[player.id]} />,
+    })) ??
+    state.players.map((p, i) => ({
+      id: p.id,
+      name: p.name,
+      score: p.total,
+      characterId: p.id === perspectiveId ? appearance.mascot : MASCOTS[i % MASCOTS.length],
+      nameplate: p.id === perspectiveId ? appearance.nameplate : undefined,
+      team: p.team,
+    }));
   const selected =
     sceneOverlay?.kind === "player"
       ? state.players.find((p) => p.id === sceneOverlay.id)
       : undefined;
   const selectedLook =
-    selected?.id === perspectiveId
+    onlinePlayers?.find((p) => p.id === selected?.id)?.look ??
+    (selected?.id === perspectiveId
       ? appearance
       : {
           ...DEFAULT_APPEARANCE,
           mascot: players.find((p) => p.id === selected?.id)?.characterId ?? "fox",
-        };
+        });
   const selectedBadge = ACHIEVEMENTS.find((a) => a.id === selectedLook.badge);
+  const activeOffline = props.online && !active.isBot && props.presence?.[active.id] === false;
   return (
     <div
-      className="tp-screen scene-game"
+      className={`tp-screen scene-game${props.online ? " scene-game--online" : ""}`}
       style={props.cosmetics}
       data-notices={Boolean(
         settings.showGuidance ||
@@ -76,20 +97,32 @@ export function LocalTableGame(props: LocalTableGameProps) {
           </svg>
         </button>
       </header>
+      {props.notice && (
+        <div className="scene-connection" role="status">
+          {props.notice}
+        </div>
+      )}
       <TableScene
         players={players}
         order={state.order.map((i) => state.players[i].id)}
-        perspectiveId={perspectiveId ?? undefined}
-        viewerId={perspectiveId ?? undefined}
+        perspectiveId={props.spectating ? undefined : (perspectiveId ?? undefined)}
+        viewerId={props.spectating ? undefined : (perspectiveId ?? undefined)}
         activePlayerId={state.phase === "game-over" ? undefined : active.id}
+        finalRound={state.endgame.triggered}
+        {...feedback}
         onPlayerDetails={(player) => onSceneOverlay({ kind: "player", id: player.id })}
       >
         <div className="scene-announcements">
           {state.endgame.triggered && state.phase === "playing" && (
             <div className="scene-final">
-              {t("banner.finalRoundPre")}
-              <strong>{last.name}</strong>
-              {t("banner.finalRoundPost")}
+              <span className="scene-final__short" aria-hidden="true">
+                {t("scene.finalRound")}
+              </span>
+              <span className="scene-final__full">
+                {t("banner.finalRoundPre")}
+                <strong>{last.name}</strong>
+                {t("banner.finalRoundPost")}
+              </span>
             </div>
           )}
           {state.phase === "sudden-death" && (
@@ -129,7 +162,11 @@ export function LocalTableGame(props: LocalTableGameProps) {
         <div className="tp-turn-label" aria-live="polite">
           <span>
             {t("controls.whoseTurn", { name: active.name })}
-            {active.isBot && !state.turn.outcome && !isRolling ? ` · ${t("table.thinking")}` : ""}
+            {activeOffline
+              ? ` · ${t("table.offline")}`
+              : active.isBot && !state.turn.outcome && !isRolling
+                ? ` · ${t("table.thinking")}`
+                : ""}
           </span>
           {settings.showTurnScore && (
             <span>
@@ -137,18 +174,35 @@ export function LocalTableGame(props: LocalTableGameProps) {
               · {t("beta.atStake")} {n(state.turn.turnScore)}
             </span>
           )}
+          {props.online && state.phase !== "game-over" && props.turnTimer && (
+            <span className="scene-turn-clock" role="img" aria-label={t("lobby.turnClock")}>
+              <TurnRing timer={props.turnTimer} />
+            </span>
+          )}
         </div>
-        <ActionBar
-          state={state}
-          legal={props.legal}
-          isRolling={isRolling}
-          canAct={canAct}
-          onRoll={props.onRoll}
-          onBank={props.onBank}
-          variant="scene"
-        />
+        {props.spectating ? (
+          <div className="scene-watching" role="status">
+            {t("spectate.watching")}
+          </div>
+        ) : (
+          <ActionBar
+            state={state}
+            legal={props.legal}
+            isRolling={isRolling}
+            canAct={canAct}
+            onRoll={props.onRoll}
+            onBank={props.onBank}
+            variant="scene"
+          />
+        )}
         <div className="scene-result">
-          <GameCelebration state={state} isRolling={isRolling} />
+          <GameCelebration
+            key={props.presentationEpoch}
+            state={state}
+            isRolling={isRolling}
+            variant="scene"
+            suspended={suspended}
+          />
         </div>
       </TableScene>
       <div className="tp-empty" aria-hidden="true" />
@@ -157,7 +211,13 @@ export function LocalTableGame(props: LocalTableGameProps) {
           <p className="scene-menu__goal">
             {t("common.goal")} · {n(state.config.goal)}
           </p>
+          {props.online && props.roomCode && !settings.hideRoomCode && (
+            <p className="scene-menu__room">
+              {t("lobby.roomCode")} <strong>{props.roomCode}</strong>
+            </p>
+          )}
           <div className="scene-menu__utilities">{props.barRight}</div>
+          {props.floating && <div className="scene-menu__reactions">{props.floating}</div>}
           <Placings state={state} youId={perspectiveId} />
         </GameMenuDrawer>
       )}
@@ -180,6 +240,10 @@ export function LocalTableGame(props: LocalTableGameProps) {
             )}
             {selected.id === last.id && <p>🏁 {t("aria.playsLast")}</p>}
             {selected.isBot && <p>{t("scene.bot")}</p>}
+            {props.online && !selected.isBot && props.presence?.[selected.id] === false && (
+              <p>{t("table.offline")}</p>
+            )}
+            {props.emotes?.[selected.id] && <p>{emoteGlyph(props.emotes[selected.id].emote)}</p>}
             <button className="tp-close" onClick={() => onSceneOverlay(null)}>
               {t("common.close")}
             </button>

@@ -122,14 +122,29 @@ describe("spectator mode", () => {
       { type: "game" }
     >;
     expect(seen.skins).toEqual(game.skins);
+    expect(seen.state.order).toEqual(game.state.order);
     host.ws.close();
+    const dropped = (await classic.waitFor(
+      (m) => m.type === "game" && m.presence.some((p) => p.id === welcome.youId && !p.connected),
+    )) as Extract<ServerMessage, { type: "game" }>;
+    expect(dropped.state.players.map((p) => p.id)).toEqual(game.state.players.map((p) => p.id));
+    expect(dropped.state.order).toEqual(game.state.order);
     const resumed = await connect(url);
     resumed.send({ type: "reconnect", token: welcome.token });
+    const roomInfo = (await resumed.waitFor((m) => m.type === "lobby")) as Extract<
+      ServerMessage,
+      { type: "lobby" }
+    >;
+    expect(roomInfo.lobby.hostId).toBe(welcome.youId);
+    expect(roomInfo.lobby.seats.find((p) => p.id === welcome.youId)?.isHost).toBe(true);
+    expect(roomInfo.lobby.seats.filter((p) => p.isHost)).toHaveLength(1);
     const restored = (await resumed.waitFor((m) => m.type === "game")) as Extract<
       ServerMessage,
       { type: "game" }
     >;
     expect(restored.skins).toEqual(game.skins);
+    expect(restored.state.order).toEqual(game.state.order);
+    expect(restored.presence.find((p) => p.id === welcome.youId)?.connected).toBe(true);
     classic.ws.close();
     watcher.ws.close();
     resumed.ws.close();

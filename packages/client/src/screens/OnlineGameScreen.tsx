@@ -1,7 +1,7 @@
 import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
-import { appearanceVars, normalizeAppearance } from "../beta/appearance.js";
-import { useMemo, useState } from "react";
+import { appearanceVars } from "../beta/appearance.js";
+import { useEffect, useMemo, useState } from "react";
 import { getLegalActions } from "@greed/core";
 import type { OnlineController } from "../net/useOnlineGame.js";
 import { GameShell } from "./GameShell.js";
@@ -16,15 +16,26 @@ import { loadProfile } from "../game/profile.js";
 import { loadSettings } from "../game/settings.js";
 import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { LocalTableGame, type SceneOverlay } from "../beta/LocalTableGame.js";
+import { canActOnline, onlineAppearance } from "../beta/onlineScene.js";
 
 /** Online play: the server is authoritative and every seat is somebody else. */
-export function OnlineGameScreen({ net }: { net: OnlineController }) {
+export function OnlineGameScreen({
+  net,
+  recordResults = true,
+}: {
+  net: OnlineController;
+  recordResults?: boolean;
+}) {
   const t = useT();
   const beta = useBetaActive();
   const { appearance } = useAppearance();
+  const [sceneOverlay, setSceneOverlay] = useState<SceneOverlay>(null);
+  const sceneActive =
+    beta && !(import.meta.env.DEV && new URLSearchParams(window.location.search).has("old-table"));
   const state = net.game!;
   const current = state.players[state.turn.playerIndex];
-  const canAct = current.id === net.youId && state.phase !== "game-over";
+  const canAct = canActOnline(state, net.youId, net.isSpectator, net.reconnecting);
   const legal = getLegalActions(state);
   const isHost = net.lobby?.seats.find((s) => s.id === net.youId)?.isHost ?? false;
   const votes = net.rematchState?.votes.length ?? 0;
@@ -39,12 +50,7 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
   const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
   const classicCosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
   const cosmetics = beta
-    ? appearanceVars(
-        normalizeAppearance({
-          ...appearance,
-          dice: net.betaLooks[current.id]?.dice ?? net.skins[current.id] ?? "ivory",
-        }),
-      )
+    ? appearanceVars(onlineAppearance(appearance, current.id, net.skins, net.betaLooks))
     : classicCosmetics;
 
   const chrome = useGameChrome({
@@ -52,14 +58,33 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
     legal,
     canAct,
     isRolling: net.isRolling,
-    youId: net.youId,
+    youId: recordResults && !net.isSpectator ? net.youId : null,
+    blockingOverlayActive: sceneActive && sceneOverlay !== null,
     onRoll: net.roll,
     onBank: net.bank,
     onToggleDie: net.toggleDie,
   });
+  const mandatoryOverlayActive = state.phase === "game-over";
+  const externalOverlayActive = mandatoryOverlayActive || chrome.showRules || chrome.showHistory;
+  const { setShowRules, setShowHistory } = chrome;
+  useEffect(() => {
+    if (externalOverlayActive) setSceneOverlay(null);
+  }, [externalOverlayActive]);
+  useEffect(() => {
+    if (mandatoryOverlayActive) {
+      setShowRules(false);
+      setShowHistory(false);
+    }
+  }, [mandatoryOverlayActive, setShowRules, setShowHistory]);
+  const Shell = sceneActive ? LocalTableGame : GameShell;
 
   return (
-    <GameShell
+    <Shell
+      sceneOverlay={externalOverlayActive ? null : sceneOverlay}
+      onSceneOverlay={setSceneOverlay}
+      online
+      roomCode={net.code}
+      presentationEpoch={net.presentationEpoch}
       state={state}
       legal={legal}
       isRolling={net.isRolling}
@@ -85,7 +110,12 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
         net.reconnecting ? <div className="banner banner--sd">{t("net.reconnecting")}</div> : null
       }
       barLeft={
-        <BarButton name="menu" onClick={net.leave}>
+        <BarButton
+          name="menu"
+          onClick={net.leave}
+          className={sceneActive ? "scene-back" : undefined}
+          aria-label={sceneActive ? t("bar.leave") : undefined}
+        >
           {t("bar.leave")}
         </BarButton>
       }
@@ -99,12 +129,22 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
           <VolumeControls />
           <BarButton
             name="history"
-            onClick={() => chrome.setShowHistory(true)}
+            onClick={() => {
+              setSceneOverlay(null);
+              chrome.setShowHistory(true);
+            }}
             title={t("history.title")}
           >
             {t("bar.history")}
           </BarButton>
-          <BarButton name="rules" onClick={() => chrome.setShowRules(true)} title={t("bar.rules")}>
+          <BarButton
+            name="rules"
+            onClick={() => {
+              setSceneOverlay(null);
+              chrome.setShowRules(true);
+            }}
+            title={t("bar.rules")}
+          >
             {t("bar.rules")}
           </BarButton>
         </>
@@ -134,8 +174,10 @@ export function OnlineGameScreen({ net }: { net: OnlineController }) {
               menuLabel={t("common.leavePlain")}
             />
           )}
-          {chrome.showRules && <RulesModal onClose={() => chrome.setShowRules(false)} />}
-          {chrome.showHistory && (
+          {!mandatoryOverlayActive && chrome.showRules && (
+            <RulesModal onClose={() => chrome.setShowRules(false)} />
+          )}
+          {!mandatoryOverlayActive && chrome.showHistory && (
             <TurnHistory
               state={state}
               youId={net.youId ?? undefined}

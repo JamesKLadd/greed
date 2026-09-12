@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createGame, type GameEvent, type GameState } from "@greed/core";
+import { createGame, scoreRoll, type DieValue, type GameEvent, type GameState } from "@greed/core";
 import { readCelebration } from "./celebrations.js";
 
 function game(): GameState {
@@ -35,6 +35,48 @@ function completeFive(s: GameState): GameState {
 }
 
 describe("beta celebration ordering and recovery", () => {
+  function pattern(dice: DieValue[], hot = false) {
+    const start = game();
+    const result = scoreRoll(dice);
+    const after = add(
+      start,
+      { type: "roll", playerId: "a", dice, result },
+      ...(hot ? [{ type: "hot-dice", playerId: "a" } as const] : []),
+    );
+    after.turn = {
+      ...after.turn,
+      dice,
+      lastRoll: result,
+      locked: result.scoringMask,
+      hotDice: hot,
+    };
+    return readCelebration(after, readCelebration(start).cursor);
+  }
+  it("shares current-throw triple classification including three individual ones", () => {
+    expect(pattern([3, 3, 3, 2, 4]).cue?.kind).toBe("triple");
+    expect(pattern([1, 1, 1, 2, 3]).cue?.kind).toBe("triple");
+  });
+  it("orders simultaneous patterns five, straight, hot, triple, score", () => {
+    expect(pattern([2, 2, 2, 2, 2], true).cue?.kind).toBe("five");
+    expect(pattern([1, 2, 3, 4, 5], true).cue?.kind).toBe("straight");
+    expect(pattern([3, 3, 3, 1, 5], true).cue?.kind).toBe("hot");
+    expect(pattern([1, 2, 2, 4, 6]).cue?.kind).toBe("score");
+  });
+  it("does not manufacture a triple from held dice or replay a reset with the same log shape", () => {
+    const start = game();
+    const after = add(start, roll());
+    after.turn = {
+      ...after.turn,
+      dice: [3, 3, 3, 1, 2],
+      locked: [true, true, true, true, false],
+      lastRoll: scoreRoll([1, 2]),
+    };
+    const result = readCelebration(after, readCelebration(start).cursor);
+    expect(result.cue?.kind).toBe("score");
+    expect(
+      readCelebration({ ...after, config: { ...after.config, seed: 2 } }, result.cursor).cue,
+    ).toBeNull();
+  });
   it("does not celebrate history on initial mount or a reconnect burst", () => {
     const start = game();
     const historical = add(start, roll(), { type: "bank", playerId: "a", gained: 100, total: 100 });

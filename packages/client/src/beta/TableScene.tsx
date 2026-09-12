@@ -8,6 +8,8 @@ import {
 } from "./tableSceneGeometry.js";
 import { TableSurface } from "./TableSurface.js";
 import { useI18n } from "../i18n/i18n.js";
+import type { TableFeedback } from "./tableFeedback.js";
+import { teamName } from "../game/teams.js";
 
 export interface ScenePlayer {
   id: string;
@@ -15,14 +17,18 @@ export interface ScenePlayer {
   characterId?: string;
   nameplate?: string;
   score: number;
+  status?: ReactNode;
+  team?: number;
+  connected?: boolean;
 }
-interface Props {
+interface Props extends TableFeedback {
   players: readonly ScenePlayer[];
   order: readonly string[];
   perspectiveId?: string;
   /** Omit for pass-and-play/spectators: camera anchor does not imply 'you'. */
   viewerId?: string;
   activePlayerId?: string;
+  finalRound?: boolean;
   onPlayerDetails?: (player: ScenePlayer) => void;
   children?: ReactNode;
 }
@@ -43,6 +49,9 @@ export function TableScene({
   perspectiveId,
   viewerId,
   activePlayerId,
+  finalRound = false,
+  banked,
+  bustedId,
   onPlayerDetails,
   children,
 }: Props) {
@@ -91,20 +100,29 @@ export function TableScene({
             data-slot={seat.slot}
             data-active={id === activePlayerId || undefined}
             data-nameplate={player.nameplate}
+            data-team={player.team}
+            data-connected={player.connected}
+            data-reaction={banked?.playerId === id ? "bank" : bustedId === id ? "bust" : undefined}
           >
             <button
               className="tp-character"
               type="button"
               style={placed(seat.character)}
               onClick={() => onPlayerDetails?.(player)}
-              aria-label={t("scene.total", { name: player.name, points: score })}
+              aria-label={`${t("scene.details", { name: player.name })} · ${t("scene.total", { name: player.name, points: score })}${player.connected === false ? ` · ${t("table.offline")}` : ""}${player.team != null ? ` · ${teamName(t, player.team)}` : ""}`}
             >
               <CharacterSprite
+                className="character-sprite"
                 characterId={player.characterId}
                 view={seat.view}
                 mirrored={seat.mirrored}
               />
             </button>
+            {player.status && (
+              <div className="tp-seat-status" style={placed(seat.character)}>
+                {player.status}
+              </div>
+            )}
             <button
               className="tp-name"
               type="button"
@@ -121,23 +139,44 @@ export function TableScene({
               aria-label={t("scene.total", { name: player.name, points: score })}
             >
               <strong
-                style={{
-                  fontSize:
-                    seat.view === "back"
-                      ? Math.min(
-                          geometry.mode === "short-wide" ? 20 : 26,
-                          (seat.score.width / score.length) * 1.65,
-                        )
-                      : geometry.scoreFont,
-                }}
+                style={
+                  {
+                    "--scene-score-font": `${
+                      seat.view === "back"
+                        ? Math.min(
+                            geometry.mode === "short-wide" ? 20 : 26,
+                            (seat.score.width / score.length) * 1.65,
+                          )
+                        : geometry.scoreFont
+                    }px`,
+                  } as CSSProperties
+                }
               >
                 {score}
               </strong>
               <span>{own ? t("scene.youPoints") : t("scene.points")}</span>
             </div>
+            {banked?.playerId === id && (
+              <span
+                className="scene-score-flight"
+                key={banked.sequence}
+                aria-hidden="true"
+                style={
+                  {
+                    left: seat.score.x + seat.score.width / 2,
+                    top: seat.score.y - 14,
+                    "--score-dx": `${size.width / 2 - seat.score.x - seat.score.width / 2}px`,
+                    "--score-dy": `${size.height * 0.61 - seat.score.y + 14}px`,
+                  } as CSSProperties
+                }
+              >
+                +{n(banked.points)}
+              </span>
+            )}
             {id === lastId && (
               <span
                 className={`tp-flag tp-flag--${seat.view}`}
+                data-final={finalRound || undefined}
                 style={{ ...placed(seat.flag), transform: `rotate(${seat.flagAngle}deg)` }}
                 role="img"
                 aria-label={`${player.name} · ${t("aria.playsLast")}`}

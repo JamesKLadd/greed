@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from "react";
 import { BetaActiveContext } from "../../beta/BetaContext.js";
 import { PERSONALITIES, teamsAvailable, type MatchSetup } from "../../game/setup.js";
 import { GameScreen } from "../../screens/GameScreen.js";
+import { DevFrameMeter } from "./DevFrameMeter.js";
 
 const NAMES = ["James", "Bear", "Cleo", "Pip", "Oliver", "Frankie", "Violet", "Rusty"];
 const LONG_NAMES = [
@@ -65,6 +66,7 @@ export default function PlayableTableReview() {
         recordResults={false}
         onExit={() => window.location.assign("/?table-preview")}
       />
+      <DevFrameMeter />
     </BetaActiveContext.Provider>
   );
 }

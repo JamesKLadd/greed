@@ -15,9 +15,11 @@ interface OnlineScreenProps {
   onExit: () => void;
   /** Room code to join straight away (a friend's challenge). */
   autoJoin?: string | null;
+  /** Development network fixtures must not award progression. */
+  recordResults?: boolean;
 }
 
-export function OnlineScreen({ onExit, autoJoin }: OnlineScreenProps) {
+export function OnlineScreen({ onExit, autoJoin, recordResults = true }: OnlineScreenProps) {
   const t = useT();
   const { user } = useAuth();
   // Only a signed-in player can be challenged, so the account name is the name.
@@ -54,7 +56,8 @@ export function OnlineScreen({ onExit, autoJoin }: OnlineScreenProps) {
     );
   }
 
-  if (net.status === "in-game" && net.game) return <OnlineGameScreen net={net} />;
+  if (net.status === "in-game" && net.game)
+    return <OnlineGameScreen net={net} recordResults={recordResults} />;
   if (net.status === "roll-off" && net.rollOff) return <RollOffView entries={net.rollOff} />;
   if (net.status === "lobby" && net.lobby) return <LobbyScreen net={net} />;
   return <OnlineMenu net={net} onBack={onExit} />;

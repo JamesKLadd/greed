@@ -102,6 +102,21 @@
   font-size: 12px;
   line-height: 1.3;
 }
+.scene-final__short {
+  display: none;
+}
+.tp-scene--short-portrait .scene-final__short,
+.tp-scene--short-wide .scene-final__short {
+  display: inline;
+}
+.tp-scene--short-portrait .scene-final__full,
+.tp-scene--short-wide .scene-final__full {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .scene-teams {
   display: flex;
   flex-direction: column;
