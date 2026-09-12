@@ -15,6 +15,7 @@ type Welcome = Extract<ServerMessage, { type: "welcome" }>;
 
 interface TestClient {
   ws: WebSocket;
+  clearMessages(): void;
   send(msg: ClientMessage): void;
   waitFor(pred: (m: ServerMessage) => boolean, timeout?: number): Promise<ServerMessage>;
 }
@@ -40,6 +41,9 @@ async function connect(url: string): Promise<TestClient> {
   });
   return {
     ws,
+    clearMessages: () => {
+      msgs.length = 0;
+    },
     send: (msg) => ws.send(encode(msg)),
     waitFor: (pred, timeout = 4000) => {
       const seen = msgs.find(pred);
@@ -245,8 +249,13 @@ describe("in-place rematch", () => {
 
   it("restarts the same table in place when everyone has voted", async () => {
     const host = await playedOutRoom();
-    await host.waitFor((m) => m.type === "game" && (m as Game).state.phase === "game-over");
+    const over = (await host.waitFor(
+      (m) => m.type === "game" && (m as Game).state.phase === "game-over",
+    )) as Game;
 
+    // The initial roll-off and fresh game are also buffered. Only packets sent
+    // AFTER this vote can prove the rematch actually happened.
+    host.clearMessages();
     host.send({ type: "rematch" });
     // The sole human voting is enough — a new roll-off, no trip via the lobby.
     const rollOff = await host.waitFor((m) => m.type === "roll-off", 8000);
@@ -256,6 +265,8 @@ describe("in-place rematch", () => {
       8000,
     )) as Game;
     expect(fresh.state.players).toHaveLength(3);
+    expect(fresh.state.players.map((p) => p.id)).toEqual(over.state.players.map((p) => p.id));
+    expect(fresh.state.players.every((p) => p.total === 0)).toBe(true);
     expect(fresh.state.log.some((e) => e.type === "game-over")).toBe(false);
     host.ws.close();
   }, 30000);
@@ -264,6 +275,7 @@ describe("in-place rematch", () => {
     const host = await playedOutRoom();
     await host.waitFor((m) => m.type === "game" && (m as Game).state.phase === "game-over");
 
+    host.clearMessages();
     host.send({ type: "to-lobby" });
     // Wait for a lobby broadcast with the full table — the first buffered lobby
     // message is the one-seat snapshot from before the bots were added.

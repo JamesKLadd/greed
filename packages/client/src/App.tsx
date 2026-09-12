@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { SetupScreen } from "./screens/SetupScreen.js";
 import { GameScreen } from "./screens/GameScreen.js";
@@ -22,6 +23,17 @@ import { Toast } from "./components/Toast.js";
 import type { ToastMessage } from "./game/useGreed.js";
 import { useT } from "./i18n/i18n.js";
 
+// The composition study is deliberately excluded from shipped game code.
+const TablePrototype = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/TablePrototype.js"))
+  : null;
+const PlayableTableReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/PlayableTableReview.js"))
+  : null;
+const TableEventReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/tablePrototype/TableEventReview.js"))
+  : null;
+
 type Mode =
   | "home"
   | "local"
@@ -42,6 +54,18 @@ export function App() {
   const challenges = useChallenges();
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
+  const beta = useBeta();
+  // All game modes share the opt-in presentation; controllers remain shared.
+  const betaActive = beta.enabled;
+  useEffect(() => {
+    if (betaActive) window.scrollTo({ top: 0, left: 0 });
+  }, [mode, betaActive]);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.presentation = betaActive ? "beta" : "classic";
+    return () => {
+      delete document.documentElement.dataset.presentation;
+    };
+  }, [betaActive]);
   // A password-reset token pulled from the email link (?reset=…).
   const [resetToken, setResetToken] = useState<string | undefined>(undefined);
   // Where to land after a successful sign-in (e.g. straight into online play when
@@ -104,6 +128,39 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("table-online")) {
+    return (
+      <BetaActiveContext.Provider value={betaActive}>
+        <OnlineScreen
+          recordResults={false}
+          onExit={() => {
+            window.location.href = "/";
+          }}
+        />
+      </BetaActiveContext.Provider>
+    );
+  }
+  if (TableEventReview && new URLSearchParams(window.location.search).has("table-events")) {
+    return (
+      <Suspense fallback={<p>Opening table events…</p>}>
+        <TableEventReview />
+      </Suspense>
+    );
+  }
+  if (PlayableTableReview && new URLSearchParams(window.location.search).has("table-play")) {
+    return (
+      <Suspense fallback={<p>Opening local table…</p>}>
+        <PlayableTableReview />
+      </Suspense>
+    );
+  }
+  if (TablePrototype && new URLSearchParams(window.location.search).has("table-preview")) {
+    return (
+      <Suspense fallback={<p>Opening table preview…</p>}>
+        <TablePrototype />
+      </Suspense>
+    );
+  }
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui")) {
     return <UiGallery />;
   }
@@ -239,7 +296,7 @@ export function App() {
   })();
 
   return (
-    <>
+    <BetaActiveContext.Provider value={betaActive}>
       {screen}
       {challenges.invite && (
         <ChallengeInvite
@@ -249,6 +306,6 @@ export function App() {
         />
       )}
       <Toast toast={challengeToast} />
-    </>
+    </BetaActiveContext.Provider>
   );
 }

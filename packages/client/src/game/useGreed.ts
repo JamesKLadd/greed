@@ -5,6 +5,7 @@ import { decide } from "@greed/bots";
 import { buildGame, type MatchSetup } from "./setup.js";
 import { toastFor, type ToastMessage } from "./toasts.js";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
+import { createRollPlayback } from "./rollPlayback.js";
 
 const ROLL_ANIM_MS = 650;
 /** A bot's pause before it acts. Long enough that a run of bot rolls reads as a
@@ -53,8 +54,8 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
 
   const [rollOffActive, setRollOffActive] = useState(true);
   const [isRolling, setIsRolling] = useState(false);
-  const isRollingRef = useRef(false);
-  isRollingRef.current = isRolling;
+  const [rollPlayback] = useState(createRollPlayback);
+  useEffect(() => () => rollPlayback.cancel(), [rollPlayback]);
 
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
@@ -62,11 +63,14 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
   const lastLogLen = useRef(state.log.length);
 
   const applyNow = useCallback((action: Parameters<typeof applyAction>[1]) => {
-    setState((prev) => applyAction(prev, action));
+    // A hold followed by Roll in the same task must use the changed selection.
+    const next = applyAction(stateRef.current, action);
+    stateRef.current = next;
+    setState(next);
   }, []);
 
   const roll = useCallback(() => {
-    if (isRollingRef.current) return;
+    if (rollPlayback.active) return;
     const s = stateRef.current;
     if (!getLegalActions(s).canRoll) return;
     // Resolve the throw NOW and hold the result back, rather than applying it
@@ -78,32 +82,35 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     setRollingIndices(diceToRoll(s.turn));
     setRollingDice(next.turn.dice);
     setIsRolling(true);
-    window.setTimeout(() => {
+    rollPlayback.start(() => {
       setIsRolling(false);
       setRollingIndices([]);
       setRollingDice(null);
+      stateRef.current = next;
       setState(next);
     }, ROLL_ANIM_MS);
-  }, []);
+  }, [rollPlayback]);
 
   const bank = useCallback(() => {
-    if (isRollingRef.current) return;
+    if (rollPlayback.active) return;
     const s = stateRef.current;
     if (!getLegalActions(s).canBank) return;
     applyNow({ type: "BANK" });
-  }, [applyNow]);
+  }, [applyNow, rollPlayback]);
 
   const toggleDie = useCallback(
     (index: number) => {
       // Never mid-throw: the dice on screen are the previous position.
-      if (isRollingRef.current) return;
+      if (rollPlayback.active) return;
       applyNow({ type: "TOGGLE_LOCK", index });
     },
-    [applyNow],
+    [applyNow, rollPlayback],
   );
 
   const restart = useCallback(
     (setup?: MatchSetup) => {
+      // A restart during the tumble must not land the old match 650ms later.
+      rollPlayback.cancel();
       const next = buildGame(setup ?? initialSetup);
       lastLogLen.current = next.state.log.length;
       setIsRolling(false);
@@ -111,10 +118,11 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
       setRollingDice(null);
       setToast(null);
       setBuilt(next);
+      stateRef.current = next.state;
       setState(next.state);
       setRollOffActive(true);
     },
-    [initialSetup],
+    [initialSetup, rollPlayback],
   );
 
   const beginPlay = useCallback(() => setRollOffActive(false), []);

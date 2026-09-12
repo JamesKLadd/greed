@@ -11,4 +11,10 @@
 @import "./styles/primitives.css";
 @import "./styles/game.css";
 @import "./styles/screens.css";
+@import "./styles/beta.css";
+@import "./beta/tableScene.css";
+@import "./beta/localTableGame.css";
+@import "./beta/tableEvents.css";
+@import "./beta/table-online.css";
+@import "./beta/sceneAccessibility.css";
 @import "./styles/a11y.css";

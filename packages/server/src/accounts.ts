@@ -1,3 +1,4 @@
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 /**
  * Account operations: sign up, log in, verify email, reset password, and the
  * per-user profile (stats / achievements / equipped cosmetics) that syncs across
@@ -45,6 +46,7 @@ export interface StoredProfile {
   table: string;
   /** Optional so profiles stored before avatars existed still normalize. */
   avatar?: string;
+  visualBeta?: BetaIdentity;
 }
 
 export interface PublicUser {
@@ -125,6 +127,7 @@ function normalizeProfile(raw: Partial<StoredProfile> | null): StoredProfile {
   return {
     ...base,
     ...raw,
+    visualBeta: cleanBetaIdentity(raw.visualBeta),
     achievements: Array.isArray(raw.achievements)
       ? raw.achievements.filter((a): a is string => typeof a === "string")
       : [],
@@ -195,6 +198,10 @@ function bounded(field: string, value: number): number {
  * streak and equipped cosmetics take the incoming (most recent) value. Every
  * figure is bounded on the way through — see PROFILE_CEILINGS. */
 export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): StoredProfile {
+  const visualBeta =
+    cleanBetaIdentity(incoming.visualBeta) ?? cleanBetaIdentity(existing.visualBeta);
+  const achievements = boundedAchievements([...existing.achievements, ...incoming.achievements]);
+  if (visualBeta && !achievements.includes(visualBeta.badge)) visualBeta.badge = "";
   const max = (field: string, a: number, b: number) => bounded(field, Math.max(a || 0, b || 0));
   /**
    * The one figure that is checked rather than simply kept.
@@ -223,10 +230,11 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
     hotDiceTotal: max("hotDiceTotal", existing.hotDiceTotal, incoming.hotDiceTotal),
     dailyWins: max("dailyWins", existing.dailyWins, incoming.dailyWins),
     weeklyWins: max("weeklyWins", existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
-    achievements: boundedAchievements([...existing.achievements, ...incoming.achievements]),
+    achievements,
     dice: incoming.dice || existing.dice,
     table: incoming.table || existing.table,
     avatar: incoming.avatar || existing.avatar || "",
+    visualBeta,
   };
 }
 

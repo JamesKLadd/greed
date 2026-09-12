@@ -8,7 +8,7 @@
  */
 
 // Bump on every SHELL change, or the old cache keeps winning.
-const CACHE = "greed-shell-v3";
+const CACHE = "greed-shell-v8-character-table";
 const SHELL = [
   "/",
   "/index.html",

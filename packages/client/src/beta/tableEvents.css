@@ -1,0 +1,255 @@
+/* One bounded lane on the felt; every effect is inert and independently clipped. */
+.scene-event {
+  position: absolute;
+  left: 31%;
+  top: 43%;
+  width: 38%;
+  height: 20%;
+  display: grid;
+  place-items: center;
+  overflow: clip;
+  pointer-events: none;
+  color: #ffbfea;
+  --event-shadow: #9b285e;
+  --event-word-space: 36cqw;
+  animation: scene-event-life var(--celebration-ms) linear both;
+}
+.scene-event__lettering {
+  width: 100%;
+  padding: 4px 3px;
+  text-align: center;
+  animation: scene-letter-in 260ms ease-out both;
+}
+.scene-event strong {
+  display: block;
+  --event-font: clamp(20px, 6cqw, 46px);
+  font: italic 950
+    min(
+      calc(var(--event-font) * var(--text-scale, 1)),
+      calc(var(--event-word-space) / var(--event-word-length) * 1.4)
+    )/0.98
+    var(--ff-body);
+  letter-spacing: -0.04em;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  text-shadow:
+    1px 2px 0 var(--event-shadow),
+    0 0 8px #ff66c34a;
+}
+.scene-event__player,
+.scene-event__points {
+  display: block;
+  font: 800 11px/1.2 var(--ff-body);
+  color: #ffefd0;
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scene-event__points {
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.scene-event--score strong {
+  --event-font: clamp(18px, 5cqw, 34px);
+}
+.scene-event--triple strong,
+.scene-event--five strong {
+  --event-font: clamp(18px, 5.2cqw, 39px);
+}
+.scene-event--triple,
+.scene-event--hot {
+  color: #b5ffe4;
+  --event-shadow: #286354;
+}
+.scene-event--straight,
+.scene-event--bank,
+.scene-event--bigBank,
+.scene-event--win {
+  color: #ffe39c;
+  --event-shadow: #815514;
+}
+.scene-event--bust {
+  color: #ffb296;
+  --event-shadow: #7f2929;
+}
+.scene-event--bust .scene-event__points {
+  animation: scene-lost-points 650ms 150ms ease-out both;
+}
+.scene-event__sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.scene-event__sparks i {
+  position: absolute;
+  left: calc(3% + var(--spark-index) * 29%);
+  top: 3%;
+  color: #ffe29d;
+  font: normal 14px var(--ff-body);
+  animation: scene-spark 700ms calc(var(--spark-index) * 45ms) ease-out both;
+}
+.scene-event__sparks i:nth-child(even) {
+  top: auto;
+  bottom: 3%;
+  color: #87f3d8;
+}
+.scene-score-flight {
+  position: absolute;
+  /* Travel beneath scores (5), the foreground body (6), and dice (7). */
+  z-index: 4;
+  font: 900 12px/1 var(--ff-body);
+  color: #ffdf91;
+  text-shadow: 0 1px 2px #042d23;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: scene-score-flight 900ms ease-out both;
+}
+.scene-game [data-reaction="bank"] .tp-character .character-sprite {
+  animation: scene-bank-nod 600ms ease-in-out;
+}
+.scene-game [data-reaction="bust"] .tp-character .character-sprite {
+  animation: scene-bust-sigh 600ms ease-in-out;
+}
+.scene-game .tp-flag[data-final="true"] {
+  animation: scene-final-flag 800ms ease-out;
+}
+@keyframes scene-event-life {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  5%,
+  92% {
+    opacity: 1;
+  }
+}
+@keyframes scene-letter-in {
+  from {
+    transform: scale(0.92) rotate(-4deg);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes scene-spark {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(8px);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.1) translateY(-8px);
+  }
+}
+@keyframes scene-score-flight {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--score-dx)), var(--score-dy));
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes scene-lost-points {
+  to {
+    opacity: 0.65;
+    transform: translateY(3px);
+  }
+}
+@keyframes scene-bank-nod {
+  45% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes scene-bust-sigh {
+  45% {
+    transform: translateY(2px);
+  }
+}
+@keyframes scene-final-flag {
+  50% {
+    filter: brightness(1.6);
+  }
+}
+.tp-scene--short-portrait .scene-event {
+  top: 43%;
+  height: 19%;
+}
+.tp-scene--short-wide .scene-event {
+  --event-word-space: 24cqw;
+  left: 37%;
+  width: 26%;
+  top: 42%;
+  height: 15%;
+}
+.tp-scene--short-wide .scene-event strong {
+  /* The compact lane sits between translated tips and 44px dice targets. */
+  font-size: 18px;
+}
+.tp-scene--short-wide .scene-event__player {
+  display: none;
+}
+.tp-scene--short-wide .scene-event__points {
+  display: block;
+  margin: 0 3px;
+  font-size: 10px;
+}
+.tp-scene--wide .scene-event {
+  --event-word-space: 24cqw;
+  left: 37%;
+  width: 26%;
+  top: 40%;
+  height: 22%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-event,
+  .scene-event__lettering,
+  .scene-event__points {
+    animation: none;
+  }
+  .scene-event__sparks {
+    display: none;
+  }
+  .scene-score-flight {
+    animation: none;
+    transform: translateX(-50%);
+  }
+}
+:root[data-motion="reduced"] .scene-event,
+:root[data-motion="reduced"] .scene-event__lettering,
+:root[data-motion="reduced"] .scene-event__points {
+  animation: none;
+}
+:root[data-motion="reduced"] .scene-event__sparks {
+  display: none;
+}
+:root[data-motion="reduced"] .scene-score-flight {
+  animation: none;
+  transform: translateX(-50%);
+}
+:root[data-contrast="high"] .scene-event {
+  color: #fff;
+}
+:root[data-contrast="high"] .scene-event strong {
+  text-shadow: 0 2px 0 #000;
+}
+@media (forced-colors: active) {
+  .scene-event strong,
+  .scene-event__player,
+  .scene-event__points {
+    color: CanvasText;
+    text-shadow: none;
+  }
+}

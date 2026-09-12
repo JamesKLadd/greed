@@ -83,6 +83,73 @@ describe("spectator mode", () => {
     return { host, code: (welcome as Extract<ServerMessage, { type: "welcome" }>).code };
   }
 
+  it("shares beta looks with classic seats and spectators, retaining them on reconnect", async () => {
+    const host = await connect(url);
+    const beta = {
+      version: 1 as const,
+      mascot: "cat",
+      frame: "neon",
+      background: "stars",
+      nameplate: "ticket",
+      badge: "",
+      dice: "circuit",
+    };
+    host.send({ type: "create-room", name: "Beta", dice: "ivory", beta });
+    const welcome = (await host.waitFor((m) => m.type === "welcome")) as Extract<
+      ServerMessage,
+      { type: "welcome" }
+    >;
+    const classic = await connect(url);
+    classic.send({ type: "join-room", code: welcome.code, name: "Classic" });
+    await classic.waitFor((m) => m.type === "welcome");
+    classic.send({ type: "set-ready", ready: true });
+    await host.waitFor(
+      (m) =>
+        m.type === "lobby" && m.lobby.seats.length === 2 && m.lobby.seats.every((s) => s.ready),
+    );
+    host.send({ type: "start-game" });
+    const game = (await classic.waitFor((m) => m.type === "game", 8000)) as Extract<
+      ServerMessage,
+      { type: "game" }
+    >;
+    expect(game.skins.find((s) => s.beta)?.beta).toEqual(beta);
+    expect(game.skins.find((s) => s.beta)?.dice).toBe("ivory");
+    expect(game.skins.filter((s) => !s.beta)).toHaveLength(1);
+    const watcher = await connect(url);
+    watcher.send({ type: "spectate", code: welcome.code });
+    const seen = (await watcher.waitFor((m) => m.type === "game")) as Extract<
+      ServerMessage,
+      { type: "game" }
+    >;
+    expect(seen.skins).toEqual(game.skins);
+    expect(seen.state.order).toEqual(game.state.order);
+    host.ws.close();
+    const dropped = (await classic.waitFor(
+      (m) => m.type === "game" && m.presence.some((p) => p.id === welcome.youId && !p.connected),
+    )) as Extract<ServerMessage, { type: "game" }>;
+    expect(dropped.state.players.map((p) => p.id)).toEqual(game.state.players.map((p) => p.id));
+    expect(dropped.state.order).toEqual(game.state.order);
+    const resumed = await connect(url);
+    resumed.send({ type: "reconnect", token: welcome.token });
+    const roomInfo = (await resumed.waitFor((m) => m.type === "lobby")) as Extract<
+      ServerMessage,
+      { type: "lobby" }
+    >;
+    expect(roomInfo.lobby.hostId).toBe(welcome.youId);
+    expect(roomInfo.lobby.seats.find((p) => p.id === welcome.youId)?.isHost).toBe(true);
+    expect(roomInfo.lobby.seats.filter((p) => p.isHost)).toHaveLength(1);
+    const restored = (await resumed.waitFor((m) => m.type === "game")) as Extract<
+      ServerMessage,
+      { type: "game" }
+    >;
+    expect(restored.skins).toEqual(game.skins);
+    expect(restored.state.order).toEqual(game.state.order);
+    expect(restored.presence.find((p) => p.id === welcome.youId)?.connected).toBe(true);
+    classic.ws.close();
+    watcher.ws.close();
+    resumed.ws.close();
+  }, 12000);
+
   it("spectating an unknown room returns an error", async () => {
     const spec = await connect(url);
     spec.send({ type: "spectate", code: "ZZZZ" });

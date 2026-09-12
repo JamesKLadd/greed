@@ -1,0 +1,102 @@
+/* Preserve the scene's touch geometry while the user's text setting grows type. */
+:root[data-text-scale="large"] .scene-game .tp-name {
+  font-size: 0.6875rem;
+}
+:root[data-text-scale="large"] .scene-game .tp-score strong {
+  font-size: calc(var(--scene-score-font) * var(--text-scale));
+}
+:root[data-text-scale="large"] .scene-game .tp-score > span {
+  font-size: 0.5rem;
+  letter-spacing: 0.5px;
+}
+:root[data-text-scale="large"] .scene-game .tp-turn-label,
+:root[data-text-scale="large"] .scene-game .scene-final {
+  font-size: 0.75rem;
+}
+:root[data-text-scale="large"] .scene-game .scene-teams {
+  font-size: 0.6875rem;
+}
+:root[data-text-scale="large"] .scene-game .scene-announcements .guide {
+  font-size: calc(clamp(10px, 2.6cqw, 14px) * var(--text-scale));
+}
+:root[data-text-scale="large"] .scene-game .tp-action strong {
+  font-size: calc(clamp(16px, 5cqw, 30px) * var(--text-scale));
+}
+:root[data-text-scale="large"] .scene-game .tp-action strong[data-long-label="true"] {
+  font-size: calc(clamp(14px, 4.2cqw, 28px) * var(--text-scale));
+}
+:root[data-text-scale="large"] .scene-game .tp-action span {
+  font-size: 0.5625rem;
+  letter-spacing: 0.75px;
+}
+:root[data-text-scale="large"] .scene-game .scene-menu__title {
+  font-size: 1.5625rem;
+}
+
+/* The illustrated scene has its own palette, so semantic app tokens alone
+   cannot make its names or neon outline lettering readable in high contrast. */
+:root[data-contrast="high"] .scene-game .tp-name span {
+  color: #fff;
+  background: #081019;
+  border: 1px solid #fff;
+  text-shadow: none;
+}
+:root[data-contrast="high"] .scene-game [data-active="true"] .tp-name span {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+:root[data-contrast="high"] .scene-game .tp-score,
+:root[data-contrast="high"] .scene-game .tp-score > span,
+:root[data-contrast="high"] .scene-game .tp-turn-label span,
+:root[data-contrast="high"] .scene-game .scene-final,
+:root[data-contrast="high"] .scene-game .scene-teams span,
+:root[data-contrast="high"] .scene-game .scene-announcements .guide {
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+:root[data-contrast="high"] .scene-game .tp-action {
+  background: #081019;
+  border: 2px solid #fff;
+  box-shadow: none;
+}
+:root[data-contrast="high"] .scene-game .tp-action strong,
+:root[data-contrast="high"] .scene-game .tp-action span {
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+:root[data-contrast="high"] .scene-game .tp-action:disabled {
+  opacity: 1;
+  border-color: #8b99aa;
+  border-style: dashed;
+}
+:root[data-contrast="high"] .scene-game .tp-action:disabled strong,
+:root[data-contrast="high"] .scene-game .tp-action:disabled span {
+  color: #b3bdca;
+}
+:root[data-contrast="high"] .scene-game .scene-menu {
+  background: #081019;
+  color: #fff;
+  border-color: #fff;
+}
+.scene-menu {
+  padding-top: max(22px, env(safe-area-inset-top));
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+}
+
+@media (forced-colors: active) {
+  .scene-game .tp-name span,
+  .scene-game .tp-action,
+  .scene-game .scene-menu {
+    border: 1px solid ButtonText;
+  }
+  .scene-game .tp-action strong {
+    color: ButtonText;
+    -webkit-text-stroke: 0;
+    text-shadow: none;
+  }
+  .scene-game .tp-flag {
+    /* Preserve the non-color checkered marker when system colors remove fills. */
+    forced-color-adjust: none;
+  }
+}

@@ -1,3 +1,4 @@
+import type { BetaLook } from "@greed/protocol";
 import type { CSSProperties, ReactNode } from "react";
 import type { DieValue, GameState, LegalActions } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
@@ -9,6 +10,8 @@ import { Toast } from "../components/Toast.js";
 import type { ToastMessage } from "../game/toasts.js";
 import { loadSettings } from "../game/settings.js";
 import { useT } from "../i18n/i18n.js";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { GameCelebration } from "../beta/Celebration.js";
 
 /**
  * The in-game screen's layout, shared by offline and online play.
@@ -20,7 +23,7 @@ import { useT } from "../i18n/i18n.js";
  * and nothing else.
  */
 
-interface GameShellProps {
+export interface GameShellProps {
   state: GameState;
   legal: LegalActions;
   isRolling: boolean;
@@ -40,7 +43,10 @@ interface GameShellProps {
   presence?: Record<string, boolean>;
   emotes?: Record<string, { emote: EmoteId; at: number }>;
   avatars?: Record<string, string>;
+  betaLooks?: Record<string, BetaLook>;
   turnTimer?: { endsAt: number; total: number } | null;
+  /** Changes only when an authoritative snapshot replaces a disconnected session. */
+  presentationEpoch?: number;
 
   /** A message about the connection, shown above the game's own banners. */
   notice?: ReactNode;
@@ -73,7 +79,9 @@ export function GameShell({
   presence,
   emotes,
   avatars,
+  betaLooks,
   turnTimer,
+  presentationEpoch,
   notice,
   barLeft,
   barRight,
@@ -83,6 +91,7 @@ export function GameShell({
   overlays,
 }: GameShellProps) {
   const t = useT();
+  const betaActive = useBetaActive();
   const lastPlayer = state.players[state.order[state.order.length - 1]];
   // Read per render rather than once on mount, so coming back from Settings
   // takes effect immediately instead of on the next game.
@@ -125,6 +134,7 @@ export function GameShell({
             presence={presence}
             emotes={emotes}
             avatars={avatars}
+            betaLooks={betaLooks}
             turnTimer={turnTimer}
             showTurnScore={showTurnScore}
             dice3d={dice3d}
@@ -153,6 +163,9 @@ export function GameShell({
       </main>
 
       {floating}
+      {betaActive && (
+        <GameCelebration key={presentationEpoch} state={state} isRolling={isRolling} />
+      )}
       <Toast toast={toast} />
       {overlays}
     </div>

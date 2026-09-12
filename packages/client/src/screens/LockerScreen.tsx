@@ -1,4 +1,6 @@
-import { useState, type CSSProperties } from "react";
+import { lazy, Suspense, useState, type CSSProperties } from "react";
+import { useBetaActive } from "../beta/BetaContext.js";
+const BetaLocker = lazy(() => import("../beta/BetaLocker.js"));
 import { Die } from "../components/Die.js";
 import { equipCosmetic, loadProfile } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
@@ -12,6 +14,13 @@ import { Button, Screen } from "../ui/index.js";
 export function LockerScreen({ onBack }: { onBack: () => void }) {
   const t = useT();
   const [profile, setProfile] = useState(() => loadProfile());
+  const beta = useBetaActive();
+  if (beta)
+    return (
+      <Suspense fallback={null}>
+        <BetaLocker onBack={onBack} />
+      </Suspense>
+    );
 
   const unlockedCount =
     [...DICE_SKINS, ...TABLE_THEMES].filter((c) => isUnlocked(c, profile)).length +

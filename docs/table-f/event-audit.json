@@ -1,0 +1,72 @@
+[
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--score",
+    "overflow": false,
+    "sparksDisplay": "grid",
+    "text": "BEAU LANCERJames+100"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--triple",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "BRELANJames+300✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--triple",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "BRELANJames+300✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--straight",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "SUITEJames✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--five",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "CINQ IDENTIQUESJames✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--hot",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "DÉS BRÛLANTSJames✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--bust",
+    "overflow": false,
+    "sparksDisplay": "grid",
+    "text": "PERDUJames−300"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--bank",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "ENCAISSÉJames+100✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--bigBank",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "GROS GAINJames+1 000✦✦✦✦"
+  },
+  {
+    "animation": "none",
+    "event": "scene-event scene-event--win",
+    "overflow": false,
+    "sparksDisplay": "none",
+    "text": "VICTOIRERusty✦✦✦✦"
+  }
+]

@@ -1,3 +1,7 @@
+import { cleanBetaIdentity } from "@greed/protocol";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { Mascot } from "../beta/Mascot.js";
+import { DEFAULT_APPEARANCE } from "../beta/appearance.js";
 /** A player's public card: what they've done, and whether you're friends. */
 
 import { useEffect, useState, type CSSProperties } from "react";
@@ -19,6 +23,7 @@ interface ProfileCardProps {
 
 export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) {
   const t = useT();
+  const beta = useBetaActive();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +55,10 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
   // Show their equipped dice, so the card feels like *their* card.
   const skin = DICE_SKINS.find((s) => s.id === profile?.dice) ?? DICE_SKINS[0];
   const earned = ACHIEVEMENTS.filter((a) => profile?.achievements.includes(a.id)).slice(0, 8);
+  const identity = cleanBetaIdentity(profile?.visualBeta);
+  const selectedBadge = ACHIEVEMENTS.find(
+    (a) => a.id === identity?.badge && profile?.achievements.includes(a.id),
+  );
 
   return (
     <Modal
@@ -74,6 +83,19 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
 
       {profile && (
         <div className="profile">
+          {beta && (
+            <div
+              className={`beta-player-card beta-nameplate--${cleanBetaIdentity(profile.visualBeta)?.nameplate ?? "classic"}`}
+            >
+              <Mascot look={cleanBetaIdentity(profile.visualBeta) ?? DEFAULT_APPEARANCE} />
+              <strong>{profile.username}</strong>
+              {selectedBadge && (
+                <small>
+                  {selectedBadge.icon} {t(`ach.${selectedBadge.id}.title` as MsgKey)}
+                </small>
+              )}
+            </div>
+          )}
           <div className="profile__dice" style={skin.vars as CSSProperties}>
             <Die value={5} size={38} />
             <Die value={3} size={38} />

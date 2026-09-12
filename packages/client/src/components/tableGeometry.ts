@@ -100,6 +100,9 @@ export const POD = {
   wide: { w: 152, h: 92 },
 } as const;
 
+/** Beta's short-landscape CSS uses these dimensions with the same wide slots. */
+export const BETA_SHORT_WIDE = { w: 100, h: 56 } as const;
+
 /**
  * The clear width down the middle of the mat, once the pods straddling each
  * rail have taken their bite. This is what the five dice have to fit inside,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGreed } from "../game/useGreed.js";
 import type { MatchSetup } from "../game/setup.js";
 import { loadProfile } from "../game/profile.js";
@@ -12,17 +12,30 @@ import { RollOffView } from "../components/RollOffView.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { BarButton } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { useAppearance } from "../beta/AppearanceContext.js";
+import { appearanceVars } from "../beta/appearance.js";
+import { LocalTableGame, type SceneOverlay } from "../beta/LocalTableGame.js";
 
 interface GameScreenProps {
   setup: MatchSetup;
   onExit: () => void;
+  /** Development match fixtures must not write earned progression. */
+  recordResults?: boolean;
 }
 
 /** Offline play: local pass-and-play, or one human against bots. */
-export function GameScreen({ setup, onExit }: GameScreenProps) {
+export function GameScreen({ setup, onExit, recordResults = true }: GameScreenProps) {
   const ctl = useGreed(setup);
   const { state } = ctl;
   const t = useT();
+  const betaActive = useBetaActive();
+  const { appearance } = useAppearance();
+  const [sceneOverlay, setSceneOverlay] = useState<SceneOverlay>(null);
+  // Development rollback for comparing the previous beta table with Table C.
+  const sceneActive =
+    betaActive &&
+    !(import.meta.env.DEV && new URLSearchParams(window.location.search).has("old-table"));
 
   const canAct = !state.players[state.turn.playerIndex].isBot;
   // Seat the human at the bottom of the table. Without this the bottom seat is
@@ -44,15 +57,32 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
     legal: ctl.legal,
     canAct,
     isRolling: ctl.isRolling,
-    youId: viewerId,
+    youId: recordResults ? viewerId : null,
     rollOffActive: ctl.rollOffActive,
+    blockingOverlayActive: sceneActive && sceneOverlay !== null,
     onRoll: ctl.roll,
     onBank: ctl.bank,
     onToggleDie: ctl.toggleDie,
   });
 
+  const mandatoryOverlayActive = ctl.rollOffActive || state.phase === "game-over";
+  const { setShowRules, setShowHistory } = chrome;
+  const externalOverlayActive = mandatoryOverlayActive || chrome.showRules || chrome.showHistory;
+  useEffect(() => {
+    if (externalOverlayActive) setSceneOverlay(null);
+  }, [externalOverlayActive]);
+  useEffect(() => {
+    if (mandatoryOverlayActive) {
+      setShowRules(false);
+      setShowHistory(false);
+    }
+  }, [mandatoryOverlayActive, setShowRules, setShowHistory]);
+  const Shell = sceneActive ? LocalTableGame : GameShell;
+
   return (
-    <GameShell
+    <Shell
+      sceneOverlay={externalOverlayActive ? null : sceneOverlay}
+      onSceneOverlay={setSceneOverlay}
       state={state}
       legal={ctl.legal}
       isRolling={ctl.isRolling}
@@ -63,11 +93,16 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
       onBank={ctl.bank}
       onToggleDie={ctl.toggleDie}
       toast={ctl.toast}
-      cosmetics={cosmetics}
+      cosmetics={betaActive ? { ...cosmetics, ...appearanceVars(appearance) } : cosmetics}
       perspectiveId={viewerId}
       avatars={avatars}
       barLeft={
-        <BarButton name="menu" onClick={onExit}>
+        <BarButton
+          name="menu"
+          onClick={onExit}
+          className={sceneActive ? "scene-back" : undefined}
+          aria-label={sceneActive ? t("scene.back") : undefined}
+        >
           {t("bar.menu")}
         </BarButton>
       }
@@ -77,15 +112,32 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
           <VolumeControls />
           <BarButton
             name="history"
-            onClick={() => chrome.setShowHistory(true)}
+            onClick={() => {
+              setSceneOverlay(null);
+              chrome.setShowHistory(true);
+            }}
             title={t("history.title")}
           >
             {t("bar.history")}
           </BarButton>
-          <BarButton name="rules" onClick={() => chrome.setShowRules(true)} title={t("bar.rules")}>
+          <BarButton
+            name="rules"
+            onClick={() => {
+              setSceneOverlay(null);
+              chrome.setShowRules(true);
+            }}
+            title={t("bar.rules")}
+          >
             {t("bar.rules")}
           </BarButton>
-          <BarButton name="restart" onClick={() => ctl.restart()} title={t("bar.restart")}>
+          <BarButton
+            name="restart"
+            onClick={() => {
+              setSceneOverlay(null);
+              ctl.restart();
+            }}
+            title={t("bar.restart")}
+          >
             {t("bar.restart")}
           </BarButton>
         </>
@@ -102,8 +154,10 @@ export function GameScreen({ setup, onExit }: GameScreenProps) {
               onMenu={onExit}
             />
           )}
-          {chrome.showRules && <RulesModal onClose={() => chrome.setShowRules(false)} />}
-          {chrome.showHistory && (
+          {!mandatoryOverlayActive && chrome.showRules && (
+            <RulesModal onClose={() => chrome.setShowRules(false)} />
+          )}
+          {!mandatoryOverlayActive && chrome.showHistory && (
             <TurnHistory state={state} onClose={() => chrome.setShowHistory(false)} />
           )}
         </>

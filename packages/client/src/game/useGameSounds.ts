@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { GameState } from "@greed/core";
 import { play } from "./sfx.js";
 import { BIG_BANK, STREAK_ROLLS, streakStep } from "./flourishes.js";
+import { useBetaActive } from "../beta/BetaContext.js";
 
 /**
  * Plays the dice tumbling for the length of a throw.
@@ -26,6 +27,7 @@ export function useRollSound(isRolling: boolean): void {
  * Shared by offline and online play — both drive the same GameState log.
  */
 export function useGameSounds(state: GameState | null | undefined): void {
+  const betaActive = useBetaActive();
   const seen = useRef(0);
   // Rolls in the turn being read. Counted from the log rather than taken from
   // turn.rollCount because a batch of events (a reconnect replaying a burst of
@@ -36,6 +38,12 @@ export function useGameSounds(state: GameState | null | undefined): void {
   useEffect(() => {
     if (!state) return;
     const log = state.log;
+    // The beta's unified cue chooses one payoff for overlapping hot/five/win
+    // events. Keep classic audio intact and never play both sound systems.
+    if (betaActive) {
+      seen.current = log.length;
+      return;
+    }
     // A shorter log than last time means a new game (restart/rematch) — resync.
     if (log.length < seen.current) {
       seen.current = 0;
@@ -89,5 +97,5 @@ export function useGameSounds(state: GameState | null | undefined): void {
       }
     }
     seen.current = log.length;
-  }, [state]);
+  }, [state, betaActive]);
 }

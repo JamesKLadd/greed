@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useBetaActive } from "../beta/BetaContext.js";
+import { BetaGate } from "../beta/BetaGate.js";
+const BetaHome = lazy(() => import("../beta/BetaHome.js"));
 import { RulesModal } from "../components/RulesModal.js";
 import { weeklyAttemptLimit } from "@greed/core";
 import { useInstallPrompt } from "../game/pwa.js";
@@ -8,7 +11,7 @@ import { hasUnreadRelease, markReleaseSeen } from "../game/changelog.js";
 import { Button, Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 
-interface HomeScreenProps {
+export interface HomeScreenProps {
   onDaily: () => void;
   onWeekly: () => void;
   onLocal: () => void;
@@ -29,24 +32,26 @@ interface HomeScreenProps {
 
 const SEEN_KEY = "greed:onboarded";
 
-export function HomeScreen({
-  onDaily,
-  onWeekly,
-  onLocal,
-  onOnline,
-  onPractice,
-  onFriends,
-  onStats,
-  onBoards,
-  onLocker,
-  onUpdates,
-  onSettings,
-  onAuth,
-  onAuthForOnline,
-  onAccount,
-  flash,
-  onDismissFlash,
-}: HomeScreenProps) {
+export function HomeScreen(props: HomeScreenProps) {
+  const {
+    onDaily,
+    onWeekly,
+    onLocal,
+    onOnline,
+    onPractice,
+    onFriends,
+    onStats,
+    onBoards,
+    onLocker,
+    onUpdates,
+    onSettings,
+    onAuth,
+    onAuthForOnline,
+    onAccount,
+    flash,
+    onDismissFlash,
+  } = props;
+  const betaActive = useBetaActive();
   const t = useT();
   const { status, user } = useAuth();
   const weeklyLimit = weeklyAttemptLimit();
@@ -80,6 +85,19 @@ export function HomeScreen({
     markSeen();
     onPractice();
   };
+
+  if (betaActive)
+    return (
+      <Suspense
+        fallback={
+          <div className="setup">
+            <BetaGate />
+          </div>
+        }
+      >
+        <BetaHome {...props} />
+      </Suspense>
+    );
 
   return (
     <div className="setup">
@@ -234,6 +252,7 @@ export function HomeScreen({
       </div>
 
       <p className="home-version">v{__APP_VERSION__}</p>
+      <BetaGate />
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>

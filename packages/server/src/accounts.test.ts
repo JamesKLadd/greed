@@ -19,6 +19,25 @@ import { accountsEnabled, query, migrate } from "./db.js";
 // ---------------------------------------------------------------------------
 
 describe("mergeProfile", () => {
+  it("preserves identity through legacy sync and keeps samples out of stored identity", () => {
+    const old = emptyProfile();
+    const visualBeta = {
+      version: 1 as const,
+      mascot: "cat",
+      frame: "neon",
+      background: "stars",
+      nameplate: "ticket",
+      badge: "",
+    };
+    const merged = mergeProfile({ ...old, visualBeta }, old);
+    expect(merged.visualBeta).toEqual(visualBeta);
+    expect(merged.dice).toBe(old.dice);
+    expect(merged.achievements).toEqual(old.achievements);
+    expect(
+      mergeProfile(old, { ...old, visualBeta: { ...visualBeta, mascot: "future" } }).visualBeta
+        ?.mascot,
+    ).toBe("fox");
+  });
   it("never loses cumulative progress (takes the max)", () => {
     const a = {
       ...emptyProfile(),

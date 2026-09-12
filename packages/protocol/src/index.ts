@@ -8,6 +8,8 @@
  */
 
 import type { BotPersonality, GameAction, GameState } from "@greed/core";
+import type { BetaLook } from "./visual.js";
+export * from "./visual.js";
 
 export const DEFAULT_SERVER_PORT = 8787;
 
@@ -81,6 +83,7 @@ export type ClientMessage =
       goal?: number;
       dice?: string;
       avatar?: string;
+      beta?: BetaLook;
       auth?: string;
     }
   | {
@@ -89,9 +92,17 @@ export type ClientMessage =
       name: string;
       dice?: string;
       avatar?: string;
+      beta?: BetaLook;
       auth?: string;
     }
-  | { type: "quick-match"; name: string; dice?: string; avatar?: string; auth?: string }
+  | {
+      type: "quick-match";
+      name: string;
+      dice?: string;
+      avatar?: string;
+      beta?: BetaLook;
+      auth?: string;
+    }
   | { type: "spectate"; code: string }
   | { type: "reconnect"; token: string }
   // A notification-only connection: no seat, no room. It exists so a signed-in
@@ -146,6 +157,7 @@ export interface PlayerPresence {
 
 /** A player's equipped cosmetics, so every client renders them the same way. */
 export interface PlayerSkin {
+  beta?: BetaLook;
   id: string;
   dice: string;
   /** Equipped avatar id, or "" — an empty pick means "derive one from the name",
