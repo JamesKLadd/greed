@@ -418,7 +418,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
             <p className="daily__note">
               {t("daily.theirRank", { rank: reading.rank, players: status?.players ?? 0 })}
             </p>
-            <div className="stats-grid">
+            <div className="stats-grid stats-grid--centered">
               <div className="stat-tile">
                 <span className="stat-tile__value">{reading.bestTurn}</span>
                 <span className="stat-tile__label">{t("gameOver.bestTurn")}</span>
@@ -426,6 +426,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
               <div className="stat-tile">
                 <span className="stat-tile__value">{reading.busts}</span>
                 <span className="stat-tile__label">{t("gameOver.busts")}</span>
+              </div>
+              {/* Next to the busts it is part of, the same way the run summary
+                  above reads: how many of the turns they lost died on a full cup. */}
+              <div className="stat-tile" title={t("run.superBustsHint")}>
+                <span className="stat-tile__value">{reading.superBusts}</span>
+                <span className="stat-tile__label">{t("run.superBusts")}</span>
               </div>
               <div className="stat-tile">
                 <span className="stat-tile__value">{reading.hotDice}</span>

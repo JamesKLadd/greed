@@ -27,6 +27,8 @@ export interface WeeklyEntry {
   turns: number;
   bestTurn: number;
   busts: number;
+  /** Of those busts, the ones thrown on a full cup of five. */
+  superBusts: number;
   hotDice: number;
   /** Attempts this player finished this week — what the score cost them. */
   attempts: number;
@@ -95,6 +97,7 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
     leaderboard: (raw.leaderboard ?? []).map((e) => ({
       ...e,
       avatar: e.avatar ?? "",
+      superBusts: e.superBusts ?? 0,
       hotDice: e.hotDice ?? 0,
       attempts: e.attempts ?? 0,
       wins: e.wins ?? 0,

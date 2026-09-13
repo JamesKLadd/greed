@@ -602,13 +602,15 @@ export async function weeklyStatus(
     turns: number;
     best_turn: number;
     busts: number;
+    super_busts: number | null;
     hot_dice: number;
     attempts: number;
     rank: string;
     user_id: string;
   }>(
     `SELECT u.username, u.profile ->> 'avatar' AS avatar,
-            r.score, r.turns, r.best_turn, r.busts, r.hot_dice, r.attempts, r.user_id,
+            r.score, r.turns, r.best_turn, r.busts, r.super_busts, r.hot_dice, r.attempts,
+            r.user_id,
             RANK() OVER (ORDER BY r.score DESC, r.best_at ASC) AS rank
        FROM weekly_runs r JOIN users u ON u.id = r.user_id
       WHERE r.week = $1
@@ -661,6 +663,7 @@ export async function weeklyStatus(
       turns: r.turns,
       bestTurn: r.best_turn,
       busts: r.busts,
+      superBusts: r.super_busts ?? 0,
       hotDice: r.hot_dice,
       attempts: r.attempts,
       wins: placings.get(r.user_id)?.wins ?? 0,

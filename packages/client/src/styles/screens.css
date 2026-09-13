@@ -283,6 +283,26 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+/**
+ * The player viewer's five stats, which divide evenly into neither the four
+ * columns this grid uses nor the two it drops to on a phone. A grid leaves the
+ * remainder hard against the left edge, which reads as a tile that failed to
+ * line up rather than as the end of a list — so the same track widths are laid
+ * out with flex instead, and the short row is centred.
+ */
+.stats-grid--centered {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stats-grid--centered .stat-tile {
+  flex: 0 1 calc(25% - 7.5px);
+}
+@media (max-width: 560px) {
+  .stats-grid--centered .stat-tile {
+    flex: 0 1 calc(50% - 5px);
+  }
+}
 .stat-tile {
   display: flex;
   flex-direction: column;

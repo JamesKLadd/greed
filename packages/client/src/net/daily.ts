@@ -25,6 +25,8 @@ export interface DailyEntry {
   turns: number;
   bestTurn: number;
   busts: number;
+  /** Of those busts, the ones thrown on a full cup of five. */
+  superBusts: number;
   hotDice: number;
   /** Daily challenges this player has won outright. */
   wins: number;
@@ -86,6 +88,7 @@ function fill(raw: DailyStatus): DailyStatus {
     leaderboard: (raw.leaderboard ?? []).map((e) => ({
       ...e,
       avatar: e.avatar ?? "",
+      superBusts: e.superBusts ?? 0,
       hotDice: e.hotDice ?? 0,
       wins: e.wins ?? 0,
     })),

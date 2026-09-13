@@ -141,6 +141,7 @@ vi.mock("./db.js", () => ({
           turns: e.row.turns,
           best_turn: e.row.bestTurn,
           busts: e.row.busts,
+          super_busts: e.row.superBusts,
           hot_dice: e.row.hotDice,
           attempts: e.row.attempts,
           user_id: e.user,
