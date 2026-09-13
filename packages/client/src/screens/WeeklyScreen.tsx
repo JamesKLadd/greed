@@ -338,7 +338,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                         ? t("weekly.attemptsMade", { n: used })
                         : t("weekly.attemptsMadeOf", { n: used, total: limit })}
                   </p>
-                  <div className="summary">
+                  <div className="summary summary--quad">
                     <div className="summary__stat">
                       <span className="summary__label">{t("gameOver.bestTurn")}</span>
                       <span className="summary__value">{best.bestTurn}</span>
@@ -346,6 +346,12 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                     <div className="summary__stat">
                       <span className="summary__label">{t("gameOver.busts")}</span>
                       <span className="summary__value">{best.busts}</span>
+                    </div>
+                    {/* A subset of the busts beside it, so the two read together:
+                        of the turns you lost, how many died on a full cup. */}
+                    <div className="summary__stat" title={t("run.superBustsHint")}>
+                      <span className="summary__label">{t("run.superBusts")}</span>
+                      <span className="summary__value">{best.superBusts}</span>
                     </div>
                     <div className="summary__stat">
                       <span className="summary__label">{t("weekly.attempts")}</span>

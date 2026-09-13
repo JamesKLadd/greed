@@ -24,6 +24,7 @@ interface Best {
   turns: number;
   banks: number;
   busts: number;
+  superBusts: number;
   hotDice: number;
   bestTurn: number;
   seed: number;
@@ -121,6 +122,7 @@ vi.mock("./db.js", () => ({
             turns: row.turns,
             banks: row.banks,
             busts: row.busts,
+            super_busts: row.superBusts,
             hot_dice: row.hotDice,
             best_turn: row.bestTurn,
             attempts: row.attempts,
@@ -193,21 +195,23 @@ vi.mock("./db.js", () => ({
     if (sql.includes("INSERT INTO weekly_runs")) {
       // The settle upsert: count the attempt, keep the run only if it beat the
       // standing score. Mirrors the CASE ladder in the real statement.
-      const [user, week, score, turns, banks, busts, hotDice, bestTurn, seed, moves] = params as [
-        string,
-        string,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        string,
-      ];
+      const [user, week, score, turns, banks, busts, superBusts, hotDice, bestTurn, seed, moves] =
+        params as [
+          string,
+          string,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          number,
+          string,
+        ];
       const k = key(user, week);
       const existing = best.get(k);
-      const fresh = { score, turns, banks, busts, hotDice, bestTurn, seed, moves };
+      const fresh = { score, turns, banks, busts, superBusts, hotDice, bestTurn, seed, moves };
       if (!existing) {
         best.set(k, { ...fresh, attempts: 1, bestAt: ++clock });
       } else if (score > existing.score) {
@@ -282,6 +286,7 @@ function record(user: string, week: string, score: number, attempts = 1): void {
     turns: 10,
     banks: 8,
     busts: 2,
+    superBusts: 1,
     hotDice: 1,
     bestTurn: 400,
     seed: 1,
@@ -374,6 +379,7 @@ describe("the best attempt is the one that stands", () => {
     expect(replay.score).toBe(status.best!.score);
     expect(replay.bestTurn).toBe(status.best!.bestTurn);
     expect(replay.busts).toBe(status.best!.busts);
+    expect(replay.superBusts).toBe(status.best!.superBusts);
     expect(replay.complete).toBe(true);
   });
 

@@ -274,7 +274,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                   ? t("daily.yourRank", { rank: status.yourRank, players: status.players })
                   : t("daily.played")}
               </p>
-              <div className="summary">
+              <div className="summary summary--quad">
                 <div className="summary__stat">
                   <span className="summary__label">{t("gameOver.bestTurn")}</span>
                   <span className="summary__value">{status.run.bestTurn}</span>
@@ -282,6 +282,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 <div className="summary__stat">
                   <span className="summary__label">{t("gameOver.busts")}</span>
                   <span className="summary__value">{status.run.busts}</span>
+                </div>
+                {/* A subset of the busts beside it, so the two read together:
+                    of the turns you lost, how many died on a full cup. */}
+                <div className="summary__stat" title={t("run.superBustsHint")}>
+                  <span className="summary__label">{t("run.superBusts")}</span>
+                  <span className="summary__value">{status.run.superBusts}</span>
                 </div>
                 <div className="summary__stat">
                   <span className="summary__label">{t("gameOver.hotDice")}</span>

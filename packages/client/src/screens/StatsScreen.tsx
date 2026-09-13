@@ -20,9 +20,7 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
     profile.gamesPlayed > 0 ? Math.round((profile.wins / profile.gamesPlayed) * 100) : 0;
   const unlockedCount = profile.achievements.length;
 
-  // `hint` is for a label that does not explain itself. Only one does so far:
-  // "Super busts" is a name the game gave the thing, not a description of it.
-  const tiles: { label: string; value: string | number; hint?: string }[] = [
+  const tiles: { label: string; value: string | number }[] = [
     { label: t("stats.games"), value: profile.gamesPlayed },
     { label: t("stats.wins"), value: profile.wins },
     { label: t("stats.winRate"), value: `${winRate}%` },
@@ -31,11 +29,6 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
     { label: t("stats.bestTurn"), value: profile.bestTurn },
     { label: t("stats.bestTotal"), value: profile.bestTotal },
     { label: t("stats.avgBank"), value: averageBank(profile) },
-    {
-      label: t("stats.superBusts"),
-      value: profile.superBusts,
-      hint: t("stats.superBustsHint"),
-    },
     // Won on the server, where the whole day's board is visible; the profile
     // carries the count back (see raiseDailyWins).
     { label: t("stats.dailyWins"), value: profile.dailyWins },
@@ -52,7 +45,7 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
     <Screen title={t("stats.title")} tagline={t("stats.tagline")}>
       <div className="stats-grid">
         {tiles.map((t) => (
-          <div key={t.label} className="stat-tile" title={t.hint}>
+          <div key={t.label} className="stat-tile">
             <span className="stat-tile__value">{t.value}</span>
             <span className="stat-tile__label">{t.label}</span>
           </div>

@@ -173,8 +173,8 @@ export async function startDailyRun(userId: string, day = dailyKey()): Promise<D
   // their dice ahead of time.
   const seed = randomInt(0, 2 ** 31);
   await query(
-    `INSERT INTO daily_runs (user_id, day, score, turns, banks, busts, hot_dice, best_turn, moves, complete, seed)
-       VALUES ($1, $2, 0, 0, 0, 0, 0, 0, '', false, $3)
+    `INSERT INTO daily_runs (user_id, day, score, turns, banks, busts, super_busts, hot_dice, best_turn, moves, complete, seed)
+       VALUES ($1, $2, 0, 0, 0, 0, 0, 0, 0, '', false, $3)
        ON CONFLICT (user_id, day) DO NOTHING`,
     [userId, day, seed],
   );
@@ -380,7 +380,7 @@ export async function playDailyMove(
   await query(
     `UPDATE daily_runs
         SET score = $3, turns = $4, banks = $5, busts = $6, hot_dice = $7,
-            best_turn = $8, moves = $9, complete = $10
+            best_turn = $8, moves = $9, complete = $10, super_busts = $11
       WHERE user_id = $1 AND day = $2 AND complete = false`,
     [
       userId,
@@ -393,6 +393,7 @@ export async function playDailyMove(
       r.bestTurn,
       next.join(","),
       r.complete,
+      r.superBusts,
     ],
   );
 
@@ -454,13 +455,14 @@ export async function dailyStatus(
     turns: number;
     banks: number;
     busts: number;
+    super_busts: number | null;
     hot_dice: number;
     best_turn: number;
     rank: string;
     players: string;
   }>(
     `WITH ranked AS (
-       SELECT user_id, score, turns, banks, busts, hot_dice, best_turn,
+       SELECT user_id, score, turns, banks, busts, super_busts, hot_dice, best_turn,
               RANK() OVER (ORDER BY score DESC, created_at ASC) AS rank,
               COUNT(*) OVER () AS players
          FROM daily_runs WHERE day = $1 AND complete
@@ -523,6 +525,10 @@ export async function dailyStatus(
           turns: own.turns,
           banks: own.banks,
           busts: own.busts,
+          // Null only for a row the backfill could not reach: a daily played
+          // before the seed became a secret, whose moves belong to dice nobody
+          // can reconstruct. Zero is the honest reading of "unknown" here.
+          superBusts: own.super_busts ?? 0,
           hotDice: own.hot_dice,
           bestTurn: own.best_turn,
           complete: true,

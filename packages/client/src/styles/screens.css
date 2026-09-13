@@ -466,6 +466,21 @@
   gap: 10px;
   margin-top: 16px;
 }
+/**
+ * The challenges' four-stat version. Three stats fit across a phone; a fourth
+ * does not, and left to wrap it lands alone on a full-width row under three
+ * narrow ones. A basis wide enough to refuse a third column turns that into a
+ * 2x2 — and still lays all four out in a row once there is room for them.
+ *
+ * A modifier rather than a change to `.summary`, so the game-over screen's
+ * three stats keep the single row they have always had.
+ */
+.summary--quad {
+  flex-wrap: wrap;
+}
+.summary--quad .summary__stat {
+  flex: 1 1 118px;
+}
 .summary__stat {
   flex: 1;
   display: flex;

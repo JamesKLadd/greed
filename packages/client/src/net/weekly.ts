@@ -79,6 +79,8 @@ export interface WeeklyStatus {
 function fill(raw: WeeklyStatus): WeeklyStatus {
   return {
     ...raw,
+    // The run summary itself now carries a field the old server never sent.
+    best: raw.best ? { ...raw.best, superBusts: raw.best.superBusts ?? 0 } : null,
     attempts: raw.attempts ?? 0,
     // A server that has never heard of the cap is a server that is not
     // enforcing one, so the honest reading of a missing limit is "unlimited".

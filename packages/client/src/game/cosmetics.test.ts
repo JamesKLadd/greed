@@ -13,7 +13,6 @@ function profile(over: Partial<Profile> = {}): Profile {
     totalBanks: 0,
     totalBankedPoints: 0,
     hotDiceTotal: 0,
-    superBusts: 0,
     dailyWins: 0,
     weeklyWins: 0,
     achievements: [],

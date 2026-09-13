@@ -120,19 +120,6 @@ describe("mergeProfile", () => {
     expect(m.hotDiceTotal).toBe(0); // never negative
   });
 
-  it("carries super busts, and survives a profile stored before they existed", () => {
-    // The field is optional on purpose: a profile written by an older client —
-    // or read back from a server that has not deployed this yet — simply does
-    // not have it, and must merge to a number rather than to NaN.
-    const before = { ...emptyProfile() } as Record<string, unknown>;
-    delete before.superBusts;
-    const m = mergeProfile(before as never, { ...emptyProfile(), superBusts: 12 });
-    expect(m.superBusts).toBe(12);
-    // And it only ever climbs, like every other lifetime counter here.
-    expect(mergeProfile(m, { ...emptyProfile(), superBusts: 3 }).superBusts).toBe(12);
-    expect(mergeProfile(emptyProfile(), { ...emptyProfile(), superBusts: -4 }).superBusts).toBe(0);
-  });
-
   it("keeps the achievements list a list of ids", () => {
     const junk = {
       ...emptyProfile(),

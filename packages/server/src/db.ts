@@ -7,7 +7,8 @@
 
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
-import { BEST_TOTAL_CEILING } from "@greed/core";
+import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
+import type { RunMove } from "@greed/core";
 
 const { Pool } = pg;
 
@@ -58,6 +59,48 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 }
 
 /** Create the accounts schema if it doesn't exist. Safe to run on every boot. */
+/**
+ * Work out `super_busts` for runs that were played before the column existed.
+ *
+ * Left NULL by the ALTER above rather than defaulted to 0, because NULL is the
+ * thing that makes this a one-shot: a row is filled once and never looked at
+ * again. Defaulting to zero would have been a lie with no way to tell it from
+ * an honest zero, and it would have been on display for a while — the weekly
+ * shows the best attempt of the CURRENT week, so a run played on Monday is
+ * still the one on screen on Sunday.
+ *
+ * Exact rather than estimated: every row keeps the seed and the moves for
+ * precisely this reason, so replaying them through the same engine that scored
+ * them originally gives the real figure.
+ *
+ * The one thing that cannot be recovered is a daily row from before the seed
+ * became a stored secret — `seed = 0` there is a placeholder, not a seed, and
+ * replaying against it meets dice the player never saw. Those rows settle at 0,
+ * which is the same answer as leaving them out and simpler to read back.
+ */
+async function backfillSuperBusts(): Promise<void> {
+  const runs: { table: string; score: (seed: number, moves: RunMove[]) => number }[] = [
+    { table: "daily_runs", score: (seed, moves) => scoreDailyRun(seed, moves).superBusts },
+    { table: "weekly_runs", score: (seed, moves) => scoreWeeklyRun(seed, moves).superBusts },
+  ];
+  for (const { table, score } of runs) {
+    const { rows } = await query<{ user_id: string; key: string; seed: string; moves: string }>(
+      `SELECT user_id, ${table === "daily_runs" ? "day" : "week"}::text AS key, seed, moves
+         FROM ${table} WHERE super_busts IS NULL`,
+    );
+    for (const row of rows) {
+      const seed = Number(row.seed); // bigint arrives as a string
+      const moves = row.moves ? (row.moves.split(",") as RunMove[]) : [];
+      const n = seed && moves.length ? score(seed, moves) : 0;
+      await query(
+        `UPDATE ${table} SET super_busts = $3
+          WHERE user_id = $1 AND ${table === "daily_runs" ? "day" : "week"} = $2`,
+        [row.user_id, row.key, n],
+      );
+    }
+  }
+}
+
 export async function migrate(): Promise<void> {
   await query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -117,6 +160,7 @@ export async function migrate(): Promise<void> {
   await query(
     `ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS complete boolean NOT NULL DEFAULT true;`,
   );
+  await query(`ALTER TABLE daily_runs ADD COLUMN IF NOT EXISTS super_busts integer;`);
   // Leaderboard reads are "top N for a day", so order within the day.
   await query(
     `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,
@@ -152,9 +196,11 @@ export async function migrate(): Promise<void> {
       PRIMARY KEY (user_id, week)
     );
   `);
+  await query(`ALTER TABLE weekly_runs ADD COLUMN IF NOT EXISTS super_busts integer;`);
   await query(
     `CREATE INDEX IF NOT EXISTS weekly_runs_week_score_idx ON weekly_runs (week, score DESC);`,
   );
+  await backfillSuperBusts();
   // The one attempt a player has open, if any. Its own table rather than a flag
   // on the row above, because an attempt in progress has no score yet and must
   // never be visible to the board — and because the PRIMARY KEY on user_id is

@@ -1,6 +1,6 @@
 import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import type { BotPersonality, GameState } from "@greed/core";
-import { isWinner, BEST_TOTAL_CEILING, DICE_COUNT, GOAL_DEFAULT } from "@greed/core";
+import { isWinner, BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 
 /**
  * Local, single-player progression: lifetime stats and achievements persisted to
@@ -23,13 +23,6 @@ export interface Profile {
   totalBanks: number;
   totalBankedPoints: number;
   hotDiceTotal: number;
-  /**
-   * Busts on a full throw of five dice — the opening throw of a turn, or the
-   * fresh five off a cleared mat. Every other bust throws what the last one
-   * left you; this is the one where the dice owed you nothing and you got
-   * nothing anyway.
-   */
-  superBusts: number;
   /**
    * Daily challenges won outright — highest score on a day, once that day is
    * over. Derived on the server (a client cannot know where everyone else
@@ -64,8 +57,6 @@ export interface GameSummary {
   bestTurn: number;
   banks: number;
   busts: number;
-  /** Of those busts, the ones thrown with all five dice. See Profile. */
-  superBusts: number;
   hotDice: number;
   turns: number;
   bankedPoints: number;
@@ -419,7 +410,6 @@ function emptyProfile(): Profile {
     totalBanks: 0,
     totalBankedPoints: 0,
     hotDiceTotal: 0,
-    superBusts: 0,
     dailyWins: 0,
     weeklyWins: 0,
     achievements: [],
@@ -449,7 +439,6 @@ const NUMERIC_FIELDS = [
   "totalBanks",
   "totalBankedPoints",
   "hotDiceTotal",
-  "superBusts",
   "dailyWins",
   "weeklyWins",
 ] as const;
@@ -576,7 +565,6 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     totalBanks: max(a.totalBanks, b.totalBanks),
     totalBankedPoints: max(a.totalBankedPoints, b.totalBankedPoints),
     hotDiceTotal: max(a.hotDiceTotal, b.hotDiceTotal),
-    superBusts: max(a.superBusts, b.superBusts),
     dailyWins: max(a.dailyWins, b.dailyWins),
     weeklyWins: max(a.weeklyWins, b.weeklyWins),
     achievements: [...new Set([...a.achievements, ...b.achievements])],
@@ -636,12 +624,7 @@ export function summarize(state: GameState, youId: string): GameSummary {
   let bestTurn = 0;
   let banks = 0;
   let busts = 0;
-  let superBusts = 0;
   let hotDice = 0;
-  // How many dice the throw on the mat right now put there. A bust is always
-  // the throw immediately before it, so this is that throw's size when one
-  // arrives — five means the cup was full, which is what a super bust is.
-  let thrown = 0;
   let bankedPoints = 0;
   let maxDeficit = 0;
   let hotStreak = 0;
@@ -687,11 +670,8 @@ export function summarize(state: GameState, youId: string): GameSummary {
       }
       maxDeficit = Math.max(maxDeficit, leader - (bySide.get(yourSide) ?? 0));
     } else if ("playerId" in e && e.playerId === youId) {
-      if (e.type === "roll") {
-        thrown = e.dice.length;
-      } else if (e.type === "bust") {
+      if (e.type === "bust") {
         busts += 1;
-        if (thrown === DICE_COUNT) superBusts += 1;
         hotStreak = 0;
       } else if (e.type === "skip") {
         hotStreak = 0;
@@ -721,7 +701,6 @@ export function summarize(state: GameState, youId: string): GameSummary {
     bestTurn,
     banks,
     busts,
-    superBusts,
     hotDice,
     turns: banks + busts,
     bankedPoints,
@@ -755,7 +734,6 @@ export function recordGame(summary: GameSummary): { profile: Profile; unlocked: 
   p.totalBanks += summary.banks;
   p.totalBankedPoints += summary.bankedPoints;
   p.hotDiceTotal += summary.hotDice;
-  p.superBusts += summary.superBusts;
 
   const unlocked: Achievement[] = [];
   for (const a of ACHIEVEMENTS) {

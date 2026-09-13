@@ -260,9 +260,9 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
   const r = weeklyPosition(run.seed, run.moves).result;
   await query(
     `INSERT INTO weekly_runs
-       (user_id, week, score, turns, banks, busts, hot_dice, best_turn, seed, moves,
-        attempts, best_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, now())
+       (user_id, week, score, turns, banks, busts, super_busts, hot_dice, best_turn, seed,
+        moves, attempts, best_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1, now())
      ON CONFLICT (user_id, week) DO UPDATE SET
        attempts  = weekly_runs.attempts + 1,
        score     = GREATEST(weekly_runs.score, EXCLUDED.score),
@@ -272,6 +272,8 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
                         THEN EXCLUDED.banks     ELSE weekly_runs.banks     END,
        busts     = CASE WHEN EXCLUDED.score > weekly_runs.score
                         THEN EXCLUDED.busts     ELSE weekly_runs.busts     END,
+       super_busts = CASE WHEN EXCLUDED.score > weekly_runs.score
+                        THEN EXCLUDED.super_busts ELSE weekly_runs.super_busts END,
        hot_dice  = CASE WHEN EXCLUDED.score > weekly_runs.score
                         THEN EXCLUDED.hot_dice  ELSE weekly_runs.hot_dice  END,
        best_turn = CASE WHEN EXCLUDED.score > weekly_runs.score
@@ -289,6 +291,7 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
       r.turns,
       r.banks,
       r.busts,
+      r.superBusts,
       r.hotDice,
       r.bestTurn,
       run.seed,
@@ -576,13 +579,14 @@ export async function weeklyStatus(
     turns: number;
     banks: number;
     busts: number;
+    super_busts: number | null;
     hot_dice: number;
     best_turn: number;
     attempts: number;
     rank: string;
   }>(
     `WITH ranked AS (
-       SELECT user_id, score, turns, banks, busts, hot_dice, best_turn, attempts,
+       SELECT user_id, score, turns, banks, busts, super_busts, hot_dice, best_turn, attempts,
               RANK() OVER (ORDER BY score DESC, best_at ASC) AS rank
          FROM weekly_runs WHERE week = $1
      )
@@ -638,6 +642,10 @@ export async function weeklyStatus(
           turns: own.turns,
           banks: own.banks,
           busts: own.busts,
+          // Only ever null for a row the backfill has not reached yet; every
+          // weekly row carries a real seed, so that window is the one boot the
+          // migration runs in.
+          superBusts: own.super_busts ?? 0,
           hotDice: own.hot_dice,
           bestTurn: own.best_turn,
           complete: true,

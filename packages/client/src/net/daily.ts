@@ -78,6 +78,8 @@ export interface DailyStatus {
 function fill(raw: DailyStatus): DailyStatus {
   return {
     ...raw,
+    // The run summary itself now carries a field the old server never sent.
+    run: raw.run ? { ...raw.run, superBusts: raw.run.superBusts ?? 0 } : null,
     wins: raw.wins ?? 0,
     champion: raw.champion ?? null,
     champions: raw.champions ?? [],

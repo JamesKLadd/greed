@@ -20,6 +20,8 @@
  */
 
 import { applyAction, createSoloGame, getLegalActions } from "./game.js";
+import { diceToRoll } from "./turn.js";
+import { DICE_COUNT } from "./types.js";
 import type { GameState } from "./types.js";
 
 /**
@@ -59,6 +61,16 @@ export interface RunResult {
   turns: number;
   banks: number;
   busts: number;
+  /**
+   * Busts on a full cup of five — the opening throw of a turn, or the fresh
+   * five off a cleared mat.
+   *
+   * Counted apart from the rest because it is a different event. Every other
+   * bust is a throw you chose to make with what the last one left you; this is
+   * the one where the dice owed you nothing and gave you nothing anyway, and
+   * it is the only bust that can cost a whole turn's worth of hot dice.
+   */
+  superBusts: number;
   hotDice: number;
   /** Largest single banked turn. */
   bestTurn: number;
@@ -118,6 +130,7 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
   let turns = 0;
   let banks = 0;
   let busts = 0;
+  let superBusts = 0;
   let hotDice = 0;
   let bestTurn = 0;
 
@@ -142,6 +155,10 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
 
     const before = state.players[0].total;
     const hotBefore = state.turn.hotDice;
+    // Asked BEFORE the throw, because afterwards the locks have moved: a bust
+    // holds nothing, and a hand that scored has locked whatever paid. This is
+    // the cup as the player picked it up.
+    const cup = move === "ROLL" ? diceToRoll(state.turn).length : 0;
     // Narrowed by the two guards above: only ROLL and BANK reach here.
     state = applyAction(state, { type: move as "ROLL" | "BANK" });
     if (!hotBefore && state.turn.hotDice) hotDice += 1;
@@ -152,6 +169,7 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
         bestTurn = Math.max(bestTurn, state.players[0].total - before);
       } else {
         busts += 1;
+        if (cup === DICE_COUNT) superBusts += 1;
       }
       turns += 1;
     }
@@ -165,6 +183,7 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
       turns,
       banks,
       busts,
+      superBusts,
       hotDice,
       bestTurn,
       complete: turns >= turnLimit,
