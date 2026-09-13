@@ -30,6 +30,7 @@ export const RELEASES: Release[] = [
       "Fixed a bug where finishing a straight across several rolls didn't count as one — holding 2, 3, 4, 5 and rolling the last die paid only what that die was worth, and busted you outright when it was a 2, 3, 4 or 6 instead of scoring 500",
       "How to play now says that a straight, like 5-of-a-kind, can be built up over several rolls",
       "The 3 of a kind / straight / 5 of a kind banner in Daily and Weekly Challenges no longer gets covered by the dice, and no longer shifts the screen when it appears",
+      "Added a Super busts stat to your Stats screen: how many times you've busted on a full throw of all five dice, either opening a turn or rolling a fresh five after hot dice",
     ],
   },
   {
