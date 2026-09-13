@@ -35,6 +35,14 @@ export interface StoredProfile {
   totalBanks: number;
   totalBankedPoints: number;
   hotDiceTotal: number;
+  /**
+   * Busts on a full throw of five dice. Optional so a profile stored before
+   * the stat existed still normalizes — and so a client that has deployed
+   * ahead of this server does not lose the count it is holding: an old server
+   * drops the field, the client keeps its own, and the next sync after the
+   * server catches up carries it up as normal.
+   */
+  superBusts?: number;
   /** Daily challenges won outright. Derived server-side (see daily.ts) and
    *  kept here so it travels with the profile like any other career stat. */
   dailyWins: number;
@@ -112,6 +120,7 @@ export function emptyProfile(): StoredProfile {
     totalBanks: 0,
     totalBankedPoints: 0,
     hotDiceTotal: 0,
+    superBusts: 0,
     dailyWins: 0,
     weeklyWins: 0,
     achievements: [],
@@ -156,6 +165,7 @@ const PROFILE_CEILINGS: Record<string, number> = {
   totalBanks: 10_000_000,
   totalBankedPoints: 1_000_000_000,
   hotDiceTotal: 1_000_000,
+  superBusts: 1_000_000,
   dailyWins: 100_000,
   weeklyWins: 100_000,
 };
@@ -228,6 +238,7 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
       incoming.totalBankedPoints,
     ),
     hotDiceTotal: max("hotDiceTotal", existing.hotDiceTotal, incoming.hotDiceTotal),
+    superBusts: max("superBusts", existing.superBusts ?? 0, incoming.superBusts ?? 0),
     dailyWins: max("dailyWins", existing.dailyWins, incoming.dailyWins),
     weeklyWins: max("weeklyWins", existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
     achievements,

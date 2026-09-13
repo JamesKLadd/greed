@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { GameState } from "@greed/core";
-import { BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
+import { applyAction, BEST_TOTAL_CEILING, createGame, diceToRoll, GOAL_DEFAULT } from "@greed/core";
 import {
   ACHIEVEMENTS,
   achievementScore,
@@ -195,6 +195,123 @@ describe("summarize", () => {
   });
 });
 
+describe("super busts", () => {
+  /**
+   * A bust is a super bust when the throw that busted was a full cup of five.
+   * The log does not label it — the engine has no reason to — so summarize
+   * reads the size of the throw immediately before the bust, which is the only
+   * throw a bust can ever belong to.
+   */
+  function runOf(events: unknown[]): GameState {
+    return {
+      winnerId: "you",
+      config: { goal: GOAL_DEFAULT },
+      players: [
+        { id: "you", name: "You", isBot: false, total: 0 },
+        { id: "b1", name: "Bot 1", isBot: true, botPersonality: "cautious", total: 0 },
+      ],
+      log: events,
+    } as unknown as GameState;
+  }
+  const roll = (playerId: string, n: number) => ({
+    type: "roll",
+    playerId,
+    dice: Array.from({ length: n }, () => 2),
+    result: { points: 0, isHotDice: false },
+  });
+  const bust = (playerId: string) => ({ type: "bust", playerId, lostPoints: 0 });
+
+  it("counts a bust on the opening throw of a turn", () => {
+    const s = summarize(runOf([roll("you", 5), bust("you")]), "you");
+    expect(s.busts).toBe(1);
+    expect(s.superBusts).toBe(1);
+  });
+
+  it("counts a bust on the fresh five off a cleared mat", () => {
+    // Hot dice, then five new dice, then nothing: the other way a full cup is
+    // thrown, and the one a player feels hardest.
+    const s = summarize(
+      runOf([roll("you", 5), { type: "hot-dice", playerId: "you" }, roll("you", 5), bust("you")]),
+      "you",
+    );
+    expect(s.superBusts).toBe(1);
+  });
+
+  it("does not count a bust on a partial throw", () => {
+    const s = summarize(runOf([roll("you", 5), roll("you", 2), bust("you")]), "you");
+    expect(s.busts).toBe(1);
+    expect(s.superBusts).toBe(0);
+  });
+
+  it("is not fooled by someone else's five", () => {
+    // Another seat throwing a full cup between your throw and your bust must
+    // not decide what your bust was: only your own throws are read.
+    const s = summarize(runOf([roll("you", 3), roll("b1", 5), bust("you")]), "you");
+    expect(s.superBusts).toBe(0);
+  });
+
+  it("adds up across a game and into the profile", () => {
+    const state = runOf([
+      roll("you", 5),
+      bust("you"),
+      roll("you", 1),
+      bust("you"),
+      roll("you", 5),
+      bust("you"),
+    ]);
+    const s = summarize(state, "you");
+    expect(s.busts).toBe(3);
+    expect(s.superBusts).toBe(2);
+
+    recordGame(s);
+    expect(loadProfile().superBusts).toBe(2);
+    recordGame(s);
+    expect(loadProfile().superBusts).toBe(4);
+  });
+});
+
+/**
+ * The hand-built logs above assume the shape doRoll writes: a bust is always
+ * preceded by its own throw. That assumption is the whole mechanism, so it is
+ * checked against the real engine rather than against more fixtures.
+ */
+describe("super busts, counted off real games", () => {
+  it("matches the throws that actually busted, across many seeds", () => {
+    const players = [
+      { id: "you", name: "You", isBot: false },
+      { id: "b1", name: "Bot 1", isBot: true },
+    ];
+    let seen = 0;
+    let withFullCup = 0;
+    for (let seed = 1; seed <= 150; seed++) {
+      let g = createGame(players, { goal: 100000, seed });
+      // Roll relentlessly and never bank: the fastest way to a lot of busts.
+      let expected = 0;
+      for (let step = 0; step < 60; step++) {
+        if (g.turn.outcome) {
+          g = applyAction(g, { type: "ADVANCE" });
+          continue;
+        }
+        const isYou = g.players[g.turn.playerIndex].id === "you";
+        const cup = diceToRoll(g.turn).length;
+        const after = applyAction(g, { type: "ROLL" });
+        if (after === g) break; // nothing left to throw
+        if (isYou && after.turn.busted && cup === 5) expected += 1;
+        g = after;
+      }
+      const s = summarize(g, "you");
+      expect(s.superBusts, `seed ${seed}`).toBe(expected);
+      expect(s.superBusts).toBeLessThanOrEqual(s.busts);
+      seen += s.busts;
+      withFullCup += s.superBusts;
+    }
+    // The run has to actually contain both kinds, or it proves nothing.
+    expect(seen).toBeGreaterThan(50);
+    expect(withFullCup).toBeGreaterThan(0);
+    expect(withFullCup).toBeLessThan(seen);
+  });
+});
+
 describe("recordGame + achievements", () => {
   function summaryOf(over: Partial<GameSummary>): GameSummary {
     return {
@@ -204,6 +321,7 @@ describe("recordGame + achievements", () => {
       bestTurn: 0,
       banks: 0,
       busts: 0,
+      superBusts: 0,
       hotDice: 0,
       turns: 0,
       bankedPoints: 0,
@@ -323,6 +441,7 @@ describe("averageBank", () => {
       bestTurn: 500,
       banks: 3,
       busts: 0,
+      superBusts: 0,
       hotDice: 0,
       turns: 3,
       bankedPoints: 1000,

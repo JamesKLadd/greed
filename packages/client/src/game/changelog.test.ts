@@ -84,6 +84,7 @@ function havePlayed() {
     bestTurn: 400,
     banks: 5,
     busts: 1,
+    superBusts: 0,
     hotDice: 0,
     turns: 6,
     bankedPoints: 3000,
