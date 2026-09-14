@@ -10,7 +10,15 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WEEKLY_ATTEMPTS, WEEKLY_CAP_FROM, weeklyPosition, type WeeklyMove } from "@greed/core";
+import {
+  WEEKLY_ATTEMPTS,
+  WEEKLY_ATTEMPTS_PER_DAY,
+  WEEKLY_CAP_FROM,
+  WEEKLY_DAILY_CAP_FROM,
+  dailyKey,
+  weeklyPosition,
+  type WeeklyMove,
+} from "@greed/core";
 
 /** The one attempt a player has open, keyed by user. */
 interface Open {
@@ -36,6 +44,8 @@ interface Best {
 
 const open = new Map<string, Open>();
 const best = new Map<string, Best>();
+/** Attempts spent per player per DAY, as weekly_attempts would hold them. */
+const spentToday = new Map<string, number>();
 const key = (user: string, week: string) => `${user}|${week}`;
 /** Career best turn per user, as the users table would hold it. */
 const bestTurns = new Map<string, number>();
@@ -193,6 +203,17 @@ vi.mock("./db.js", () => ({
       if (row) row.moves = moves;
       return { rows: [] };
     }
+    if (sql.includes("INSERT INTO weekly_attempts")) {
+      const [user, day] = params as [string, string];
+      const k = key(user, day);
+      spentToday.set(k, (spentToday.get(k) ?? 0) + 1);
+      return { rows: [] };
+    }
+    if (sql.includes("FROM weekly_attempts")) {
+      const [user, day] = params as [string, string];
+      const n = spentToday.get(key(user, day));
+      return { rows: n === undefined ? [] : [{ n }] };
+    }
     if (sql.includes("INSERT INTO weekly_runs")) {
       // The settle upsert: count the attempt, keep the run only if it beat the
       // standing score. Mirrors the CASE ladder in the real statement.
@@ -254,6 +275,7 @@ const CAPPED_WEEK = WEEKLY_CAP_FROM;
 beforeEach(() => {
   open.clear();
   best.clear();
+  spentToday.clear();
   bestTurns.clear();
   weeklyWins.clear();
   clock = 0;
@@ -706,6 +728,16 @@ describe("a week's worth of attempts", () => {
     await expect(startWeeklyRun(USER, WEEK)).resolves.toBeTruthy();
   });
 
+  it("counts the fifty against the WEEK, not against a day", async () => {
+    // The week of WEEKLY_CAP_FROM is the one week that ever worked this way, so
+    // its fifty must stay spendable in a single sitting.
+    record(USER, CAPPED_WEEK, 2000, 12);
+    const status = await weeklyStatus(USER, CAPPED_WEEK);
+    expect(status.attemptPeriod).toBe("week");
+    expect(status.attemptsUsed).toBe(12);
+    expect(spentToday.size).toBe(0);
+  });
+
   it("tells the screen what the week grants", async () => {
     record(USER, CAPPED_WEEK, 2000, 3);
     const capped = await weeklyStatus(USER, CAPPED_WEEK);
@@ -714,5 +746,66 @@ describe("a week's worth of attempts", () => {
 
     const uncapped = await weeklyStatus(USER, WEEK);
     expect(uncapped.attemptLimit).toBeNull();
+  });
+});
+
+describe("a day's worth of attempts", () => {
+  const DAY_WEEK = WEEKLY_DAILY_CAP_FROM;
+
+  /** Spend `n` attempts today, as settling that many runs would. */
+  function spend(user: string, n: number): void {
+    spentToday.set(key(user, dailyKey()), n);
+  }
+
+  it("deals the last one of the day and refuses the one after it", async () => {
+    spend(USER, WEEKLY_ATTEMPTS_PER_DAY - 1);
+    await expect(startWeeklyRun(USER, DAY_WEEK)).resolves.toBeTruthy();
+    await playAttempt(USER, 300, DAY_WEEK);
+    expect(spentToday.get(key(USER, dailyKey()))).toBe(WEEKLY_ATTEMPTS_PER_DAY);
+
+    await expect(startWeeklyRun(USER, DAY_WEEK)).rejects.toThrow(/all 10 attempts for today/i);
+    expect(open.has(USER)).toBe(false);
+  });
+
+  it("does not care how many the player has already made this week", async () => {
+    // The whole point of the change: a week is no longer a pot that can be
+    // emptied on Monday. Forty attempts already made, none of them today.
+    record(USER, DAY_WEEK, 2500, 40);
+    await expect(startWeeklyRun(USER, DAY_WEEK)).resolves.toBeTruthy();
+  });
+
+  it("gives a fresh ten when the day turns over", async () => {
+    // Yesterday's count is a different row, so it cannot hold today back.
+    spentToday.set(key(USER, "1999-01-01"), 500);
+    spend(USER, 0);
+    await expect(startWeeklyRun(USER, DAY_WEEK)).resolves.toBeTruthy();
+  });
+
+  it("charges the day an attempt was PLAYED OUT, not the one it was dealt on", async () => {
+    // Same rule the week count already follows: an attempt costs nothing until
+    // it is finished, so opening one and walking away is free.
+    await startWeeklyRun(USER, DAY_WEEK);
+    expect(spentToday.get(key(USER, dailyKey())) ?? 0).toBe(0);
+    await playAttempt(USER, 300, DAY_WEEK);
+    expect(spentToday.get(key(USER, dailyKey()))).toBe(1);
+  });
+
+  it("still lets a player finish the attempt in their hands", async () => {
+    const view = await startWeeklyRun(USER, DAY_WEEK);
+    expect(view.complete).toBe(false);
+    spend(USER, WEEKLY_ATTEMPTS_PER_DAY);
+    const again = await startWeeklyRun(USER, DAY_WEEK);
+    expect(again.complete).toBe(false);
+  });
+
+  it("tells the screen it is a daily ration, and what is spent against it", async () => {
+    record(USER, DAY_WEEK, 2500, 23); // 23 attempts this week...
+    spend(USER, 4); // ...four of them today
+    const status = await weeklyStatus(USER, DAY_WEEK);
+    expect(status.attemptLimit).toBe(WEEKLY_ATTEMPTS_PER_DAY);
+    expect(status.attemptPeriod).toBe("day");
+    expect(status.attemptsUsed).toBe(4);
+    // The week's total is untouched — it is what "best of N attempts" means.
+    expect(status.attempts).toBe(23);
   });
 });

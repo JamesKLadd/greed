@@ -6,7 +6,9 @@ import {
   msUntilNextWeek,
   scoreWeeklyRun,
   weekKey,
-  weeklyAttemptLimit,
+  WEEKLY_ATTEMPTS_PER_DAY,
+  WEEKLY_DAILY_CAP_FROM,
+  weeklyAllowance,
   weeklyPosition,
   type WeeklyMove,
 } from "./weekly.js";
@@ -158,25 +160,49 @@ describe("a weekly run", () => {
   });
 });
 
-describe("weeklyAttemptLimit", () => {
-  it("allows fifty attempts from the week the cap starts", () => {
-    expect(weeklyAttemptLimit(WEEKLY_CAP_FROM)).toBe(WEEKLY_ATTEMPTS);
-    expect(weeklyAttemptLimit("2026-09-21")).toBe(WEEKLY_ATTEMPTS);
-    expect(weeklyAttemptLimit("2027-01-04")).toBe(WEEKLY_ATTEMPTS);
+describe("weeklyAllowance", () => {
+  it("grants ten a day from the week the daily ration starts", () => {
+    expect(weeklyAllowance(WEEKLY_DAILY_CAP_FROM)).toEqual({
+      limit: WEEKLY_ATTEMPTS_PER_DAY,
+      per: "day",
+    });
+    expect(weeklyAllowance("2026-09-28")).toEqual({ limit: WEEKLY_ATTEMPTS_PER_DAY, per: "day" });
+    expect(weeklyAllowance("2027-01-04")).toEqual({ limit: WEEKLY_ATTEMPTS_PER_DAY, per: "day" });
   });
 
-  it("leaves every week before it unlimited", () => {
+  it("keeps the one week that was played at fifty a week", () => {
+    // That week was announced in an update log and played under it. It is over
+    // by the time this reads it, but its board is still there to be read, and a
+    // rule that forgot it would describe it wrongly.
+    expect(weeklyAllowance(WEEKLY_CAP_FROM)).toEqual({ limit: WEEKLY_ATTEMPTS, per: "week" });
+  });
+
+  it("leaves every week before any cap unlimited", () => {
     // Weeks played under the old promise keep it. Someone part-way through the
     // week the cap was written in may already hold more than fifty attempts,
     // and taking those back is not something a rule change gets to do.
-    expect(weeklyAttemptLimit("2026-09-07")).toBeNull();
-    expect(weeklyAttemptLimit("2026-08-31")).toBeNull();
+    expect(weeklyAllowance("2026-09-07")).toEqual({ limit: null, per: null });
+    expect(weeklyAllowance("2026-08-31")).toEqual({ limit: null, per: null });
+  });
+
+  it("gives a period exactly when it gives a limit", () => {
+    // The two are read together everywhere — a limit with no period cannot be
+    // described, and a period with no limit describes nothing.
+    for (const week of ["2026-08-31", WEEKLY_CAP_FROM, WEEKLY_DAILY_CAP_FROM, "2030-06-03"]) {
+      const a = weeklyAllowance(week);
+      expect(a.limit === null, week).toBe(a.per === null);
+    }
   });
 
   it("turns over on a Monday, like everything else about a week", () => {
-    // The cutover is a week key rather than a date, so it can only ever land on
-    // a boundary — a cap that began mid-week would change the rules of a week
-    // already being played.
+    // Both cutovers are week keys rather than dates, so they can only ever land
+    // on a boundary — a rule that began mid-week would change the terms of a
+    // week already being played.
     expect(weekKey(new Date(`${WEEKLY_CAP_FROM}T12:00:00Z`))).toBe(WEEKLY_CAP_FROM);
+    expect(weekKey(new Date(`${WEEKLY_DAILY_CAP_FROM}T12:00:00Z`))).toBe(WEEKLY_DAILY_CAP_FROM);
+  });
+
+  it("changes the ration a week after introducing one, not in the same week", () => {
+    expect(WEEKLY_DAILY_CAP_FROM > WEEKLY_CAP_FROM).toBe(true);
   });
 });

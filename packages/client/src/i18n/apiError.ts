@@ -54,6 +54,7 @@ const KEYS: Record<string, MsgKey> = {
   "username.rejected": "err.username.rejected",
   "username.taken": "err.username.taken",
   "weekly.spent": "err.weekly.spent",
+  "weekly.spentToday": "err.weekly.spentToday",
   "weekly.staleRun": "err.weekly.staleRun",
 };
 

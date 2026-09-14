@@ -12,7 +12,7 @@
  * A player may only have ONE attempt open at a time, so an attempt is finished
  * rather than abandoned the moment it goes badly — which is what stops the mode
  * collapsing into "reroll the first turn until it's good". And a week grants a
- * fixed number of attempts (see `weeklyAttemptLimit`), so a board is won by
+ * fixed ration of attempts (see `weeklyAllowance`), so a board is won by
  * playing well rather than by playing longest.
  *
  * Unlike the daily, this week's board is public from the start. With a week's
@@ -23,13 +23,15 @@
 import {
   WEEKLY_TURNS,
   canToggleLock,
+  dailyKey,
   getLegalActions,
   holdIndex,
   isRunMove,
   weekKey,
-  weeklyAttemptLimit,
+  weeklyAllowance,
   weeklyMoveStart,
   weeklyPosition,
+  type AttemptPeriod,
   type GameState,
   type WeeklyMove,
   type WeeklyResult,
@@ -96,6 +98,17 @@ export interface WeeklyStatus {
    * attempts the server would happily have dealt.
    */
   attemptLimit: number | null;
+  /** What that limit is counted per. Null exactly when `attemptLimit` is. */
+  attemptPeriod: AttemptPeriod | null;
+  /**
+   * Spent against the ration in force: today's count where it is daily, the
+   * week's where it is weekly.
+   *
+   * Sent for the same reason the limit is, and one more besides — what day it
+   * is depends on the challenge zone, and a client in another timezone has no
+   * business deciding when its own allowance refreshes.
+   */
+  attemptsUsed: number;
   /** Current streak of consecutive weeks played, including this one. */
   streak: number;
   /**
@@ -172,12 +185,42 @@ async function clearOpenRun(userId: string): Promise<void> {
  * one-open-run rule can support: a player who could burn an attempt by opening
  * one and walking away would be paying for dice they never rolled.
  */
-async function attemptsUsed(userId: string, week: string): Promise<number> {
+async function attemptsThisWeek(userId: string, week: string): Promise<number> {
   const { rows } = await query<{ attempts: number }>(
     `SELECT attempts FROM weekly_runs WHERE user_id = $1 AND week = $2`,
     [userId, week],
   );
   return rows[0]?.attempts ?? 0;
+}
+
+/**
+ * Attempts this player has spent TODAY, which is what a daily ration counts.
+ *
+ * Its own table rather than a column on the week's row: a week holds seven
+ * days' worth of these and only ever keeps one row per player, so there is
+ * nowhere on it for a per-day figure to live.
+ */
+async function attemptsToday(userId: string, day: string): Promise<number> {
+  const { rows } = await query<{ n: number }>(
+    `SELECT n FROM weekly_attempts WHERE user_id = $1 AND day = $2`,
+    [userId, day],
+  );
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * What this player has spent against the ration in force, and what that ration
+ * is. Together, because reading one without the other is how a screen ends up
+ * saying "3 of 50" on a week that grants ten a day.
+ */
+async function standing(
+  userId: string,
+  week: string,
+  day: string,
+): Promise<{ limit: number | null; per: "day" | "week" | null; used: number }> {
+  const { limit, per } = weeklyAllowance(week);
+  if (per === "day") return { limit, per, used: await attemptsToday(userId, day) };
+  return { limit, per, used: await attemptsThisWeek(userId, week) };
 }
 
 function viewOf(run: OpenRun): WeeklyRunView {
@@ -223,13 +266,19 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
     await clearOpenRun(userId);
   }
 
-  const limit = weeklyAttemptLimit(week);
-  if (limit !== null && (await attemptsUsed(userId, week)) >= limit) {
-    throw new AccountError(
-      409,
-      `You have used all ${limit} attempts for this week. New dice on Monday.`,
-      "weekly.spent",
-    );
+  const { limit, per, used } = await standing(userId, week, dailyKey());
+  if (limit !== null && used >= limit) {
+    throw per === "day"
+      ? new AccountError(
+          409,
+          `You have used all ${limit} attempts for today. New dice tomorrow.`,
+          "weekly.spentToday",
+        )
+      : new AccountError(
+          409,
+          `You have used all ${limit} attempts for this week. New dice on Monday.`,
+          "weekly.spent",
+        );
   }
 
   // A fresh, unguessable seed per ATTEMPT. Deriving it from the week or the
@@ -258,6 +307,17 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
  */
 async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
   const r = weeklyPosition(run.seed, run.moves).result;
+  // Charged to the day the attempt was PLAYED OUT, matching the rule the week
+  // count already follows: an attempt costs nothing until it is finished. A run
+  // carried across midnight is therefore charged to the day it ended on, which
+  // can cost its player one attempt of the pair of days it straddled and can
+  // never hand them a spare — the cap was already checked when it was dealt,
+  // and only one attempt can be open at a time.
+  await query(
+    `INSERT INTO weekly_attempts (user_id, day, n) VALUES ($1, $2, 1)
+     ON CONFLICT (user_id, day) DO UPDATE SET n = weekly_attempts.n + 1`,
+    [userId, dailyKey()],
+  );
   await query(
     `INSERT INTO weekly_runs
        (user_id, week, score, turns, banks, busts, super_busts, hot_dice, best_turn, seed,
@@ -632,6 +692,11 @@ export async function weeklyStatus(
   const champions = await weeklyChampions(week);
   const reigning = champions[0] ?? null;
 
+  // The ration in force and what this player has spent against it. Read here
+  // rather than derived on the screen: only the server knows which day it is in
+  // the challenge zone, and only it can count what has been spent today.
+  const ration = await standing(userId, week, dailyKey());
+
   // Keep the account's copy in step, so the count reaches the Stats screen and
   // the leaderboards rather than living only in this response.
   if (mineClosed.wins > 0) await raiseWeeklyWins(userId, mineClosed.wins);
@@ -654,7 +719,9 @@ export async function weeklyStatus(
         }
       : null,
     attempts: own?.attempts ?? 0,
-    attemptLimit: weeklyAttemptLimit(week),
+    attemptLimit: ration.limit,
+    attemptPeriod: ration.per,
+    attemptsUsed: ration.used,
     streak: await currentStreak(userId, week),
     leaderboard: board.rows.map((r) => ({
       username: r.username,

@@ -21,19 +21,32 @@ import type { GameState } from "./types.js";
 export const WEEKLY_TURNS = 10;
 
 /**
- * Attempts a player gets in a week.
+ * Attempts a player gets each day, once the daily allowance begins.
  *
  * The mode opened with no limit at all, which made "how many times can you be
  * bothered" part of the score — a week went to whoever ground it hardest rather
- * than to whoever played it best. Fifty is meant to be more than anyone needs
- * to have a proper go at a week and few enough that an attempt is worth
- * something. They can be spent whenever across the week; nothing is doled out
- * per day.
+ * than to whoever played it best. A weekly ration fixed that but bought a
+ * second problem with it: fifty in one pot is spendable in one sitting, so a
+ * player who found a good week on Monday could exhaust it before Tuesday and
+ * then watch the board for six days with nothing to play.
+ *
+ * Ten a day is roughly the same ration across a week and cannot be front-
+ * loaded. It also gives the mode a reason to be opened daily, which is the
+ * shape the daily challenge already has and the weekly never did.
+ */
+export const WEEKLY_ATTEMPTS_PER_DAY = 10;
+
+/**
+ * Attempts a player got for a whole week, in the one week that worked that way.
+ *
+ * Kept because that week really happened and its rule has to keep answering
+ * for it — `weeklyAllowance` still reports it for the week of WEEKLY_CAP_FROM.
+ * No week after WEEKLY_DAILY_CAP_FROM uses it.
  */
 export const WEEKLY_ATTEMPTS = 50;
 
 /**
- * The first week the cap applies to — the Monday it starts on.
+ * The first week any cap applied to — the Monday it started on.
  *
  * The weeks before it were played under the old promise of unlimited tries, and
  * players spent them accordingly: some already hold more than fifty attempts on
@@ -44,13 +57,42 @@ export const WEEKLY_ATTEMPTS = 50;
 export const WEEKLY_CAP_FROM = "2026-09-14";
 
 /**
- * How many attempts a given week allows, or null where a week is unlimited.
+ * The first week the ration is DAILY rather than weekly.
+ *
+ * A week later than WEEKLY_CAP_FROM, and for the same reason it exists at all:
+ * the fifty-a-week week was announced in an update log and is being played
+ * right now under that promise. Moving it to ten a day mid-week would cut
+ * somebody off at four attempts who had been told they had fifty, so the change
+ * lands on the boundary and the week already in progress keeps the rule it
+ * started with.
+ */
+export const WEEKLY_DAILY_CAP_FROM = "2026-09-21";
+
+/** What a limit is counted per, or null where a week is unlimited. */
+export type AttemptPeriod = "day" | "week";
+
+export interface WeeklyAllowance {
+  /** How many attempts the allowance grants per `per`, or null for no cap. */
+  limit: number | null;
+  /** What that limit is counted per. Null exactly when `limit` is. */
+  per: AttemptPeriod | null;
+}
+
+/**
+ * What a given week grants, and what it grants it per.
+ *
+ * Three answers, because the mode has had three rules and each week has to keep
+ * reporting the one it was actually played under — a board from August is still
+ * readable, and the screen describing it should not claim a cap that did not
+ * exist then.
  *
  * Week keys are YYYY-MM-DD, so they compare as strings in calendar order — the
  * same property that lets the board's queries say `week < today`.
  */
-export function weeklyAttemptLimit(week: string = weekKey()): number | null {
-  return week >= WEEKLY_CAP_FROM ? WEEKLY_ATTEMPTS : null;
+export function weeklyAllowance(week: string = weekKey()): WeeklyAllowance {
+  if (week >= WEEKLY_DAILY_CAP_FROM) return { limit: WEEKLY_ATTEMPTS_PER_DAY, per: "day" };
+  if (week >= WEEKLY_CAP_FROM) return { limit: WEEKLY_ATTEMPTS, per: "week" };
+  return { limit: null, per: null };
 }
 
 export type WeeklyMove = RunMove;

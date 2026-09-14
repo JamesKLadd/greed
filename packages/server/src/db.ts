@@ -197,6 +197,23 @@ export async function migrate(): Promise<void> {
     );
   `);
   await query(`ALTER TABLE weekly_runs ADD COLUMN IF NOT EXISTS super_busts integer;`);
+  // Attempts spent per CALENDAR DAY, once the weekly's ration became a daily
+  // one. The count on weekly_runs stays what it always was — every attempt a
+  // player has made this week, which is what "best of N attempts" means on the
+  // board — and this answers the different question the cap now asks: how many
+  // have they made TODAY. Neither can be derived from the other, so both are
+  // kept rather than one being computed from the other and getting it wrong.
+  //
+  // Days are the challenge zone's days, the same ones the daily challenge is
+  // keyed by, so "a new day" means the same thing in both modes.
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_attempts (
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day     date NOT NULL,
+      n       integer NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, day)
+    );
+  `);
   await query(
     `CREATE INDEX IF NOT EXISTS weekly_runs_week_score_idx ON weekly_runs (week, score DESC);`,
   );
@@ -368,6 +385,11 @@ export async function prune(): Promise<void> {
     [
       "old weekly runs",
       `DELETE FROM weekly_runs WHERE week < (now() - $1::interval)::date`,
+      [cutoff],
+    ],
+    [
+      "old weekly attempt counts",
+      `DELETE FROM weekly_attempts WHERE day < (now() - $1::interval)::date`,
       [cutoff],
     ],
     // An attempt left open for a month belongs to a week that closed long ago

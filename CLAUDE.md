@@ -60,9 +60,16 @@ build on every push. Node 20.
   owns the move list, and replays it to derive the score. The client never sees a
   seed and never reports a score.
 - Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
-  unlimited attempts, best one stands. Every attempt gets a fresh secret seed,
-  and only one attempt may be open at a time. Unlike the daily, this week's board
-  is public from the start.
+  best attempt of the week stands. Every attempt gets a fresh secret seed, and
+  only one attempt may be open at a time. Unlike the daily, this week's board is
+  public from the start.
+- The weekly's ration has changed twice and every week still reports the rule it
+  was played under — `weeklyAllowance(week)` in `core/src/weekly.ts` is the one
+  answer: unlimited before `WEEKLY_CAP_FROM`, 50 for that single week, 10 A DAY
+  from `WEEKLY_DAILY_CAP_FROM` on. A ration change always lands on a Monday, so
+  nobody's terms change mid-week. `weekly_runs.attempts` is the week's total
+  (what "best of N attempts" means); `weekly_attempts` is the per-day count the
+  cap reads. Neither derives from the other.
 
 ## Deploying — both halves ship on a push to `main`
 

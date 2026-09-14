@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WEEKLY_TURNS, msUntilNextWeek, weekKey, weeklyAttemptLimit } from "@greed/core";
+import { WEEKLY_TURNS, msUntilNextWeek, weekKey, weeklyAllowance } from "@greed/core";
 import { ChallengeRun } from "../components/ChallengeRun.js";
 import {
   fetchWeekly,
@@ -62,7 +62,14 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
    * function of the calendar, so those screens can still say what the mode is.
    * Anything about what THIS player has left comes from the server instead.
    */
-  const weekLimit = weeklyAttemptLimit(week);
+  const weekRation = weeklyAllowance(week);
+  /** The mode's own description, said the same way in all three places it appears. */
+  const tagline =
+    weekRation.limit === null
+      ? t("weekly.tagline")
+      : weekRation.per === "day"
+        ? t("weekly.tagline.capped.day", { n: weekRation.limit })
+        : t("weekly.tagline.capped", { n: weekRation.limit });
   const [status, setStatus] = useState<WeeklyStatus | null>(null);
   const [unlocked, setUnlocked] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,11 +189,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
       <div className="setup">
         <div className="setup__hero">
           <h1 className="setup__logo">{t("weekly.title")}</h1>
-          <p className="setup__tagline">
-            {weekLimit === null
-              ? t("weekly.tagline")
-              : t("weekly.tagline.capped", { n: weekLimit })}
-          </p>
+          <p className="setup__tagline">{tagline}</p>
         </div>
         <div className="setup__panel daily">
           <p className="daily__note">{t("weekly.signInRequired")}</p>
@@ -211,11 +214,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
       <div className="setup">
         <div className="setup__hero">
           <h1 className="setup__logo">{t("weekly.title")}</h1>
-          <p className="setup__tagline">
-            {weekLimit === null
-              ? t("weekly.tagline")
-              : t("weekly.tagline.capped", { n: weekLimit })}
-          </p>
+          <p className="setup__tagline">{tagline}</p>
         </div>
         <div className="setup__panel daily">
           <p className="daily__note">{t("weekly.notReady")}</p>
@@ -236,7 +235,11 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   // cap, which is every week before the limit began and any server that
   // predates it. `left` is only meaningful alongside a limit.
   const limit = status?.attemptLimit ?? null;
-  const used = status?.attempts ?? 0;
+  // Spent against the ration in force, which is NOT the same as the attempts
+  // made this week once the ration is daily. `attempts` still means the week's
+  // total and is what the board and the run summary talk about.
+  const used = status?.attemptsUsed ?? 0;
+  const perDay = status?.attemptPeriod === "day";
   const left = limit === null ? null : Math.max(0, limit - used);
   const spent = left === 0;
 
@@ -244,9 +247,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
     <div className="setup">
       <div className="setup__hero">
         <h1 className="setup__logo">{t("weekly.title")}</h1>
-        <p className="setup__tagline">
-          {weekLimit === null ? t("weekly.tagline") : t("weekly.tagline.capped", { n: weekLimit })}
-        </p>
+        <p className="setup__tagline">{tagline}</p>
       </div>
 
       <div className="daily__layout">
@@ -335,8 +336,10 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                           players: status.players,
                         })
                       : limit === null
-                        ? t("weekly.attemptsMade", { n: used })
-                        : t("weekly.attemptsMadeOf", { n: used, total: limit })}
+                        ? t("weekly.attemptsMade", { n: status?.attempts ?? 0 })
+                        : perDay
+                          ? t("weekly.attemptsMadeOf.day", { n: used, total: limit })
+                          : t("weekly.attemptsMadeOf", { n: used, total: limit })}
                   </p>
                   <div className="summary summary--quad">
                     <div className="summary__stat">
@@ -368,7 +371,9 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                   <p className="daily__note">
                     {limit === null
                       ? t("weekly.intro", { turns: WEEKLY_TURNS })
-                      : t("weekly.intro.capped", { turns: WEEKLY_TURNS, n: limit })}
+                      : perDay
+                        ? t("weekly.intro.capped.day", { turns: WEEKLY_TURNS, n: limit })
+                        : t("weekly.intro.capped", { turns: WEEKLY_TURNS, n: limit })}
                   </p>
                   <p className="daily__note daily__note--hint">{t("weekly.freshDice")}</p>
                 </>
@@ -385,10 +390,16 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                   }
                 >
                   {spent
-                    ? t("weekly.attemptsGone", { total: limit })
+                    ? perDay
+                      ? t("weekly.attemptsGone.day", { total: limit })
+                      : t("weekly.attemptsGone", { total: limit })
                     : left === 1
-                      ? t("weekly.attemptsLast")
-                      : t("weekly.attemptsLeft", { n: left ?? 0, total: limit })}
+                      ? perDay
+                        ? t("weekly.attemptsLast.day")
+                        : t("weekly.attemptsLast")
+                      : perDay
+                        ? t("weekly.attemptsLeft.day", { n: left ?? 0, total: limit })
+                        : t("weekly.attemptsLeft", { n: left ?? 0, total: limit })}
                 </p>
               )}
 

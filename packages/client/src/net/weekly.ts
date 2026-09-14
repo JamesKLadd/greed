@@ -4,7 +4,7 @@
  * sees a seed.
  */
 
-import type { RunMove, RunResult, GameState } from "@greed/core";
+import type { AttemptPeriod, RunMove, RunResult, GameState } from "@greed/core";
 import { api, ApiError } from "./auth.js";
 
 /**
@@ -53,9 +53,19 @@ export interface WeeklyChampion {
 export interface WeeklyStatus {
   week: string;
   best: RunResult | null;
+  /** Every attempt this player has finished this week, best and beaten alike. */
   attempts: number;
-  /** Attempts this week grants, or null where a week is unlimited. */
+  /** Attempts the ration grants, or null where a week is unlimited. */
   attemptLimit: number | null;
+  /** What that limit is counted per. Null exactly when `attemptLimit` is. */
+  attemptPeriod: AttemptPeriod | null;
+  /**
+   * Spent against the ration in force — today's count where it is daily, the
+   * week's where it is weekly. The same as `attempts` under a weekly ration and
+   * emphatically not under a daily one, which is why it is sent rather than
+   * worked out here: only the server knows what day it is in the challenge zone.
+   */
+  attemptsUsed: number;
   streak: number;
   leaderboard: WeeklyEntry[];
   yourRank: number | null;
@@ -89,6 +99,13 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
     // Guessing 50 here would have this screen refuse attempts the server
     // would have dealt, for the few minutes a release takes to land.
     attemptLimit: raw.attemptLimit ?? null,
+    // A server sending a limit but no period is one from before the ration
+    // became daily, and such a server is enforcing it by the week — so that is
+    // not a guess, it is what the missing field means.
+    attemptPeriod: raw.attemptPeriod ?? (raw.attemptLimit == null ? null : "week"),
+    // And under a weekly ration the week's total IS the figure the cap counts,
+    // so the same reasoning gives the right fallback here.
+    attemptsUsed: raw.attemptsUsed ?? raw.attempts ?? 0,
     streak: raw.streak ?? 0,
     wins: raw.wins ?? 0,
     players: raw.players ?? 0,

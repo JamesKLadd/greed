@@ -3,7 +3,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { BetaGate } from "../beta/BetaGate.js";
 const BetaHome = lazy(() => import("../beta/BetaHome.js"));
 import { RulesModal } from "../components/RulesModal.js";
-import { weeklyAttemptLimit } from "@greed/core";
+import { weeklyAllowance } from "@greed/core";
 import { useInstallPrompt } from "../game/pwa.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
@@ -54,7 +54,7 @@ export function HomeScreen(props: HomeScreenProps) {
   const betaActive = useBetaActive();
   const t = useT();
   const { status, user } = useAuth();
-  const weeklyLimit = weeklyAttemptLimit();
+  const weeklyRation = weeklyAllowance();
   const [showRules, setShowRules] = useState(false);
   const { canInstall, promptInstall } = useInstallPrompt();
   // First-time visitors get the practice button gently highlighted.
@@ -155,9 +155,11 @@ export function HomeScreen(props: HomeScreenProps) {
               subtitle would put a round trip in front of the front door. The
               rule is a pure function of the week, so it can be answered here. */}
           <span className="home-menu__sub">
-            {weeklyLimit === null
+            {weeklyRation.limit === null
               ? t("weekly.home.sub")
-              : t("weekly.home.subCapped", { n: weeklyLimit })}
+              : weeklyRation.per === "day"
+                ? t("weekly.home.subCapped.day", { n: weeklyRation.limit })
+                : t("weekly.home.subCapped", { n: weeklyRation.limit })}
           </span>
         </button>
         <button className="btn btn--roll btn--big home-menu__btn" onClick={onLocal}>
