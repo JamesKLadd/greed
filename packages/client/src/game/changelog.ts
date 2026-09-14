@@ -24,6 +24,14 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.7.2",
+    date: "2026-09-14",
+    notes: [
+      "The Weekly Challenge now gives you 10 attempts every day instead of 50 for the whole week, starting with the week of September 21st. A week's worth of tries can no longer be spent on Monday, and this week still runs on the 50 you were promised",
+      "Leaderboards has two new categories: Daily wins and Weekly wins, counting the days and weeks you finished top of the board. Worked out by the server from the runs themselves, and only counted once that day or week has closed",
+    ],
+  },
+  {
     version: "0.7.1",
     date: "2026-09-12",
     notes: [
