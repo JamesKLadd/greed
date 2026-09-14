@@ -217,12 +217,16 @@ export const en = {
   "board.title": "LEADERBOARDS",
   "board.tagline": "Career bests across everyone who plays.",
   "board.onlineOnly":
-    "These four count games played online, scored by the server. Offline games against bots still count toward your own stats.",
+    "These boards count games played online, scored by the server. Offline games against bots still count toward your own stats.",
+  "board.challengeWins":
+    "A win is finishing top of a day or a week, counted once that board has closed. Worked out by the server from the runs themselves.",
   "board.home": "Leaderboards",
   "board.cat.wins": "Wins",
   "board.cat.bestTurn": "Best turn",
   "board.cat.bestStreak": "Best streak",
   "board.cat.bestTotal": "Best total",
+  "board.cat.dailyWins": "Daily wins",
+  "board.cat.weeklyWins": "Weekly wins",
   "board.cat.daily": "Daily challenge",
   "board.cat.weekly": "Weekly challenge",
   "board.yourBestWeek": "Your best: {score} in the week of {date} — #{rank} of {runs} weeks.",
@@ -1049,12 +1053,16 @@ export const es: Record<MsgKey, string> = {
   "board.title": "CLASIFICACIONES",
   "board.tagline": "Los mejores registros de todos los que juegan.",
   "board.onlineOnly":
-    "Estas cuatro cuentan las partidas jugadas en línea, puntuadas por el servidor. Las partidas contra bots siguen contando para tus propias estadísticas.",
+    "Estas tablas cuentan las partidas jugadas en línea, puntuadas por el servidor. Las partidas contra bots siguen contando para tus propias estadísticas.",
+  "board.challengeWins":
+    "Ganar es quedar primero en un día o una semana, y cuenta cuando esa tabla se cierra. Lo calcula el servidor a partir de las propias partidas.",
   "board.home": "Clasificaciones",
   "board.cat.wins": "Victorias",
   "board.cat.bestTurn": "Mejor turno",
   "board.cat.bestStreak": "Mejor racha",
   "board.cat.bestTotal": "Mejor total",
+  "board.cat.dailyWins": "Retos diarios ganados",
+  "board.cat.weeklyWins": "Retos semanales ganados",
   "board.cat.daily": "Reto diario",
   "board.cat.weekly": "Reto semanal",
   "board.yourBestWeek": "Tu mejor: {score} en la semana del {date} — #{rank} de {runs} semanas.",
@@ -1861,12 +1869,16 @@ export const fr: Record<MsgKey, string> = {
   "board.title": "CLASSEMENTS",
   "board.tagline": "Les meilleurs records de tous ceux qui jouent.",
   "board.onlineOnly":
-    "Ces quatre-là comptent les parties jouées en ligne, calculées par le serveur. Les parties contre des bots comptent toujours pour vos propres statistiques.",
+    "Ces classements comptent les parties jouées en ligne, calculées par le serveur. Les parties contre des bots comptent toujours pour vos propres statistiques.",
+  "board.challengeWins":
+    "Une victoire, c’est terminer premier d’un jour ou d’une semaine, comptée une fois ce classement clos. Calculée par le serveur à partir des parties elles-mêmes.",
   "board.home": "Classements",
   "board.cat.wins": "Victoires",
   "board.cat.bestTurn": "Meilleur tour",
   "board.cat.bestStreak": "Meilleure série",
   "board.cat.bestTotal": "Meilleur total",
+  "board.cat.dailyWins": "Défis du jour gagnés",
+  "board.cat.weeklyWins": "Défis hebdo gagnés",
   "board.cat.daily": "Défi du jour",
   "board.cat.weekly": "Défi hebdomadaire",
   "board.yourBestWeek":

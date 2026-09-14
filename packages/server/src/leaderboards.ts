@@ -13,11 +13,18 @@
  * are labelled as such.
  */
 
-import { GOAL_DEFAULT } from "@greed/core";
+import { GOAL_DEFAULT, dailyKey } from "@greed/core";
 import { query } from "./db.js";
 
 /** The career stats a board can be built on. */
-export const LEADERBOARD_CATEGORIES = ["wins", "bestTurn", "bestStreak", "bestTotal"] as const;
+export const LEADERBOARD_CATEGORIES = [
+  "wins",
+  "bestTurn",
+  "bestStreak",
+  "bestTotal",
+  "dailyWins",
+  "weeklyWins",
+] as const;
 export type LeaderboardCategory = (typeof LEADERBOARD_CATEGORIES)[number];
 
 export function isLeaderboardCategory(v: unknown): v is LeaderboardCategory {
@@ -60,12 +67,21 @@ const FIELD: Record<LeaderboardCategory, string> = {
   bestTurn: "best_turn",
   bestStreak: "best_streak",
   bestTotal: "best_total",
+  dailyWins: "daily_wins",
+  weeklyWins: "weekly_wins",
 };
 
 export async function leaderboard(
   category: LeaderboardCategory,
   userId: string | null,
 ): Promise<LeaderboardView> {
+  // The four online boards are written as games finish, so they are already
+  // current. The two challenge boards are a tally of the run tables, and this
+  // is what keeps them from lagging behind the days and weeks that have closed
+  // since anybody last looked.
+  if (category === "dailyWins") await refreshCareerChallengeWins("daily");
+  if (category === "weeklyWins") await refreshCareerChallengeWins("weekly");
+
   const value = `c.${FIELD[category]}`;
 
   const { rows } = await query<{ username: string; value: string; rank: string; id: string }>(
@@ -179,6 +195,67 @@ export async function recordMatch(m: FinishedMatch): Promise<void> {
        best_total     = GREATEST(career_stats.best_total, $4),
        updated_at     = now()`,
     [m.userId, m.won ? 1 : 0, Math.max(0, Math.round(m.bestTurn)), Math.max(0, eligibleTotal)],
+  );
+}
+
+/**
+ * How each challenge's wins are counted, and from where.
+ *
+ * Both are "finished top of a board that has closed", tie-broken exactly as the
+ * board itself draws them so every day and every week has one winner. Written
+ * out here rather than reusing the challenge modules' own placings queries,
+ * because those answer for a named list of players and this has to answer for
+ * everybody at once.
+ */
+const CHALLENGE_WINS = {
+  daily: {
+    column: "daily_wins",
+    sql: `SELECT user_id, count(*)::int AS wins FROM (
+            SELECT user_id,
+                   RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+              FROM daily_runs WHERE complete AND score > 0 AND day < $1::date
+          ) r WHERE rank = 1 GROUP BY user_id`,
+  },
+  weekly: {
+    column: "weekly_wins",
+    sql: `SELECT user_id, count(*)::int AS wins FROM (
+            SELECT user_id,
+                   RANK() OVER (PARTITION BY week ORDER BY score DESC, best_at ASC) AS rank
+              FROM weekly_runs WHERE score > 0 AND week < $1::date
+          ) r WHERE rank = 1 GROUP BY user_id`,
+  },
+} as const;
+
+/**
+ * Bring the career count of days or weeks taken outright up to date.
+ *
+ * A stored column rather than a live count, and GREATEST rather than
+ * assignment, for one reason: wins are derived from the run tables and those
+ * are pruned after thirty days, so the derived figure SHRINKS as a player's
+ * history ages out. A career total that went down would be a strange thing to
+ * show anybody, so the high-water mark is kept here and the boards rank that.
+ *
+ * Called from two places, and it needs both. Reading a board refreshes it, so
+ * what is on screen is never behind the days and weeks that closed since anyone
+ * last looked. The retention sweep refreshes it too, just BEFORE it deletes
+ * anything, so a win is banked even if nobody happens to open the board in the
+ * month between earning it and the run expiring.
+ *
+ * `kind` picks the statement from a closed set rather than naming a column,
+ * because the column name lands inside the SQL text — same rule as FIELD above.
+ */
+export async function refreshCareerChallengeWins(kind: "daily" | "weekly"): Promise<void> {
+  const { column, sql } = CHALLENGE_WINS[kind];
+  await query(
+    `INSERT INTO career_stats (user_id, ${column})
+     ${sql}
+     ON CONFLICT (user_id) DO UPDATE
+       SET ${column} = GREATEST(career_stats.${column}, EXCLUDED.${column}),
+           updated_at = now()`,
+    // Today's board is still filling up, so it is not a win yet — the same
+    // boundary the challenge screens draw. The weekly's key is a Monday, which
+    // is also strictly less than today on every day of its week.
+    [dailyKey()],
   );
 }
 

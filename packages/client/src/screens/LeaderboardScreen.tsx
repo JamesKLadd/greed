@@ -5,6 +5,7 @@ import {
   fetchMatches,
   fetchWeeklyBest,
   LEADERBOARD_CATEGORIES,
+  ONLINE_CATEGORIES,
   type LeaderboardCategory,
   type DailyBestView,
   type LeaderboardView,
@@ -126,8 +127,11 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           {/* What these boards measure changed when they stopped ranking the
               profile a client uploads and started ranking games the server ran
               itself. Say so, rather than leaving a player to wonder why their
-              offline wins are missing. */}
-          <p className="daily__note daily__note--hint">{t("board.onlineOnly")}</p>
+              offline wins are missing — and say the right thing on the two that
+              count challenge finishes rather than online games. */}
+          <p className="daily__note daily__note--hint">
+            {ONLINE_CATEGORIES.includes(tab) ? t("board.onlineOnly") : t("board.challengeWins")}
+          </p>
           {board.entries.length === 0 ? (
             <p className="daily__status">{t("board.empty")}</p>
           ) : (

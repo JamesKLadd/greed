@@ -700,7 +700,6 @@ export async function weeklyStatus(
   // Keep the account's copy in step, so the count reaches the Stats screen and
   // the leaderboards rather than living only in this response.
   if (mineClosed.wins > 0) await raiseWeeklyWins(userId, mineClosed.wins);
-
   return {
     week,
     best: own

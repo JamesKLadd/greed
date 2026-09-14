@@ -8,6 +8,7 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
+import { refreshCareerChallengeWins } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 
 const { Pool } = pg;
@@ -304,8 +305,25 @@ export async function migrate(): Promise<void> {
       updated_at     timestamptz NOT NULL DEFAULT now()
     );
   `);
+  // Days and weeks taken outright. Added after the table, so existing rows get
+  // them at zero and fill in from the server's own count the next time any
+  // challenge board is read — see raiseCareerChallengeWins.
+  //
+  // Deliberately NOT seeded from `profile` the way the four columns above were.
+  // That seed existed to preserve standings already on display when the boards
+  // moved off the client-synced profile; these two boards have never existed,
+  // so there is nothing to preserve, and starting them from a figure a client
+  // can inflate would import the exact problem the move was made to escape.
+  await query(
+    `ALTER TABLE career_stats ADD COLUMN IF NOT EXISTS daily_wins integer NOT NULL DEFAULT 0;`,
+  );
+  await query(
+    `ALTER TABLE career_stats ADD COLUMN IF NOT EXISTS weekly_wins integer NOT NULL DEFAULT 0;`,
+  );
   for (const [col, dir] of [
     ["online_wins", "DESC"],
+    ["daily_wins", "DESC"],
+    ["weekly_wins", "DESC"],
     ["best_turn", "DESC"],
     ["best_streak", "DESC"],
     ["best_total", "DESC"],
@@ -377,6 +395,16 @@ export const RETENTION_DAYS = 30;
  * the first pass didn't.
  */
 export async function prune(): Promise<void> {
+  // Bank what the runs about to be deleted were worth, BEFORE deleting them.
+  // A day taken outright is a career figure; the row proving it is a log entry
+  // with a month to live, and losing one should not lose the other.
+  for (const kind of ["daily", "weekly"] as const) {
+    try {
+      await refreshCareerChallengeWins(kind);
+    } catch (err) {
+      console.error(`[prune] could not bank ${kind} wins:`, err);
+    }
+  }
   const cutoff = `${RETENTION_DAYS} days`;
   const jobs: [string, string, unknown[]][] = [
     ["expired sign-in tokens", `DELETE FROM auth_tokens WHERE expires_at < now()`, []],

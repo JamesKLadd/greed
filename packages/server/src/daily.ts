@@ -515,9 +515,8 @@ export async function dailyStatus(
   const reigning = champions[0] ?? null;
 
   // Keep the account's copy in step, so the count reaches the Stats screen and
-  // the leaderboards rather than living only in this response.
+  // the profile sync rather than living only in this response.
   if (mineClosed.wins > 0) await raiseDailyWins(userId, mineClosed.wins);
-
   return {
     day,
     run: own

@@ -3,8 +3,29 @@
 
 import { api } from "./auth.js";
 
-export const LEADERBOARD_CATEGORIES = ["wins", "bestTurn", "bestStreak", "bestTotal"] as const;
+export const LEADERBOARD_CATEGORIES = [
+  "wins",
+  "bestTurn",
+  "bestStreak",
+  "bestTotal",
+  "dailyWins",
+  "weeklyWins",
+] as const;
 export type LeaderboardCategory = (typeof LEADERBOARD_CATEGORIES)[number];
+
+/**
+ * The boards built from ONLINE games, as opposed to from challenge runs.
+ *
+ * The distinction is only a caption — the server ranks each category the same
+ * way — but the caption is the one saying which of a player's games counted,
+ * and it was wrong for two of the six the moment they were added.
+ */
+export const ONLINE_CATEGORIES: readonly LeaderboardCategory[] = [
+  "wins",
+  "bestTurn",
+  "bestStreak",
+  "bestTotal",
+];
 
 export interface LeaderboardEntry {
   username: string;
