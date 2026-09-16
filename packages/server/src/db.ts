@@ -8,7 +8,7 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
-import { refreshCareerChallengeWins } from "./leaderboards.js";
+import { refreshCareerChallengeWins, repairOpenWeekWins } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 
 const { Pool } = pg;
@@ -100,6 +100,24 @@ async function backfillSuperBusts(): Promise<void> {
       );
     }
   }
+}
+
+/**
+ * Run a one-off data repair, once and only once.
+ *
+ * Everything else in `migrate()` is idempotent by construction — CREATE TABLE
+ * IF NOT EXISTS, ADD COLUMN IF NOT EXISTS, a backfill guarded by a NULL — and
+ * so it can run on every boot forever. A repair that CORRECTS data is not like
+ * that. It is right at the moment it is written and wrong later: the one below
+ * lowers a figure that is otherwise only ever raised, which is the right answer
+ * today and would destroy honest standings a month from now. So the repairs
+ * that have run are written down, and never run again.
+ */
+async function applyOnce(id: string, repair: () => Promise<void>): Promise<void> {
+  const { rows } = await query(`SELECT 1 FROM schema_fixes WHERE id = $1`, [id]);
+  if (rows.length > 0) return;
+  await repair();
+  await query(`INSERT INTO schema_fixes (id) VALUES ($1) ON CONFLICT DO NOTHING`, [id]);
 }
 
 export async function migrate(): Promise<void> {
@@ -320,6 +338,16 @@ export async function migrate(): Promise<void> {
   await query(
     `ALTER TABLE career_stats ADD COLUMN IF NOT EXISTS weekly_wins integer NOT NULL DEFAULT 0;`,
   );
+  await query(`
+    CREATE TABLE IF NOT EXISTS schema_fixes (
+      id         text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  // Wins credited for a week that had not finished. See repairOpenWeekWins for
+  // why this can lower a figure that is otherwise only ever raised, and why it
+  // has to happen exactly once.
+  await applyOnce("weekly-wins-open-week-2026-09", repairOpenWeekWins);
   for (const [col, dir] of [
     ["online_wins", "DESC"],
     ["daily_wins", "DESC"],

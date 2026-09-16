@@ -8,22 +8,32 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { dailyKey, weekKey } from "@greed/core";
 
 /** Every statement the module sent, for checking what it asked the database. */
 const sql: string[] = [];
+/** And what it bound to them — which is where the open-week bug lived. */
+const bound: unknown[][] = [];
 
 vi.mock("./db.js", () => ({
-  query: async (text: string) => {
+  query: async (text: string, params: unknown[] = []) => {
     sql.push(text);
+    bound.push(params);
     return { rows: [] };
   },
 }));
 
-const { LEADERBOARD_CATEGORIES, isLeaderboardCategory, leaderboard, refreshCareerChallengeWins } =
-  await import("./leaderboards.js");
+const {
+  LEADERBOARD_CATEGORIES,
+  isLeaderboardCategory,
+  leaderboard,
+  refreshCareerChallengeWins,
+  repairOpenWeekWins,
+} = await import("./leaderboards.js");
 
 beforeEach(() => {
   sql.length = 0;
+  bound.length = 0;
 });
 
 describe("categories", () => {
@@ -94,6 +104,47 @@ describe("career challenge wins", () => {
     await refreshCareerChallengeWins("weekly");
     expect(sql.join("\n")).toContain("weekly_wins");
     expect(sql.join("\n")).not.toContain("daily_wins");
+  });
+
+  it("counts a week as closed only once the NEXT week has started", async () => {
+    // The bug these boards shipped with. A week's key is the Monday it starts
+    // on, so from Tuesday onward the open week's key is strictly less than
+    // today's date — and comparing against today let the week in progress
+    // through as closed, crediting whoever was leading it with a win.
+    await refreshCareerChallengeWins("weekly");
+    expect(bound.at(-1)).toEqual([weekKey()]);
+  });
+
+  it("does not count the open week, on a day that is not its Monday", () => {
+    // Pinned to a WEDNESDAY on purpose. Asserting "the boundary is not today's
+    // date" against the real clock passes six days a week and fails on the
+    // seventh, when a week key and a date are the same string — and Monday is
+    // the one day the bug was invisible, which is presumably how it shipped.
+    const wednesday = new Date("2026-09-16T17:00:00Z");
+    expect(weekKey(wednesday)).toBe("2026-09-14");
+    expect(dailyKey(wednesday)).toBe("2026-09-16");
+    // A run in the open week compares as BEFORE today, and as NOT before the
+    // week boundary. That difference is the entire bug.
+    expect(weekKey(wednesday) < dailyKey(wednesday)).toBe(true);
+    expect(weekKey(wednesday) < weekKey(wednesday)).toBe(false);
+  });
+
+  it("counts a day as closed once the next day has started", async () => {
+    await refreshCareerChallengeWins("daily");
+    expect(bound.at(-1)).toEqual([dailyKey()]);
+  });
+
+  it("repairs the wins the open week banked, and can lower them", async () => {
+    await repairOpenWeekWins();
+    const text = sql.join("\n");
+    // Assignment, not GREATEST: the stored figure is too HIGH, so the rule that
+    // protects it from falling is the rule that has to be set aside here.
+    expect(text).toContain("SET weekly_wins = COALESCE(w.wins, 0)");
+    expect(text).not.toContain("GREATEST");
+    // Against the same boundary the fixed tally uses.
+    expect(bound.at(-1)).toEqual([weekKey()]);
+    // Only rows that could be wrong. A stored zero cannot be too high.
+    expect(text).toContain("weekly_wins > 0");
   });
 
   it("counts only boards that have closed", async () => {

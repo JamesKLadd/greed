@@ -13,7 +13,7 @@
  * are labelled as such.
  */
 
-import { GOAL_DEFAULT, dailyKey } from "@greed/core";
+import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
 import { query } from "./db.js";
 
 /** The career stats a board can be built on. */
@@ -210,6 +210,8 @@ export async function recordMatch(m: FinishedMatch): Promise<void> {
 const CHALLENGE_WINS = {
   daily: {
     column: "daily_wins",
+    /** Today's board is still filling up, so today is not a win yet. */
+    openBoard: dailyKey,
     sql: `SELECT user_id, count(*)::int AS wins FROM (
             SELECT user_id,
                    RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
@@ -218,6 +220,19 @@ const CHALLENGE_WINS = {
   },
   weekly: {
     column: "weekly_wins",
+    /**
+     * The Monday of the week still being played — NOT today.
+     *
+     * This is the whole of the bug that made these boards wrong on the day they
+     * shipped. A week's key is the Monday it starts on, so from Tuesday onward
+     * the current week's key is strictly less than today's date: comparing
+     * against today let the week in progress through as though it had closed,
+     * and whoever happened to be leading it was credited with a win they had
+     * not won yet. The comment here used to state that "a Monday is strictly
+     * less than today" as the REASON the boundary was safe, which is exactly
+     * backwards — it is the reason it was not.
+     */
+    openBoard: weekKey,
     sql: `SELECT user_id, count(*)::int AS wins FROM (
             SELECT user_id,
                    RANK() OVER (PARTITION BY week ORDER BY score DESC, best_at ASC) AS rank
@@ -245,17 +260,43 @@ const CHALLENGE_WINS = {
  * because the column name lands inside the SQL text — same rule as FIELD above.
  */
 export async function refreshCareerChallengeWins(kind: "daily" | "weekly"): Promise<void> {
-  const { column, sql } = CHALLENGE_WINS[kind];
+  const { column, sql, openBoard } = CHALLENGE_WINS[kind];
   await query(
     `INSERT INTO career_stats (user_id, ${column})
      ${sql}
      ON CONFLICT (user_id) DO UPDATE
        SET ${column} = GREATEST(career_stats.${column}, EXCLUDED.${column}),
            updated_at = now()`,
-    // Today's board is still filling up, so it is not a win yet — the same
-    // boundary the challenge screens draw. The weekly's key is a Monday, which
-    // is also strictly less than today on every day of its week.
-    [dailyKey()],
+    [openBoard()],
+  );
+}
+
+/**
+ * Put right the wins the open-week bug banked.
+ *
+ * GREATEST is what makes this necessary rather than self-healing: fixing the
+ * boundary stops the wrong number being written again, but the wrong number is
+ * already stored and a high-water mark never comes down on its own.
+ *
+ * Safe to lower them only because of when this runs. `weekly_wins` is days old
+ * and nothing but the tally above has ever written it, and no weekly run has
+ * aged out in that time — retention is thirty days — so today's honest count is
+ * at least as high as anything legitimately banked, and a stored figure above
+ * it can only have come from counting the week in progress. That stops being
+ * true once runs start expiring, which is why this is applied once and recorded
+ * rather than left to run on every boot.
+ */
+export async function repairOpenWeekWins(): Promise<void> {
+  const { sql } = CHALLENGE_WINS.weekly;
+  await query(
+    `WITH winners AS (${sql})
+     UPDATE career_stats c
+        SET weekly_wins = COALESCE(w.wins, 0),
+            updated_at = now()
+       FROM (SELECT user_id FROM career_stats WHERE weekly_wins > 0) stale
+       LEFT JOIN winners w ON w.user_id = stale.user_id
+      WHERE c.user_id = stale.user_id`,
+    [weekKey()],
   );
 }
 
