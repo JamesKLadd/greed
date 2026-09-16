@@ -109,7 +109,19 @@
 }
 .tp-character {
   position: absolute;
-  z-index: 4;
+  /*
+   * Behind the table, because that is where the player is sitting.
+   *
+   * The felt is a trapezoid that widens toward the viewer, so a seat down the
+   * side of it overlaps the near half of the table — and drawn in front, the
+   * character's legs and feet appeared ON the felt, standing on a table they
+   * are supposed to be sitting at. Only the part of a sprite outside the table
+   * outline should be visible, which is what putting them under it does.
+   *
+   * The viewer's own character is the exception and overrides this: they are in
+   * front of the table, between it and the camera.
+   */
+  z-index: 1;
   left: var(--seat-x);
   top: var(--seat-y);
   width: clamp(76px, 26cqw, 125px);
@@ -127,7 +139,6 @@
   height: 100%;
 }
 .tp-seat--far .tp-character {
-  z-index: 1;
   width: clamp(64px, 22cqw, 125px);
 }
 .tp-name {
@@ -187,6 +198,18 @@
   transform: translateX(-50%);
   width: clamp(116px, 34cqw, 190px);
   z-index: 6;
+}
+/*
+ * Your own score sits above your own head, and has to stay readable there.
+ *
+ * The band between the dice and the bottom of the screen is full — dice, turn
+ * label, score, nameplate — and your character is drawn big enough that its
+ * head reaches into it. There is nowhere to move the score to, so it wins the
+ * overlap instead: at z-index 5 the head swallowed the "YOUR POINTS" line
+ * underneath the number, which is the half of it that says whose score it is.
+ */
+.tp-seat--self .tp-score {
+  z-index: 7;
 }
 .tp-seat--self .tp-score strong {
   font-size: clamp(24px, 7cqw, 34px);
