@@ -40,6 +40,7 @@ import { randomInt } from "node:crypto";
 import { query } from "./db.js";
 import { raiseCareerBestTurn } from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
+import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
 
 /** Cap on a single attempt's move list — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -300,11 +301,28 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
  * beat what they had.
  *
  * The upsert decides in one statement rather than reading and then writing, so
- * the stored best is never a stale value written back over a newer one. Only a
- * STRICTLY better score displaces the standing run, which is what keeps
- * `best_at` — and with it the board's tiebreak — pinned to the moment the score
- * was first reached rather than to the last time it was matched.
+ * the stored best is never a stale value written back over a newer one.
+ *
+ * "Beat" means better by the order the BOARD ranks on — score, then the best
+ * turn of the run (see WEEKLY_ORDER). It used to mean a strictly higher score,
+ * and that stopped being enough the moment the best turn became a tiebreak: an
+ * attempt that matched your score with a bigger turn is a better run under the
+ * rule the board applies, and leaving it unstored would have ranked you on the
+ * weaker of two runs you had actually played — losing you a tie you had won.
+ *
+ * `best_at` is the exception and still moves only on a strictly higher SCORE.
+ * It is the last tiebreak, meaning "who reached this total first", so matching
+ * a score must not cost the player who got there first their earliness — and
+ * improving the turn behind an unchanged score is not reaching it again.
  */
+/**
+ * Does the attempt just played beat the one standing, by the board's own order?
+ *
+ * A row comparison, so it reads as the pair it is: score first, and the best
+ * turn only where the scores are level.
+ */
+const BEATS = "(EXCLUDED.score, EXCLUDED.best_turn) > (weekly_runs.score, weekly_runs.best_turn)";
+
 async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
   const r = weeklyPosition(run.seed, run.moves).result;
   // Charged to the day the attempt was PLAYED OUT, matching the rule the week
@@ -326,22 +344,14 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
      ON CONFLICT (user_id, week) DO UPDATE SET
        attempts  = weekly_runs.attempts + 1,
        score     = GREATEST(weekly_runs.score, EXCLUDED.score),
-       turns     = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.turns     ELSE weekly_runs.turns     END,
-       banks     = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.banks     ELSE weekly_runs.banks     END,
-       busts     = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.busts     ELSE weekly_runs.busts     END,
-       super_busts = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.super_busts ELSE weekly_runs.super_busts END,
-       hot_dice  = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.hot_dice  ELSE weekly_runs.hot_dice  END,
-       best_turn = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.best_turn ELSE weekly_runs.best_turn END,
-       seed      = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.seed      ELSE weekly_runs.seed      END,
-       moves     = CASE WHEN EXCLUDED.score > weekly_runs.score
-                        THEN EXCLUDED.moves     ELSE weekly_runs.moves     END,
+       turns     = CASE WHEN ${BEATS} THEN EXCLUDED.turns       ELSE weekly_runs.turns       END,
+       banks     = CASE WHEN ${BEATS} THEN EXCLUDED.banks       ELSE weekly_runs.banks       END,
+       busts     = CASE WHEN ${BEATS} THEN EXCLUDED.busts       ELSE weekly_runs.busts       END,
+       super_busts = CASE WHEN ${BEATS} THEN EXCLUDED.super_busts ELSE weekly_runs.super_busts END,
+       hot_dice  = CASE WHEN ${BEATS} THEN EXCLUDED.hot_dice    ELSE weekly_runs.hot_dice    END,
+       best_turn = CASE WHEN ${BEATS} THEN EXCLUDED.best_turn   ELSE weekly_runs.best_turn   END,
+       seed      = CASE WHEN ${BEATS} THEN EXCLUDED.seed        ELSE weekly_runs.seed        END,
+       moves     = CASE WHEN ${BEATS} THEN EXCLUDED.moves       ELSE weekly_runs.moves       END,
        best_at   = CASE WHEN EXCLUDED.score > weekly_runs.score
                         THEN now()              ELSE weekly_runs.best_at   END`,
     [
@@ -562,7 +572,7 @@ export async function closedWeekPlacings(
   const { rows } = await query<{ user_id: string; wins: string; podiums: string }>(
     `WITH ranked AS (
        SELECT user_id,
-              RANK() OVER (PARTITION BY week ORDER BY score DESC, best_at ASC) AS rank
+              RANK() OVER (PARTITION BY week ORDER BY ${WEEKLY_ORDER}) AS rank
          FROM weekly_runs
         WHERE score > 0 AND week < $2::date
      )
@@ -599,7 +609,7 @@ async function weeklyChampions(
   }>(
     `WITH ranked AS (
        SELECT user_id, week, score,
-              RANK() OVER (PARTITION BY week ORDER BY score DESC, best_at ASC) AS rank
+              RANK() OVER (PARTITION BY week ORDER BY ${WEEKLY_ORDER}) AS rank
          FROM weekly_runs
         WHERE score > 0 AND week < $1::date
      )
@@ -647,7 +657,7 @@ export async function weeklyStatus(
   }>(
     `WITH ranked AS (
        SELECT user_id, score, turns, banks, busts, super_busts, hot_dice, best_turn, attempts,
-              RANK() OVER (ORDER BY score DESC, best_at ASC) AS rank
+              RANK() OVER (ORDER BY ${WEEKLY_ORDER}) AS rank
          FROM weekly_runs WHERE week = $1
      )
      SELECT * FROM ranked WHERE user_id = $2`,
@@ -671,7 +681,7 @@ export async function weeklyStatus(
     `SELECT u.username, u.profile ->> 'avatar' AS avatar,
             r.score, r.turns, r.best_turn, r.busts, r.super_busts, r.hot_dice, r.attempts,
             r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.best_at ASC) AS rank
+            RANK() OVER (ORDER BY ${WEEKLY_ORDER_R}) AS rank
        FROM weekly_runs r JOIN users u ON u.id = r.user_id
       WHERE r.week = $1
       ORDER BY rank

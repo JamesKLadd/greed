@@ -15,6 +15,7 @@
 
 import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
 import { query } from "./db.js";
+import { WEEKLY_ALLTIME_ORDER_R, WEEKLY_ORDER } from "./ranking.js";
 
 /** The career stats a board can be built on. */
 export const LEADERBOARD_CATEGORIES = [
@@ -235,7 +236,7 @@ const CHALLENGE_WINS = {
     openBoard: weekKey,
     sql: `SELECT user_id, count(*)::int AS wins FROM (
             SELECT user_id,
-                   RANK() OVER (PARTITION BY week ORDER BY score DESC, best_at ASC) AS rank
+                   RANK() OVER (PARTITION BY week ORDER BY ${WEEKLY_ORDER}) AS rank
               FROM weekly_runs WHERE score > 0 AND week < $1::date
           ) r WHERE rank = 1 GROUP BY user_id`,
   },
@@ -521,7 +522,7 @@ export async function weeklyBest(
     user_id: string;
   }>(
     `SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.week ASC) AS rank
+            RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
        FROM weekly_runs r JOIN users u ON u.id = r.user_id
       WHERE r.score > 0
       ORDER BY rank
@@ -542,7 +543,7 @@ export async function weeklyBest(
     }>(
       `WITH ranked AS (
          SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
-                RANK() OVER (ORDER BY r.score DESC, r.week ASC) AS rank
+                RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
            FROM weekly_runs r JOIN users u ON u.id = r.user_id
           WHERE r.score > 0
        )

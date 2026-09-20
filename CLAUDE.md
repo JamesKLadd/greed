@@ -60,7 +60,12 @@ build on every push. Node 20.
   owns the move list, and replays it to derive the score. The client never sees a
   seed and never reports a score.
 - Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
-  best attempt of the week stands. Every attempt gets a fresh secret seed, and
+  best attempt of the week stands. Standings order on **score, then the run's
+  best turn, then who got there first** — `WEEKLY_ORDER` in
+  `server/src/ranking.ts` is the one copy, and every board, tally and champion
+  query interpolates it. `settle()` stores a new attempt when it beats the
+  standing one BY THAT ORDER, not merely on score, or the board would rank a
+  player on the weaker of two runs they had played. Every attempt gets a fresh secret seed, and
   only one attempt may be open at a time. Unlike the daily, this week's board is
   public from the start.
 - The weekly's ration has changed twice and every week still reports the rule it

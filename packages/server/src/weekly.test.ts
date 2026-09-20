@@ -56,10 +56,19 @@ let clock = 0;
 
 /** Every row in a week, best first — the order the board is built in. */
 function boardFor(week: string): { user: string; row: Best }[] {
-  return [...best.entries()]
-    .filter(([k]) => k.endsWith(`|${week}`))
-    .map(([k, row]) => ({ user: k.split("|")[0], row }))
-    .sort((a, b) => b.row.score - a.row.score || a.row.bestAt - b.row.bestAt);
+  return (
+    [...best.entries()]
+      .filter(([k]) => k.endsWith(`|${week}`))
+      .map(([k, row]) => ({ user: k.split("|")[0], row }))
+      // The board's order, mirroring WEEKLY_ORDER: score, then the run's best
+      // turn, then who got there first.
+      .sort(
+        (a, b) =>
+          b.row.score - a.row.score ||
+          b.row.bestTurn - a.row.bestTurn ||
+          a.row.bestAt - b.row.bestAt,
+      )
+  );
 }
 
 /** Every week that has CLOSED, as its final board. */
@@ -236,10 +245,19 @@ vi.mock("./db.js", () => ({
       const fresh = { score, turns, banks, busts, superBusts, hotDice, bestTurn, seed, moves };
       if (!existing) {
         best.set(k, { ...fresh, attempts: 1, bestAt: ++clock });
-      } else if (score > existing.score) {
-        best.set(k, { ...fresh, attempts: existing.attempts + 1, bestAt: ++clock });
       } else {
-        existing.attempts += 1;
+        // Mirrors the real CASE ladder: the run is kept when it beats the
+        // standing one by the board's order (score, then best turn), while
+        // best_at moves only on a strictly higher SCORE.
+        const beats =
+          score > existing.score || (score === existing.score && bestTurn > existing.bestTurn);
+        const attempts = existing.attempts + 1;
+        if (beats) {
+          const bestAt = score > existing.score ? ++clock : existing.bestAt;
+          best.set(k, { ...fresh, score: Math.max(score, existing.score), attempts, bestAt });
+        } else {
+          existing.attempts = attempts;
+        }
       }
       return { rows: [] };
     }
@@ -746,6 +764,52 @@ describe("a week's worth of attempts", () => {
 
     const uncapped = await weeklyStatus(USER, WEEK);
     expect(uncapped.attemptLimit).toBeNull();
+  });
+});
+
+describe("ties on the weekly board", () => {
+  /** Put a finished run on the board directly, with the figures it is ranked by. */
+  function standing(user: string, week: string, score: number, bestTurn: number): void {
+    best.set(key(user, week), {
+      score,
+      turns: 10,
+      banks: 8,
+      busts: 2,
+      superBusts: 0,
+      hotDice: 1,
+      bestTurn,
+      seed: 1,
+      moves: "",
+      attempts: 1,
+      bestAt: ++clock,
+    });
+  }
+
+  it("puts the bigger single turn first when two players finish level", async () => {
+    // The reported case: two players on 5850, settled by whoever got there
+    // first. The one who built it out of a bigger turn now takes the week.
+    standing("early", WEEK, 5850, 2000); // got there first...
+    standing("bigger", WEEK, 5850, 2400); // ...but played the better turn
+    const board = (await weeklyStatus("early", WEEK)).leaderboard;
+    expect(board.map((e) => e.username)).toEqual(["player-bigger", "player-early"]);
+    expect(board.map((e) => e.rank)).toEqual([1, 2]);
+  });
+
+  it("falls back to who got there first when the turns match too", async () => {
+    standing("early", WEEK, 5850, 2400);
+    standing("late", WEEK, 5850, 2400);
+    const board = (await weeklyStatus("early", WEEK)).leaderboard;
+    expect(board.map((e) => e.username)).toEqual(["player-early", "player-late"]);
+    // And exactly one of them is first, so the week has one winner.
+    expect(board.filter((e) => e.rank === 1)).toHaveLength(1);
+  });
+
+  it("still ranks on score before anything else", async () => {
+    // A monstrous turn does not outweigh a higher total.
+    standing("total", WEEK, 6000, 400);
+    standing("turn", WEEK, 5850, 3000);
+    const board = (await weeklyStatus("total", WEEK)).leaderboard;
+    expect(board.map((e) => e.username)).toEqual(["player-total", "player-turn"]);
   });
 });
 

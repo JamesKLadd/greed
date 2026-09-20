@@ -206,9 +206,10 @@ export async function migrate(): Promise<void> {
       /** Attempts finished this week, best and beaten alike. */
       attempts   integer NOT NULL DEFAULT 0,
       /**
-       * When the standing best score was FIRST reached. The board's tiebreak,
-       * so matching a score never displaces the player who got there first —
-       * and beating your own best does not cost you the ground it won.
+       * When the standing best score was FIRST reached. The board's LAST
+       * tiebreak — score, then the run's best turn, then this — so matching a
+       * score never displaces the player who got there first, and beating your
+       * own best does not cost you the ground it won. See ranking.ts.
        */
       best_at    timestamptz NOT NULL DEFAULT now(),
       created_at timestamptz NOT NULL DEFAULT now(),
