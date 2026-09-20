@@ -15,7 +15,12 @@
 
 import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
 import { query } from "./db.js";
-import { WEEKLY_ALLTIME_ORDER_R, WEEKLY_ORDER } from "./ranking.js";
+import {
+  DAILY_ALLTIME_ORDER_R,
+  DAILY_ORDER,
+  WEEKLY_ALLTIME_ORDER_R,
+  WEEKLY_ORDER,
+} from "./ranking.js";
 
 /** The career stats a board can be built on. */
 export const LEADERBOARD_CATEGORIES = [
@@ -215,7 +220,7 @@ const CHALLENGE_WINS = {
     openBoard: dailyKey,
     sql: `SELECT user_id, count(*)::int AS wins FROM (
             SELECT user_id,
-                   RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+                   RANK() OVER (PARTITION BY day ORDER BY ${DAILY_ORDER}) AS rank
               FROM daily_runs WHERE complete AND score > 0 AND day < $1::date
           ) r WHERE rank = 1 GROUP BY user_id`,
   },
@@ -411,7 +416,7 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
     user_id: string;
   }>(
     `SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.day ASC) AS rank
+            RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
        FROM daily_runs r JOIN users u ON u.id = r.user_id
       WHERE ${scope} AND r.score > 0
       ORDER BY rank
@@ -436,7 +441,7 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
     }>(
       `WITH ranked AS (
          SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
-                RANK() OVER (ORDER BY r.score DESC, r.day ASC) AS rank
+                RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
            FROM daily_runs r JOIN users u ON u.id = r.user_id
           WHERE ${scope} AND r.score > 0
        )

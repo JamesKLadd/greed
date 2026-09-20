@@ -60,14 +60,20 @@ build on every push. Node 20.
   owns the move list, and replays it to derive the score. The client never sees a
   seed and never reports a score.
 - Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
-  best attempt of the week stands. Standings order on **score, then the run's
-  best turn, then who got there first** — `WEEKLY_ORDER` in
-  `server/src/ranking.ts` is the one copy, and every board, tally and champion
-  query interpolates it. `settle()` stores a new attempt when it beats the
-  standing one BY THAT ORDER, not merely on score, or the board would rank a
-  player on the weaker of two runs they had played. Every attempt gets a fresh secret seed, and
+  best attempt of the week stands. Every attempt gets a fresh secret seed, and
   only one attempt may be open at a time. Unlike the daily, this week's board is
   public from the start.
+- Both challenges order their standings on **score, then the run's best turn,
+  then who got there first**. `server/src/ranking.ts` holds the one copy of each
+  — `DAILY_ORDER`, `WEEKLY_ORDER` and their aliased and all-time variants — and
+  all fourteen board, own-rank, placings, champion, tally and all-time queries
+  interpolate one of them. They were copies once, and a copy that drifted is
+  what credited a weekly win for a week that had not finished.
+- The weekly's `settle()` stores a new attempt when it beats the standing one BY
+  THAT ORDER, not merely on score, or the board would rank a player on the
+  weaker of two runs they had played. `best_at` is the exception and still moves
+  only on a higher score — it means "when this total was first reached". The
+  daily needs none of this: a day is one run, updated in place.
 - The weekly's ration has changed twice and every week still reports the rule it
   was played under — `weeklyAllowance(week)` in `core/src/weekly.ts` is the one
   answer: unlimited before `WEEKLY_CAP_FROM`, 50 for that single week, 10 A DAY

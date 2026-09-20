@@ -1,12 +1,15 @@
 /**
- * How the weekly's standings are ordered, written once.
+ * How the challenges' standings are ordered, written once each.
  *
- * Six queries rank weekly runs — this week's board, the player's own rank on
- * it, the closed-week win and podium counts, the champion of each week, the
- * career wins tally, and the all-time board. They have to give the same answer:
- * a tally that disagrees with the board credits a win to somebody the board
- * does not show in first place, which is a bug this module exists to make
- * impossible rather than to keep catching.
+ * Both challenges are ranked by several queries apiece — the period's board,
+ * the player's own rank on it, the closed-period win and podium counts, the
+ * champion of each period, the career wins tally, and the all-time board. They
+ * have to give the same answer: a tally that disagrees with the board credits
+ * a win to somebody the board does not show in first place, which is a bug
+ * this module exists to make impossible rather than to keep catching.
+ *
+ * The two challenges share a rule and differ only in their last term, which is
+ * the column each one has for "who got there first".
  */
 
 /**
@@ -36,3 +39,24 @@ export const WEEKLY_ORDER_R = "r.score DESC, r.best_turn DESC, r.best_at ASC";
  * instant, because across weeks "“who got there first" means the earlier week.
  */
 export const WEEKLY_ALLTIME_ORDER_R = "r.score DESC, r.best_turn DESC, r.week ASC";
+
+/**
+ * The daily's standings. Same rule as the weekly's, with the day's own column
+ * for the final tiebreak.
+ *
+ * `created_at` is when the RUN WAS STARTED, not when the score was reached —
+ * a daily row is written the moment a player claims their run and updated as
+ * they play, so there is no equivalent of the weekly's `best_at`. That made it
+ * a weak last word on a tie, which is part of why the middle term is worth
+ * having; it stays last because a tie still has to be broken by something.
+ */
+export const DAILY_ORDER = "score DESC, best_turn DESC, created_at ASC";
+
+/** The same, qualified, for the queries that alias `daily_runs` as `r`. */
+export const DAILY_ORDER_R = "r.score DESC, r.best_turn DESC, r.created_at ASC";
+
+/**
+ * The all-time daily board, which ranks runs from DIFFERENT days against each
+ * other — so the last term is the day, as the weekly's is the week.
+ */
+export const DAILY_ALLTIME_ORDER_R = "r.score DESC, r.best_turn DESC, r.day ASC";

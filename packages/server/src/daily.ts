@@ -27,6 +27,7 @@ import { randomInt } from "node:crypto";
 import { query } from "./db.js";
 import { raiseCareerBestTurn } from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
+import { DAILY_ORDER, DAILY_ORDER_R } from "./ranking.js";
 
 /** Cap on submitted move lists — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -258,7 +259,7 @@ export async function closedDayPlacings(
   const { rows } = await query<{ user_id: string; wins: string; podiums: string }>(
     `WITH ranked AS (
        SELECT user_id,
-              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+              RANK() OVER (PARTITION BY day ORDER BY ${DAILY_ORDER}) AS rank
          FROM daily_runs
         WHERE complete AND score > 0 AND day < $2::date
      )
@@ -295,7 +296,7 @@ async function dailyChampions(
   }>(
     `WITH ranked AS (
        SELECT user_id, day, score,
-              RANK() OVER (PARTITION BY day ORDER BY score DESC, created_at ASC) AS rank
+              RANK() OVER (PARTITION BY day ORDER BY ${DAILY_ORDER}) AS rank
          FROM daily_runs
         WHERE complete AND score > 0 AND day < $1::date
      )
@@ -463,7 +464,7 @@ export async function dailyStatus(
   }>(
     `WITH ranked AS (
        SELECT user_id, score, turns, banks, busts, super_busts, hot_dice, best_turn,
-              RANK() OVER (ORDER BY score DESC, created_at ASC) AS rank,
+              RANK() OVER (ORDER BY ${DAILY_ORDER}) AS rank,
               COUNT(*) OVER () AS players
          FROM daily_runs WHERE day = $1 AND complete
      )
@@ -489,7 +490,7 @@ export async function dailyStatus(
       }>(
         `SELECT u.username, u.profile ->> 'avatar' AS avatar,
             r.score, r.turns, r.best_turn, r.busts, r.super_busts, r.hot_dice, r.user_id,
-            RANK() OVER (ORDER BY r.score DESC, r.created_at ASC) AS rank
+            RANK() OVER (ORDER BY ${DAILY_ORDER_R}) AS rank
        FROM daily_runs r JOIN users u ON u.id = r.user_id
       WHERE r.day = $1 AND r.complete
       ORDER BY rank

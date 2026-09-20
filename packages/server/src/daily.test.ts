@@ -20,6 +20,8 @@ interface Row {
   complete: boolean;
   score: number;
   turns: number;
+  /** The run's biggest single turn — the board's tiebreak. See ranking.ts. */
+  bestTurn: number;
 }
 const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
@@ -30,10 +32,15 @@ const dailyWins = new Map<string, number>();
 
 /** Finished runs for a day, best first — the order the board is built in. */
 function finished(day: string): { user: string; row: Row }[] {
-  return [...rows.entries()]
-    .filter(([k, row]) => k.endsWith(`|${day}`) && row.complete)
-    .map(([k, row]) => ({ user: k.split("|")[0], row }))
-    .sort((a, b) => b.row.score - a.row.score);
+  return (
+    [...rows.entries()]
+      .filter(([k, row]) => k.endsWith(`|${day}`) && row.complete)
+      .map(([k, row]) => ({ user: k.split("|")[0], row }))
+      // Mirrors DAILY_ORDER: score, then the run's best turn. The sort is
+      // stable, so runs level on both keep insertion order, which stands in for
+      // the real query's created_at tiebreak.
+      .sort((a, b) => b.row.score - a.row.score || b.row.bestTurn - a.row.bestTurn)
+  );
 }
 
 /**
@@ -118,7 +125,7 @@ vi.mock("./db.js", () => ({
             busts: 0,
             super_busts: 0,
             hot_dice: 0,
-            best_turn: 0,
+            best_turn: row.bestTurn,
             rank: String(i + 1),
             players: String(board.length),
           },
@@ -133,7 +140,7 @@ vi.mock("./db.js", () => ({
           avatar: null,
           score: e.row.score,
           turns: e.row.turns,
-          best_turn: 0,
+          best_turn: e.row.bestTurn,
           busts: 0,
           super_busts: 0,
           hot_dice: 0,
@@ -158,7 +165,14 @@ vi.mock("./db.js", () => ({
       const k = key(user, day);
       // ON CONFLICT DO NOTHING: an existing run is never replaced.
       if (!rows.has(k)) {
-        rows.set(k, { moves: "", seed: Number(params[2]), complete: false, score: 0, turns: 0 });
+        rows.set(k, {
+          moves: "",
+          seed: Number(params[2]),
+          complete: false,
+          score: 0,
+          turns: 0,
+          bestTurn: 0,
+        });
       }
       return { rows: [] };
     }
@@ -310,6 +324,7 @@ describe("runs recorded before the seed was stored", () => {
       complete: true,
       score: 2550,
       turns: 10,
+      bestTurn: 0,
     });
   }
 
@@ -529,8 +544,15 @@ describe("the podium badge settles when the day does", () => {
   const YESTERDAY = "2026-08-11";
 
   /** A finished run on a given day, at a given score. */
-  function record(user: string, day: string, score: number) {
-    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  function record(user: string, day: string, score: number, bestTurn = 0) {
+    rows.set(`${user}|${day}`, {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score,
+      turns: 10,
+      bestTurn,
+    });
   }
 
   it("is not earned by topping a board that is still open", async () => {
@@ -569,8 +591,15 @@ describe("winning a day", () => {
   const BEFORE = "2026-08-10";
 
   /** A finished run on a given day, at a given score. */
-  function record(user: string, day: string, score: number) {
-    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  function record(user: string, day: string, score: number, bestTurn = 0) {
+    rows.set(`${user}|${day}`, {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score,
+      turns: 10,
+      bestTurn,
+    });
   }
 
   it("counts a first place on a day that has closed", async () => {
@@ -614,12 +643,63 @@ describe("winning a day", () => {
   });
 });
 
+describe("ties on the daily board", () => {
+  const DAY = "2026-08-12";
+  const YESTERDAY = "2026-08-11";
+
+  function record(user: string, day: string, score: number, bestTurn = 0) {
+    rows.set(`${user}|${day}`, {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score,
+      turns: 10,
+      bestTurn,
+    });
+  }
+
+  it("puts the bigger single turn first when two players finish level", async () => {
+    // The same rule the weekly took: a day settled purely on who got there
+    // first rewards playing at the right hour rather than playing well.
+    record(USER, DAY, 3000, 2000); // the viewer, in first by arrival...
+    record("rival", DAY, 3000, 2400); // ...but beaten on the run itself
+    const board = (await dailyStatus(USER, DAY)).leaderboard;
+    expect(board.map((e) => e.username)).toEqual(["player-rival", `player-${USER}`]);
+    expect(board.map((e) => e.rank)).toEqual([1, 2]);
+  });
+
+  it("still ranks on score before anything else", async () => {
+    record(USER, DAY, 3200, 400);
+    record("rival", DAY, 3000, 3000);
+    const board = (await dailyStatus(USER, DAY)).leaderboard;
+    expect(board.map((e) => e.username)).toEqual([`player-${USER}`, "player-rival"]);
+  });
+
+  it("credits the win to the player the board shows first", async () => {
+    // The agreement that matters: a tally disagreeing with the board hands a
+    // win to somebody who is not shown in first place.
+    record(USER, YESTERDAY, 3000, 2000);
+    record("rival", YESTERDAY, 3000, 2400);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.champion?.username).toBe("player-rival");
+    // And the viewer, who led on arrival, is credited with nothing.
+    expect(dailyWins.get(USER) ?? 0).toBe(0);
+  });
+});
+
 describe("the reigning champion", () => {
   const YESTERDAY = "2026-08-11";
   const BEFORE = "2026-08-10";
 
-  function record(user: string, day: string, score: number) {
-    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  function record(user: string, day: string, score: number, bestTurn = 0) {
+    rows.set(`${user}|${day}`, {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score,
+      turns: 10,
+      bestTurn,
+    });
   }
 
   it("is whoever took the most recent day that finished", async () => {
@@ -671,8 +751,15 @@ describe("the reigning champion", () => {
 describe("reading another player's run", () => {
   const YESTERDAY = "2026-08-11";
 
-  function record(user: string, day: string, score: number) {
-    rows.set(`${user}|${day}`, { moves: "", seed: 1, complete: true, score, turns: 10 });
+  function record(user: string, day: string, score: number, bestTurn = 0) {
+    rows.set(`${user}|${day}`, {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score,
+      turns: 10,
+      bestTurn,
+    });
   }
 
   it("carries what the close-up shows: their best turn, busts, hot dice and wins", async () => {
