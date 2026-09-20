@@ -51,6 +51,11 @@ const key = (user: string, week: string) => `${user}|${week}`;
 const bestTurns = new Map<string, number>();
 /** Weekly first places written back onto the account. */
 const weeklyWins = new Map<string, number>();
+/**
+ * The career column the BOARDS rank and the screens now read — distinct from
+ * the profile copy above, which is a different number with a different owner.
+ */
+const careerWeeklyWins = new Map<string, number>();
 /** Monotonic clock standing in for now(), so best_at ordering is checkable. */
 let clock = 0;
 
@@ -93,6 +98,27 @@ function closedBoards(thisWeek: string): Map<string, { user: string; row: Best }
 // most-specific first: several of them mention the same tables.
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
+    if (sql.includes("INSERT INTO career_stats") && sql.includes("weekly_wins")) {
+      // The refresh: count each closed period's winner and keep the high-water
+      // mark, exactly as the real INSERT ... ON CONFLICT ... GREATEST does.
+      const [thisWeek] = params as [string];
+      const tally = new Map<string, number>();
+      for (const [, board] of closedBoards(thisWeek)) {
+        if (board.length) tally.set(board[0].user, (tally.get(board[0].user) ?? 0) + 1);
+      }
+      for (const [user, n] of tally) {
+        careerWeeklyWins.set(user, Math.max(careerWeeklyWins.get(user) ?? 0, n));
+      }
+      return { rows: [] };
+    }
+    if (sql.includes("weekly_wins AS wins FROM career_stats")) {
+      const [ids] = params as [string[]];
+      return {
+        rows: ids
+          .filter((id) => careerWeeklyWins.has(id))
+          .map((id) => ({ user_id: id, wins: careerWeeklyWins.get(id) })),
+      };
+    }
     if (sql.includes("FILTER (WHERE rank = 1)")) {
       // Wins and podiums per account on closed weeks: [userIds, thisWeek, cap].
       const [ids, thisWeek, cap] = params as [string[], string, number];
@@ -296,6 +322,7 @@ beforeEach(() => {
   spentToday.clear();
   bestTurns.clear();
   weeklyWins.clear();
+  careerWeeklyWins.clear();
   clock = 0;
 });
 

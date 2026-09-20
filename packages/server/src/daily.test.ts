@@ -29,6 +29,11 @@ const key = (user: string, day: string) => `${user}|${day}`;
 const bestTurns = new Map<string, number>();
 /** Daily first places written back onto the account. */
 const dailyWins = new Map<string, number>();
+/**
+ * The career column the BOARDS rank and the screens now read — distinct from
+ * the profile copy above, which is a different number with a different owner.
+ */
+const careerDailyWins = new Map<string, number>();
 
 /** Finished runs for a day, best first — the order the board is built in. */
 function finished(day: string): { user: string; row: Row }[] {
@@ -70,6 +75,27 @@ function closedBoards(today: string): Map<string, { user: string; row: Row }[]> 
 // A stub that understands only the handful of statements daily.ts issues.
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
+    if (sql.includes("INSERT INTO career_stats") && sql.includes("daily_wins")) {
+      // The refresh: count each closed period's winner and keep the high-water
+      // mark, exactly as the real INSERT ... ON CONFLICT ... GREATEST does.
+      const [today] = params as [string];
+      const tally = new Map<string, number>();
+      for (const [, board] of closedBoards(today)) {
+        if (board.length) tally.set(board[0].user, (tally.get(board[0].user) ?? 0) + 1);
+      }
+      for (const [user, n] of tally) {
+        careerDailyWins.set(user, Math.max(careerDailyWins.get(user) ?? 0, n));
+      }
+      return { rows: [] };
+    }
+    if (sql.includes("daily_wins AS wins FROM career_stats")) {
+      const [ids] = params as [string[]];
+      return {
+        rows: ids
+          .filter((id) => careerDailyWins.has(id))
+          .map((id) => ({ user_id: id, wins: careerDailyWins.get(id) })),
+      };
+    }
     const [user, day] = params as [string, string];
     // ---- dailyStatus reads (their params are NOT [user, day]) ----
     // Two statements rank across every closed day; they are told apart by what
@@ -220,6 +246,7 @@ beforeEach(() => {
   rows.clear();
   bestTurns.clear();
   dailyWins.clear();
+  careerDailyWins.clear();
 });
 
 describe("claiming a run", () => {

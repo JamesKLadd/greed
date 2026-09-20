@@ -8,7 +8,7 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
-import { refreshCareerChallengeWins, repairOpenWeekWins } from "./leaderboards.js";
+import { recountCareerChallengeWins, refreshCareerChallengeWins } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 
 const { Pool } = pg;
@@ -345,10 +345,16 @@ export async function migrate(): Promise<void> {
       applied_at timestamptz NOT NULL DEFAULT now()
     );
   `);
-  // Wins credited for a week that had not finished. See repairOpenWeekWins for
-  // why this can lower a figure that is otherwise only ever raised, and why it
-  // has to happen exactly once.
-  await applyOnce("weekly-wins-open-week-2026-09", repairOpenWeekWins);
+  // Wins credited for a week that had not finished.
+  await applyOnce("weekly-wins-open-week-2026-09", () => recountCareerChallengeWins("weekly"));
+  // Wins banked before ties were settled on the run's best turn. Changing that
+  // re-decided days and weeks already counted, and a high-water mark kept the
+  // old answers — so a player could hold six wins on the board while the game
+  // showed somebody else wearing the crown for two of those days.
+  await applyOnce("challenge-wins-tiebreak-2026-09", async () => {
+    await recountCareerChallengeWins("daily");
+    await recountCareerChallengeWins("weekly");
+  });
   for (const [col, dir] of [
     ["online_wins", "DESC"],
     ["daily_wins", "DESC"],

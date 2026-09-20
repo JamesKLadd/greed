@@ -265,45 +265,85 @@ const CHALLENGE_WINS = {
  * `kind` picks the statement from a closed set rather than naming a column,
  * because the column name lands inside the SQL text — same rule as FIELD above.
  */
-export async function refreshCareerChallengeWins(kind: "daily" | "weekly"): Promise<void> {
-  const { column, sql, openBoard } = CHALLENGE_WINS[kind];
+export async function refreshCareerChallengeWins(
+  kind: "daily" | "weekly",
+  /**
+   * The period still being played, whose board is therefore not yet won.
+   *
+   * Defaulted from the clock, but taken from the caller where there is one:
+   * the challenge screens are told which day or week they are reporting on,
+   * and a refresh that asked the clock instead would answer about a different
+   * period than the screen that triggered it.
+   */
+  openBoard = CHALLENGE_WINS[kind].openBoard(),
+): Promise<void> {
+  const { column, sql } = CHALLENGE_WINS[kind];
   await query(
     `INSERT INTO career_stats (user_id, ${column})
      ${sql}
      ON CONFLICT (user_id) DO UPDATE
        SET ${column} = GREATEST(career_stats.${column}, EXCLUDED.${column}),
            updated_at = now()`,
+    [openBoard],
+  );
+}
+
+/**
+ * Recompute a challenge's career wins from scratch, lowering them if need be.
+ *
+ * GREATEST is what makes this necessary rather than self-healing. The tally is
+ * a high-water mark so that a win survives its run being pruned, and the price
+ * of that is a stored figure which cannot come down on its own — so whenever a
+ * banked answer stops being the right one, something has to come and say so.
+ *
+ * It has happened twice. A boundary bug credited weekly wins for a week that
+ * had not finished; and changing how a tie is settled re-decided days and weeks
+ * that had already been counted, leaving players holding wins the board no
+ * longer shows them winning.
+ *
+ * Only safe to lower while nothing has been pruned since the columns existed —
+ * after that a stored figure above today's honest count may be a real win whose
+ * run has expired, and indistinguishable from a stale one. Both columns were
+ * created on 2026-09-14 and retention is thirty days, so that is true now and
+ * stops being true in October. Which is why every call is applied once and
+ * written down; see applyOnce in db.ts.
+ */
+export async function recountCareerChallengeWins(kind: "daily" | "weekly"): Promise<void> {
+  const { column, sql, openBoard } = CHALLENGE_WINS[kind];
+  await query(
+    `WITH winners AS (${sql})
+     UPDATE career_stats c
+        SET ${column} = COALESCE(w.wins, 0),
+            updated_at = now()
+       FROM (SELECT user_id FROM career_stats WHERE ${column} > 0) stale
+       LEFT JOIN winners w ON w.user_id = stale.user_id
+      WHERE c.user_id = stale.user_id`,
     [openBoard()],
   );
 }
 
 /**
- * Put right the wins the open-week bug banked.
+ * The career win counts for a set of players, as the boards rank them.
  *
- * GREATEST is what makes this necessary rather than self-healing: fixing the
- * boundary stops the wrong number being written again, but the wrong number is
- * already stored and a high-water mark never comes down on its own.
- *
- * Safe to lower them only because of when this runs. `weekly_wins` is days old
- * and nothing but the tally above has ever written it, and no weekly run has
- * aged out in that time — retention is thirty days — so today's honest count is
- * at least as high as anything legitimately banked, and a stored figure above
- * it can only have come from counting the week in progress. That stops being
- * true once runs start expiring, which is why this is applied once and recorded
- * rather than left to run on every boot.
+ * So that the challenge screens can show the same figure the board does. They
+ * used to show a LIVE count, recomputed from the run tables on every read, and
+ * the two are not the same number: the live one falls as a player's runs are
+ * pruned, and falls again if a rule change re-decides a day. That is exactly
+ * how a player came to read four wins on one screen and six on another.
  */
-export async function repairOpenWeekWins(): Promise<void> {
-  const { sql } = CHALLENGE_WINS.weekly;
-  await query(
-    `WITH winners AS (${sql})
-     UPDATE career_stats c
-        SET weekly_wins = COALESCE(w.wins, 0),
-            updated_at = now()
-       FROM (SELECT user_id FROM career_stats WHERE weekly_wins > 0) stale
-       LEFT JOIN winners w ON w.user_id = stale.user_id
-      WHERE c.user_id = stale.user_id`,
-    [weekKey()],
+export async function careerChallengeWins(
+  kind: "daily" | "weekly",
+  userIds: string[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (userIds.length === 0) return out;
+  const { column } = CHALLENGE_WINS[kind];
+  const { rows } = await query<{ user_id: string; wins: number }>(
+    `SELECT user_id, ${column} AS wins FROM career_stats WHERE user_id = ANY($1::uuid[])`,
+    [[...new Set(userIds)]],
   );
+  for (const r of rows) out.set(r.user_id, Number(r.wins));
+  return out;
 }
 
 /**

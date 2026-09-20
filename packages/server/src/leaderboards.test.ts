@@ -26,9 +26,10 @@ vi.mock("./db.js", () => ({
 const {
   LEADERBOARD_CATEGORIES,
   isLeaderboardCategory,
+  careerChallengeWins,
   leaderboard,
   refreshCareerChallengeWins,
-  repairOpenWeekWins,
+  recountCareerChallengeWins,
 } = await import("./leaderboards.js");
 
 beforeEach(() => {
@@ -134,8 +135,8 @@ describe("career challenge wins", () => {
     expect(bound.at(-1)).toEqual([dailyKey()]);
   });
 
-  it("repairs the wins the open week banked, and can lower them", async () => {
-    await repairOpenWeekWins();
+  it("recounts a career tally from scratch, and can lower it", async () => {
+    await recountCareerChallengeWins("weekly");
     const text = sql.join("\n");
     // Assignment, not GREATEST: the stored figure is too HIGH, so the rule that
     // protects it from falling is the rule that has to be set aside here.
@@ -145,6 +146,30 @@ describe("career challenge wins", () => {
     expect(bound.at(-1)).toEqual([weekKey()]);
     // Only rows that could be wrong. A stored zero cannot be too high.
     expect(text).toContain("weekly_wins > 0");
+  });
+
+  it("recounts the daily tally against its own column and boundary", async () => {
+    // The same repair serves both challenges, so each has to reach its own
+    // column — a recount that wrote the wrong one would silently zero a board.
+    await recountCareerChallengeWins("daily");
+    const text = sql.join("\n");
+    expect(text).toContain("SET daily_wins = COALESCE(w.wins, 0)");
+    expect(text).not.toContain("weekly_wins");
+    expect(bound.at(-1)).toEqual([dailyKey()]);
+  });
+
+  it("reads the career tally for the screens, so they cannot disagree", async () => {
+    sql.length = 0;
+    await careerChallengeWins("daily", ["a", "b", "a"]);
+    expect(sql.join("\n")).toContain("daily_wins AS wins FROM career_stats");
+    // Deduplicated: the viewer is normally on the board they asked for too.
+    expect(bound.at(-1)).toEqual([["a", "b"]]);
+  });
+
+  it("asks for nothing at all when there is nobody to ask about", async () => {
+    sql.length = 0;
+    expect(await careerChallengeWins("weekly", [])).toEqual(new Map());
+    expect(sql).toEqual([]);
   });
 
   it("counts only boards that have closed", async () => {

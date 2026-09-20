@@ -38,7 +38,11 @@ import {
 } from "@greed/core";
 import { randomInt } from "node:crypto";
 import { query } from "./db.js";
-import { raiseCareerBestTurn } from "./leaderboards.js";
+import {
+  careerChallengeWins,
+  raiseCareerBestTurn,
+  refreshCareerChallengeWins,
+} from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
 import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
 
@@ -698,6 +702,9 @@ export async function weeklyStatus(
   // weeks that have already CLOSED.
   const placings = await closedWeekPlacings([userId, ...board.rows.map((r) => r.user_id)], week);
   const mineClosed = placings.get(userId) ?? { wins: 0, podiums: 0 };
+  // The career tally, not the live placings — see the same note in daily.ts.
+  await refreshCareerChallengeWins("weekly", week);
+  const career = await careerChallengeWins("weekly", [userId, ...board.rows.map((r) => r.user_id)]);
 
   const champions = await weeklyChampions(week);
   const reigning = champions[0] ?? null;
@@ -742,7 +749,7 @@ export async function weeklyStatus(
       superBusts: r.super_busts ?? 0,
       hotDice: r.hot_dice,
       attempts: r.attempts,
-      wins: placings.get(r.user_id)?.wins ?? 0,
+      wins: career.get(r.user_id) ?? 0,
       rank: Number(r.rank),
       you: r.user_id === userId ? true : undefined,
       crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
@@ -750,7 +757,7 @@ export async function weeklyStatus(
     yourRank: own ? Number(own.rank) : null,
     players: Number(total.rows[0]?.n ?? 0),
     eliteEarned: mineClosed.podiums > 0,
-    wins: mineClosed.wins,
+    wins: career.get(userId) ?? 0,
     champion: reigning && strip(reigning),
     champions: champions.map(strip),
   };

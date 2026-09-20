@@ -25,7 +25,11 @@ import {
 } from "@greed/core";
 import { randomInt } from "node:crypto";
 import { query } from "./db.js";
-import { raiseCareerBestTurn } from "./leaderboards.js";
+import {
+  careerChallengeWins,
+  raiseCareerBestTurn,
+  refreshCareerChallengeWins,
+} from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
 import { DAILY_ORDER, DAILY_ORDER_R } from "./ranking.js";
 
@@ -510,6 +514,15 @@ export async function dailyStatus(
   // counts a day that is still being written.
   const placings = await closedDayPlacings([userId, ...board.rows.map((r) => r.user_id)], day);
   const mineClosed = placings.get(userId) ?? { wins: 0, podiums: 0 };
+  // Wins come from the CAREER tally, not from the placings above. Both count
+  // days taken outright, but the placings are recomputed from the run tables on
+  // every read and so fall away as a player's runs are pruned — while the
+  // career figure is kept precisely so a win outlives the run that earned it.
+  // Showing the live one here is what had a player reading four wins on this
+  // screen and six on the leaderboard. Podiums stay live: they feed a badge
+  // that is granted once and stored, not a number on display.
+  await refreshCareerChallengeWins("daily", day);
+  const career = await careerChallengeWins("daily", [userId, ...board.rows.map((r) => r.user_id)]);
 
   // Past winners. Closed days only, so this is safe to send before the run.
   const champions = await dailyChampions(day);
@@ -545,7 +558,7 @@ export async function dailyStatus(
       busts: r.busts,
       superBusts: r.super_busts ?? 0,
       hotDice: r.hot_dice,
-      wins: placings.get(r.user_id)?.wins ?? 0,
+      wins: career.get(r.user_id) ?? 0,
       rank: Number(r.rank),
       you: r.user_id === userId ? true : undefined,
       crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
@@ -553,7 +566,7 @@ export async function dailyStatus(
     yourRank: own ? Number(own.rank) : null,
     players: Number(total.rows[0]?.n ?? 0),
     eliteEarned: mineClosed.podiums > 0,
-    wins: mineClosed.wins,
+    wins: career.get(userId) ?? 0,
     champion: reigning && strip(reigning),
     champions: champions.map(strip),
   };
