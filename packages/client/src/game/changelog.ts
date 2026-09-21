@@ -24,6 +24,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.7.3",
+    date: "2026-09-21",
+    notes: [
+      "Your equipped dice skin now shows in the Daily and Weekly Challenges, instead of the plain ivory dice you got whatever you had on",
+      "Daily and Weekly Challenge places are now decided by your best single turn when two runs finish on the same score, and only then by who got there first",
+      "Fixed the Weekly wins leaderboard handing out a win for the week still being played. A week only counts once it has finished, and the wins credited early have been taken back",
+      "Fixed your Daily wins reading one number on your profile and a different one on the leaderboard. Every screen now shows the same count, worked out by the server",
+      "Visual Beta: players sitting down the sides of the table no longer have their feet drawn on top of it, and your own character no longer covers the label under your score",
+      "Visual Beta: the banner after a roll, a bank or a bust no longer stays up into the next player's turn",
+    ],
+  },
+  {
     version: "0.7.2",
     date: "2026-09-14",
     notes: [
