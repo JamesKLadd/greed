@@ -10,7 +10,8 @@ import {
   loadProfile,
   maxAchievementScore,
   raiseBestTurn,
-  raiseDailyWins,
+  setDailyWins,
+  setWeeklyWins,
   recordGame,
   summarize,
   TIER_POINTS,
@@ -404,17 +405,34 @@ describe("daily streak badges", () => {
   });
 });
 
-describe("raiseDailyWins", () => {
-  it("takes a higher count and reports the move", () => {
-    expect(raiseDailyWins(2)).toBe(true);
+describe("adopting the server's challenge win counts", () => {
+  it("takes the count it is given and reports the move", () => {
+    expect(setDailyWins(2)).toBe(true);
     expect(loadProfile().dailyWins).toBe(2);
+    expect(setWeeklyWins(3)).toBe(true);
+    expect(loadProfile().weeklyWins).toBe(3);
   });
 
-  it("never lowers one, however often it is told to", () => {
-    raiseDailyWins(5);
-    expect(raiseDailyWins(3)).toBe(false);
-    expect(raiseDailyWins(5)).toBe(false);
-    expect(loadProfile().dailyWins).toBe(5);
+  it("takes a LOWER count too, unlike every other stat here", () => {
+    // The whole point. A win is decided by a rule, and a rule can change — so
+    // the server can hand back fewer than it did before, and this screen has to
+    // follow rather than keep the best number it ever saw. Holding on is what
+    // showed a player six wins here and four everywhere else.
+    setDailyWins(6);
+    expect(setDailyWins(4)).toBe(true);
+    expect(loadProfile().dailyWins).toBe(4);
+  });
+
+  it("reports no move when the count has not changed", () => {
+    setDailyWins(4);
+    expect(setDailyWins(4)).toBe(false);
+  });
+
+  it("refuses a figure that is not a count", () => {
+    setDailyWins(4);
+    expect(loadProfile().dailyWins).toBe(4);
+    setDailyWins(-3);
+    expect(loadProfile().dailyWins).toBe(0);
   });
 });
 

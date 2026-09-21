@@ -664,8 +664,9 @@ describe("champions, crowns and badges settle when a week does", () => {
     const afterItClosed = await weeklyStatus(USER, WEEK);
     expect(afterItClosed.wins).toBe(1);
     expect(afterItClosed.eliteEarned).toBe(true);
-    // And the figure reaches the account, so Stats agrees without a re-sync.
-    expect(weeklyWins.get(USER)).toBe(1);
+    // And it is banked in the career tally, which is the single place the
+    // boards, this screen and the Stats screen all now read it from.
+    expect(careerWeeklyWins.get(USER)).toBe(1);
   });
 
   it("counts a streak in weeks, not days", async () => {

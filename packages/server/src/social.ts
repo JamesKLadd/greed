@@ -11,7 +11,7 @@ import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import { query } from "./db.js";
 import { AccountError } from "./accounts.js";
 import { onlineAmong } from "./presence.js";
-import { closedDayPlacings } from "./daily.js";
+import { careerChallengeWins } from "./leaderboards.js";
 import type { StoredProfile } from "./accounts.js";
 
 export interface FriendSummary {
@@ -212,10 +212,12 @@ export async function publicProfile(viewerId: string, username: unknown): Promis
     `SELECT MAX(score) AS best, COUNT(*)::text AS runs FROM daily_runs WHERE user_id = $1`,
     [target.id],
   );
-  // Derived from the runs themselves rather than read off their profile: the
-  // profile's copy only refreshes when THEY next open the daily screen, and a
-  // card someone else is looking at should not be waiting on that.
-  const placings = await closedDayPlacings([target.id]);
+  // The career tally, the same figure the boards rank and the daily screen
+  // shows. It used to be recomputed here from the runs, to avoid a profile copy
+  // that only refreshed when THEY next opened the daily screen — but a count
+  // derived in its own way is a count that disagrees, and this one fell away as
+  // their old runs were pruned while the board's did not.
+  const career = await careerChallengeWins("daily", [target.id]);
 
   const p = target.profile ?? {};
   return {
@@ -232,7 +234,7 @@ export async function publicProfile(viewerId: string, username: unknown): Promis
     dice: p.dice ?? "ivory",
     dailyBest: daily.rows[0]?.best ?? null,
     dailyRuns: Number(daily.rows[0]?.runs ?? 0),
-    dailyWins: placings.get(target.id)?.wins ?? 0,
+    dailyWins: career.get(target.id) ?? 0,
     relation,
   };
 }

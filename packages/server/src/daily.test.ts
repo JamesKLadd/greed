@@ -656,10 +656,14 @@ describe("winning a day", () => {
     expect((await dailyStatus(USER, DAY)).wins).toBe(2);
   });
 
-  it("writes the count onto the account, so it reaches the Stats screen", async () => {
+  it("banks the count where the Stats screen will read it", async () => {
+    // It used to be written onto the profile blob as well, which made a second
+    // copy that could disagree — and did. The career tally is the only one now;
+    // the profile picks it up from there on its way to the client.
     record(USER, YESTERDAY, 3000);
     await dailyStatus(USER, DAY);
-    expect(dailyWins.get(USER)).toBe(1);
+    expect(careerDailyWins.get(USER)).toBe(1);
+    expect(dailyWins.has(USER)).toBe(false);
   });
 
   it("ignores a scoreless day nobody won", async () => {

@@ -23,7 +23,7 @@ import {
   awardAchievement,
   DAILY_STREAK_BADGES,
   raiseBestTurn,
-  raiseDailyWins,
+  setDailyWins,
   type Achievement,
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
@@ -86,7 +86,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     // The wins figure is the server's — only it can see where everyone else
     // finished. This is the local copy catching up, so the Stats screen agrees
     // now rather than after the next sign-in.
-    const movedWins = raiseDailyWins(next.wins);
+    const movedWins = setDailyWins(next.wins);
 
     if (won.length > 0) {
       setUnlocked((prev) => [...prev, ...won]);

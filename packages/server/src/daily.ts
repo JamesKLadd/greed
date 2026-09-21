@@ -214,30 +214,6 @@ async function raiseBestTurn(userId: string, points: number): Promise<void> {
   await raiseCareerBestTurn(userId, points);
 }
 
-/**
- * Record a player's daily first places on their account, if it beats what is
- * stored. Same GREATEST-in-the-statement rule as the best turn above.
- *
- * The count is DERIVED — it can always be recomputed from daily_runs, and is,
- * every time a status is read. This copy exists so the figure reaches the Stats
- * screen and the profile sync like any other career stat, instead of only
- * existing on the one screen that queried for it.
- */
-async function raiseDailyWins(userId: string, wins: number): Promise<void> {
-  await query(
-    `UPDATE users
-        SET profile = jsonb_set(
-              profile,
-              '{dailyWins}',
-              to_jsonb(GREATEST(COALESCE((profile ->> 'dailyWins')::numeric, 0), $2::numeric)),
-              true
-            ),
-            updated_at = now()
-      WHERE id = $1`,
-    [userId, wins],
-  );
-}
-
 /** What a player has to show for the daily boards that have CLOSED. */
 export interface DailyPlacings {
   /** Days taken outright. */
@@ -528,9 +504,6 @@ export async function dailyStatus(
   const champions = await dailyChampions(day);
   const reigning = champions[0] ?? null;
 
-  // Keep the account's copy in step, so the count reaches the Stats screen and
-  // the profile sync rather than living only in this response.
-  if (mineClosed.wins > 0) await raiseDailyWins(userId, mineClosed.wins);
   return {
     day,
     run: own

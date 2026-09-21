@@ -228,8 +228,11 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
       incoming.totalBankedPoints,
     ),
     hotDiceTotal: max("hotDiceTotal", existing.hotDiceTotal, incoming.hotDiceTotal),
-    dailyWins: max("dailyWins", existing.dailyWins, incoming.dailyWins),
-    weeklyWins: max("weeklyWins", existing.weeklyWins ?? 0, incoming.weeklyWins ?? 0),
+    // NOT merged: the server owns these and overlays them from career_stats
+    // (see withChallengeWins). Taking the maximum of what a client reported is
+    // how a figure the server had lowered came straight back up again.
+    dailyWins: existing.dailyWins,
+    weeklyWins: existing.weeklyWins ?? 0,
     achievements,
     dice: incoming.dice || existing.dice,
     table: incoming.table || existing.table,
@@ -451,7 +454,7 @@ export async function signup(input: {
   return {
     token: await signSession({ sub: user.id, username: user.username }),
     user: publicUser(user),
-    profile: normalizeProfile(user.profile),
+    profile: await withChallengeWins(user.id, normalizeProfile(user.profile)),
     emailSent: verificationRequired() && emailEnabled(),
   };
 }
@@ -480,7 +483,7 @@ export async function login(input: { login: unknown; password: unknown }): Promi
   return {
     token: await signSession({ sub: user.id, username: user.username }),
     user: publicUser(user),
-    profile: normalizeProfile(user.profile),
+    profile: await withChallengeWins(user.id, normalizeProfile(user.profile)),
     emailSent: false,
   };
 }
@@ -577,8 +580,35 @@ export async function resetPassword(rawToken: unknown, newPassword: unknown): Pr
   return {
     token: await signSession({ sub: user.id, username: user.username }),
     user: publicUser(user),
-    profile: normalizeProfile(user.profile),
+    profile: await withChallengeWins(user.id, normalizeProfile(user.profile)),
     emailSent: false,
+  };
+}
+
+/**
+ * Put the server's own win counts onto a profile, whatever it was carrying.
+ *
+ * `dailyWins` and `weeklyWins` ride along with the profile so the Stats screen
+ * can show them, but they are not the player's figures to report: only the
+ * server can see where everyone else finished. They live in `career_stats`,
+ * which is what the leaderboards rank and what the challenge screens read — and
+ * a profile that carried its own copy made a third and fourth answer to one
+ * question. A player reading four wins on one screen and six on another is
+ * exactly what that produced.
+ *
+ * Overlaid on the way out AND on the way in, so a client cannot push one up:
+ * the profile merge is monotonic by design, which is right for a figure the
+ * player owns and wrong for one they do not.
+ */
+async function withChallengeWins(userId: string, profile: StoredProfile): Promise<StoredProfile> {
+  const { rows } = await query<{ daily_wins: number; weekly_wins: number }>(
+    `SELECT daily_wins, weekly_wins FROM career_stats WHERE user_id = $1`,
+    [userId],
+  );
+  return {
+    ...profile,
+    dailyWins: Number(rows[0]?.daily_wins ?? 0),
+    weeklyWins: Number(rows[0]?.weekly_wins ?? 0),
   };
 }
 
@@ -588,7 +618,10 @@ export async function getAccount(
   const { rows } = await query<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
   const user = rows[0];
   if (!user) return null;
-  return { user: publicUser(user), profile: normalizeProfile(user.profile) };
+  return {
+    user: publicUser(user),
+    profile: await withChallengeWins(userId, normalizeProfile(user.profile)),
+  };
 }
 
 /**
@@ -634,7 +667,10 @@ export async function saveProfile(
     [userId],
   );
   if (rows.length === 0) throw new AccountError(404, "Account not found.", "account.missing");
-  const merged = mergeProfile(normalizeProfile(rows[0].profile), normalizeProfile(incoming));
+  const merged = await withChallengeWins(
+    userId,
+    mergeProfile(normalizeProfile(rows[0].profile), normalizeProfile(incoming)),
+  );
   await query(`UPDATE users SET profile = $1, updated_at = now() WHERE id = $2`, [
     JSON.stringify(merged),
     userId,

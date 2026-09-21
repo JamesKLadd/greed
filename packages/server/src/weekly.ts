@@ -410,29 +410,6 @@ async function raiseBestTurn(userId: string, points: number): Promise<void> {
 }
 
 /**
- * Record a player's weekly first places on their account, if it beats what is
- * stored. Same GREATEST-in-the-statement rule as the best turn above.
- *
- * The count is DERIVED — it can always be recomputed from weekly_runs, and is,
- * every time a status is read. This copy exists so the figure reaches the Stats
- * screen and the profile sync like any other career stat.
- */
-async function raiseWeeklyWins(userId: string, wins: number): Promise<void> {
-  await query(
-    `UPDATE users
-        SET profile = jsonb_set(
-              profile,
-              '{weeklyWins}',
-              to_jsonb(GREATEST(COALESCE((profile ->> 'weeklyWins')::numeric, 0), $2::numeric)),
-              true
-            ),
-            updated_at = now()
-      WHERE id = $1`,
-    [userId, wins],
-  );
-}
-
-/**
  * Play one move in the open attempt. The server owns the move list and the
  * dice: it appends, replays from the seed, and hands back the new position.
  *
@@ -714,9 +691,6 @@ export async function weeklyStatus(
   // the challenge zone, and only it can count what has been spent today.
   const ration = await standing(userId, week, dailyKey());
 
-  // Keep the account's copy in step, so the count reaches the Stats screen and
-  // the leaderboards rather than living only in this response.
-  if (mineClosed.wins > 0) await raiseWeeklyWins(userId, mineClosed.wins);
   return {
     week,
     best: own

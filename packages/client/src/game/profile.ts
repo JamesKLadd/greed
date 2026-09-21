@@ -512,33 +512,32 @@ export function raiseBestTurn(points: number): boolean {
 }
 
 /**
- * Raise the recorded daily-challenge wins, if `wins` beats what is stored.
- * Returns true if it moved.
+ * Adopt the server's count of challenge wins. Returns true if it moved.
  *
- * The server owns this figure — only it can see where everyone else finished —
- * and writes it onto the account as the run is read back. This keeps the local
- * copy in step so the Stats screen shows it straight away; the two agree
- * because, like every other career stat here, both only take the higher number.
+ * SET rather than raised, unlike every other career stat here. The others are
+ * the player's own record of their own play and only ever climb; these two the
+ * server owns outright — only it can see where everyone else finished — and it
+ * can legitimately hand back a SMALLER number than the one stored: a win is
+ * decided by a rule, and a rule can change. Taking the higher of the two is
+ * what left a player reading six wins on this screen and four everywhere else.
  */
-export function raiseDailyWins(wins: number): boolean {
+function setWins(field: "dailyWins" | "weeklyWins", wins: number): boolean {
   const p = loadProfile();
-  if (!(wins > p.dailyWins)) return false;
-  p.dailyWins = wins;
+  const next = Math.max(0, Math.round(wins));
+  if (p[field] === next) return false;
+  p[field] = next;
   saveProfile(p);
   return true;
 }
 
-/**
- * Raise the recorded weekly-challenge wins, if `wins` beats what is stored.
- * Returns true if it moved. The server owns this figure, exactly as it owns
- * `dailyWins`; this is the local copy catching up.
- */
-export function raiseWeeklyWins(wins: number): boolean {
-  const p = loadProfile();
-  if (!(wins > p.weeklyWins)) return false;
-  p.weeklyWins = wins;
-  saveProfile(p);
-  return true;
+/** Adopt the server's daily-challenge win count. */
+export function setDailyWins(wins: number): boolean {
+  return setWins("dailyWins", wins);
+}
+
+/** Adopt the server's weekly-challenge win count. */
+export function setWeeklyWins(wins: number): boolean {
+  return setWins("weeklyWins", wins);
 }
 
 /** Overwrite the whole saved profile (used when adopting a synced account profile). */
@@ -565,8 +564,10 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     totalBanks: max(a.totalBanks, b.totalBanks),
     totalBankedPoints: max(a.totalBankedPoints, b.totalBankedPoints),
     hotDiceTotal: max(a.hotDiceTotal, b.hotDiceTotal),
-    dailyWins: max(a.dailyWins, b.dailyWins),
-    weeklyWins: max(a.weeklyWins, b.weeklyWins),
+    // The server's, not the higher of the two: see setWins. `b` is the more
+    // recent profile, which on sign-in is the account's.
+    dailyWins: b.dailyWins ?? a.dailyWins,
+    weeklyWins: b.weeklyWins ?? a.weeklyWins,
     achievements: [...new Set([...a.achievements, ...b.achievements])],
     dice: b.dice || a.dice,
     table: b.table || a.table,

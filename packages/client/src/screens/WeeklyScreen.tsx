@@ -26,7 +26,7 @@ import {
 import {
   awardAchievement,
   raiseBestTurn,
-  raiseWeeklyWins,
+  setWeeklyWins,
   WEEKLY_STREAK_BADGES,
   type Achievement,
 } from "../game/profile.js";
@@ -103,7 +103,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
     // The wins figure is the server's — only it can see where everyone else
     // finished. This is the local copy catching up, so the Stats screen agrees
     // now rather than after the next sign-in.
-    const movedWins = raiseWeeklyWins(next.wins);
+    const movedWins = setWeeklyWins(next.wins);
 
     if (won.length > 0) {
       setUnlocked((prev) => [...prev, ...won]);
