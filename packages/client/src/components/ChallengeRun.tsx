@@ -2,13 +2,15 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { appearanceVars } from "../beta/appearance.js";
 import { GameCelebration } from "../beta/Celebration.js";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { Die } from "./Die.js";
 import { Button } from "../ui/index.js";
 import { rollCall } from "../game/rollCall.js";
+import { equippedDiceVars } from "../game/cosmetics.js";
+import { loadProfile } from "../game/profile.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
@@ -39,6 +41,11 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
   const beta = useBetaActive();
   const { appearance } = useAppearance();
   const run = useChallengeRun(initial, playMove);
+  // The player's equipped dice, read once for the life of the run: a skin
+  // changed in the Locker mid-attempt would otherwise swap the dice underneath
+  // them. The beta's own appearance vars go on the same element and are spread
+  // after, so a beta look still wins where the two name the same property.
+  const [diceSkin] = useState(() => equippedDiceVars(loadProfile()));
   const call = rollCall(run.state.turn);
   useGameSounds(run.state);
   useRollSound(run.isRolling);
@@ -50,7 +57,10 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
   }, [run.finished, onFinished]);
 
   return (
-    <div className="daily__run" style={beta ? appearanceVars(appearance) : undefined}>
+    <div
+      className="daily__run"
+      style={beta ? { ...diceSkin, ...appearanceVars(appearance) } : diceSkin}
+    >
       {beta && <GameCelebration state={run.state} isRolling={run.isRolling} showVisuals={false} />}
       {run.error && <div className="banner banner--sd">{run.error}</div>}
 

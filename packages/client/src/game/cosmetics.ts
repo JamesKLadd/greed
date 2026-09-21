@@ -494,12 +494,23 @@ function find(list: Cosmetic[], id: string): Cosmetic {
 
 /** Combined CSS-variable style for the profile's equipped dice + table (with fallbacks). */
 export function cosmeticVars(profile: Profile): CSSProperties {
-  const dice = find(DICE_SKINS, profile.dice);
   const table = find(TABLE_THEMES, profile.table);
   // Equipped-but-locked (e.g. after a reset) falls back to the default.
-  const diceVars = isUnlocked(dice, profile) ? dice.vars : DICE_SKINS[0].vars;
   const tableVars = isUnlocked(table, profile) ? table.vars : TABLE_THEMES[0].vars;
-  return { ...diceVars, ...tableVars } as CSSProperties;
+  return { ...equippedDiceVars(profile), ...tableVars } as CSSProperties;
+}
+
+/**
+ * The dice half on its own, for screens that are not a table.
+ *
+ * The daily and weekly challenges are played on their own panel rather than on
+ * the felt, so they want the player's dice without their table theme — the
+ * skins were only ever visible in a game, which made the locker's dice a reward
+ * you could not see in the mode you were most likely grinding for it.
+ */
+export function equippedDiceVars(profile: Profile): CSSProperties {
+  const dice = find(DICE_SKINS, profile.dice);
+  return { ...(isUnlocked(dice, profile) ? dice.vars : DICE_SKINS[0].vars) } as CSSProperties;
 }
 
 /**

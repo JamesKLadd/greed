@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Profile } from "./profile.js";
-import { DICE_SKINS, TABLE_THEMES, cosmeticVars, isUnlocked, tableVars } from "./cosmetics.js";
+import { ACHIEVEMENTS } from "./profile.js";
+import {
+  DICE_SKINS,
+  TABLE_THEMES,
+  cosmeticVars,
+  equippedDiceVars,
+  isUnlocked,
+  tableVars,
+} from "./cosmetics.js";
 
 function profile(over: Partial<Profile> = {}): Profile {
   return {
@@ -91,5 +99,63 @@ describe("tableVars", () => {
     for (const [key, value] of Object.entries(tableVars(p) as Record<string, string>)) {
       expect(whole[key], key).toBe(value);
     }
+  });
+});
+
+describe("equippedDiceVars", () => {
+  const unlockAll = (p: ReturnType<typeof profile>) => ({
+    ...p,
+    gamesPlayed: 100000,
+    wins: 100000,
+    bestTurn: 100000,
+    bestTotal: 4000,
+    bestStreak: 1000,
+    hotDiceTotal: 100000,
+    dailyWins: 100000,
+    weeklyWins: 100000,
+    achievements: ACHIEVEMENTS.map((a) => a.id),
+  });
+
+  it("gives the dice half of a look without its table", () => {
+    // The challenges are played on a panel rather than on the felt, so they
+    // want the player's dice and nothing else.
+    // Every property a table theme can set, so "no table" is checked against
+    // the real list rather than against a naming convention — the gold skin
+    // sets `--score-*` as well as `--die-*`, and a prefix test called that a
+    // table variable.
+    const tableKeys = new Set(TABLE_THEMES.flatMap((t) => Object.keys(t.vars)));
+    for (const skin of DICE_SKINS) {
+      const p = unlockAll(profile({ dice: skin.id }));
+      const vars = equippedDiceVars(p) as Record<string, string>;
+      expect(vars, skin.id).toEqual(skin.vars);
+      expect(
+        Object.keys(vars).filter((k) => tableKeys.has(k)),
+        skin.id,
+      ).toEqual([]);
+    }
+  });
+
+  it("agrees with the dice half of the full look", () => {
+    // One definition: cosmeticVars is built on this, so a skin can never look
+    // one way at the table and another in a challenge.
+    const p = unlockAll(profile({ dice: DICE_SKINS[DICE_SKINS.length - 1].id }));
+    const full = cosmeticVars(p) as Record<string, string>;
+    for (const [k, v] of Object.entries(equippedDiceVars(p) as Record<string, string>)) {
+      expect(full[k], k).toBe(v);
+    }
+  });
+
+  it("falls back to the default when the equipped skin is locked", () => {
+    // Equipping something and then resetting your stats leaves a skin you no
+    // longer own; the table already handled that and so must this.
+    const locked = DICE_SKINS.find((s) => s.unlock);
+    if (!locked) throw new Error("no lockable dice skin to test with");
+    const p = profile({ dice: locked.id });
+    expect(isUnlocked(locked, p)).toBe(false);
+    expect(equippedDiceVars(p)).toEqual(DICE_SKINS[0].vars);
+  });
+
+  it("falls back to the default for a skin that does not exist", () => {
+    expect(equippedDiceVars(profile({ dice: "no-such-skin" }))).toEqual(DICE_SKINS[0].vars);
   });
 });
