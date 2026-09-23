@@ -7,7 +7,7 @@
 
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
-import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
+import { BEST_TOTAL_CEILING, DAILY_ZONE, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
 import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 
@@ -112,11 +112,15 @@ async function backfillSuperBusts(): Promise<void> {
  * seeds or lowers a figure that is otherwise only ever added to would, run a
  * second time, count something twice or destroy honest standings. So the
  * repairs that have run are written down, and never run again.
+ *
+ * A repair may return `false` to say it found nothing to act on yet — a named
+ * account that does not exist, say. It is then NOT written down, and is tried
+ * again on the next boot rather than being quietly used up.
  */
-async function applyOnce(id: string, repair: () => Promise<void>): Promise<void> {
+async function applyOnce(id: string, repair: () => Promise<void | boolean>): Promise<void> {
   const { rows } = await query(`SELECT 1 FROM schema_fixes WHERE id = $1`, [id]);
   if (rows.length > 0) return;
-  await repair();
+  if ((await repair()) === false) return;
   await query(`INSERT INTO schema_fixes (id) VALUES ($1) ON CONFLICT DO NOTHING`, [id]);
 }
 
@@ -375,6 +379,36 @@ export async function migrate(): Promise<void> {
   await applyOnce("challenge-wins-ledger-2026-09", async () => {
     await seedChallengeWinsLedger("daily");
     await seedChallengeWinsLedger("weekly");
+  });
+  // Daily wins lost before the ledger existed, restored by hand. Nothing on
+  // record can say which days they were — the runs are deleted — so this is
+  // the player's own account of it: four wins on 2026-09-20, then the next two
+  // days won, for six by the time the ledger was seeded.
+  //
+  // Six PLUS whatever the ledger has banked for them since it started, not a
+  // flat six: a day won after the seed has already been added to the column,
+  // and a floor of six would swallow it. The seed covered every day before the
+  // one it ran on, so "since" is the date of its boot, in the challenge's zone.
+  // A floor, never a decrease, so it cannot take away anything counted since.
+  await applyOnce("daily-wins-restore-james-2026-09", async () => {
+    const { rowCount } = await query(
+      `UPDATE career_stats c
+          SET daily_wins = GREATEST(c.daily_wins, 6 + (
+                SELECT count(*)::int FROM challenge_wins w
+                 WHERE w.kind = 'daily' AND w.user_id = c.user_id
+                   AND w.period >= (
+                     SELECT (applied_at AT TIME ZONE $1)::date
+                       FROM schema_fixes WHERE id = 'challenge-wins-ledger-2026-09'))),
+              updated_at = now()
+        FROM users u
+       WHERE u.id = c.user_id AND lower(u.username) = 'james'`,
+      [DAILY_ZONE],
+    );
+    if (!rowCount) {
+      console.warn("Repair: no career record for James yet; will try again next boot.");
+      return false;
+    }
+    console.log("Repair: restored James's daily wins.");
   });
   for (const [col, dir] of [
     ["online_wins", "DESC"],
