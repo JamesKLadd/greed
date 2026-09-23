@@ -69,6 +69,15 @@ build on every push. Node 20.
   all fourteen board, own-rank, placings, champion, tally and all-time queries
   interpolate one of them. They were copies once, and a copy that drifted is
   what credited a weekly win for a week that had not finished.
+- Challenge WINS are a ledger, not a count. `challenge_wins` holds one row per
+  closed day/week naming its winner, written once when the period closes and
+  **never pruned**; `career_stats.daily_wins`/`weekly_wins` are its running
+  totals, added to by `refreshCareerChallengeWins`. Never derive a win count
+  from `daily_runs`/`weekly_runs`: those are pruned after 30 days, so any count
+  of them is a count of the last month. That is what froze a player at four
+  wins while they kept winning — and a "recount" from the runs is what erased
+  real wins once already. A closed period's result stands, even under a later
+  rule change.
 - The weekly's `settle()` stores a new attempt when it beats the standing one BY
   THAT ORDER, not merely on score, or the board would rank a player on the
   weaker of two runs they had played. `best_at` is the exception and still moves

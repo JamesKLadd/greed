@@ -8,7 +8,7 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { BEST_TOTAL_CEILING, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
-import { recountCareerChallengeWins, refreshCareerChallengeWins } from "./leaderboards.js";
+import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 
 const { Pool } = pg;
@@ -108,10 +108,10 @@ async function backfillSuperBusts(): Promise<void> {
  * Everything else in `migrate()` is idempotent by construction — CREATE TABLE
  * IF NOT EXISTS, ADD COLUMN IF NOT EXISTS, a backfill guarded by a NULL — and
  * so it can run on every boot forever. A repair that CORRECTS data is not like
- * that. It is right at the moment it is written and wrong later: the one below
- * lowers a figure that is otherwise only ever raised, which is the right answer
- * today and would destroy honest standings a month from now. So the repairs
- * that have run are written down, and never run again.
+ * that. It is right at the moment it is written and wrong later — a repair that
+ * seeds or lowers a figure that is otherwise only ever added to would, run a
+ * second time, count something twice or destroy honest standings. So the
+ * repairs that have run are written down, and never run again.
  */
 async function applyOnce(id: string, repair: () => Promise<void>): Promise<void> {
   const { rows } = await query(`SELECT 1 FROM schema_fixes WHERE id = $1`, [id]);
@@ -326,7 +326,7 @@ export async function migrate(): Promise<void> {
   `);
   // Days and weeks taken outright. Added after the table, so existing rows get
   // them at zero and fill in from the server's own count the next time any
-  // challenge board is read — see raiseCareerChallengeWins.
+  // challenge board is read — see refreshCareerChallengeWins.
   //
   // Deliberately NOT seeded from `profile` the way the four columns above were.
   // That seed existed to preserve standings already on display when the boards
@@ -345,15 +345,36 @@ export async function migrate(): Promise<void> {
       applied_at timestamptz NOT NULL DEFAULT now()
     );
   `);
-  // Wins credited for a week that had not finished.
-  await applyOnce("weekly-wins-open-week-2026-09", () => recountCareerChallengeWins("weekly"));
-  // Wins banked before ties were settled on the run's best turn. Changing that
-  // re-decided days and weeks already counted, and a high-water mark kept the
-  // old answers — so a player could hold six wins on the board while the game
-  // showed somebody else wearing the crown for two of those days.
-  await applyOnce("challenge-wins-tiebreak-2026-09", async () => {
-    await recountCareerChallengeWins("daily");
-    await recountCareerChallengeWins("weekly");
+  // Who won each closed day and week, written once and never pruned. The career
+  // columns above are counted from this — see refreshCareerChallengeWins for
+  // why a count taken from the run tables could not be. One row per period, so
+  // it grows by about a row a day.
+  await query(`
+    CREATE TABLE IF NOT EXISTS challenge_wins (
+      kind    text NOT NULL CHECK (kind IN ('daily', 'weekly')),
+      period  date NOT NULL,
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      PRIMARY KEY (kind, period, user_id)
+    );
+  `);
+  await query(
+    `CREATE INDEX IF NOT EXISTS challenge_wins_user_idx ON challenge_wins (user_id, kind);`,
+  );
+  // Two earlier repairs, "weekly-wins-open-week-2026-09" and
+  // "challenge-wins-tiebreak-2026-09", recounted these columns from the run
+  // tables and SET them to the answer. Both rested on a premise that was false
+  // when they ran: that nothing had yet been pruned. Runs had been pruned daily
+  // since 2026-09-09, so a recount was a count of the last thirty days, and it
+  // lowered players who had real wins older than that. The function is gone —
+  // a count from the runs is never the career figure — and the repairs are not
+  // re-run on a fresh database, where there is nothing to repair.
+  //
+  // This starts the ledger from whatever runs remain, keeping any stored figure
+  // that is higher. It MUST precede the first refresh, which assumes every
+  // period already in the ledger has been counted into the columns.
+  await applyOnce("challenge-wins-ledger-2026-09", async () => {
+    await seedChallengeWinsLedger("daily");
+    await seedChallengeWinsLedger("weekly");
   });
   for (const [col, dir] of [
     ["online_wins", "DESC"],
@@ -431,8 +452,9 @@ export const RETENTION_DAYS = 30;
  */
 export async function prune(): Promise<void> {
   // Bank what the runs about to be deleted were worth, BEFORE deleting them.
-  // A day taken outright is a career figure; the row proving it is a log entry
-  // with a month to live, and losing one should not lose the other.
+  // A day taken outright is a career figure; the run proving it is a log entry
+  // with a month to live, so the win is copied into challenge_wins — which this
+  // sweep never touches — before the run can go.
   for (const kind of ["daily", "weekly"] as const) {
     try {
       await refreshCareerChallengeWins(kind);

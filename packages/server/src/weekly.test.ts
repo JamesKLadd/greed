@@ -56,6 +56,8 @@ const weeklyWins = new Map<string, number>();
  * the profile copy above, which is a different number with a different owner.
  */
 const careerWeeklyWins = new Map<string, number>();
+/** Periods already written to the challenge_wins ledger. */
+const banked = new Set<string>();
 /** Monotonic clock standing in for now(), so best_at ordering is checkable. */
 let clock = 0;
 
@@ -99,15 +101,14 @@ function closedBoards(thisWeek: string): Map<string, { user: string; row: Best }
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     if (sql.includes("INSERT INTO career_stats") && sql.includes("weekly_wins")) {
-      // The refresh: count each closed period's winner and keep the high-water
-      // mark, exactly as the real INSERT ... ON CONFLICT ... GREATEST does.
+      // The refresh: bank each closed period's winner the first time it is
+      // seen, and add it on — as the real statement does through the
+      // challenge_wins ledger. A period already banked is never counted again.
       const [thisWeek] = params as [string];
-      const tally = new Map<string, number>();
-      for (const [, board] of closedBoards(thisWeek)) {
-        if (board.length) tally.set(board[0].user, (tally.get(board[0].user) ?? 0) + 1);
-      }
-      for (const [user, n] of tally) {
-        careerWeeklyWins.set(user, Math.max(careerWeeklyWins.get(user) ?? 0, n));
+      for (const [period, board] of closedBoards(thisWeek)) {
+        if (!board.length || banked.has(period)) continue;
+        banked.add(period);
+        careerWeeklyWins.set(board[0].user, (careerWeeklyWins.get(board[0].user) ?? 0) + 1);
       }
       return { rows: [] };
     }
@@ -323,6 +324,7 @@ beforeEach(() => {
   bestTurns.clear();
   weeklyWins.clear();
   careerWeeklyWins.clear();
+  banked.clear();
   clock = 0;
 });
 

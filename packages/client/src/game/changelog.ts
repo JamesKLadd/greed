@@ -31,6 +31,7 @@ export const RELEASES: Release[] = [
       "Daily and Weekly Challenge places are now decided by your best single turn when two runs finish on the same score, and only then by who got there first",
       "Fixed the Weekly wins leaderboard handing out a win for the week still being played. A week only counts once it has finished, and the wins credited early have been taken back",
       "Fixed your Daily wins reading one number on your profile and a different one on the leaderboard. Every screen now shows the same count, worked out by the server",
+      "Fixed Daily and Weekly wins no longer going up once your earliest wins were more than 30 days old. Every day and week you win is now recorded for good and added to your total",
       "Visual Beta: players sitting down the sides of the table no longer have their feet drawn on top of it, and your own character no longer covers the label under your score",
       "Visual Beta: the banner after a roll, a bank or a bust no longer stays up into the next player's turn",
     ],

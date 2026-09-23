@@ -205,24 +205,29 @@ export async function recordMatch(m: FinishedMatch): Promise<void> {
 }
 
 /**
- * How each challenge's wins are counted, and from where.
+ * How each challenge's winners are found, and from where.
  *
  * Both are "finished top of a board that has closed", tie-broken exactly as the
  * board itself draws them so every day and every week has one winner. Written
  * out here rather than reusing the challenge modules' own placings queries,
  * because those answer for a named list of players and this has to answer for
  * everybody at once.
+ *
+ * Each statement yields one row per closed period — who won it, and which day
+ * or week it was — not a count. A count taken from the run tables is only ever
+ * a count of the last thirty days, which is the bug the ledger below exists to
+ * fix; see refreshCareerChallengeWins.
  */
 const CHALLENGE_WINS = {
   daily: {
     column: "daily_wins",
     /** Today's board is still filling up, so today is not a win yet. */
     openBoard: dailyKey,
-    sql: `SELECT user_id, count(*)::int AS wins FROM (
-            SELECT user_id,
+    winners: `SELECT user_id, day AS period FROM (
+            SELECT user_id, day,
                    RANK() OVER (PARTITION BY day ORDER BY ${DAILY_ORDER}) AS rank
               FROM daily_runs WHERE complete AND score > 0 AND day < $1::date
-          ) r WHERE rank = 1 GROUP BY user_id`,
+          ) r WHERE rank = 1`,
   },
   weekly: {
     column: "weekly_wins",
@@ -239,22 +244,41 @@ const CHALLENGE_WINS = {
      * backwards — it is the reason it was not.
      */
     openBoard: weekKey,
-    sql: `SELECT user_id, count(*)::int AS wins FROM (
-            SELECT user_id,
+    winners: `SELECT user_id, week AS period FROM (
+            SELECT user_id, week,
                    RANK() OVER (PARTITION BY week ORDER BY ${WEEKLY_ORDER}) AS rank
               FROM weekly_runs WHERE score > 0 AND week < $1::date
-          ) r WHERE rank = 1 GROUP BY user_id`,
+          ) r WHERE rank = 1`,
   },
 } as const;
 
 /**
- * Bring the career count of days or weeks taken outright up to date.
+ * Bank the winner of every day or week that has closed since the last call.
  *
- * A stored column rather than a live count, and GREATEST rather than
- * assignment, for one reason: wins are derived from the run tables and those
- * are pruned after thirty days, so the derived figure SHRINKS as a player's
- * history ages out. A career total that went down would be a strange thing to
- * show anybody, so the high-water mark is kept here and the boards rank that.
+ * Wins are written to `challenge_wins`, one row per closed period, and each new
+ * row adds one to the winner's career column. The ledger is never pruned; the
+ * run tables it is read from are, after thirty days.
+ *
+ * This used to keep the column as GREATEST(stored, a count taken from the run
+ * tables) — a high-water mark, on the reasoning that the count shrinks as old
+ * runs are pruned and a career total should not. But the count was never a
+ * career total in the first place. It was the number of wins inside the last
+ * thirty days, and the maximum of a sliding window is not a sum: a player who
+ * had four wins and then won two more days, while two of the old winning days
+ * aged out, went from four to four. Reported exactly like that, and reproduced
+ * exactly like that, day by day, against a real database.
+ *
+ * So a period is written down once, when it has closed, and after that its
+ * result stands. Only the periods the ledger has not yet seen are banked —
+ * `NOT EXISTS` on the period, not just the player — so a closed day can never
+ * gain a second winner, even if a later rule would rank it differently. That
+ * is deliberate: re-deciding closed days from whatever runs happen to survive
+ * is precisely how wins were lost before.
+ *
+ * Safe to run concurrently and repeatedly. A closed period's runs are frozen —
+ * moves only ever reach today's run and this week's attempt — so two callers
+ * find the same winners, and the primary key lets exactly one of them insert;
+ * `RETURNING` reports only rows actually inserted, so the column moves once.
  *
  * Called from two places, and it needs both. Reading a board refreshes it, so
  * what is on screen is never behind the days and weeks that closed since anyone
@@ -277,48 +301,55 @@ export async function refreshCareerChallengeWins(
    */
   openBoard = CHALLENGE_WINS[kind].openBoard(),
 ): Promise<void> {
-  const { column, sql } = CHALLENGE_WINS[kind];
+  const { column, winners } = CHALLENGE_WINS[kind];
   await query(
-    `INSERT INTO career_stats (user_id, ${column})
-     ${sql}
+    `WITH winners AS (${winners}),
+          banked AS (
+            INSERT INTO challenge_wins (kind, period, user_id)
+            SELECT $2::text, w.period, w.user_id FROM winners w
+             WHERE NOT EXISTS (
+                     SELECT 1 FROM challenge_wins c
+                      WHERE c.kind = $2::text AND c.period = w.period)
+            ON CONFLICT DO NOTHING
+            RETURNING user_id
+          )
+     INSERT INTO career_stats (user_id, ${column})
+     SELECT user_id, count(*)::int FROM banked GROUP BY user_id
      ON CONFLICT (user_id) DO UPDATE
-       SET ${column} = GREATEST(career_stats.${column}, EXCLUDED.${column}),
+       SET ${column} = career_stats.${column} + EXCLUDED.${column},
            updated_at = now()`,
-    [openBoard],
+    [openBoard, kind],
   );
 }
 
 /**
- * Recompute a challenge's career wins from scratch, lowering them if need be.
+ * Start the ledger from the runs that are still there. Once, on the boot that
+ * creates it; see applyOnce in db.ts.
  *
- * GREATEST is what makes this necessary rather than self-healing. The tally is
- * a high-water mark so that a win survives its run being pruned, and the price
- * of that is a stored figure which cannot come down on its own — so whenever a
- * banked answer stops being the right one, something has to come and say so.
+ * Only the last thirty days of runs survive to be read, so this cannot know
+ * about a win older than that. What it CAN do is not make anything worse: the
+ * stored column is kept wherever it is already higher, since it may be holding
+ * a win whose run has since been deleted. The two are never added together —
+ * they overlap by an amount nothing on record can tell.
  *
- * It has happened twice. A boundary bug credited weekly wins for a week that
- * had not finished; and changing how a tie is settled re-decided days and weeks
- * that had already been counted, leaving players holding wins the board no
- * longer shows them winning.
- *
- * Only safe to lower while nothing has been pruned since the columns existed —
- * after that a stored figure above today's honest count may be a real win whose
- * run has expired, and indistinguishable from a stale one. Both columns were
- * created on 2026-09-14 and retention is thirty days, so that is true now and
- * stops being true in October. Which is why every call is applied once and
- * written down; see applyOnce in db.ts.
+ * After this, the refresh above only ever adds, one closed period at a time.
  */
-export async function recountCareerChallengeWins(kind: "daily" | "weekly"): Promise<void> {
-  const { column, sql, openBoard } = CHALLENGE_WINS[kind];
+export async function seedChallengeWinsLedger(kind: "daily" | "weekly"): Promise<void> {
+  const { column, winners, openBoard } = CHALLENGE_WINS[kind];
   await query(
-    `WITH winners AS (${sql})
-     UPDATE career_stats c
-        SET ${column} = COALESCE(w.wins, 0),
-            updated_at = now()
-       FROM (SELECT user_id FROM career_stats WHERE ${column} > 0) stale
-       LEFT JOIN winners w ON w.user_id = stale.user_id
-      WHERE c.user_id = stale.user_id`,
-    [openBoard()],
+    `WITH winners AS (${winners}),
+          banked AS (
+            INSERT INTO challenge_wins (kind, period, user_id)
+            SELECT $2::text, w.period, w.user_id FROM winners w
+            ON CONFLICT DO NOTHING
+            RETURNING user_id
+          )
+     INSERT INTO career_stats (user_id, ${column})
+     SELECT user_id, count(*)::int FROM banked GROUP BY user_id
+     ON CONFLICT (user_id) DO UPDATE
+       SET ${column} = GREATEST(career_stats.${column}, EXCLUDED.${column}),
+           updated_at = now()`,
+    [openBoard(), kind],
   );
 }
 

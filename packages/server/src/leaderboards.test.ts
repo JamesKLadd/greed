@@ -3,8 +3,8 @@
  *
  * What is pinned here is the part a board cannot recover from getting wrong: a
  * category only ever names a column this module chose (the name lands inside
- * the SQL text), and a career count of challenge wins only ever climbs — the
- * figure it is fed shrinks on its own as old runs are pruned.
+ * the SQL text), and a career count of challenge wins is a running total of a
+ * ledger — never a count of the run tables, which are pruned after thirty days.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,7 +29,7 @@ const {
   careerChallengeWins,
   leaderboard,
   refreshCareerChallengeWins,
-  recountCareerChallengeWins,
+  seedChallengeWinsLedger,
 } = await import("./leaderboards.js");
 
 beforeEach(() => {
@@ -87,12 +87,27 @@ describe("career challenge wins", () => {
     expect(text).not.toContain("profile");
   });
 
-  it("only ever climbs, because the figure it is fed can fall", async () => {
-    // Wins are derived from runs, and runs are pruned after thirty days — so a
-    // later tally genuinely reports fewer. A career total that went down would
-    // be a strange thing to show anybody.
+  it("adds each newly closed period, rather than re-counting the runs", async () => {
+    // It used to keep GREATEST(stored, a count of the runs on file). The runs
+    // are pruned after thirty days, so that count was a sliding window, and the
+    // maximum of a window is not a total: two wins won while two old ones aged
+    // out left the figure exactly where it was.
     await refreshCareerChallengeWins("weekly");
-    expect(sql.join("\n")).toContain("GREATEST(career_stats.weekly_wins");
+    const text = sql.join("\n");
+    expect(text).toContain("INSERT INTO challenge_wins");
+    expect(text).toContain("SET weekly_wins = career_stats.weekly_wins + EXCLUDED.weekly_wins");
+    expect(text).not.toContain("GREATEST");
+    // Only from what the ledger inserted this time, so a period is counted once.
+    expect(text).toContain("RETURNING user_id");
+    expect(text).toContain("FROM banked");
+  });
+
+  it("never gives a closed period a second winner", async () => {
+    // Keyed on the period, not the player: whatever a later rule would make of
+    // a day's surviving runs, the day was settled when it closed.
+    await refreshCareerChallengeWins("daily");
+    expect(sql.join("\n")).toMatch(/NOT EXISTS[\s\S]*c\.period = w\.period/);
+    expect(bound.at(-1)).toEqual([dailyKey(), "daily"]);
   });
 
   it("keeps the two counts in their own columns", async () => {
@@ -113,7 +128,7 @@ describe("career challenge wins", () => {
     // today's date — and comparing against today let the week in progress
     // through as closed, crediting whoever was leading it with a win.
     await refreshCareerChallengeWins("weekly");
-    expect(bound.at(-1)).toEqual([weekKey()]);
+    expect(bound.at(-1)).toEqual([weekKey(), "weekly"]);
   });
 
   it("does not count the open week, on a day that is not its Monday", () => {
@@ -132,30 +147,19 @@ describe("career challenge wins", () => {
 
   it("counts a day as closed once the next day has started", async () => {
     await refreshCareerChallengeWins("daily");
-    expect(bound.at(-1)).toEqual([dailyKey()]);
+    expect(bound.at(-1)).toEqual([dailyKey(), "daily"]);
   });
 
-  it("recounts a career tally from scratch, and can lower it", async () => {
-    await recountCareerChallengeWins("weekly");
+  it("seeds the ledger without lowering anybody", async () => {
+    // The first boot with the ledger starts it from the runs still on file.
+    // Those only reach back thirty days, so a stored figure may be holding a
+    // win the runs no longer show — it is kept wherever it is higher.
+    await seedChallengeWinsLedger("weekly");
     const text = sql.join("\n");
-    // Assignment, not GREATEST: the stored figure is too HIGH, so the rule that
-    // protects it from falling is the rule that has to be set aside here.
-    expect(text).toContain("SET weekly_wins = COALESCE(w.wins, 0)");
-    expect(text).not.toContain("GREATEST");
-    // Against the same boundary the fixed tally uses.
-    expect(bound.at(-1)).toEqual([weekKey()]);
-    // Only rows that could be wrong. A stored zero cannot be too high.
-    expect(text).toContain("weekly_wins > 0");
-  });
-
-  it("recounts the daily tally against its own column and boundary", async () => {
-    // The same repair serves both challenges, so each has to reach its own
-    // column — a recount that wrote the wrong one would silently zero a board.
-    await recountCareerChallengeWins("daily");
-    const text = sql.join("\n");
-    expect(text).toContain("SET daily_wins = COALESCE(w.wins, 0)");
-    expect(text).not.toContain("weekly_wins");
-    expect(bound.at(-1)).toEqual([dailyKey()]);
+    expect(text).toContain("INSERT INTO challenge_wins");
+    expect(text).toContain("GREATEST(career_stats.weekly_wins, EXCLUDED.weekly_wins)");
+    expect(text).not.toContain("daily_wins");
+    expect(bound.at(-1)).toEqual([weekKey(), "weekly"]);
   });
 
   it("reads the career tally for the screens, so they cannot disagree", async () => {

@@ -34,6 +34,8 @@ const dailyWins = new Map<string, number>();
  * the profile copy above, which is a different number with a different owner.
  */
 const careerDailyWins = new Map<string, number>();
+/** Periods already written to the challenge_wins ledger. */
+const banked = new Set<string>();
 
 /** Finished runs for a day, best first — the order the board is built in. */
 function finished(day: string): { user: string; row: Row }[] {
@@ -76,15 +78,14 @@ function closedBoards(today: string): Map<string, { user: string; row: Row }[]> 
 vi.mock("./db.js", () => ({
   query: async (sql: string, params: unknown[] = []) => {
     if (sql.includes("INSERT INTO career_stats") && sql.includes("daily_wins")) {
-      // The refresh: count each closed period's winner and keep the high-water
-      // mark, exactly as the real INSERT ... ON CONFLICT ... GREATEST does.
+      // The refresh: bank each closed period's winner the first time it is
+      // seen, and add it on — as the real statement does through the
+      // challenge_wins ledger. A period already banked is never counted again.
       const [today] = params as [string];
-      const tally = new Map<string, number>();
-      for (const [, board] of closedBoards(today)) {
-        if (board.length) tally.set(board[0].user, (tally.get(board[0].user) ?? 0) + 1);
-      }
-      for (const [user, n] of tally) {
-        careerDailyWins.set(user, Math.max(careerDailyWins.get(user) ?? 0, n));
+      for (const [period, board] of closedBoards(today)) {
+        if (!board.length || banked.has(period)) continue;
+        banked.add(period);
+        careerDailyWins.set(board[0].user, (careerDailyWins.get(board[0].user) ?? 0) + 1);
       }
       return { rows: [] };
     }
@@ -247,6 +248,7 @@ beforeEach(() => {
   bestTurns.clear();
   dailyWins.clear();
   careerDailyWins.clear();
+  banked.clear();
 });
 
 describe("claiming a run", () => {
@@ -664,6 +666,33 @@ describe("winning a day", () => {
     await dailyStatus(USER, DAY);
     expect(careerDailyWins.get(USER)).toBe(1);
     expect(dailyWins.has(USER)).toBe(false);
+  });
+
+  it("keeps a win after the run that earned it has been pruned", async () => {
+    // The reported bug, in miniature: four wins, two more won, still four.
+    // The tally was GREATEST(stored, a count of the runs still on file), and
+    // the runs are only kept thirty days — so as old winning days were pruned
+    // and new ones won, the count taken from the runs stayed where it was and
+    // the high-water mark never moved. Wins have to be ADDED, once each.
+    record(USER, BEFORE, 3000);
+    record(USER, YESTERDAY, 3000);
+    await dailyStatus(USER, "2026-08-12");
+    expect(careerDailyWins.get(USER)).toBe(2);
+
+    // The retention sweep takes both runs; two new days are won.
+    rows.delete(`${USER}|${BEFORE}`);
+    rows.delete(`${USER}|${YESTERDAY}`);
+    record(USER, "2026-08-12", 3000);
+    record(USER, "2026-08-13", 3000);
+    const status = await dailyStatus(USER, "2026-08-14");
+    expect(status.wins).toBe(4);
+    expect(careerDailyWins.get(USER)).toBe(4);
+  });
+
+  it("counts a closed day once, however often the board is read", async () => {
+    record(USER, YESTERDAY, 3000);
+    for (let i = 0; i < 3; i++) await dailyStatus(USER, DAY);
+    expect(careerDailyWins.get(USER)).toBe(1);
   });
 
   it("ignores a scoreless day nobody won", async () => {
