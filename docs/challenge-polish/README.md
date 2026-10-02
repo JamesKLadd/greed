@@ -86,8 +86,10 @@ will reduce surrounding content's prominence during active play.
 Remaining approved roadmap, delivered as independent reviewable chunks:
 
 **Checkpoint update:** [Phase 2B and 3A are implemented](phase-2b-3a/README.md),
-followed by [Phase 4A and 4B](phase-4a-4b/README.md). The next unstarted chunk is
-3B. The numbered list below records the original scope and sequence.
+followed by [Phase 4A and 4B](phase-4a-4b/README.md) and
+[Phase 3B and 5A](phase-3b-5a/README.md). Review the fox pilot before the next
+unstarted chunk, 5B/5C. The numbered list below records the original scope and
+sequence.
 
 1. **2B — challenge entry/results/leaderboards:** primary start/resume state,
    today/week allowance distinctions, reset/closing clocks, latest weekly

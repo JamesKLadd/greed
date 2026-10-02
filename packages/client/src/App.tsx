@@ -45,6 +45,12 @@ const ChallengeLobbyReview = import.meta.env.DEV
 const PolishReview = import.meta.env.DEV
   ? lazy(() => import("./dev/polishReview/PolishReview.js"))
   : null;
+const CharacterPilotReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/characterPilot/CharacterPilotReview.js"))
+  : null;
+const SupportReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/supportReview/SupportReview.js"))
+  : null;
 
 type Mode =
   | "home"
@@ -140,6 +146,20 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (SupportReview && new URLSearchParams(window.location.search).has("support-review")) {
+    return (
+      <Suspense fallback={<p>Opening supporting-screen review…</p>}>
+        <SupportReview />
+      </Suspense>
+    );
+  }
+  if (CharacterPilotReview && new URLSearchParams(window.location.search).has("character-pilot")) {
+    return (
+      <Suspense fallback={<p>Opening character pilot…</p>}>
+        <CharacterPilotReview />
+      </Suspense>
+    );
+  }
   if (PolishReview && new URLSearchParams(window.location.search).has("polish-review")) {
     return (
       <Suspense fallback={<p>Opening table and match polish samples…</p>}>

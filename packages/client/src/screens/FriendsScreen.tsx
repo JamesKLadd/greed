@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Button, Icon, Screen, TextField } from "../ui/index.js";
 import { ProfileCard } from "../components/ProfileCard.js";
 import {
@@ -22,7 +23,7 @@ import {
 import { useChallenges } from "../net/challenges.js";
 import { ONLINE_ENABLED } from "../game/online.js";
 import { useAuth } from "../game/auth.js";
-import { useT } from "../i18n/i18n.js";
+import { useI18n, useT } from "../i18n/i18n.js";
 import { apiErrorText } from "../i18n/apiError.js";
 
 /** How often the list refreshes itself while the screen is open. */
@@ -41,6 +42,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<string | null>(null);
 
   /** A refresh nobody asked for reports nothing: a blip must not throw an error
@@ -50,12 +52,17 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
     async (quiet = false) => {
       if (inFlight.current) return;
       inFlight.current = true;
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         setView(await fetchFriends());
       } catch (err) {
         if (!quiet) setError(apiErrorText(t, err, "social.loadFailed"));
       } finally {
         inFlight.current = false;
+        if (!quiet) setLoading(false);
       }
     },
     [t],
@@ -87,6 +94,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   }, [authStatus, load]);
 
   const run = async (fn: () => Promise<FriendsView>) => {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -100,7 +108,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
 
   const add = () => {
     const u = name.trim();
-    if (!u) return;
+    if (!u || busy) return;
     void run(async () => {
       const next = await requestFriend(u);
       setName("");
@@ -108,34 +116,91 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
     });
   };
 
-  if (authStatus !== "authed") {
-    return (
-      <Screen
-        title={t("social.title")}
-        tagline={t("social.tagline")}
-        actions={
-          <>
-            <Button variant="ghost" onClick={onBack}>
-              {t("bar.home")}
-            </Button>
-            <Button variant="roll" onClick={onSignIn}>
-              {t("home.signIn")}
-            </Button>
-          </>
-        }
-      >
-        <p className="daily__note">{t("social.signInRequired")}</p>
-      </Screen>
-    );
-  }
+  return (
+    <>
+      <FriendsScreenView
+        authStatus={authStatus}
+        view={view}
+        name={name}
+        error={error}
+        busy={busy}
+        loading={loading}
+        onlineEnabled={ONLINE_ENABLED}
+        challengesConnected={challenges.connected}
+        onBack={onBack}
+        onSignIn={onSignIn}
+        onNameChange={setName}
+        onDismissError={() => setError(null)}
+        onRetry={() => void load()}
+        onAdd={add}
+        onAccept={(username) => void run(() => acceptFriend(username))}
+        onRemove={(username) => void run(() => removeFriend(username))}
+        onChallenge={(username) => challenges.challenge(username)}
+        onViewProfile={setViewing}
+      />
+      {authStatus === "authed" && viewing && (
+        <ProfileCard username={viewing} onClose={() => setViewing(null)} onChanged={load} />
+      )}
+    </>
+  );
+}
 
-  const row = (f: FriendSummary, actions: React.ReactNode) => (
+/** Presentation only: no polling, social mutations, profile fetches, or notification socket. */
+export interface FriendsScreenViewProps {
+  authStatus: "loading" | "anon" | "authed";
+  view: FriendsView | null;
+  name: string;
+  error: string | null;
+  busy: boolean;
+  loading: boolean;
+  onlineEnabled: boolean;
+  challengesConnected: boolean;
+  onBack: () => void;
+  onSignIn: () => void;
+  onNameChange: (name: string) => void;
+  onDismissError: () => void;
+  onRetry: () => void;
+  onAdd: () => void;
+  onAccept: (username: string) => void;
+  onRemove: (username: string) => void;
+  onChallenge: (username: string) => void;
+  onViewProfile: (username: string) => void;
+}
+
+export function FriendsScreenView({
+  authStatus,
+  view,
+  name,
+  error,
+  busy,
+  loading,
+  onlineEnabled,
+  challengesConnected,
+  onBack,
+  onSignIn,
+  onNameChange,
+  onDismissError,
+  onRetry,
+  onAdd,
+  onAccept,
+  onRemove,
+  onChallenge,
+  onViewProfile,
+}: FriendsScreenViewProps) {
+  const { t, n } = useI18n();
+
+  const row = (f: FriendSummary, actions: ReactNode) => (
     <li key={f.id} className="friend">
-      <button className="friend__main" onClick={() => setViewing(f.username)}>
+      <button className="friend__main" onClick={() => onViewProfile(f.username)}>
         <span className={`friend__dot${f.online ? " friend__dot--on" : ""}`} aria-hidden="true" />
-        <span className="friend__name">{f.username}</span>
-        <span className="friend__meta">
-          {t("social.record", { wins: f.wins, games: f.gamesPlayed })}
+        <span className="friend__identity">
+          <span className="friend__name">{f.username}</span>
+          <span className="friend__presence">
+            {f.online ? t("social.online") : t("social.offline")}
+          </span>
+          <span className="friend__meta">
+            {t("social.record", { wins: n(f.wins), games: n(f.gamesPlayed) })}
+          </span>
         </span>
       </button>
       <span className="friend__actions">{actions}</span>
@@ -144,122 +209,183 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
 
   return (
     <Screen
-      title={t("social.title")}
-      tagline={t("social.tagline")}
+      className="support-screen"
+      panelClassName="support-panel support-friends"
+      hero={false}
       actions={
-        <Button variant="ghost" onClick={onBack}>
-          {t("bar.home")}
-        </Button>
+        <>
+          <Button variant="ghost" disabled={busy} onClick={onBack}>
+            {t("bar.home")}
+          </Button>
+          {authStatus === "anon" && (
+            <Button variant="roll" onClick={onSignIn}>
+              {t("home.signIn")}
+            </Button>
+          )}
+        </>
       }
     >
-      {error && (
-        <div className="banner banner--sd online-error" onClick={() => setError(null)}>
-          {error} <span className="online-error__x">✕</span>
-        </div>
-      )}
-
-      <div className="friends__add">
-        <TextField
-          value={name}
-          maxLength={16}
-          placeholder={t("social.addPlaceholder")}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-        />
-        <Button variant="roll" disabled={busy || !name.trim()} onClick={add}>
-          {t("social.add")}
-        </Button>
-      </div>
-
-      {view && view.incoming.length > 0 && (
+      <header className="support-panel__heading">
+        <h1>{t("social.home")}</h1>
+        <p className="support-panel__intro">{t("social.tagline")}</p>
+      </header>
+      {authStatus !== "authed" ? (
+        <p className="support-panel__intro" role="status">
+          {authStatus === "loading" ? t("board.loading") : t("social.signInRequired")}
+        </p>
+      ) : (
         <>
-          <h2 className="friends__head">{t("social.requests")}</h2>
+          {error && view && (
+            <div className="support-auth__message support-auth__message--error" role="alert">
+              <span>{error}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={t("common.close")}
+                onClick={onDismissError}
+              >
+                <Icon name="close" />
+              </Button>
+            </div>
+          )}
+
+          <form
+            className="friends__add"
+            aria-busy={busy}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!busy && name.trim()) onAdd();
+            }}
+          >
+            <TextField
+              label={t("auth.username")}
+              value={name}
+              maxLength={16}
+              placeholder={t("social.addPlaceholder")}
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              disabled={busy}
+              onChange={(e) => onNameChange(e.target.value)}
+            />
+            <Button type="submit" variant="roll" disabled={busy || !name.trim()}>
+              {t("social.add")}
+            </Button>
+          </form>
+
+          {!view && (
+            <div className="support-friends__state" role="status">
+              <p>{loading ? t("board.loading") : (error ?? t("social.loadFailed"))}</p>
+              {!loading && (
+                <Button disabled={busy} onClick={onRetry}>
+                  {t("social.retry")}
+                </Button>
+              )}
+            </div>
+          )}
+          {onlineEnabled && view && !challengesConnected && (
+            <p className="support-friends__connection" role="status">
+              {t("social.connecting")}
+            </p>
+          )}
+
+          {view && view.incoming.length > 0 && (
+            <>
+              <h2 className="friends__head">{t("social.requests")}</h2>
+              <ul className="friends">
+                {view.incoming.map((f) =>
+                  row(
+                    f,
+                    <>
+                      <Button
+                        size="md"
+                        variant="bank"
+                        disabled={busy}
+                        aria-label={`${t("social.accept")} · ${f.username}`}
+                        title={t("social.accept")}
+                        onClick={() => onAccept(f.username)}
+                      >
+                        <Icon name="check" />
+                      </Button>
+                      <Button
+                        size="md"
+                        variant="ghost"
+                        disabled={busy}
+                        aria-label={`${t("social.decline")} · ${f.username}`}
+                        title={t("social.decline")}
+                        onClick={() => onRemove(f.username)}
+                      >
+                        <Icon name="close" />
+                      </Button>
+                    </>,
+                  ),
+                )}
+              </ul>
+            </>
+          )}
+
+          {view && <h2 className="friends__head">{t("social.friends")}</h2>}
+          {view && view.friends.length === 0 && (
+            <p className="daily__note">{t("social.noFriends")}</p>
+          )}
           <ul className="friends">
-            {view.incoming.map((f) =>
+            {view?.friends.map((f) =>
               row(
                 f,
                 <>
-                  <Button
-                    size="md"
-                    variant="bank"
-                    disabled={busy}
-                    onClick={() => void run(() => acceptFriend(f.username))}
-                  >
-                    <Icon name="check" />
-                  </Button>
+                  {onlineEnabled && (
+                    // Only a friend who has the game open can be reached, so the
+                    // button is offered exactly when it can actually work.
+                    <Button
+                      size="md"
+                      variant="roll"
+                      disabled={busy || !f.online || !challengesConnected}
+                      title={f.online ? t("challenge.send") : t("challenge.offline")}
+                      aria-label={`${t("challenge.play")} · ${f.username}`}
+                      onClick={() => onChallenge(f.username)}
+                    >
+                      {t("challenge.play")}
+                    </Button>
+                  )}
                   <Button
                     size="md"
                     variant="ghost"
                     disabled={busy}
-                    onClick={() => void run(() => removeFriend(f.username))}
+                    title={t("social.remove")}
+                    aria-label={`${t("social.remove")} · ${f.username}`}
+                    onClick={() => onRemove(f.username)}
                   >
-                    <Icon name="close" />
+                    <Icon name="minus" />
                   </Button>
                 </>,
               ),
             )}
           </ul>
-        </>
-      )}
 
-      <h2 className="friends__head">{t("social.friends")}</h2>
-      {view && view.friends.length === 0 && <p className="daily__note">{t("social.noFriends")}</p>}
-      <ul className="friends">
-        {view?.friends.map((f) =>
-          row(
-            f,
+          {view && view.outgoing.length > 0 && (
             <>
-              {ONLINE_ENABLED && (
-                // Only a friend who has the game open can be reached, so the
-                // button is offered exactly when it can actually work.
-                <Button
-                  size="md"
-                  variant="roll"
-                  disabled={busy || !f.online || !challenges.connected}
-                  title={f.online ? t("challenge.send") : t("challenge.offline")}
-                  onClick={() => challenges.challenge(f.username)}
-                >
-                  {t("challenge.play")}
-                </Button>
-              )}
-              <Button
-                size="md"
-                variant="ghost"
-                disabled={busy}
-                title={t("social.remove")}
-                onClick={() => void run(() => removeFriend(f.username))}
-              >
-                <Icon name="minus" />
-              </Button>
-            </>,
-          ),
-        )}
-      </ul>
-
-      {view && view.outgoing.length > 0 && (
-        <>
-          <h2 className="friends__head">{t("social.pending")}</h2>
-          <ul className="friends">
-            {view.outgoing.map((f) =>
-              row(
-                f,
-                <Button
-                  size="md"
-                  variant="ghost"
-                  disabled={busy}
-                  title={t("social.cancel")}
-                  onClick={() => void run(() => removeFriend(f.username))}
-                >
-                  <Icon name="close" />
-                </Button>,
-              ),
-            )}
-          </ul>
+              <h2 className="friends__head">{t("social.pending")}</h2>
+              <ul className="friends">
+                {view.outgoing.map((f) =>
+                  row(
+                    f,
+                    <Button
+                      size="md"
+                      variant="ghost"
+                      disabled={busy}
+                      title={t("social.cancel")}
+                      aria-label={`${t("social.cancel")} · ${f.username}`}
+                      onClick={() => onRemove(f.username)}
+                    >
+                      <Icon name="close" />
+                    </Button>,
+                  ),
+                )}
+              </ul>
+            </>
+          )}
         </>
-      )}
-
-      {viewing && (
-        <ProfileCard username={viewing} onClose={() => setViewing(null)} onChanged={load} />
       )}
     </Screen>
   );

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../game/auth.js";
-import { deleteAccount, resendVerification } from "../net/auth.js";
-import { Button, TextField } from "../ui/index.js";
+import { deleteAccount, resendVerification, type AccountUser } from "../net/auth.js";
+import { Button, Screen, TextField } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 import { apiErrorText } from "../i18n/apiError.js";
 import { useBetaActive } from "../beta/BetaContext.js";
@@ -31,9 +31,7 @@ function formatCountdown(secs: number): string {
 
 export function AccountScreen({ onBack }: AccountScreenProps) {
   const t = useT();
-  const beta = useBetaActive();
-  const { appearance } = useAppearance();
-  const { user, logout, verificationRequired } = useAuth();
+  const { status, user, logout, verificationRequired } = useAuth();
   const [cooldown, setCooldown] = useState(() => resendCooldownLeft());
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -49,23 +47,8 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
     return () => window.clearInterval(id);
   }, [cooldown]);
 
-  if (!user) {
-    return (
-      <div className="setup">
-        <div className="setup__panel">
-          <p>{t("account.notSignedIn")}</p>
-          <div className="setup__actions">
-            <Button variant="ghost" onClick={onBack}>
-              {t("bar.home")}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const resend = async () => {
-    if (resendCooldownLeft() > 0) return;
+    if (busy || resendCooldownLeft() > 0) return;
     setBusy(true);
     setNotice(null);
     try {
@@ -90,6 +73,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
   };
 
   const confirmDelete = async () => {
+    if (busy || !confirmingDelete || !deletePassword) return;
     setBusy(true);
     setDeleteError(null);
     try {
@@ -106,106 +90,194 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
   };
 
   return (
-    <div className="setup">
-      <div className="setup__hero">
-        <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">{t("account.title")}</p>
-      </div>
+    <AccountScreenView
+      user={user}
+      loading={status === "loading"}
+      verificationRequired={verificationRequired}
+      cooldown={cooldown}
+      busy={busy}
+      notice={notice}
+      confirmingDelete={confirmingDelete}
+      deletePassword={deletePassword}
+      deleteError={deleteError}
+      onBack={onBack}
+      onLogout={logout}
+      onResend={() => void resend()}
+      onBeginDelete={() => setConfirmingDelete(true)}
+      onDeletePasswordChange={setDeletePassword}
+      onCancelDelete={() => {
+        setConfirmingDelete(false);
+        setDeletePassword("");
+        setDeleteError(null);
+      }}
+      onConfirmDelete={() => void confirmDelete()}
+    />
+  );
+}
 
-      <div className="setup__panel account">
-        <div className="account__id">
-          <div className="account__avatar">
-            {beta ? <Mascot look={appearance} /> : user.username.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <div className="account__name">{user.username}</div>
-            <div className="account__email">{user.email}</div>
-          </div>
-        </div>
+/** Presentation only: a review fixture can exercise this layout without an account session. */
+export interface AccountScreenViewProps {
+  user: AccountUser | null;
+  loading?: boolean;
+  verificationRequired: boolean;
+  cooldown: number;
+  busy: boolean;
+  notice: string | null;
+  confirmingDelete: boolean;
+  deletePassword: string;
+  deleteError: string | null;
+  onBack: () => void;
+  onLogout: () => void;
+  onResend: () => void;
+  onBeginDelete: () => void;
+  onDeletePasswordChange: (password: string) => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
+}
 
-        {/* Only worth showing when this server actually asks for verification —
-            otherwise it's a status about a step that doesn't exist. */}
-        {verificationRequired && (
-          <div className={`account__verify${user.emailVerified ? " account__verify--ok" : ""}`}>
-            {user.emailVerified ? t("account.verified") : t("account.unverified")}
-          </div>
-        )}
+export function AccountScreenView({
+  user,
+  loading = false,
+  verificationRequired,
+  cooldown,
+  busy,
+  notice,
+  confirmingDelete,
+  deletePassword,
+  deleteError,
+  onBack,
+  onLogout,
+  onResend,
+  onBeginDelete,
+  onDeletePasswordChange,
+  onCancelDelete,
+  onConfirmDelete,
+}: AccountScreenViewProps) {
+  const t = useT();
+  const beta = useBetaActive();
+  const { appearance } = useAppearance();
 
-        {verificationRequired && !user.emailVerified && (
-          <div className="account__resend">
-            <Button disabled={busy || cooldown > 0} onClick={resend}>
-              {busy
-                ? t("account.sending")
-                : cooldown > 0
-                  ? t("account.resendIn", { time: formatCountdown(cooldown) })
-                  : t("account.resend")}
+  return (
+    <Screen
+      className="support-screen"
+      panelClassName="support-panel support-account account"
+      hero={false}
+    >
+      <header className="support-panel__heading">
+        <h1>{t("account.title")}</h1>
+      </header>
+      {!user ? (
+        <>
+          <p className="support-panel__intro" role="status">
+            {loading ? t("board.loading") : t("account.notSignedIn")}
+          </p>
+          <div className="setup__actions">
+            <Button variant="ghost" onClick={onBack}>
+              {t("bar.home")}
             </Button>
-            {notice && <p className="account__resend-note">{notice}</p>}
           </div>
-        )}
+        </>
+      ) : (
+        <>
+          <div className="account__id">
+            <div className="account__avatar" aria-hidden="true">
+              {beta ? <Mascot look={appearance} /> : user.username.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="account__identity">
+              <div className="account__name">{user.username}</div>
+              <div className="account__email">{user.email}</div>
+            </div>
+          </div>
 
-        <p className="account__note">{t("account.note", { name: user.username })}</p>
+          {/* Only worth showing when this server actually asks for verification —
+            otherwise it's a status about a step that doesn't exist. */}
+          {verificationRequired && (
+            <div className={`account__verify${user.emailVerified ? " account__verify--ok" : ""}`}>
+              {user.emailVerified ? t("account.verified") : t("account.unverified")}
+            </div>
+          )}
 
-        {/* Said before the button, not after it: signing out clears this
+          {verificationRequired && !user.emailVerified && (
+            <div className="account__resend">
+              <Button disabled={busy || cooldown > 0} onClick={onResend}>
+                {busy && !confirmingDelete
+                  ? t("account.sending")
+                  : cooldown > 0
+                    ? t("account.resendIn", { time: formatCountdown(cooldown) })
+                    : t("account.resend")}
+              </Button>
+              {notice && (
+                <p className="account__resend-note" role="status">
+                  {notice}
+                </p>
+              )}
+            </div>
+          )}
+
+          <section className="support-account__section">
+            <p className="account__note">{t("account.note", { name: user.username })}</p>
+          </section>
+
+          {/* Said before the button, not after it: signing out clears this
             device's copy of the career so the next account to be created here
             starts from nothing. The account keeps its own, and signing back in
             brings it down again. */}
-        <p className="daily__note">{t("account.logoutNote")}</p>
+          <section className="support-account__section">
+            <p className="daily__note">{t("account.logoutNote")}</p>
 
-        <div className="setup__actions">
-          <Button variant="ghost" onClick={onBack}>
-            {t("bar.home")}
-          </Button>
-          <Button variant="bank" onClick={logout}>
-            {t("account.logout")}
-          </Button>
-        </div>
+            <div className="setup__actions">
+              <Button variant="ghost" disabled={busy} onClick={onBack}>
+                {t("bar.home")}
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={onLogout}>
+                {t("account.logout")}
+              </Button>
+            </div>
+          </section>
 
-        {/* Kept apart from the ordinary actions above, and behind a second step:
+          {/* Kept apart from the ordinary actions above, and behind a second step:
             there is nothing that undoes it. */}
-        <div className="danger-zone">
-          {!confirmingDelete ? (
-            <>
-              <p className="danger-zone__note">{t("account.deleteNote")}</p>
-              <button className="btn btn--danger" onClick={() => setConfirmingDelete(true)}>
-                {t("account.delete")}
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="danger-zone__warn">{t("account.deleteConfirm")}</p>
-              <TextField
-                label={t("account.deletePassword")}
-                type="password"
-                autoComplete="current-password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-              />
-              {deleteError && <p className="danger-zone__error">{deleteError}</p>}
-              <div className="danger-zone__actions">
-                <Button
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => {
-                    setConfirmingDelete(false);
-                    setDeletePassword("");
-                    setDeleteError(null);
-                  }}
-                >
-                  {t("common.cancel")}
-                </Button>
-                <button
-                  className="btn btn--danger"
-                  disabled={busy || deletePassword.length === 0}
-                  onClick={confirmDelete}
-                >
-                  {busy ? t("account.deleting") : t("account.deleteForever")}
+          <div className="danger-zone">
+            {!confirmingDelete ? (
+              <>
+                <p className="danger-zone__note">{t("account.deleteNote")}</p>
+                <button className="btn btn--danger" disabled={busy} onClick={onBeginDelete}>
+                  {t("account.delete")}
                 </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+              </>
+            ) : (
+              <>
+                <p className="danger-zone__warn">{t("account.deleteConfirm")}</p>
+                <TextField
+                  label={t("account.deletePassword")}
+                  type="password"
+                  autoComplete="current-password"
+                  disabled={busy}
+                  value={deletePassword}
+                  onChange={(e) => onDeletePasswordChange(e.target.value)}
+                />
+                {deleteError && (
+                  <p className="danger-zone__error" role="alert">
+                    {deleteError}
+                  </p>
+                )}
+                <div className="danger-zone__actions">
+                  <Button variant="ghost" disabled={busy} onClick={onCancelDelete}>
+                    {t("common.cancel")}
+                  </Button>
+                  <button
+                    className="btn btn--danger"
+                    disabled={busy || deletePassword.length === 0}
+                    onClick={onConfirmDelete}
+                  >
+                    {busy ? t("account.deleting") : t("account.deleteForever")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </Screen>
   );
 }

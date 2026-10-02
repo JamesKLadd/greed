@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CharacterPlaceholder } from "./CharacterPlaceholder.js";
+import { FoxCharacter } from "./FoxCharacter.js";
 import { loadCharacterImage, type LoadedCharacterImage } from "./loadCharacterImage.js";
 import {
   CHARACTER_CANVAS,
@@ -61,6 +62,8 @@ export function CharacterSprite({
             preserveAspectRatio="none"
             onError={() => setLoadedImage(null)}
           />
+        ) : kind === "fox" ? (
+          <FoxCharacter view={view} />
         ) : (
           <CharacterPlaceholder kind={kind} view={view} />
         )}

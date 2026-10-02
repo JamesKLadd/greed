@@ -13,6 +13,8 @@ import { Brand } from "../beta/Brand.js";
  */
 
 export interface ScreenProps {
+  /** Optional scope for a screen family's responsive styling. */
+  className?: string;
   /** Wordmark text. Defaults to the game title. */
   title?: ReactNode;
   tagline?: ReactNode;
@@ -34,6 +36,7 @@ export interface ScreenProps {
 }
 
 export function Screen({
+  className,
   title = "GREED",
   tagline,
   hero = true,
@@ -65,7 +68,7 @@ export function Screen({
   );
 
   return (
-    <div className="setup">
+    <div className={cx("setup", className)}>
       {beta && (
         <div className="beta-screen-brand">
           <Brand compact />

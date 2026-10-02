@@ -1,0 +1,248 @@
+/* Account and social pages share the supporting-screen shell. Layout rules
+   stay scoped here so game controls and the legacy table keep their sizing. */
+.support-auth {
+  max-width: 34rem;
+}
+
+.support-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.support-auth__form .field {
+  margin: 0;
+}
+
+.support-auth__form > .btn {
+  width: 100%;
+  min-height: 48px;
+}
+
+.support-auth .auth__links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.support-auth .auth__links .btn {
+  min-height: 44px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.support-auth__message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.support-auth__message > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.support-auth__message--error {
+  border-color: var(--bad);
+  background: rgba(160, 40, 48, 0.14);
+}
+
+.support-auth__message .btn {
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+}
+
+.support-account .account__id {
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-account .account__avatar {
+  flex: none;
+}
+
+.support-account .account__identity {
+  min-width: 0;
+}
+
+.support-account .account__name,
+.support-account .account__email {
+  overflow-wrap: anywhere;
+}
+
+.support-account .account__name {
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.support-account .account__email {
+  line-height: 1.5;
+}
+
+.support-account .account__resend .btn {
+  width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.support-account__section {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px;
+  margin: 14px 0;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.support-account__section p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.support-account__section .setup__actions {
+  margin-top: 14px;
+}
+
+.support-account .danger-zone {
+  padding: 16px;
+  border: 1px solid var(--bad);
+  border-radius: var(--r-md);
+  background: rgba(160, 40, 48, 0.08);
+}
+
+.support-account .danger-zone__actions {
+  flex-wrap: wrap;
+}
+
+.support-account .danger-zone .btn {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.support-account .danger-zone__warn,
+.support-account .danger-zone__note,
+.support-account .danger-zone__error {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.support-friends .friends__add {
+  align-items: end;
+  margin: 0 0 18px;
+}
+
+.support-friends .friends__add .field {
+  min-width: 0;
+}
+
+.support-friends .friends__add > .btn {
+  min-height: 44px;
+}
+
+.support-friends .friends__head {
+  font-size: 1rem;
+  margin: 24px 0 10px;
+}
+
+.support-friends .friend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.support-friends .friend__main {
+  min-width: 0;
+  min-height: 44px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.support-friends .friend__identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.support-friends .friend__name {
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.support-friends .friend__presence,
+.support-friends .friend__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.support-friends .friend__actions {
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
+.support-friends .friend__actions .btn {
+  min-height: 44px;
+  min-width: 44px;
+  white-space: normal;
+}
+
+.support-friends__state {
+  padding: 18px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  text-align: center;
+}
+
+.support-friends__state p {
+  margin: 0 0 10px;
+}
+
+.support-friends__state .btn {
+  min-height: 44px;
+}
+
+.support-friends__connection {
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  border-left: 3px solid var(--gold);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+@media (max-width: 420px) {
+  .support-friends .friend {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .support-friends .friend__actions {
+    padding-left: 19px;
+  }
+}
+
+@media (max-width: 360px) {
+  .support-friends .friends__add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .support-account .danger-zone__actions > .btn {
+    width: 100%;
+  }
+}

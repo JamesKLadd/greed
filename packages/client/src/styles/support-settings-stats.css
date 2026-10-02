@@ -1,0 +1,217 @@
+/* Settings retain compact switches while their hit areas reach 44px. */
+.support-settings .settings-row {
+  gap: 16px;
+  padding: 16px 0;
+}
+.support-settings .settings-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.support-settings .settings-row__label {
+  color: var(--text);
+  line-height: 1.4;
+}
+.support-settings .settings-row__hint {
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.support-settings .settings-row--toggle {
+  flex-wrap: nowrap;
+}
+.support-settings .settings-row--choice,
+.support-settings .settings-row--volume {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 0.85fr);
+}
+.support-settings .segmented {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+.support-settings .segmented__btn {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 8px;
+}
+.support-settings .switch {
+  width: 56px;
+  min-width: 56px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.support-settings .switch::before {
+  content: "";
+  position: absolute;
+  inset: 8px 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.support-settings .switch--on::before {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 28%, var(--surface-2));
+}
+.support-settings .switch__knob {
+  top: 11px;
+  left: 7px;
+}
+.settings-volume {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.support-settings .slider {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+}
+.settings-volume output {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Grouped career totals remain readable without relying on badge colors. */
+.support-stats .stats-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+}
+.support-stats .stats-section:nth-child(2) .stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.support-stats .stats-section:nth-child(3) .stats-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.support-stats .stat-tile {
+  min-width: 0;
+  padding: 16px 10px;
+  text-align: center;
+}
+.support-stats .stat-tile__value {
+  order: -1;
+  margin: 0;
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.support-stats .stat-tile__label {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.support-stats .stats-achievements {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.stats-achievements__heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 14px;
+}
+.stats-achievements__heading h2,
+.stats-achievements__heading p {
+  margin: 0;
+  line-height: 1.5;
+}
+.stats-achievements__heading .ach-score {
+  color: var(--text-dim);
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+.support-stats .ach {
+  align-items: flex-start;
+  padding: 14px;
+}
+.support-stats .ach__icon {
+  line-height: 1.4;
+}
+.support-stats .ach__title,
+.support-stats .ach__desc {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.support-stats .ach__title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.support-stats .ach__desc {
+  font-size: 0.8125rem;
+}
+.support-stats .ach--locked {
+  opacity: 1;
+  background: var(--surface-2);
+}
+.stats-reset-panel {
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.stats-reset-panel h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+.stats-reset-panel p {
+  margin: 8px 0 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.support-reset-modal .overlay__title {
+  overflow-wrap: anywhere;
+}
+.support-reset-modal .btn {
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.support-reset-modal .overlay__actions {
+  flex-wrap: wrap;
+}
+.support-reset-modal .overlay__actions .btn {
+  flex: 1 1 180px;
+}
+.support-reset-modal button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 620px) {
+  .support-settings .settings-row--choice,
+  .support-settings .settings-row--volume {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .support-stats .stats-grid,
+  .support-stats .stats-section:nth-child(2) .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .support-stats .stats-section:first-child .stat-tile:last-child,
+  .support-stats .stats-section:nth-child(2) .stat-tile:first-child {
+    grid-column: 1 / -1;
+  }
+  .support-stats .ach-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stats-reset-panel .btn {
+    width: 100%;
+  }
+}

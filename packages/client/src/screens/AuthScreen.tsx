@@ -14,7 +14,7 @@ import {
   resetPassword,
   type AuthResult,
 } from "../net/auth.js";
-import { Button } from "../ui/index.js";
+import { Button, Icon, Screen, TextField } from "../ui/index.js";
 
 type Mode = "login" | "signup" | "forgot" | "reset";
 
@@ -113,58 +113,108 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
           ? t("auth.forgot")
           : t("auth.reset");
 
+  const canSubmit =
+    !busy &&
+    (mode === "login"
+      ? Boolean(loginId.trim() && password)
+      : mode === "signup"
+        ? Boolean(email.trim() && username.trim().length >= 3 && password.length >= 8)
+        : mode === "forgot"
+          ? Boolean(email.trim())
+          : password.length >= 8);
+
+  const submit = () => {
+    // The keyboard uses the same readiness rules as the visible submit button.
+    if (!canSubmit) return;
+    if (mode === "login") void submitLogin();
+    else if (mode === "signup") void submitSignup();
+    else if (mode === "forgot") void submitForgot();
+    else void submitReset();
+  };
+
   return (
-    <div className="setup">
-      <div className="setup__hero">
-        <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">{t("auth.tagline")}</p>
-      </div>
+    <Screen
+      className="support-screen"
+      panelClassName="support-panel support-auth auth"
+      hero={false}
+      actions={
+        <Button variant="ghost" onClick={onBack} disabled={busy}>
+          {t("auth.back")}
+        </Button>
+      }
+    >
+      <header className="support-panel__heading">
+        <h1>{title}</h1>
+        <p className="support-panel__intro">{t("auth.tagline")}</p>
+      </header>
 
-      <div className="setup__panel auth">
-        <h2 className="auth__title">{title}</h2>
+      {error && (
+        <div className="support-auth__message support-auth__message--error" role="alert">
+          <span>{error}</span>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={() => setError(null)}
+          >
+            <Icon name="close" />
+          </Button>
+        </div>
+      )}
+      {notice && (
+        <div className="support-auth__message auth__notice" role="status">
+          {notice}
+        </div>
+      )}
 
-        {error && (
-          <div className="banner banner--sd online-error" onClick={() => setError(null)}>
-            {error} <span className="online-error__x">✕</span>
-          </div>
-        )}
-        {notice && <div className="banner auth__notice">{notice}</div>}
-
+      <form
+        className="support-auth__form"
+        aria-busy={busy}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
         {mode === "login" && (
           <>
-            <label className="field">
-              <span className="field__label">{t("auth.loginId")}</span>
-              <input
-                className="seats-config__name"
-                value={loginId}
-                autoComplete="username"
-                onChange={(e) => setLoginId(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span className="field__label">{t("auth.password")}</span>
-              <input
-                className="seats-config__name"
-                type="password"
-                value={password}
-                autoComplete="current-password"
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitLogin()}
-              />
-            </label>
-            <Button
-              variant="roll"
-              size="lg"
-              disabled={busy || !loginId.trim() || !password}
-              onClick={submitLogin}
-            >
+            <TextField
+              label={t("auth.loginId")}
+              value={loginId}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              disabled={busy}
+              required
+              onChange={(e) => setLoginId(e.target.value)}
+            />
+            <TextField
+              label={t("auth.password")}
+              type="password"
+              value={password}
+              autoComplete="current-password"
+              disabled={busy}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.login")}
             </Button>
             <div className="auth__links">
-              <Button variant="ghost" onClick={() => switchMode("forgot")}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => switchMode("forgot")}
+              >
                 {t("auth.forgotLink")}
               </Button>
-              <Button variant="ghost" onClick={() => switchMode("signup")}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => switchMode("signup")}
+              >
                 {t("auth.createLink")}
               </Button>
             </div>
@@ -173,59 +223,63 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
 
         {mode === "signup" && (
           <>
-            <label className="field">
-              <span className="field__label">{t("auth.email")}</span>
-              <input
-                className="seats-config__name"
-                type="email"
-                value={email}
-                autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span className="field__label">
-                {t("auth.username")}
-                {nameFree === "checking" && (
-                  <span className="auth__hint"> {t("auth.checking")}</span>
-                )}
-                {nameFree === "free" && (
-                  <span className="auth__hint auth__hint--ok"> ✓ {t("auth.available")}</span>
-                )}
-                {nameFree === "taken" && (
-                  <span className="auth__hint auth__hint--bad"> ✕ {t("auth.taken")}</span>
-                )}
-              </span>
-              <input
-                className="seats-config__name"
-                value={username}
-                maxLength={16}
-                autoComplete="off"
-                placeholder={t("auth.usernameHint")}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span className="field__label">{t("auth.password")}</span>
-              <input
-                className="seats-config__name"
-                type="password"
-                value={password}
-                autoComplete="new-password"
-                placeholder={t("auth.passwordHint")}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            <Button
-              variant="roll"
-              size="lg"
-              disabled={busy || !email.trim() || username.trim().length < 3 || password.length < 8}
-              onClick={submitSignup}
-            >
+            <TextField
+              label={t("auth.email")}
+              type="email"
+              value={email}
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              disabled={busy}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              label={t("auth.username")}
+              hint={
+                <span role="status" aria-live="polite">
+                  {t("auth.usernameHint")}
+                  {nameFree === "checking" && (
+                    <span className="auth__hint"> {t("auth.checking")}</span>
+                  )}
+                  {nameFree === "free" && (
+                    <span className="auth__hint auth__hint--ok"> ✓ {t("auth.available")}</span>
+                  )}
+                  {nameFree === "taken" && (
+                    <span className="auth__hint auth__hint--bad"> ✕ {t("auth.taken")}</span>
+                  )}
+                </span>
+              }
+              value={username}
+              maxLength={16}
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              disabled={busy}
+              required
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <TextField
+              label={t("auth.password")}
+              hint={t("auth.passwordHint")}
+              type="password"
+              value={password}
+              autoComplete="new-password"
+              disabled={busy}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.signup")}
             </Button>
             <div className="auth__links">
-              <Button variant="ghost" onClick={() => switchMode("login")}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => switchMode("login")}
+              >
                 {t("auth.haveAccount")}
               </Button>
             </div>
@@ -234,27 +288,27 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
 
         {mode === "forgot" && (
           <>
-            <label className="field">
-              <span className="field__label">{t("auth.email")}</span>
-              <input
-                className="seats-config__name"
-                type="email"
-                value={email}
-                autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitForgot()}
-              />
-            </label>
-            <Button
-              variant="roll"
-              size="lg"
-              disabled={busy || !email.trim()}
-              onClick={submitForgot}
-            >
+            <TextField
+              label={t("auth.email")}
+              type="email"
+              value={email}
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              disabled={busy}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.sendReset")}
             </Button>
             <div className="auth__links">
-              <Button variant="ghost" onClick={() => switchMode("login")}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => switchMode("login")}
+              >
                 {t("auth.backToLogin")}
               </Button>
             </div>
@@ -263,35 +317,22 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
 
         {mode === "reset" && (
           <>
-            <label className="field">
-              <span className="field__label">{t("auth.newPassword")}</span>
-              <input
-                className="seats-config__name"
-                type="password"
-                value={password}
-                autoComplete="new-password"
-                placeholder={t("auth.passwordHint")}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitReset()}
-              />
-            </label>
-            <Button
-              variant="roll"
-              size="lg"
-              disabled={busy || password.length < 8}
-              onClick={submitReset}
-            >
+            <TextField
+              label={t("auth.newPassword")}
+              hint={t("auth.passwordHint")}
+              type="password"
+              value={password}
+              autoComplete="new-password"
+              disabled={busy}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.setPassword")}
             </Button>
           </>
         )}
-
-        <div className="setup__actions">
-          <Button variant="ghost" onClick={onBack}>
-            {t("auth.back")}
-          </Button>
-        </div>
-      </div>
-    </div>
+      </form>
+    </Screen>
   );
 }

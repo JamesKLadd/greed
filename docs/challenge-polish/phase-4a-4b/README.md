@@ -125,8 +125,7 @@ Start captures configuration for inspection rather than launching a real game.
 
 ## Resume here
 
-The next approved chunk is **3B — supporting screens**: consistent button,
-panel, heading, and dialog treatments for accounts, settings, friends, stats,
-and locker. After that: **5A** character pilot, **5B/5C** cast/material refinement,
-and **6** real-phone validation. Publishing to main and making beta the default
+[Phase 3B supporting screens and 5A fox pilot are now implemented](../phase-3b-5a/README.md).
+Review the fox direction before **5B/5C** cast/material refinement, then continue
+to **6** real-phone validation. Publishing to main and making beta the default
 remain separate steps.

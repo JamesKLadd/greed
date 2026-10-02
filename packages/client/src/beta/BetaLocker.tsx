@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Die } from "../components/Die.js";
-import { ACHIEVEMENTS, loadProfile } from "../game/profile.js";
+import { ACHIEVEMENTS, loadProfile, type Profile } from "../game/profile.js";
 import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
 import { useT, type MsgKey } from "../i18n/i18n.js";
 import { useAuth } from "../game/auth.js";
@@ -25,9 +25,34 @@ import { playBetaCue } from "../game/sfx.js";
 
 type Category = "dice" | "table" | "mascot" | "frame" | "background" | "nameplate" | "badge";
 export default function BetaLocker({ onBack }: { onBack: () => void }) {
-  const t = useT();
   const { user } = useAuth();
   const { appearance, equip } = useAppearance();
+  return (
+    <BetaLockerView
+      onBack={onBack}
+      username={user?.username}
+      appearance={appearance}
+      profile={loadProfile()}
+      onEquip={equip}
+    />
+  );
+}
+
+/** The same locker with explicit data/actions, also used by isolated visual reviews. */
+export function BetaLockerView({
+  onBack,
+  username,
+  appearance,
+  profile,
+  onEquip,
+}: {
+  onBack: () => void;
+  username?: string;
+  appearance: Appearance;
+  profile: Profile;
+  onEquip: (look: Appearance) => void;
+}) {
+  const t = useT();
   const [draft, setDraft] = useState(appearance);
   const [category, setCategory] = useState<Category>("dice");
   const [owned, setOwned] = useState(false);
@@ -45,7 +70,6 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
     },
     [],
   );
-  const profile = loadProfile();
   const shown = compare ? appearance : draft;
   const allowed = canEquipAppearance(draft, profile);
   const categories: Category[] = [
@@ -106,10 +130,12 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
       </header>
       <div className="beta-section-heading">
         <span>{t("beta.locker.studio")}</span>
-        <span>02 / GREED</span>
       </div>
       <h1>{t("beta.locker.title")}</h1>
       <p className="beta-locker__intro">{t("beta.locker.description")}</p>
+      <a className="btn btn--ghost beta-locker__browse" href="#beta-look-collection">
+        {t("beta.locker.browse")}
+      </a>
       <div className="beta-locker__layout">
         <section
           id="beta-look-preview"
@@ -122,7 +148,7 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
             </span>
             <div className={`beta-player-card beta-nameplate--${shown.nameplate}`}>
               <Mascot look={shown} />
-              <strong>{user?.username ?? t("beta.locker.yourName")}</strong>
+              <strong>{username ?? t("beta.locker.yourName")}</strong>
               {badge && (
                 <small>
                   {badge.icon} {t(`ach.${badge.id}.title` as MsgKey)}
@@ -176,14 +202,15 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
           <button
             className="btn btn--roll beta-locker__equip"
             disabled={!allowed}
+            aria-describedby="beta-locker-equip-note"
             onClick={() => {
-              equip(draft);
+              onEquip(draft);
               setSaved(true);
             }}
           >
             {t(saved ? "beta.locker.saved" : "beta.locker.equip")}
           </button>
-          <p className="beta-locker__note" role="status">
+          <p id="beta-locker-equip-note" className="beta-locker__note" role="status">
             {t(
               !allowed
                 ? "beta.locker.locked"
@@ -193,13 +220,22 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
             )}
           </p>
         </section>
-        <section className="beta-locker__collection" aria-label={t("beta.locker.collection")}>
-          <div className="beta-locker__categories" aria-label={t("beta.locker.categories")}>
+        <section
+          id="beta-look-collection"
+          className="beta-locker__collection"
+          aria-label={t("beta.locker.collection")}
+        >
+          <div
+            className="beta-locker__categories"
+            role="group"
+            aria-label={t("beta.locker.categories")}
+          >
             {categories.map((c) => (
               <button
                 key={c}
                 className="btn btn--ghost"
                 aria-pressed={category === c}
+                aria-controls="beta-category-items"
                 onClick={() => setCategory(c)}
               >
                 {t(`beta.category.${c}`)}
@@ -210,7 +246,13 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
             <input type="checkbox" checked={owned} onChange={(e) => setOwned(e.target.checked)} />
             {t("beta.locker.available")}
           </label>
-          <div className="beta-collection-grid">
+          <h2 className="beta-locker__category-title">{t(`beta.category.${category}`)}</h2>
+          <div
+            id="beta-category-items"
+            className="beta-collection-grid"
+            role="group"
+            aria-label={t(`beta.category.${category}`)}
+          >
             {items
               .filter((id) => !owned || available(id))
               .map((id) => {
@@ -246,6 +288,11 @@ export default function BetaLocker({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                     <strong>{itemName(id)}</strong>
+                    {draft[category] === id && (
+                      <span className="beta-collection-card__selected">
+                        ✓ {t("beta.locker.selected")}
+                      </span>
+                    )}
                     <small>{locked ? t("beta.locker.previewOnly") : t("beta.locker.try")}</small>
                     {locked && (
                       <span className="beta-collection-card__requirement">
