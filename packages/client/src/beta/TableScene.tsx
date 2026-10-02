@@ -90,8 +90,21 @@ export function TableScene({
         if (!player) return null;
         const seat = geometry.seats[index];
         const own = id === viewerId;
+        const isActive = id === activePlayerId;
         const label = own ? t("scene.you") : player.name;
         const score = n(player.score);
+        const detailsLabel = [
+          t("scene.details", { name: player.name }),
+          t("scene.total", { name: player.name, points: score }),
+          isActive ? t("scene.currentTurn") : "",
+          id === lastId ? t("scene.finalSeatDetail") : "",
+          player.connected === false ? t("table.offline") : "",
+          player.team != null
+            ? `${t("scene.teamBadge", { n: player.team + 1 })} · ${teamName(t, player.team)}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
         return (
           <div
             className={`tp-seat tp-seat--${seat.view === "back" ? "self" : seat.view === "front" ? "far" : "side"}`}
@@ -109,7 +122,7 @@ export function TableScene({
               type="button"
               style={placed(seat.character)}
               onClick={() => onPlayerDetails?.(player)}
-              aria-label={`${t("scene.details", { name: player.name })} · ${t("scene.total", { name: player.name, points: score })}${player.connected === false ? ` · ${t("table.offline")}` : ""}${player.team != null ? ` · ${teamName(t, player.team)}` : ""}`}
+              aria-label={detailsLabel}
             >
               <CharacterSprite
                 className="character-sprite"
@@ -128,10 +141,22 @@ export function TableScene({
               type="button"
               style={placed(seat.name)}
               onClick={() => onPlayerDetails?.(player)}
-              aria-label={t("scene.details", { name: player.name })}
-              title={player.name}
+              aria-label={detailsLabel}
+              title={detailsLabel}
             >
-              <span>{label}</span>
+              <span>
+                {isActive && (
+                  <i className="scene-name__turn" aria-hidden="true">
+                    ▸
+                  </i>
+                )}
+                <b className="scene-name__text">{label}</b>
+                {player.team != null && (
+                  <i className="scene-name__team" aria-hidden="true">
+                    {player.team + 1}
+                  </i>
+                )}
+              </span>
             </button>
             <div
               className="tp-score"
@@ -149,6 +174,7 @@ export function TableScene({
                           )
                         : geometry.scoreFont
                     }px`,
+                    "--scene-score-fit": `${(seat.score.width / Math.max(1, score.length)) * 1.65}px`,
                   } as CSSProperties
                 }
               >

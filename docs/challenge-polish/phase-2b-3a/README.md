@@ -59,9 +59,8 @@ attempt; the latest-attempt card is correctly omitted. It is also session-only.
 
 ## Resume here
 
-Next approved chunk: **4A**, small table details (turn/score/name/team/held/final
-seat/presence clarity within the existing geometry), followed by **4B** setup
-and match results. Remaining chunks are other-screen consistency, a character
-pilot, cast/material polish, and real-phone validation. No further phase was
-started after the user's request to stop at a checkpoint before losing internet.
+**Later checkpoint:** [4A table details and 4B setup/results are now implemented](../phase-4a-4b/README.md).
+At this checkpoint, those were the next approved chunks. Remaining work now
+starts with 3B supporting-screen consistency, then a character pilot,
+cast/material polish, and real-phone validation.
 Publishing to main and making beta the default remain separate steps.

@@ -3,7 +3,7 @@ import type { GameState } from "@greed/core";
 import { isWinner as isWinningSeat, teamTotal } from "@greed/core";
 import type { Achievement, GameSummary } from "../game/profile.js";
 import { Button, Modal } from "../ui/index.js";
-import { useT } from "../i18n/i18n.js";
+import { useI18n } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
 import { useBetaActive } from "../beta/BetaContext.js";
@@ -23,7 +23,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 
 interface GameOverProps {
   state: GameState;
-  /** The local player, when known (online). Marks your row and decides the win. */
+  /** The local player, when known. Omit for pass-and-play and spectators. */
   youId?: string | null;
   /** This game's personal summary (recorded games only; null otherwise). */
   summary?: GameSummary | null;
@@ -57,18 +57,24 @@ export function GameOver({
   onMenu,
   menuLabel,
 }: GameOverProps) {
-  const t = useT();
+  const { t, n } = useI18n();
   const betaActive = useBetaActive();
   const winner = state.players.find((p) => p.id === state.winnerId);
   const sides = state.teams;
   // A team game is won by a side, so that is what the header names and what the
   // standings are grouped by — an individual's total is only their contribution.
   const winnerName =
-    sides && state.winnerTeam !== null ? teamName(t, state.winnerTeam) : (winner?.name ?? "");
+    sides && typeof state.winnerTeam === "number"
+      ? teamName(t, state.winnerTeam)
+      : (winner?.name ?? "");
   // Online knows exactly which seat is yours; offline falls back to the summary,
   // which is only recorded for solo games.
   const youWon = youId ? isWinningSeat(state, youId) : (summary?.won ?? false);
   const titled = youId != null || summary != null;
+  const winnerTotal =
+    sides && typeof state.winnerTeam === "number"
+      ? teamTotal(state, state.winnerTeam)
+      : (winner?.total ?? 0);
 
   const standings = [...state.players].sort((a, b) => b.total - a.total);
   const sideStandings = sides
@@ -83,6 +89,7 @@ export function GameOver({
 
   return (
     <Modal
+      className={`results-modal${betaActive ? " results-modal--beta" : ""}`}
       icon={
         betaActive ? (
           <svg className="beta-trophy" viewBox="0 0 100 100" aria-hidden="true">
@@ -111,87 +118,143 @@ export function GameOver({
           : t("gameOver.winsExcl", { name: winnerName })
       }
       actions={
-        <>
+        <div className="results-actions">
           {onPlayAgain ? (
-            <Button
-              variant={playAgainActive ? "ghost" : "roll"}
-              onClick={onPlayAgain}
-              aria-pressed={playAgainActive}
-            >
-              {playAgainLabel ?? t("gameOver.playAgain")}
-            </Button>
+            <div className="results-actions__primary">
+              <Button
+                variant={playAgainActive ? "ghost" : "roll"}
+                onClick={onPlayAgain}
+                pressed={playAgainLabel != null ? playAgainActive : undefined}
+              >
+                {playAgainActive && <span aria-hidden="true">✓ </span>}
+                {playAgainLabel ?? t("gameOver.playAgain")}
+              </Button>
+              {playAgainActive && (
+                <p className="results-actions__note">{t("gameOver.voteChosen")}</p>
+              )}
+            </div>
           ) : (
-            waitingNote != null && <span className="overlay__note">{waitingNote}</span>
+            waitingNote != null && (
+              <p className="results-actions__note results-actions__waiting" role="status">
+                {waitingNote}
+              </p>
+            )
           )}
-          {onSecondary && <Button onClick={onSecondary}>{secondaryLabel}</Button>}
-          <Button onClick={onMenu}>{menuLabel ?? t("gameOver.mainMenu")}</Button>
-        </>
+          <div className="results-actions__secondary">
+            {onSecondary && <Button onClick={onSecondary}>{secondaryLabel}</Button>}
+            <Button onClick={onMenu}>{menuLabel ?? t("gameOver.mainMenu")}</Button>
+          </div>
+        </div>
       }
     >
-      {sideStandings ? (
-        <div className="standings standings--teams">
-          {sideStandings.map((side) => (
-            <div
-              key={side.side}
-              className={`standings__team${
-                side.side === state.winnerTeam ? " standings__team--win" : ""
-              }`}
-              data-team={side.side}
-            >
-              <div className="standings__team-head">
-                <span>{teamName(t, side.side)}</span>
-                <span>{side.total}</span>
-              </div>
-              <ol>
-                {side.members.map((p) => (
-                  <li key={p.id} className="standings__row">
-                    <span>
-                      {p.name}
-                      {youId && p.id === youId ? ` ${t("common.youParen")}` : ""}
-                      {p.isBot ? ` (${t(`pers.${p.botPersonality ?? "balanced"}`)})` : ""}
-                    </span>
-                    <span>{p.total}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
+      <div className="results-winner">
+        {youWon && <strong className="results-winner__name">{winnerName}</strong>}
+        <span className="results-winner__label">
+          {t(sides ? "gameOver.teamTotal" : "gameOver.winningScore")}
+        </span>
+        <div className="results-winner__score">
+          <strong>{n(winnerTotal)}</strong>
+          <span>{t("challenge.points")}</span>
         </div>
-      ) : (
-        <ol className="standings">
-          {standings.map((p) => (
-            <li
-              key={p.id}
-              className={
-                p.id === state.winnerId ? "standings__row standings__row--win" : "standings__row"
-              }
-            >
-              <span>
-                {p.name}
-                {youId && p.id === youId ? ` ${t("common.youParen")}` : ""}
-                {p.isBot ? ` (${t(`pers.${p.botPersonality ?? "balanced"}`)})` : ""}
-              </span>
-              <span>{p.total}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      </div>
+
+      <section className="results-standings" aria-label={t("gameOver.standings")}>
+        <div className="results-standings__head">
+          <h3>{t("gameOver.standings")}</h3>
+          <span>{t(sides ? "gameOver.teamTotal" : "gameOver.score")}</span>
+        </div>
+        {sideStandings ? (
+          <div className="standings standings--teams">
+            {sideStandings.map((side, index) => (
+              <div
+                key={side.side}
+                className={`standings__team${
+                  side.side === state.winnerTeam ? " standings__team--win" : ""
+                }`}
+                data-team={side.side}
+              >
+                <div className="standings__team-head">
+                  <span className="results-team__name">
+                    <span className="results-rank">{n(index + 1)}</span>
+                    <span>{teamName(t, side.side)}</span>
+                  </span>
+                  <span className="results-score">{n(side.total)}</span>
+                </div>
+                <div className="results-team__contributions">{t("gameOver.contributions")}</div>
+                <ol>
+                  {side.members.map((p) => (
+                    <li
+                      key={p.id}
+                      className={`standings__row${youId && p.id === youId ? " results-row--you" : ""}`}
+                    >
+                      <span className="results-player">
+                        <span className="results-player__name">{p.name}</span>
+                        {youId && p.id === youId && (
+                          <span className="results-player__you">{t("common.youParen")}</span>
+                        )}
+                        {p.isBot && (
+                          <span className="results-player__detail">
+                            {t(`pers.${p.botPersonality ?? "balanced"}`)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="results-score">{n(p.total)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ol className="standings">
+            {standings.map((p) => (
+              <li
+                key={p.id}
+                className={`standings__row${p.id === state.winnerId ? " standings__row--win" : ""}${youId && p.id === youId ? " results-row--you" : ""}`}
+              >
+                <span className="results-rank">
+                  {n(standings.findIndex((other) => other.total === p.total) + 1)}
+                </span>
+                <span className="results-player">
+                  <span className="results-player__name">{p.name}</span>
+                  {youId && p.id === youId && (
+                    <span className="results-player__you">{t("common.youParen")}</span>
+                  )}
+                  {p.isBot && (
+                    <span className="results-player__detail">
+                      {t(`pers.${p.botPersonality ?? "balanced"}`)}
+                    </span>
+                  )}
+                </span>
+                <span className="results-score">{n(p.total)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
 
       {summary && (
-        <div className="summary">
-          <div className="summary__stat">
-            <span className="summary__label">{t("gameOver.bestTurn")}</span>
-            <span className="summary__value">{summary.bestTurn}</span>
+        <section className="results-personal" aria-label={t("gameOver.personal")}>
+          <h3>{t("gameOver.personal")}</h3>
+          <div className="summary">
+            <div className="summary__stat">
+              <span className="summary__label">{t("gameOver.finalTotal")}</span>
+              <span className="summary__value">{n(summary.finalTotal)}</span>
+            </div>
+            <div className="summary__stat">
+              <span className="summary__label">{t("gameOver.bestTurn")}</span>
+              <span className="summary__value">{n(summary.bestTurn)}</span>
+            </div>
+            <div className="summary__stat">
+              <span className="summary__label">{t("gameOver.hotDice")}</span>
+              <span className="summary__value">{n(summary.hotDice)}</span>
+            </div>
+            <div className="summary__stat">
+              <span className="summary__label">{t("gameOver.busts")}</span>
+              <span className="summary__value">{n(summary.busts)}</span>
+            </div>
           </div>
-          <div className="summary__stat">
-            <span className="summary__label">{t("gameOver.hotDice")}</span>
-            <span className="summary__value">{summary.hotDice}</span>
-          </div>
-          <div className="summary__stat">
-            <span className="summary__label">{t("gameOver.busts")}</span>
-            <span className="summary__value">{summary.busts}</span>
-          </div>
-        </div>
+        </section>
       )}
 
       {unlocked.length > 0 && (

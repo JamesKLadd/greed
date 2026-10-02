@@ -18,4 +18,7 @@
 @import "./beta/table-online.css";
 @import "./beta/sceneAccessibility.css";
 @import "./styles/challenge-lobby.css";
+@import "./styles/table-polish.css";
+@import "./styles/setup-polish.css";
+@import "./styles/results-polish.css";
 @import "./styles/a11y.css";

@@ -1,4 +1,5 @@
-import { teamTotal } from "@greed/core";
+import { useEffect, useState } from "react";
+import { isLastHeldDie, teamTotal } from "@greed/core";
 import type { GameShellProps } from "../screens/GameShell.js";
 import { TableScene, type ScenePlayer } from "./TableScene.js";
 import { DiceTray } from "../components/DiceTray.js";
@@ -21,6 +22,7 @@ import { onlineScenePlayers } from "./onlineScene.js";
 import { OnlineSeatStatus } from "./OnlineSeatStatus.js";
 import { emoteGlyph } from "../components/EmoteBar.js";
 import { useTableFeedback } from "./tableFeedback.js";
+import { pointsAtRisk } from "../game/turnPresentation.js";
 
 export type SceneOverlay = { kind: "menu" } | { kind: "player"; id: string } | null;
 interface LocalTableGameProps extends GameShellProps {
@@ -37,6 +39,8 @@ export function LocalTableGame(props: LocalTableGameProps) {
   const { t, n } = useI18n();
   const { appearance } = useAppearance();
   const settings = loadSettings();
+  const [heldNotice, setHeldNotice] = useState(false);
+  useEffect(() => setHeldNotice(false), [state, isRolling, canAct]);
   const suspended = Boolean(props.online && props.notice);
   const feedback = useTableFeedback(state, suspended, props.presentationEpoch);
   const active = state.players[state.turn.playerIndex];
@@ -71,11 +75,13 @@ export function LocalTableGame(props: LocalTableGameProps) {
         });
   const selectedBadge = ACHIEVEMENTS.find((a) => a.id === selectedLook.badge);
   const activeOffline = props.online && !active.isBot && props.presence?.[active.id] === false;
+  const atRisk = pointsAtRisk(state);
   return (
     <div
       className={`tp-screen scene-game${props.online ? " scene-game--online" : ""}`}
       style={props.cosmetics}
       data-notices={Boolean(
+        heldNotice ||
         settings.showGuidance ||
         state.teams ||
         state.endgame.triggered ||
@@ -132,6 +138,9 @@ export function LocalTableGame(props: LocalTableGameProps) {
             <div className="scene-teams">
               {state.teams.map((_, i) => (
                 <span key={i} data-team={i}>
+                  <span className="scene-team-marker" aria-hidden="true">
+                    {i + 1}
+                  </span>
                   {teamName(t, i)} <strong>{n(teamTotal(state, i))}</strong>
                 </span>
               ))}
@@ -142,9 +151,17 @@ export function LocalTableGame(props: LocalTableGameProps) {
             canAct={canAct}
             compact
             muted={
-              !settings.showGuidance || state.endgame.triggered || state.phase === "sudden-death"
+              heldNotice ||
+              !settings.showGuidance ||
+              state.endgame.triggered ||
+              state.phase === "sudden-death"
             }
           />
+          {heldNotice && (
+            <p className="guide" role="status">
+              {t("dice.keepOneHeld")}
+            </p>
+          )}
         </div>
         <div className="tp-dice scene-dice">
           <DiceTray
@@ -154,13 +171,24 @@ export function LocalTableGame(props: LocalTableGameProps) {
             isRolling={isRolling}
             dice3d={settings.dice3d}
             onToggle={(i) => {
-              if (canAct) props.onToggleDie?.(i);
+              if (!canAct || isRolling) return;
+              if (isLastHeldDie(state.turn, i)) {
+                setHeldNotice(true);
+                return;
+              }
+              setHeldNotice(false);
+              props.onToggleDie?.(i);
             }}
             disabled={!canAct}
           />
         </div>
-        <div className="tp-turn-label" aria-live="polite">
-          <span>
+        <div
+          className="tp-turn-label"
+          data-clock={Boolean(props.online && state.phase !== "game-over" && props.turnTimer)}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span className="scene-turn__player">
             {t("controls.whoseTurn", { name: active.name })}
             {activeOffline
               ? ` · ${t("table.offline")}`
@@ -169,9 +197,8 @@ export function LocalTableGame(props: LocalTableGameProps) {
                 : ""}
           </span>
           {settings.showTurnScore && (
-            <span>
-              {" "}
-              · {t("beta.atStake")} {n(state.turn.turnScore)}
+            <span className="scene-turn__stake" data-resolved={Boolean(state.turn.outcome)}>
+              {t("run.atRisk")} <b>{n(atRisk)}</b>
             </span>
           )}
           {props.online && state.phase !== "game-over" && props.turnTimer && (
@@ -222,7 +249,12 @@ export function LocalTableGame(props: LocalTableGameProps) {
         </GameMenuDrawer>
       )}
       {selected && (
-        <Modal title={selected.name} onClose={() => onSceneOverlay(null)}>
+        <Modal
+          className="scene-player-modal"
+          scroll
+          title={selected.name}
+          onClose={() => onSceneOverlay(null)}
+        >
           <div className="scene-details">
             <Mascot look={selectedLook} />
             {selectedBadge && (
@@ -230,15 +262,20 @@ export function LocalTableGame(props: LocalTableGameProps) {
                 {selectedBadge.icon} {t(`ach.${selectedBadge.id}.title` as MsgKey)}
               </p>
             )}
-            <strong>
+            <p className="scene-details__label">{t("run.bankedTotal")}</p>
+            <strong className="scene-details__score">
               {n(selected.total)} {t("scene.points")}
             </strong>
+            {selected.id === active.id && state.phase !== "game-over" && (
+              <p className="scene-details__turn">{t("scene.currentTurn")}</p>
+            )}
             {selected.team != null && (
               <p>
-                {teamName(t, selected.team)} · {n(teamTotal(state, selected.team))}
+                {t("scene.teamBadge", { n: selected.team + 1 })} · {teamName(t, selected.team)} ·{" "}
+                {n(teamTotal(state, selected.team))}
               </p>
             )}
-            {selected.id === last.id && <p>🏁 {t("aria.playsLast")}</p>}
+            {selected.id === last.id && <p>🏁 {t("scene.finalSeatDetail")}</p>}
             {selected.isBot && <p>{t("scene.bot")}</p>}
             {props.online && !selected.isBot && props.presence?.[selected.id] === false && (
               <p>{t("table.offline")}</p>

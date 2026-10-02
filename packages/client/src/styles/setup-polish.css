@@ -1,0 +1,206 @@
+/* Local setup only: controls stay in document flow when a phone keyboard opens. */
+.setup-lobby .setup {
+  gap: 18px;
+  padding-top: max(24px, env(safe-area-inset-top));
+}
+.setup-lobby .setup-lobby__panel {
+  width: min(760px, 100%);
+  padding: clamp(14px, 3vw, 26px);
+}
+.setup-lobby .beta-screen-brand {
+  padding-top: 0;
+}
+.setup-lobby__header {
+  margin-bottom: 22px;
+}
+.setup-lobby__header h1,
+.setup-lobby__header h2 {
+  margin: 0;
+  font: 800 clamp(1.375rem, 4vw, 1.75rem) var(--ff-body);
+  color: var(--text);
+}
+.setup-lobby__header p {
+  margin: 6px 0 0;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.setup-lobby__section + .setup-lobby__section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.setup-lobby__section h3 {
+  margin: 0 0 12px;
+  font-size: 1.0625rem;
+}
+.setup-lobby__add {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.setup-lobby__seats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.setup-lobby__seat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: end;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.setup-lobby__seat-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.setup-lobby__seat-head label {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+.setup-lobby__remove {
+  width: 44px;
+  min-height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+}
+.setup-lobby__remove:hover:not(:disabled) {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.setup-lobby__remove:disabled,
+.setup-lobby .segmented__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.setup-lobby .seats-config__name {
+  grid-column: 1 / -1;
+}
+.setup-lobby .seats-config__name,
+.setup-lobby .seats-config__diff,
+.setup-lobby .setup__goal-input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  font-size: 1rem;
+}
+.setup-lobby__personality {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.setup-lobby__type {
+  grid-column: 1 / -1;
+}
+.setup-lobby__personality span,
+.setup-lobby .setup__goal-label {
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.setup-lobby .segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+}
+.setup-lobby .segmented__btn,
+.setup-lobby .btn {
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.setup-lobby .segmented__btn {
+  padding: 9px 8px;
+  font-size: 0.875rem;
+}
+.setup-lobby .seats-config__team {
+  grid-column: 1 / -1;
+}
+.setup-lobby .setup-lobby__goals {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.setup-lobby__custom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 1fr);
+  width: 100%;
+  margin-top: 12px;
+}
+.setup-lobby__note {
+  margin: 10px 0 0;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.setup-lobby .setup__rebalance {
+  margin-top: 12px;
+  width: 100%;
+}
+.setup-lobby__start {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.setup-lobby__summary {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1.5;
+}
+.setup-lobby__warning {
+  padding: 12px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  color: var(--warn);
+  line-height: 1.5;
+}
+.setup-lobby .setup-lobby__start-button {
+  width: 100%;
+  min-height: 52px;
+}
+.setup-lobby__utilities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.setup-lobby button:focus-visible,
+.setup-lobby input:focus-visible,
+.setup-lobby select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 560px) {
+  .setup-lobby__seats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 380px) {
+  .setup-lobby__add {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .setup-lobby .setup-lobby__goals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

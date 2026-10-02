@@ -1,0 +1,132 @@
+/* Small table details only: seat, score, flag and action coordinates stay owned
+   by tableSceneGeometry. Do not enlarge their hit areas into the dice lane. */
+.scene-game .tp-name > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+  padding-inline: 3px;
+}
+.scene-name__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: inherit;
+}
+.scene-name__turn {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 12px;
+  color: #ffe09b;
+}
+.scene-name__team {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 8px;
+  min-width: 10px;
+  line-height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+.scene-game [data-team="0"] .tp-name {
+  --scene-team-color: var(--team-0);
+}
+.scene-game [data-team="1"] .tp-name {
+  --scene-team-color: var(--team-1);
+}
+.scene-game .scene-teams [data-team="0"] {
+  color: var(--team-0);
+}
+.scene-game .scene-teams [data-team="1"] {
+  color: var(--team-1);
+}
+.scene-team-marker {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  min-width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  font-size: 9px;
+  font-weight: 900;
+}
+.scene-game .tp-score strong {
+  font-size: min(var(--scene-score-font), var(--scene-score-fit));
+}
+.scene-game .tp-turn-label {
+  align-items: center;
+  gap: 6px;
+  width: min(90%, 460px);
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #071d19e6;
+  border: 1px solid #4b7968;
+  min-height: 22px;
+}
+.scene-game .tp-turn-label > .scene-turn__player {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.scene-game .tp-turn-label[data-clock="true"] {
+  min-height: 26px;
+  padding-block: 0;
+  margin-top: -4px;
+}
+.scene-game .tp-turn-label > .scene-turn-clock {
+  margin-block: 0;
+}
+
+.scene-game .tp-scene--short-portrait .tp-turn-label,
+.scene-game .tp-scene--short-wide .tp-turn-label {
+  top: calc(74% - 12px);
+}
+.scene-game .tp-turn-label > .scene-turn__stake {
+  flex: 0 0 auto;
+  overflow: visible;
+  color: #d4efdf;
+  font-weight: 700;
+}
+.scene-turn__stake b {
+  color: #ffe09b;
+  font-weight: 1000;
+  font-variant-numeric: tabular-nums;
+}
+.scene-game .tp-flag[data-final="true"] {
+  outline: 2px solid #ffe09b;
+  outline-offset: 2px;
+}
+.scene-game [data-connected="false"] .tp-name > span {
+  border: 1px dashed #ffe09b;
+}
+:root[data-contrast="high"] .scene-game [data-connected="false"] .tp-name > span {
+  border-style: dashed;
+}
+.scene-player-modal .overlay__title {
+  overflow-wrap: anywhere;
+}
+.scene-details__label {
+  margin: 0 0 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.scene-details__score {
+  font-size: 1.5rem;
+  color: var(--gold);
+}
+.scene-details__turn {
+  font-weight: 800;
+  color: var(--good);
+}
+.scene-player-modal .tp-close {
+  min-width: 44px;
+  min-height: 44px;
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .scene-game .tp-turn-label {
+    font-size: 11px;
+    width: min(70%, 460px);
+  }
+}

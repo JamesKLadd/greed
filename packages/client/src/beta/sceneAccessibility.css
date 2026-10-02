@@ -3,7 +3,7 @@
   font-size: 0.6875rem;
 }
 :root[data-text-scale="large"] .scene-game .tp-score strong {
-  font-size: calc(var(--scene-score-font) * var(--text-scale));
+  font-size: min(calc(var(--scene-score-font) * var(--text-scale)), var(--scene-score-fit));
 }
 :root[data-text-scale="large"] .scene-game .tp-score > span {
   font-size: 0.5rem;

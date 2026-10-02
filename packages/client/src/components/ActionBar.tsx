@@ -1,6 +1,7 @@
 import { diceRemaining } from "@greed/core";
 import type { GameState, LegalActions } from "@greed/core";
 import { useI18n } from "../i18n/i18n.js";
+import { pointsAtRisk } from "../game/turnPresentation.js";
 
 interface ActionBarProps {
   state: GameState;
@@ -74,7 +75,7 @@ export function ActionBar({
         >
           {t("controls.bank")}
         </strong>
-        <span className="actionbar__num">{n(turn.turnScore)}</span>
+        <span className="actionbar__num">{n(pointsAtRisk(state))}</span>
       </button>
     </div>
   );

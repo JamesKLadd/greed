@@ -1,0 +1,259 @@
+/* Finished games share one results card across local, online and spectator play.
+   Keep the standings readable before decoration, and let long names use space
+   vertically rather than squeeze the score or the actions off a phone. */
+.results-modal {
+  width: min(560px, 100%);
+  padding: 20px;
+  text-align: center;
+}
+.results-modal .overlay__crown {
+  line-height: 1;
+}
+.results-modal .overlay__title {
+  margin: 10px 0 14px;
+  font-size: clamp(1.25rem, 4.8vw, 1.75rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.results-winner {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 0 4px 18px;
+}
+.results-winner__name {
+  max-width: 100%;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.results-winner__label {
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+.results-winner__score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+.results-winner__score strong {
+  font-size: clamp(1.875rem, 7vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--gold);
+}
+.results-winner__score > span {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+.results-standings {
+  text-align: left;
+}
+.results-standings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 9px;
+}
+.results-standings__head h3,
+.results-personal h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+.results-standings__head > span {
+  flex-shrink: 0;
+  max-width: 45%;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-align: right;
+}
+.results-modal .standings__row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  min-height: 46px;
+  font-size: 0.875rem;
+}
+.results-rank {
+  display: inline-flex;
+  min-width: 26px;
+  min-height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.results-player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 5px;
+  min-width: 0;
+}
+.results-player__name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.results-player__you {
+  color: var(--info);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.results-player__detail {
+  flex-basis: 100%;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.results-score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.results-modal .results-row--you {
+  box-shadow: inset 3px 0 0 var(--info);
+}
+.results-modal .standings__row--win .results-rank {
+  color: var(--good);
+}
+.results-modal .standings__team-head {
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.results-team__name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.results-team__name > span:last-child {
+  overflow-wrap: anywhere;
+}
+.results-team__contributions {
+  padding: 8px 12px 0;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+.results-modal .standings__team .standings__row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 42px;
+  padding: 8px 9px;
+}
+.results-personal {
+  margin-top: 20px;
+  text-align: left;
+}
+.results-modal .summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.results-modal .summary__stat {
+  min-width: 0;
+  padding: 10px 8px;
+}
+.results-modal .summary__label {
+  line-height: 1.35;
+}
+.results-modal .summary__value {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+.results-modal .unlocks {
+  margin-top: 20px;
+  text-align: left;
+}
+.results-modal .unlocks__row {
+  align-items: flex-start;
+  overflow-wrap: anywhere;
+}
+.results-modal .overlay__actions {
+  margin-top: 20px;
+}
+.results-actions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.results-actions__primary {
+  min-width: 0;
+}
+.results-actions__primary > .btn {
+  width: 100%;
+}
+.results-actions__secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.results-actions__secondary > .btn {
+  flex: 1 1 130px;
+}
+.results-actions .btn {
+  min-height: 48px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.results-actions__note {
+  margin: 7px 0 0;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.results-actions__waiting {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Beta's flourish belongs above the score; the rows stay calm enough to scan. */
+.results-modal--beta {
+  border-color: color-mix(in srgb, var(--gold) 50%, var(--line));
+  background:
+    radial-gradient(ellipse at top, rgba(67, 124, 95, 0.24), transparent 55%),
+    linear-gradient(178deg, var(--surface-1), var(--surface-2));
+}
+.results-modal--beta .beta-trophy {
+  width: 64px;
+  height: 64px;
+}
+.results-modal--beta .results-winner {
+  margin-bottom: 17px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+.results-modal--beta .results-winner__score strong {
+  text-shadow: 0 0 20px rgba(255, 200, 87, 0.18);
+}
+
+@media (min-width: 600px) {
+  .results-modal .summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 380px) {
+  .results-modal {
+    padding: 16px;
+  }
+  .results-modal .standings__row {
+    padding: 10px;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    gap: 7px;
+  }
+  .results-rank {
+    min-width: 24px;
+  }
+}

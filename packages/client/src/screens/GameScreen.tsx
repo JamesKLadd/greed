@@ -148,6 +148,7 @@ export function GameScreen({ setup, onExit, recordResults = true }: GameScreenPr
           {state.phase === "game-over" && (
             <GameOver
               state={state}
+              youId={viewerId}
               summary={chrome.summary}
               unlocked={chrome.unlocked}
               onPlayAgain={() => ctl.restart()}

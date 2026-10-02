@@ -2,6 +2,7 @@ import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import type { DieValue, TurnState } from "@greed/core";
 import { Die } from "./Die.js";
 import { useT } from "../i18n/i18n.js";
+import { shownHeldDie } from "../game/turnPresentation.js";
 
 interface DiceTrayProps {
   turn: TurnState;
@@ -49,7 +50,7 @@ export function DiceTray({
           <Die
             key={i}
             value={value}
-            locked={turn.locked[i] && !turn.hotDice}
+            locked={shownHeldDie(turn, i, isRolling)}
             rolling={rolling}
             dim={!hasRolled}
             dimensional={dice3d}
@@ -63,7 +64,11 @@ export function DiceTray({
             // last held die, which cannot be put back. A tap that would be
             // silently ignored is worse than one that is plainly unavailable.
             toggleDisabled={disabled || isRolling || !canToggleLock(turn, i)}
-            refusedReason={lastHeld(turn, i) ? t("dice.keepOneHeld") : undefined}
+            refusedReason={
+              onToggle && !disabled && !isRolling && lastHeld(turn, i)
+                ? t("dice.keepOneHeld")
+                : undefined
+            }
             toggleLabel={turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
           />
         );

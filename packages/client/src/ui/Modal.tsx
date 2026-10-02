@@ -19,6 +19,8 @@ import { useBodyScrollLock, useEscapeKey, useFocusTrap } from "./useFocusTrap.js
  */
 
 export interface ModalProps {
+  /** Optional presentation scope; dismissal and focus behavior stay shared. */
+  className?: string;
   /** Omit to make the dialog non-dismissible (no backdrop click, no Escape). */
   onClose?: () => void;
   title?: ReactNode;
@@ -35,6 +37,7 @@ export interface ModalProps {
 }
 
 export function Modal({
+  className,
   onClose,
   title,
   icon,
@@ -59,6 +62,7 @@ export function Modal({
           "overlay__card",
           size === "wide" && "overlay__card--wide",
           scroll && "overlay__card--scroll",
+          className,
         )}
         role="dialog"
         aria-modal="true"
