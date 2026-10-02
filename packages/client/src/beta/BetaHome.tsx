@@ -1,124 +1,194 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { weeklyAllowance } from "@greed/core";
 import type { HomeScreenProps } from "../screens/HomeScreen.js";
 import { useT } from "../i18n/i18n.js";
 import { useAuth } from "../game/auth.js";
+import { ONLINE_ENABLED } from "../game/online.js";
+import { hasUnreadRelease, markReleaseSeen } from "../game/changelog.js";
 import { Die } from "../components/Die.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { Icon } from "../ui/index.js";
 import { Brand } from "./Brand.js";
 import { BetaGate } from "./BetaGate.js";
 import { CelebrationDemo } from "./CelebrationDemo.js";
+import "../styles/beta-home-polish.css";
 
 export default function BetaHome(p: HomeScreenProps) {
   const t = useT();
   const { status, user } = useAuth();
   const [rules, setRules] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [newRelease, setNewRelease] = useState(false);
+  const weeklyRation = weeklyAllowance();
+
+  useEffect(() => setNewRelease(hasUnreadRelease()), []);
+
+  // This is the mode's published rule, not an estimate of this player's
+  // remaining attempts. The home menu needs no challenge-status request.
+  const weeklySubtitle =
+    weeklyRation.limit === null
+      ? t("weekly.home.sub")
+      : weeklyRation.per === "day"
+        ? t("weekly.home.subCapped.day", { n: weeklyRation.limit })
+        : t("weekly.home.subCapped", { n: weeklyRation.limit });
+
   return (
-    <main className="beta-home">
-      <header className="beta-home__top">
+    <main className="beta-home beta-home--polished">
+      <header className="beta-hub__top">
         <span className="beta-pill">
           <i />
           {t("beta.label")}
         </span>
-        <button className="beta-account" onClick={status === "authed" ? p.onAccount : p.onAuth}>
-          <Icon name="user" />
-          {user?.username ?? t("home.signIn")}
+        <button
+          className="beta-hub__account"
+          onClick={status === "authed" ? p.onAccount : p.onAuth}
+        >
+          <Icon name="user" size={20} />
+          <span>{user?.username ?? t("home.signIn")}</span>
         </button>
       </header>
       {p.flash && (
-        <button className="banner" onClick={p.onDismissFlash}>
-          {p.flash}
+        <button className="banner beta-hub__flash" onClick={p.onDismissFlash}>
+          <span>{p.flash}</span>
+          <Icon name="close" size={20} />
         </button>
       )}
-      <div className="beta-home__layout">
-        <section className="beta-hero" aria-label="Greed">
-          <p className="beta-eyebrow">{t("beta.gameNight")}</p>
+      <div className="beta-hub__layout">
+        <section className="beta-hub__hero" aria-label="Greed">
+          <p className="beta-hub__eyebrow">{t("beta.gameNight")}</p>
           <h1>
-            <Brand />
+            <Brand compact />
           </h1>
-          <p className="beta-hero__tagline">{t("beta.tagline")}</p>
-          <div className="beta-display" aria-hidden="true">
-            <div className="beta-display__rail" />
-            <span className="beta-display__stamp">G / 5</span>
-            <div className="beta-display__dice">
-              <Die value={3} dimensional size={66} />
-              <Die value={5} dimensional size={82} />
-              <Die value={1} dimensional size={66} />
-            </div>
-            <span className="beta-display__star beta-display__star--one">✦</span>
-            <span className="beta-display__star beta-display__star--two">✦</span>
-            <span className="beta-display__caption">{t("beta.fiveDice")}</span>
+          <p className="beta-hub__tagline">{t("beta.tagline")}</p>
+          <div className="beta-hub__ornament" aria-hidden="true">
+            <Die value={3} dimensional size={32} />
+            <Die value={5} dimensional size={40} />
+            <Die value={1} dimensional size={32} />
           </div>
         </section>
-        <section className="beta-play" aria-label={t("beta.play")}>
-          <div className="beta-section-heading">
-            <span>{t("beta.takeSeat")}</span>
-            <span>01 — 05</span>
-          </div>
-          <button className="beta-play__primary" onClick={p.onLocal}>
-            <span className="beta-play__icon">
-              <Icon name="dice" />
-            </span>
-            <span>
-              <strong>{t("home.local")}</strong>
-              <small>{t("home.local.sub")}</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </button>
-          <button className="beta-play__learn" onClick={p.onPractice}>
-            <Icon name="graduate" />
-            <span>{t("home.learn")}</span>
-            <span aria-hidden="true">→</span>
-          </button>
-          <div className="beta-play__cards">
-            <button onClick={status === "authed" ? p.onOnline : p.onAuthForOnline}>
-              <Icon name="globe" />
-              <strong>{t("home.online")}</strong>
-              <small>{t("beta.classicMode")}</small>
+        <div className="beta-hub__body">
+          <section className="beta-hub__play" aria-labelledby="beta-play-heading">
+            <h2 id="beta-play-heading" className="beta-hub__heading">
+              {t("beta.takeSeat")}
+            </h2>
+            <div className="beta-hub__challenges">
+              <button className="beta-hub__mode beta-hub__mode--daily" onClick={p.onDaily}>
+                <span className="beta-hub__mode-icon">
+                  <Icon name="check" size={27} />
+                </span>
+                <span className="beta-hub__mode-copy">
+                  <strong>{t("daily.home")}</strong>
+                  <small>{t("daily.home.sub")}</small>
+                </span>
+                <span className="beta-hub__arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+              <button className="beta-hub__mode beta-hub__mode--weekly" onClick={p.onWeekly}>
+                <span className="beta-hub__mode-icon">
+                  <Icon name="trophy" size={27} />
+                </span>
+                <span className="beta-hub__mode-copy">
+                  <strong>{t("weekly.home")}</strong>
+                  <small>{weeklySubtitle}</small>
+                </span>
+                <span className="beta-hub__arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            </div>
+            <div className="beta-hub__games">
+              <button className="beta-hub__mode beta-hub__mode--local" onClick={p.onLocal}>
+                <span className="beta-hub__mode-icon">
+                  <Icon name="dice" size={25} />
+                </span>
+                <span className="beta-hub__mode-copy">
+                  <strong>{t("home.local")}</strong>
+                  <small>{t("home.local.sub")}</small>
+                </span>
+                <span className="beta-hub__arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+              {ONLINE_ENABLED && (
+                <button
+                  className="beta-hub__mode beta-hub__mode--online"
+                  onClick={status === "authed" ? p.onOnline : p.onAuthForOnline}
+                >
+                  <span className="beta-hub__mode-icon">
+                    <Icon name={status === "authed" ? "globe" : "lock"} size={25} />
+                  </span>
+                  <span className="beta-hub__mode-copy">
+                    <strong>{t("home.online")}</strong>
+                    <small>
+                      {t(status === "authed" ? "home.online.sub" : "home.online.signInSub")}
+                    </small>
+                  </span>
+                  <span className="beta-hub__arrow" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+              )}
+            </div>
+            <button className="beta-hub__learn" onClick={p.onPractice}>
+              <Icon name="graduate" size={25} />
+              <span>
+                <strong>{t("home.learn")}</strong>
+                <small>{t("home.learn.subNew")}</small>
+              </span>
+              <span className="beta-hub__arrow" aria-hidden="true">
+                →
+              </span>
             </button>
-            <button onClick={p.onDaily}>
-              <Icon name="check" />
-              <strong>{t("daily.home")}</strong>
-              <small>{t("beta.classicMode")}</small>
-            </button>
-            <button onClick={p.onWeekly}>
-              <Icon name="trophy" />
-              <strong>{t("weekly.home")}</strong>
-              <small>{t("beta.classicMode")}</small>
-            </button>
-          </div>
-          <nav className="beta-nav" aria-label={t("beta.explore")}>
+          </section>
+          <nav className="beta-hub__explore" aria-label={t("beta.explore")}>
             <button onClick={p.onLocker}>
-              <Icon name="palette" />
-              {t("home.locker")}
+              <Icon name="palette" size={23} />
+              <span>{t("home.locker")}</span>
             </button>
             <button onClick={p.onFriends}>
-              <Icon name="user" />
-              {t("social.home")}
+              <Icon name="user" size={23} />
+              <span>{t("social.home")}</span>
             </button>
             <button onClick={p.onBoards}>
-              <Icon name="chart" />
-              {t("board.home")}
+              <Icon name="trophy" size={23} />
+              <span>{t("board.home")}</span>
             </button>
             <button onClick={p.onStats}>
-              <Icon name="chart" />
-              {t("home.stats")}
+              <Icon name="chart" size={23} />
+              <span>{t("home.stats")}</span>
             </button>
           </nav>
-          <button className="beta-demo-link" onClick={() => setDemo(true)}>
-            <span aria-hidden="true">✦</span>
-            {t("beta.previewEffects")}
-            <span aria-hidden="true">→</span>
-          </button>
-        </section>
-      </div>
-      <footer className="beta-home__footer">
-        <div>
-          <button onClick={() => setRules(true)}>{t("home.howToPlay")}</button>
-          <button onClick={p.onSettings}>{t("home.settings")}</button>
-          <button onClick={p.onUpdates}>{t("home.updates")}</button>
+          <nav className="beta-hub__utilities" aria-label={t("home.settings")}>
+            <button onClick={() => setRules(true)}>
+              <Icon name="book" size={19} />
+              <span>{t("home.howToPlay")}</span>
+            </button>
+            <button onClick={p.onSettings}>
+              <Icon name="gear" size={19} />
+              <span>{t("home.settings")}</span>
+            </button>
+            <button
+              onClick={() => {
+                markReleaseSeen();
+                setNewRelease(false);
+                p.onUpdates();
+              }}
+            >
+              <Icon name="scroll" size={19} />
+              <span>{t("home.updates")}</span>
+              {newRelease && (
+                <span className="beta-hub__new" role="img" aria-label={t("home.updates.new")} />
+              )}
+            </button>
+          </nav>
         </div>
+      </div>
+      <footer className="beta-hub__footer">
+        <button className="beta-hub__preview" onClick={() => setDemo(true)}>
+          <Icon name="eye" size={19} />
+          {t("beta.previewEffects")}
+        </button>
         <BetaGate />
         <small>
           {t("beta.scope")} · v{__APP_VERSION__}

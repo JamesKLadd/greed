@@ -1,0 +1,253 @@
+/* Entry/results share these dimensions in classic and visual beta. The live
+   five-dice board stays in its existing geometry. */
+.setup--challenge {
+  justify-content: flex-start;
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+.challenge-lobby .setup__hero {
+  width: min(680px, 100%);
+  margin-bottom: 18px;
+}
+.challenge-lobby .setup__logo {
+  font-size: clamp(2rem, 8vw, 3rem);
+  margin: 8px 0;
+}
+.challenge-lobby--playing .setup__hero {
+  margin-bottom: 8px;
+}
+.challenge-lobby__nav,
+.challenge-lobby__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(680px, 100%);
+}
+.challenge-lobby__nav .btn,
+.challenge-lobby__top .btn {
+  min-height: 44px;
+}
+.challenge-lobby .daily__day {
+  overflow-wrap: anywhere;
+}
+.challenge-lobby__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.challenge-lobby__entry .challenge-lobby__action {
+  width: 100%;
+  min-height: 56px;
+  white-space: normal;
+  padding: 14px 16px;
+}
+.challenge-lobby__intro,
+.challenge-lobby__allowance .daily__note {
+  margin: 0;
+  line-height: 1.55;
+}
+.challenge-lobby__allowance {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+.challenge-lobby__allowance > :first-child {
+  font-weight: 800;
+}
+.challenge-lobby__clocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.challenge-lobby__clocks > div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.challenge-lobby__clocks dt {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.challenge-lobby__clocks dd {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  margin: 6px 0 0;
+}
+.challenge-lobby__result {
+  padding: 20px 0 0;
+  text-align: center;
+}
+.challenge-lobby__resultLabel {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text);
+}
+.challenge-lobby__points {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.challenge-lobby__rank {
+  font-weight: 800;
+  line-height: 1.5;
+  margin: 14px 0 6px;
+}
+.challenge-lobby__provisional {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 8px 0 18px;
+}
+.challenge-lobby__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.challenge-lobby__stats > div {
+  min-width: 0;
+  padding: 12px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.challenge-lobby__stats dt {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.challenge-lobby__stats dd {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-weight: 900;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-lobby__help {
+  margin: 10px 0;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.challenge-lobby__help summary,
+.challenge-lobby__history summary {
+  min-height: 44px;
+  padding: 12px;
+  line-height: 1.5;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+.challenge-lobby__help p {
+  margin: 0;
+  padding: 0 12px 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  font-size: var(--fs-sm);
+}
+.challenge-lobby__help summary:focus-visible,
+.challenge-lobby__history summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.challenge-lobby__latest {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--surface-2);
+}
+.challenge-lobby__latest > span {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.challenge-lobby__latest strong {
+  font-size: 1.5rem;
+  color: var(--text);
+}
+.challenge-lobby__latest p {
+  margin: 0;
+}
+.challenge-lobby__board {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.challenge-lobby__board .daily__row {
+  display: grid;
+  grid-template-columns: auto 24px minmax(0, 1fr) auto;
+  min-height: 56px;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 1px solid var(--line);
+}
+.challenge-lobby__board .standings__row--win {
+  border-color: var(--good);
+  box-shadow: inset 3px 0 0 var(--good);
+}
+.challenge-lobby__board .daily__name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.challenge-lobby__rowScore {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.challenge-lobby__you {
+  display: block;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.challenge-lobby__error {
+  padding: 14px;
+  border: 1px solid var(--bad);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  background: var(--surface-2);
+}
+.challenge-lobby__error p {
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+.challenge-lobby__error .btn {
+  min-height: 44px;
+  white-space: normal;
+}
+.challenge-lobby__extras {
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.challenge-lobby .daily__heraldName,
+.challenge-lobby .daily-hall__name {
+  overflow-wrap: anywhere;
+}
+.challenge-lobby__detail .daily__score {
+  margin-top: 12px;
+}
+.challenge-lobby__detail .btn {
+  min-height: 44px;
+}
+@media (max-width: 480px) {
+  .challenge-lobby .daily {
+    padding: 18px 14px;
+  }
+  .challenge-lobby__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .challenge-lobby__board .daily__row {
+    gap: 6px;
+    font-size: var(--fs-sm);
+  }
+}

@@ -36,6 +36,12 @@ const TableEventReview = import.meta.env.DEV
 const ChallengeReview = import.meta.env.DEV
   ? lazy(() => import("./dev/challengePrototype/ChallengeReview.js"))
   : null;
+const MenuReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/challengePrototype/MenuReview.js"))
+  : null;
+const ChallengeLobbyReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/challengePrototype/ChallengeLobbyReview.js"))
+  : null;
 
 type Mode =
   | "home"
@@ -131,6 +137,20 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (ChallengeLobbyReview && new URLSearchParams(window.location.search).has("challenge-lobby")) {
+    return (
+      <Suspense fallback={<p>Opening challenge lobby fixture…</p>}>
+        <ChallengeLobbyReview />
+      </Suspense>
+    );
+  }
+  if (MenuReview && new URLSearchParams(window.location.search).has("menu-preview")) {
+    return (
+      <Suspense fallback={<p>Opening menu fixture…</p>}>
+        <MenuReview />
+      </Suspense>
+    );
+  }
   if (ChallengeReview && new URLSearchParams(window.location.search).has("challenge-play")) {
     return (
       <Suspense fallback={<p>Opening challenge fixture…</p>}>

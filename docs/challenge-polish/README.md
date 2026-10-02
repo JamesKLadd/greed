@@ -85,6 +85,10 @@ will reduce surrounding content's prominence during active play.
 
 Remaining approved roadmap, delivered as independent reviewable chunks:
 
+**Checkpoint update:** [Phase 2B and 3A are implemented](phase-2b-3a/README.md).
+The next unstarted chunk is 4A. The numbered list below records the original
+scope and sequence.
+
 1. **2B — challenge entry/results/leaderboards:** primary start/resume state,
    today/week allowance distinctions, reset/closing clocks, latest weekly
    attempt versus standing best, touch-accessible stat/tiebreak explanations,

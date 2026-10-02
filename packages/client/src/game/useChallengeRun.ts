@@ -66,6 +66,8 @@ export interface ChallengeRunController {
   turn: number;
   totalTurns: number;
   finished: boolean;
+  /** Verified final position, never the stale view left by an empty recovery read. */
+  completedView: RunView | null;
   isRolling: boolean;
   rollingIndices: number[];
   /** Faces the throw in flight will land on — null when nothing is rolling. */
@@ -340,6 +342,7 @@ export function useChallengeRun(
     turn: view.turns,
     totalTurns: view.totalTurns,
     finished,
+    completedView: finished && view.complete ? view : null,
     isRolling,
     rollingIndices,
     rollingDice,

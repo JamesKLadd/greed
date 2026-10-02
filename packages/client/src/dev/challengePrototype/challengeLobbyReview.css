@@ -1,0 +1,42 @@
+.lobby-review__tools {
+  width: min(calc(100% - 32px), 680px);
+  margin: 24px auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--surface-1);
+}
+
+.lobby-review__tools summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.lobby-review__tools p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lobby-review__tools label {
+  display: grid;
+  gap: 6px;
+  margin-block: 12px;
+  font-size: 13px;
+}
+
+.lobby-review__tools select {
+  width: 100%;
+  min-height: 44px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.lobby-review__tools a {
+  display: inline-block;
+  padding: 12px;
+  min-height: 44px;
+}

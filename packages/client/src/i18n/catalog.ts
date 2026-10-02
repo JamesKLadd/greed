@@ -313,6 +313,23 @@ export const en = {
   "emote.nice": "Good move",
   "emote.aww": "Aww!",
   // Daily challenge.
+  "challenge.points": "points",
+  "challenge.dailyResult": "Your score today",
+  "challenge.retry": "Check saved challenge",
+  "challenge.starting": "Opening saved run…",
+  "challenge.standingsLive": "Current standings · places can change until the challenge closes.",
+  "challenge.weekCloses": "Weekly board closes in",
+  "challenge.attemptsReset": "Today's attempts reset in",
+  "challenge.latestAttempt": "Your latest attempt",
+  "challenge.weeklyBestStands": "Your best attempt holds your place on this week's board.",
+  "challenge.superBustsExplain": "What is a super bust?",
+  "challenge.superBustsDetail":
+    "A super bust is a bust on a full throw of five dice. It is already included in your bust count.",
+  "challenge.tiebreakExplain": "How are ties decided?",
+  "challenge.tiebreakDetail":
+    "Higher score comes first, then the higher best turn. If both match, the earlier started daily run wins the tie; weekly ties go to whoever first reached that score. Wins settle when the challenge closes.",
+  "challenge.noDailyRuns": "No finished runs are on this board yet.",
+  "challenge.countdownDays": "{days}d {clock}",
   "daily.title": "DAILY",
   "daily.tagline": "Your own dice. One run a day.",
   "daily.home": "Daily challenge",
@@ -1161,6 +1178,25 @@ export const es: Record<MsgKey, string> = {
   "emote.nice": "Buena jugada",
   "emote.aww": "¡Qué tierno!",
   // Daily challenge.
+  "challenge.points": "puntos",
+  "challenge.dailyResult": "Tu puntuación de hoy",
+  "challenge.retry": "Consultar el desafío guardado",
+  "challenge.starting": "Abriendo la partida guardada…",
+  "challenge.standingsLive":
+    "Clasificación actual · las posiciones pueden cambiar hasta el cierre del desafío.",
+  "challenge.weekCloses": "La clasificación semanal cierra en",
+  "challenge.attemptsReset": "Los intentos de hoy se renuevan en",
+  "challenge.latestAttempt": "Tu último intento",
+  "challenge.weeklyBestStands":
+    "Tu mejor intento mantiene tu posición en la clasificación de esta semana.",
+  "challenge.superBustsExplain": "¿Qué es una superpasada?",
+  "challenge.superBustsDetail":
+    "Una superpasada es una pasada al lanzar los cinco dados. Ya está incluida en el total de pasadas.",
+  "challenge.tiebreakExplain": "¿Cómo se resuelven los empates?",
+  "challenge.tiebreakDetail":
+    "Primero cuenta la mayor puntuación, después el mejor turno. Si ambos coinciden, en el diario va primero quien empezó antes; en el semanal, quien alcanzó esa puntuación antes. Las victorias se deciden al cerrar el desafío.",
+  "challenge.noDailyRuns": "Aún no hay partidas terminadas en esta clasificación.",
+  "challenge.countdownDays": "{days}d {clock}",
   "daily.title": "DIARIO",
   "daily.tagline": "Tus propios dados. Una partida al día.",
   "daily.home": "Reto diario",
@@ -1989,6 +2025,25 @@ export const fr: Record<MsgKey, string> = {
   "emote.unlucky": "Pas de chance !",
   "emote.nice": "Beau coup",
   "emote.aww": "Trop mignon !",
+  "challenge.points": "points",
+  "challenge.dailyResult": "Votre score du jour",
+  "challenge.retry": "Vérifier le défi sauvegardé",
+  "challenge.starting": "Ouverture de la partie sauvegardée…",
+  "challenge.standingsLive":
+    "Classement actuel · les places peuvent changer jusqu’à la clôture du défi.",
+  "challenge.weekCloses": "Clôture du classement hebdo dans",
+  "challenge.attemptsReset": "Nouveaux essais du jour dans",
+  "challenge.latestAttempt": "Votre dernier essai",
+  "challenge.weeklyBestStands":
+    "Votre meilleur essai conserve votre place au classement de la semaine.",
+  "challenge.superBustsExplain": "Qu’est-ce qu’un super bust ?",
+  "challenge.superBustsDetail":
+    "Un super bust est un bust sur un lancer des cinq dés. Il est déjà inclus dans le nombre total de busts.",
+  "challenge.tiebreakExplain": "Comment départager les égalités ?",
+  "challenge.tiebreakDetail":
+    "Le score le plus élevé passe devant, puis le meilleur tour. Si les deux sont égaux, le défi quotidien favorise la partie commencée en premier ; le défi hebdo favorise celui qui a atteint ce score en premier. Les victoires sont fixées à la clôture du défi.",
+  "challenge.noDailyRuns": "Aucune partie terminée dans ce classement pour le moment.",
+  "challenge.countdownDays": "{days}j {clock}",
   "daily.title": "QUOTIDIEN",
   "daily.tagline": "Vos propres dés. Une tentative par jour.",
   "daily.home": "Défi quotidien",

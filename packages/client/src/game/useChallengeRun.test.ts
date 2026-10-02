@@ -250,6 +250,7 @@ describe("challenge move presentation and synchronization", () => {
     await settle();
     const recovered = render(initial, play, resume);
     expect(recovered.finished).toBe(true);
+    expect(recovered.completedView).toBeNull();
     expect(recovered.state.players[0].total).toBe(initial.state.players[0].total);
     expect(play).toHaveBeenCalledOnce();
   });
@@ -266,6 +267,7 @@ describe("challenge move presentation and synchronization", () => {
     expect(render(initial, play).finished).toBe(false);
     vi.advanceTimersByTime(1);
     expect(render(initial, play).finished).toBe(true);
+    expect(render(initial, play).completedView).toBe(next);
   });
 
   it("keeps an ordinary bank immediate and clears the previous turn's dice", async () => {

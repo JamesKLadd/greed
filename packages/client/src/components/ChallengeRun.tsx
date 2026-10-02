@@ -2,7 +2,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { appearanceVars } from "../beta/appearance.js";
 import { GameCelebration } from "../beta/Celebration.js";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
@@ -35,7 +35,7 @@ interface ChallengeRunProps {
   /** Read the authoritative position after a response is lost; never repeat a move. */
   resumeRun?: () => Promise<RunView | null>;
   /** Called when the last turn resolves. */
-  onFinished: () => void;
+  onFinished: (final: RunView | null) => void;
 }
 
 export function ChallengeRun({
@@ -51,6 +51,7 @@ export function ChallengeRun({
   const { appearance } = useAppearance();
   const run = useChallengeRun(initial, playMove, resumeRun);
   const [holdNotice, setHoldNotice] = useState(false);
+  const reportedFinish = useRef(false);
   useEffect(() => setHoldNotice(false), [run.state]);
   // The player's equipped dice, read once for the life of the run: a skin
   // changed in the Locker mid-attempt would otherwise swap the dice underneath
@@ -93,8 +94,11 @@ export function ChallengeRun({
   // The server decides when the run is over; this only reports it upward, and
   // does it in an effect so the parent's state change isn't made during render.
   useEffect(() => {
-    if (run.finished) onFinished();
-  }, [run.finished, onFinished]);
+    if (run.finished && !reportedFinish.current) {
+      reportedFinish.current = true;
+      onFinished(run.completedView);
+    }
+  }, [run.finished, run.completedView, onFinished]);
 
   return (
     <div
