@@ -25,4 +25,6 @@
 @import "./styles/support-settings-stats.css";
 @import "./styles/support-account-friends.css";
 @import "./styles/support-locker.css";
+@import "./styles/material-polish.css";
+@import "./styles/cast-reactions.css";
 @import "./styles/a11y.css";

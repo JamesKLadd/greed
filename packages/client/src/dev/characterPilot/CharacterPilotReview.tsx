@@ -31,9 +31,10 @@ export default function CharacterPilotReview() {
       <p>
         A friendly game-night host: sharp ears, a cream muzzle and tail tip, an emerald jacket and
         gold trim. This pilot preserves the seated canvas and table positions. The other five
-        characters keep their current art until the fox direction is approved.
+        characters now follow the approved pilot in the full cast review.
       </p>
       <p>
+        <a href="?cast-review">Review the complete cast and materials</a>
         <a href="?table-preview&scene&players=8">Review on the eight-player table</a>
         <a href="?table-preview&scene&players=4">Review on the four-player table</a>
         <a href="?table-preview&art-review">Image replacement and fallback review</a>

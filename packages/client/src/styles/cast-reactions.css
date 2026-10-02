@@ -1,0 +1,74 @@
+/* Finite reactions use existing bank/bust events and move only decorative art. */
+:root[data-presentation="beta"] .scene-game .character-sprite {
+  transform-origin: 50% 80%;
+}
+:root[data-presentation="beta"]
+  .scene-game
+  [data-reaction="bank"]
+  .character-sprite[data-character="bear"] {
+  animation-name: cast-bear-cheer;
+}
+:root[data-presentation="beta"]
+  .scene-game
+  [data-reaction="bank"]
+  .character-sprite[data-character="panda"] {
+  animation-name: cast-panda-cheer;
+}
+:root[data-presentation="beta"]
+  .scene-game
+  [data-reaction="bank"]
+  .character-sprite[data-character="cat"] {
+  animation-name: cast-cat-cheer;
+}
+:root[data-presentation="beta"]
+  .scene-game
+  [data-reaction="bank"]
+  .character-sprite[data-character="owl"] {
+  animation-name: cast-owl-cheer;
+}
+:root[data-presentation="beta"]
+  .scene-game
+  [data-reaction="bank"]
+  .character-sprite[data-character="frog"] {
+  animation-name: cast-frog-cheer;
+}
+@keyframes cast-bear-cheer {
+  45% {
+    transform: translateY(-2px) scaleY(1.015);
+  }
+}
+@keyframes cast-panda-cheer {
+  30% {
+    transform: rotate(-0.8deg);
+  }
+  65% {
+    transform: rotate(0.8deg);
+  }
+}
+@keyframes cast-cat-cheer {
+  45% {
+    transform: translateY(-1px) rotate(-1deg);
+  }
+}
+@keyframes cast-owl-cheer {
+  45% {
+    transform: translateY(2px) scaleY(0.99);
+  }
+}
+@keyframes cast-frog-cheer {
+  35% {
+    transform: translateY(-3px);
+  }
+  65% {
+    transform: translateY(-1px);
+  }
+}
+/* Scores and names still communicate the result when movement is disabled. */
+:root[data-motion="reduced"] .scene-game .character-sprite {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-game .character-sprite {
+    animation: none !important;
+  }
+}

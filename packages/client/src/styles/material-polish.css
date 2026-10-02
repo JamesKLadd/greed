@@ -1,0 +1,208 @@
+/* Static material lighting only. TableSceneGeometry still owns every seat,
+   rail outline and dice/control bound; no extra layer sits above table text. */
+:root[data-presentation="beta"] .tp-room-light {
+  background: radial-gradient(ellipse, #ffe8be70, transparent 68%);
+  filter: none;
+  opacity: 0.15;
+}
+
+/* The SVG already supplies the lamp-to-edge depth and the cloth weave. Keep
+   those inexpensive fills and derive the rail from the equipped theme rather
+   than painting the same green rail around every blue, purple or red table. */
+:root[data-presentation="beta"] .tp-surface__rail-gradient > stop {
+  stop-color: var(--rail-1);
+}
+:root[data-presentation="beta"] .tp-surface__rail-gradient > stop:first-child {
+  stop-color: color-mix(in srgb, var(--rail-1) 70%, #fff2cd);
+}
+:root[data-presentation="beta"] .tp-surface__rail-gradient > stop:nth-child(2) {
+  stop-color: var(--rail-2);
+}
+:root[data-presentation="beta"] .tp-surface__rail-gradient > stop:nth-child(3) {
+  stop-color: color-mix(in srgb, var(--rail-2) 70%, #080d12);
+}
+:root[data-presentation="beta"] .tp-surface__rail-gradient > stop:last-child {
+  stop-color: color-mix(in srgb, var(--rail-1) 76%, #fff2cd);
+}
+:root[data-presentation="beta"] .tp-surface__rail {
+  stroke: color-mix(in srgb, var(--rail-1) 55%, #eed7a5);
+}
+:root[data-presentation="beta"] .tp-surface__felt-gradient > stop:first-child {
+  stop-color: var(--felt-1);
+  stop-color: color-mix(in srgb, var(--felt-1) 95%, #fff4d6);
+}
+:root[data-presentation="beta"] .tp-surface__felt {
+  stroke: color-mix(in srgb, var(--rail-1) 48%, #ffe8b5);
+  stroke-opacity: 0.62;
+}
+:root[data-presentation="beta"] .tp-surface__weave-pattern > path {
+  fill: #fff;
+  opacity: 0.055;
+}
+:root[data-presentation="beta"] .tp-surface__seam {
+  stroke: color-mix(in srgb, var(--felt-1) 70%, #fff1c7);
+  stroke-opacity: 0.28;
+}
+
+/* Keep the same material family in the locker and the smaller challenge mat.
+   Their existing border widths, corners and spacing are deliberately retained. */
+:root[data-presentation="beta"] .beta-look-stage,
+:root[data-presentation="beta"] .beta-collection-card__art--table {
+  border-color: var(--rail-2);
+}
+:root[data-presentation="beta"] .beta-look-stage {
+  outline-color: color-mix(in srgb, var(--rail-1) 55%, #edd8ac);
+  box-shadow:
+    inset 0 1px 0 #ffffff14,
+    inset 0 0 32px #0007,
+    0 12px 24px #0005;
+}
+:root[data-presentation="beta"] .daily__run {
+  border-color: color-mix(in srgb, var(--rail-1) 60%, #e9d4a4);
+  background: radial-gradient(
+    ellipse at 50% 12%,
+    var(--felt-1),
+    var(--felt-2) 70%,
+    var(--felt-edge)
+  );
+  box-shadow:
+    inset 0 1px 0 #ffffff12,
+    inset 0 -10px 22px #0002;
+}
+:root[data-presentation="beta"] .felt {
+  background:
+    repeating-linear-gradient(45deg, #ffffff03 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 32%, var(--felt-1), var(--felt-2) 70%, var(--felt-edge));
+}
+
+/* All bevels and pip recesses scale with the die, including 18px history dice.
+   Patterns stay behind the existing pip layer. The scoring face keeps its
+   separate palette, including the gold skin's dark inversion. */
+:root[data-presentation="beta"] .die__side {
+  box-shadow:
+    inset 0 0 0 0.025em #ffffff36,
+    inset 0 0.035em 0.055em #ffffff4d,
+    inset 0 -0.055em 0.08em var(--die-lip);
+}
+:root[data-presentation="beta"] .die:not(.die--locked) .die__side,
+:root[data-presentation="beta"] .die--locked .die__side:not(.die__side--up) {
+  background:
+    radial-gradient(100% 85% at 28% 12%, #ffffff38, transparent 56%),
+    linear-gradient(155deg, var(--die-c1), var(--die-c2) 66%, var(--die-c3));
+}
+:root[data-presentation="beta"] .die__side::after {
+  opacity: 0.4;
+}
+:root[data-presentation="beta"] .die--locked .die__side--up::after {
+  opacity: 0.12;
+}
+:root[data-presentation="beta"] .die:not(.die--3d):not(.die--locked) {
+  background:
+    radial-gradient(100% 85% at 28% 12%, #ffffff38, transparent 56%),
+    linear-gradient(155deg, var(--die-c1), var(--die-c2) 66%, var(--die-c3));
+}
+:root[data-presentation="beta"] .die--locked:not(.die--3d) .die__face {
+  background-image: none;
+}
+:root[data-presentation="beta"] .die:not(.die--rolling) .pip--on {
+  box-shadow:
+    inset 0 0.018em 0.035em #0008,
+    0 0.012em 0 #ffffff66;
+}
+:root[data-presentation="beta"] .die--3d.die--locked .die__side--up {
+  box-shadow:
+    inset 0 0 0 0.04em #ffffff66,
+    inset 0 0.035em 0.055em #ffffff59,
+    inset 0 -0.055em 0.08em var(--score-lip),
+    0 0 0.24em color-mix(in srgb, var(--score-2) 38%, transparent);
+}
+:root[data-presentation="beta"] .die__held-marker {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #d0ffe580,
+    0 1px 2px #0009;
+}
+
+/* Texture is decoration. The explicit high-contrast setting removes it and
+   strengthens edges while retaining the non-color held check and its depth. */
+:root[data-presentation="beta"][data-contrast="high"] .tp-surface__weave,
+:root[data-presentation="beta"][data-contrast="high"] .tp-room-light {
+  opacity: 0;
+}
+:root[data-presentation="beta"][data-contrast="high"] .tp-surface__felt {
+  stroke: #fff;
+  stroke-opacity: 0.65;
+}
+:root[data-presentation="beta"][data-contrast="high"] .tp-surface__seam {
+  stroke-opacity: 0;
+}
+:root[data-presentation="beta"][data-contrast="high"] .die__side::after {
+  opacity: 0;
+}
+:root[data-presentation="beta"][data-contrast="high"] .die:not(.die--3d) .die__face {
+  background-image: none;
+}
+:root[data-presentation="beta"][data-contrast="high"] .die__side {
+  box-shadow: inset 0 0 0 0.025em var(--die-pip);
+}
+:root[data-presentation="beta"][data-contrast="high"] .die--3d.die--locked .die__side--up {
+  box-shadow: inset 0 0 0 0.035em var(--score-pip);
+}
+:root[data-presentation="beta"][data-contrast="high"] .die__held-marker {
+  background: #081019;
+  color: #fff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* These additions have no motion. Existing roll/hold transitions keep obeying
+   the app's reduced-motion settings; forced colors gets readable flat fills. */
+@media (forced-colors: active) {
+  :root[data-presentation="beta"] .tp-surface__weave,
+  :root[data-presentation="beta"] .tp-room-light {
+    opacity: 0;
+  }
+  :root[data-presentation="beta"] .tp-surface .tp-surface__rail,
+  :root[data-presentation="beta"] .tp-surface .tp-surface__felt {
+    fill: Canvas;
+    stroke: CanvasText;
+    stroke-opacity: 1;
+  }
+  :root[data-presentation="beta"] .tp-surface__seam {
+    stroke-opacity: 0;
+  }
+  :root[data-presentation="beta"] .die:not(.die--locked) .die__side,
+  :root[data-presentation="beta"] .die--locked .die__side:not(.die__side--up),
+  :root[data-presentation="beta"] .die:not(.die--3d):not(.die--locked) {
+    forced-color-adjust: none;
+    background: Canvas;
+    box-shadow: inset 0 0 0 1px CanvasText;
+  }
+  :root[data-presentation="beta"] .die__side::after {
+    opacity: 0;
+  }
+  :root[data-presentation="beta"] .die:not(.die--3d) .die__face {
+    background-image: none;
+  }
+  :root[data-presentation="beta"] .die .pip--on,
+  :root[data-presentation="beta"] .die:not(.die--rolling) .pip--on {
+    background: CanvasText;
+    box-shadow: none;
+  }
+  :root[data-presentation="beta"] .die--locked:not(.die--3d),
+  :root[data-presentation="beta"] .die.die--3d.die--locked .die__side--up {
+    forced-color-adjust: none;
+    background: Highlight;
+    box-shadow: inset 0 0 0 1px HighlightText;
+  }
+  :root[data-presentation="beta"] .die--locked:not(.die--3d) .pip--on,
+  :root[data-presentation="beta"] .die--3d.die--locked .die__side--up .pip--on {
+    background: HighlightText;
+    box-shadow: none;
+  }
+  :root[data-presentation="beta"] .die .die__held-marker {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: 0 0 0 1px CanvasText;
+  }
+}

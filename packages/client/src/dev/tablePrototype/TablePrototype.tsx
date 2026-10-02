@@ -6,6 +6,9 @@ import { TableScene, type ScenePlayer } from "../../beta/TableScene.js";
 import { SCENE_COUNTS, type SceneCount } from "../../beta/tableSceneGeometry.js";
 import "./tablePrototype.css";
 import CharacterArtReview from "./CharacterArtReview.js";
+import { appearanceVars, type Appearance } from "../../beta/appearance.js";
+import type { TableFeedback } from "../../beta/tableFeedback.js";
+import type { CharacterKind } from "../../beta/characters/manifest.js";
 
 type Count = SceneCount;
 type EventSample = "hot" | "triple" | "none";
@@ -39,13 +42,18 @@ function sceneUrl(
   return `?table-preview&scene&players=${count}&event=${event}${held ? "&held" : ""}&anchor=${anchor}${stress ? "&stress" : ""}${spectator ? "&spectator" : ""}`;
 }
 
-function Scene({
+export function Scene({
   count,
   event,
   held,
   anchor,
   stress,
   spectator,
+  look,
+  characters,
+  feedback,
+  onMenu,
+  backHref = "?table-preview",
 }: {
   count: Count;
   event: EventSample;
@@ -53,10 +61,16 @@ function Scene({
   anchor: number;
   stress: boolean;
   spectator: boolean;
+  look?: Appearance;
+  characters?: readonly CharacterKind[];
+  feedback?: TableFeedback;
+  onMenu?: () => void;
+  backHref?: string;
 }) {
   const [detail, setDetail] = useState<Seat | "menu" | null>(null);
   const seats: ScenePlayer[] = PEOPLE.slice(0, count).map((p, i) => ({
     ...p,
+    characterId: characters?.[i % characters.length] ?? p.characterId,
     id: String(i),
     name: stress ? p.name + " the Magnificent" : p.name,
     score: stress ? 123450 + i * 50 : p.score,
@@ -64,14 +78,12 @@ function Scene({
   const sampleDice: DieValue[] = event === "triple" ? [3, 3, 3, 2, 4] : [1, 2, 3, 4, 5];
   const atStake = event === "triple" ? 300 : 500;
   return (
-    <main className={`tp-screen tp-count-${count}`}>
+    <main
+      className={`tp-screen tp-count-${count}${look ? " scene-game" : ""}`}
+      style={look ? appearanceVars(look) : undefined}
+    >
       <header className="tp-header">
-        <a
-          href="?table-preview"
-          target="_top"
-          aria-label="Back to table review"
-          className="tp-icon"
-        >
+        <a href={backHref} target="_top" aria-label="Back to table review" className="tp-icon">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m14 5-7 7 7 7M7 12h14" />
           </svg>
@@ -83,7 +95,7 @@ function Scene({
           type="button"
           aria-label="Open table menu preview"
           className="tp-icon"
-          onClick={() => setDetail("menu")}
+          onClick={() => (onMenu ? onMenu() : setDetail("menu"))}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h16M4 12h16M4 18h16" />
@@ -96,6 +108,7 @@ function Scene({
         perspectiveId={seats[anchor]?.id}
         viewerId={spectator ? undefined : seats[anchor]?.id}
         onPlayerDetails={setDetail}
+        {...feedback}
       >
         <div
           className={`tp-event tp-event--${event}`}
@@ -216,7 +229,7 @@ export default function TablePrototype() {
   const [held, setHeld] = useState(params.has("held"));
   const [size, setSize] = useState(0);
   const [anchor, setAnchor] = useState(
-    Math.max(0, Math.min(count - 1, Number(params.get("anchor")) || 0)),
+    Math.max(0, Math.min(count - 1, Math.trunc(Number(params.get("anchor")) || 0))),
   );
   const [stress, setStress] = useState(params.has("stress"));
   const [spectator, setSpectator] = useState(params.has("spectator"));

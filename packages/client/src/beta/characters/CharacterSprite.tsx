@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { CharacterPlaceholder } from "./CharacterPlaceholder.js";
 import { FoxCharacter } from "./FoxCharacter.js";
+import { BearCharacter, PandaCharacter } from "./BearPandaArtwork.js";
+import { CatCharacter, OwlCharacter, FrogCharacter } from "./CatOwlFrogArtwork.js";
 import { loadCharacterImage, type LoadedCharacterImage } from "./loadCharacterImage.js";
 import {
   CHARACTER_CANVAS,
@@ -30,6 +31,14 @@ export function CharacterSprite({
   art,
 }: CharacterSpriteProps) {
   const kind = getCharacterKind(characterId);
+  const SeatedCharacter = {
+    fox: FoxCharacter,
+    bear: BearCharacter,
+    panda: PandaCharacter,
+    cat: CatCharacter,
+    owl: OwlCharacter,
+    frog: FrogCharacter,
+  }[kind];
   const selectedArt = art ?? getCharacterArt(characterId, view);
   const src = isCharacterArt(selectedArt) ? selectedArt.src : undefined;
   const [loadedImage, setLoadedImage] = useState<LoadedCharacterImage | null>(null);
@@ -62,10 +71,8 @@ export function CharacterSprite({
             preserveAspectRatio="none"
             onError={() => setLoadedImage(null)}
           />
-        ) : kind === "fox" ? (
-          <FoxCharacter view={view} />
         ) : (
-          <CharacterPlaceholder kind={kind} view={view} />
+          <SeatedCharacter view={view} />
         )}
       </g>
     </svg>

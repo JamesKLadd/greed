@@ -87,9 +87,10 @@ Remaining approved roadmap, delivered as independent reviewable chunks:
 
 **Checkpoint update:** [Phase 2B and 3A are implemented](phase-2b-3a/README.md),
 followed by [Phase 4A and 4B](phase-4a-4b/README.md) and
-[Phase 3B and 5A](phase-3b-5a/README.md). Review the fox pilot before the next
-unstarted chunk, 5B/5C. The numbered list below records the original scope and
-sequence.
+[Phase 3B and 5A](phase-3b-5a/README.md). The fox pilot was approved and
+[Phase 5B and 5C](phase-5b-5c/README.md) are now implemented. The remaining
+chunk is Phase 6: real-phone validation and release preparation. The numbered
+list below records the original scope and sequence.
 
 1. **2B — challenge entry/results/leaderboards:** primary start/resume state,
    today/week allowance distinctions, reset/closing clocks, latest weekly

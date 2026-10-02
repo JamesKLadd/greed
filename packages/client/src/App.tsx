@@ -48,6 +48,9 @@ const PolishReview = import.meta.env.DEV
 const CharacterPilotReview = import.meta.env.DEV
   ? lazy(() => import("./dev/characterPilot/CharacterPilotReview.js"))
   : null;
+const CastReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/characterPilot/CastReview.js"))
+  : null;
 const SupportReview = import.meta.env.DEV
   ? lazy(() => import("./dev/supportReview/SupportReview.js"))
   : null;
@@ -150,6 +153,13 @@ export function App() {
     return (
       <Suspense fallback={<p>Opening supporting-screen review…</p>}>
         <SupportReview />
+      </Suspense>
+    );
+  }
+  if (CastReview && new URLSearchParams(window.location.search).has("cast-review")) {
+    return (
+      <Suspense fallback={<p>Opening cast and material review…</p>}>
+        <CastReview />
       </Suspense>
     );
   }

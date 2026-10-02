@@ -121,10 +121,10 @@ The sample-data warning above supporting views is development-only.
 
 ## Resume here
 
-Review the fox style before expanding to **5B/5C — remaining cast and material
-refinement**: distinct mascot silhouettes, matching portraits, restrained
-reactions, felt/rail/dice polish and readable cosmetic effects. Preserve the
-current table layout and replaceable art contracts.
+The fox style was approved, and **[5B/5C — remaining cast and material
+refinement](../phase-5b-5c/README.md)** is now implemented: distinct mascot
+silhouettes, matching portraits, restrained reactions and felt/rail/dice polish,
+preserving the current table layout and replaceable art contracts.
 
 After that, **6 — real-phone validation** covers touch, browser chrome,
 keyboard, audio, backgrounding/reconnect, screen readers, animation frame times

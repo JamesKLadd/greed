@@ -1,0 +1,151 @@
+.cast-review {
+  min-height: 100dvh;
+  padding: 24px;
+  color: var(--text);
+  background: var(--surface-2);
+}
+.cast-review a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-right: 20px;
+  color: var(--accent);
+}
+.cast-review h1 {
+  font-size: clamp(24px, 4vw, 36px);
+}
+.cast-review__lineup,
+.cast-review__materials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.cast-review article {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--surface-1);
+}
+.cast-review__lineup article {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 10px;
+}
+.cast-review__lineup .beta-portrait {
+  width: 68px;
+  height: 68px;
+}
+.cast-review__lineup .beta-portrait svg {
+  width: 100%;
+  height: 100%;
+}
+.cast-review__lineup article > svg {
+  width: 110px;
+  height: 147px;
+}
+.cast-review__lineup h2 {
+  margin: 0;
+  font-size: 18px;
+  text-transform: capitalize;
+}
+.cast-review__lineup p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.cast-review__select,
+.cast-review__controls label {
+  display: grid;
+  gap: 8px;
+}
+.cast-review select,
+.cast-review__controls select {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.cast-review__select {
+  max-width: 360px;
+  margin: 32px 0 16px;
+}
+.cast-review__views {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.cast-review__views h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.cast-review__views article > svg {
+  display: block;
+  width: 140px;
+  height: 187px;
+  margin: 0 auto 20px;
+}
+.cast-review__sizes {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+}
+.cast-review figure {
+  margin: 0;
+  flex-shrink: 0;
+}
+.cast-review__sizes svg {
+  width: 100%;
+  display: block;
+  aspect-ratio: 3/4;
+}
+.cast-review figcaption {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.cast-review__dice {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+}
+.cast-review__materials h3 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+}
+.cast-review__surface {
+  height: 170px;
+  position: relative;
+}
+.cast-review__controls {
+  display: grid;
+  gap: 16px;
+}
+.cast-review__controls .btn {
+  min-height: 44px;
+  white-space: normal;
+}
+.cast-review :is(button, select, a):focus-visible,
+.cast-review__controls :is(button, select):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 380px) {
+  .cast-review {
+    padding: 16px;
+  }
+  .cast-review article {
+    padding: 12px;
+  }
+}
