@@ -1,5 +1,11 @@
 # Phase 6 — reliability, loading and mobile readiness
 
+**Promotion update:** the user authorized pushing the completed design to main
+as the default. The [promotion checkpoint](promotion/README.md) records the new
+public toggle, equipment behavior, validation, deployment and rollback. The
+notes below preserve the earlier password-gated checkpoint. Hardware checks
+remain unverified.
+
 The final implementation checkpoint improves loading, offline updates, audio
 after backgrounding, saved preferences and short-screen dialogs. The approved
 table composition, character anchors, rules, challenge allowances, earned

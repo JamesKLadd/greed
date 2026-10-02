@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
 import type { Profile } from "../game/profile.js";
-import { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES } from "@greed/protocol";
+import { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES, cleanBetaIdentity } from "@greed/protocol";
 export { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES };
 
 export const APPEARANCE_KEY = "greed:visual-beta:appearance:v1";
@@ -59,12 +59,45 @@ export function writeAppearance(storage: Pick<Storage, "setItem">, value: Appear
 }
 export function canEquipAppearance(a: Appearance, p: Profile): boolean {
   return (
-    (SAMPLE_DICE.includes(a.dice as (typeof SAMPLE_DICE)[number]) ||
-      DICE_SKINS.some((c) => c.id === a.dice && isUnlocked(c, p))) &&
-    (SAMPLE_TABLES.includes(a.table as (typeof SAMPLE_TABLES)[number]) ||
-      TABLE_THEMES.some((c) => c.id === a.table && isUnlocked(c, p))) &&
+    a.version === 1 &&
+    (a.dice === "house" || DICE_SKINS.some((c) => c.id === a.dice && isUnlocked(c, p))) &&
+    (a.table === "club" || TABLE_THEMES.some((c) => c.id === a.table && isUnlocked(c, p))) &&
+    MASCOTS.includes(a.mascot as (typeof MASCOTS)[number]) &&
+    FRAMES.includes(a.frame as (typeof FRAMES)[number]) &&
+    BACKGROUNDS.includes(a.background as (typeof BACKGROUNDS)[number]) &&
+    NAMEPLATES.includes(a.nameplate as (typeof NAMEPLATES)[number]) &&
     (!a.badge || p.achievements.includes(a.badge))
   );
+}
+
+/**
+ * Account equipment wins over the former session samples. Keep portrait choices,
+ * but never turn a preview into an earned cosmetic or change progression on load.
+ */
+export function resolveEquippedAppearance(
+  p: Profile,
+  previous: Appearance = DEFAULT_APPEARANCE,
+): Appearance {
+  const identity = normalizeAppearance({ ...previous, ...p.visualBeta });
+  const dice = DICE_SKINS.find((c) => c.id === p.dice);
+  const table = TABLE_THEMES.find((c) => c.id === p.table);
+  return {
+    ...identity,
+    dice: dice && dice.id !== "ivory" && isUnlocked(dice, p) ? dice.id : "house",
+    table: table && table.id !== "classic" && isUnlocked(table, p) ? table.id : "club",
+    badge: p.achievements.includes(identity.badge) ? identity.badge : "",
+  };
+}
+
+/** Validate the entire selection before producing a profile for the equip action. */
+export function profileWithAppearance(a: Appearance, p: Profile): Profile | null {
+  if (!canEquipAppearance(a, p)) return null;
+  return {
+    ...p,
+    dice: a.dice === "house" ? "ivory" : a.dice,
+    table: a.table === "club" ? "classic" : a.table,
+    visualBeta: cleanBetaIdentity(a),
+  };
 }
 export function appearanceVars(a: Appearance): CSSProperties {
   const dice = DICE_SKINS.find((c) => c.id === a.dice)?.vars ?? {

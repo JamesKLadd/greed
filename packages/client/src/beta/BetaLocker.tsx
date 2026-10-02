@@ -84,9 +84,9 @@ export function BetaLockerView({
   const label = (id: string) => t(`beta.look.${id}` as MsgKey);
   const items =
     category === "dice"
-      ? [...SAMPLE_DICE, ...DICE_SKINS.map((c) => c.id)]
+      ? [...SAMPLE_DICE, ...DICE_SKINS.filter((c) => c.id !== "ivory").map((c) => c.id)]
       : category === "table"
-        ? [...SAMPLE_TABLES, ...TABLE_THEMES.map((c) => c.id)]
+        ? [...SAMPLE_TABLES, ...TABLE_THEMES.filter((c) => c.id !== "classic").map((c) => c.id)]
         : category === "mascot"
           ? [...MASCOTS]
           : category === "frame"
@@ -126,7 +126,6 @@ export function BetaLockerView({
           {t("bar.home")}
         </button>
         <Brand compact />
-        <span className="beta-pill">{t("beta.label")}</span>
       </header>
       <div className="beta-section-heading">
         <span>{t("beta.locker.studio")}</span>
@@ -216,7 +215,7 @@ export function BetaLockerView({
                 ? "beta.locker.locked"
                 : saved
                   ? "beta.locker.savedNote"
-                  : "beta.locker.temporary",
+                  : "beta.locker.equipmentNote",
             )}
           </p>
         </section>

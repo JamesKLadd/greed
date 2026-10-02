@@ -26,19 +26,9 @@ const betaLook = cleanBetaLook({
 describe("online table presentation ownership", () => {
   it("uses the throwing player's dice while keeping the viewer's table", () => {
     const viewer = { ...DEFAULT_APPEARANCE, table: "afterhours", dice: "volcanic" };
-    const beta = onlineAppearance(
-      viewer,
-      "beta",
-      { beta: "ivory", classic: "gold" },
-      { beta: betaLook },
-    );
-    const classic = onlineAppearance(
-      viewer,
-      "classic",
-      { beta: "ivory", classic: "gold" },
-      { beta: betaLook },
-    );
-    expect(beta.dice).toBe("circuit");
+    const beta = onlineAppearance(viewer, "beta", { beta: "ivory", classic: "gold" });
+    const classic = onlineAppearance(viewer, "classic", { beta: "ivory", classic: "gold" });
+    expect(beta.dice).toBe("house");
     expect(classic.dice).toBe("gold");
     expect(beta.table).toBe("afterhours");
     expect(classic.table).toBe("afterhours");
@@ -49,7 +39,7 @@ describe("online table presentation ownership", () => {
   });
 
   it("survives old snapshots and unknown appearance ids without copying the viewer's dice", () => {
-    expect(onlineAppearance(DEFAULT_APPEARANCE, "old").dice).toBe("ivory");
+    expect(onlineAppearance(DEFAULT_APPEARANCE, "old").dice).toBe("house");
     const missing = onlineScenePlayers(game());
     expect(missing.map((p) => p.id)).toEqual(["beta", "classic", "bot"]);
     expect(missing.every((p) => p.connected && Boolean(p.characterId))).toBe(true);
@@ -62,6 +52,18 @@ describe("online table presentation ownership", () => {
     );
     expect(future[0].look.mascot).toBe("fox");
     expect(future[0].look.frame).toBe("brass");
+  });
+
+  it("ignores sample and unknown skin ids from older snapshots", () => {
+    const viewer = { ...DEFAULT_APPEARANCE, dice: "volcanic", table: "afterhours" };
+    for (const skin of ["circuit", "volcanic", "future-skin"]) {
+      expect(onlineAppearance(viewer, "old", { old: skin })).toMatchObject({
+        dice: "house",
+        table: "afterhours",
+      });
+    }
+    expect(onlineAppearance(viewer, "current", { current: "gold" }).dice).toBe("gold");
+    expect(viewer.dice).toBe("volcanic");
   });
 
   it("keeps per-player art, names and details identical for every viewing seat", () => {

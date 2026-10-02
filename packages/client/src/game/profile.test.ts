@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameState } from "@greed/core";
 import { BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 import {
@@ -7,12 +7,14 @@ import {
   averageBank,
   awardAchievement,
   DAILY_STREAK_BADGES,
+  equipCosmetic,
   loadProfile,
   maxAchievementScore,
   raiseBestTurn,
   setDailyWins,
   setWeeklyWins,
   recordGame,
+  replaceProfile,
   summarize,
   TIER_POINTS,
   type GameSummary,
@@ -38,6 +40,23 @@ class MemStore {
 
 beforeEach(() => {
   (globalThis as unknown as { localStorage: MemStore }).localStorage = new MemStore();
+});
+
+afterEach(() => vi.unstubAllGlobals());
+
+it("notifies the mounted new-look provider after Classic equipment is saved", () => {
+  const events = new EventTarget();
+  vi.stubGlobal("window", events);
+  const before = { ...loadProfile(), gamesPlayed: 9, wins: 3, achievements: ["high-roller"] };
+  replaceProfile(before);
+  const observer = vi.fn(() => loadProfile());
+  events.addEventListener("greed:profile-changed", observer);
+
+  const equipped = equipCosmetic("dice", "gold");
+
+  expect(observer).toHaveBeenCalledTimes(1);
+  expect(observer.mock.results[0].value).toEqual(equipped);
+  expect(loadProfile()).toEqual({ ...before, dice: "gold", visualBeta: undefined });
 });
 
 /** A hand-built game state exercising just the fields summarize reads. */

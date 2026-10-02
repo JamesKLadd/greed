@@ -90,10 +90,11 @@ followed by [Phase 4A and 4B](phase-4a-4b/README.md) and
 [Phase 3B and 5A](phase-3b-5a/README.md). The fox pilot was approved and
 [Phase 5B and 5C](phase-5b-5c/README.md) are now implemented. The final
 [Phase 6 implementation checkpoint](phase-6/README.md) adds loading/recovery,
-offline-update, audio-lifecycle and short-screen fixes. Real-phone sign-off and
-the separately approved beta/default release remain pending; the Phase 6 notes
-contain the device checklist and rollback preparation. The numbered list below
-records the original scope and sequence.
+offline-update, audio-lifecycle and short-screen fixes. The user has approved
+[promoting the design to the default and deploying main](phase-6/promotion/README.md).
+Real-phone checks remain explicitly unverified; the Phase 6 notes contain the
+device checklist and rollback preparation. The numbered list below records
+the original scope and sequence.
 
 1. **2B — challenge entry/results/leaderboards:** primary start/resume state,
    today/week allowance distinctions, reset/closing clocks, latest weekly

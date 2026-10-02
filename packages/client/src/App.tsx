@@ -112,7 +112,7 @@ export function App() {
   const [mode, setMode] = useState<Mode>("home");
   const [match, setMatch] = useState<MatchSetup | null>(null);
   const beta = useBeta();
-  // All game modes share the opt-in presentation; controllers remain shared.
+  // All game modes share the default presentation or the chosen Classic fallback.
   const betaActive = beta.enabled;
   useEffect(() => {
     if (betaActive) window.scrollTo({ top: 0, left: 0 });

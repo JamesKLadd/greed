@@ -50,7 +50,7 @@ export function OnlineGameScreen({
   const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
   const classicCosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
   const cosmetics = beta
-    ? appearanceVars(onlineAppearance(appearance, current.id, net.skins, net.betaLooks))
+    ? appearanceVars(onlineAppearance(appearance, current.id, net.skins))
     : classicCosmetics;
 
   const chrome = useGameChrome({

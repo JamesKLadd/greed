@@ -1,17 +1,21 @@
 import type { GameState } from "@greed/core";
 import type { BetaLook } from "@greed/protocol";
 import { DEFAULT_APPEARANCE, MASCOTS, normalizeAppearance, type Appearance } from "./appearance.js";
+import { DICE_SKINS } from "../game/cosmetics.js";
 
 /** A viewer's table stays put; only the active player's dice travel between turns. */
 export function onlineAppearance(
   viewer: Appearance,
   activeId: string,
   skins: Record<string, string> = {},
-  looks: Record<string, BetaLook> = {},
 ): Appearance {
+  // Session-only beta samples are previews after promotion. The actual equipped
+  // catalog skin stays authoritative, including while old clients are connected.
+  const saved = skins[activeId];
+  const skin = DICE_SKINS.some((item) => item.id === saved) ? saved : "ivory";
   return normalizeAppearance({
     ...viewer,
-    dice: looks[activeId]?.dice ?? skins[activeId] ?? "ivory",
+    dice: skin === "ivory" ? "house" : skin,
   });
 }
 

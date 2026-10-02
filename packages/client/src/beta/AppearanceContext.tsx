@@ -1,11 +1,11 @@
 import { loadProfile, replaceProfile } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
-import { cleanBetaIdentity } from "@greed/protocol";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   DEFAULT_APPEARANCE,
-  normalizeAppearance,
+  profileWithAppearance,
   readAppearance,
+  resolveEquippedAppearance,
   writeAppearance,
   type Appearance,
 } from "./appearance.js";
@@ -15,13 +15,13 @@ export const useAppearance = () => useContext(Context);
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [appearance, setAppearance] = useState(() => {
     try {
-      return { ...readAppearance(sessionStorage), ...loadProfile().visualBeta };
+      return resolveEquippedAppearance(loadProfile(), readAppearance(sessionStorage));
     } catch {
-      return DEFAULT_APPEARANCE;
+      return resolveEquippedAppearance(loadProfile());
     }
   });
   useEffect(() => {
-    const update = () => setAppearance((a) => ({ ...a, ...loadProfile().visualBeta }));
+    const update = () => setAppearance((a) => resolveEquippedAppearance(loadProfile(), a));
     const reset = () => {
       setAppearance(DEFAULT_APPEARANCE);
       try {
@@ -38,10 +38,11 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const equip = (a: Appearance) => {
-    const clean = normalizeAppearance(a);
+    const profile = profileWithAppearance(a, loadProfile());
+    if (!profile) return;
+    const clean = resolveEquippedAppearance(profile, a);
     setAppearance(clean);
-    const profile = loadProfile();
-    replaceProfile({ ...profile, visualBeta: cleanBetaIdentity(clean) });
+    replaceProfile(profile);
     void syncProfileUp();
     try {
       writeAppearance(sessionStorage, clean);

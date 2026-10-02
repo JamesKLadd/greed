@@ -581,6 +581,8 @@ export function equipCosmetic(kind: "dice" | "table" | "avatar", id: string): Pr
   const p = loadProfile();
   p[kind] = id;
   saveProfile(p);
+  // The new-look provider stays mounted while Classic equipment is changed.
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("greed:profile-changed"));
   return p;
 }
 

@@ -2,7 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { translate } from "../i18n/translate.js";
 import type { MsgKey } from "../i18n/catalog.js";
 import { loadLocale } from "../i18n/i18n.js";
-import { BETA_SESSION_KEY } from "../beta/access.js";
+import { writeBrowserPresentation } from "../beta/access.js";
 
 interface Props {
   children: ReactNode;
@@ -55,12 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 className="btn btn--bank"
                 onClick={() => {
-                  try {
-                    sessionStorage.removeItem(BETA_SESSION_KEY);
-                  } catch {
-                    /* reload resets in-memory access */
-                  }
-                  location.reload();
+                  location.replace(writeBrowserPresentation(false));
                 }}
               >
                 {crashT("beta.recover")}

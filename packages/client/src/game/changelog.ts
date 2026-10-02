@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-10-02",
+    notes: [
+      "Greed's new visual design is now the default: a memorable logo, casino-inspired colors, larger menu buttons, and illustrated characters around the table. Return to Classic is still available from the main menu, and switching back no longer needs a password",
+      "Redesigned Daily and Weekly Challenge screens with clearer start and resume actions, turn and score displays, attempt allowances, results, and leaderboard details. Celebration popups stay out of challenge play",
+      "Improved the existing table layout with clearer active turns, banked and at-risk scores, held-dice markers, final-round flags, online connection notices, and player details",
+      "Added distinct fox, bear, panda, cat, owl, and frog artwork with matching profile portraits, brief character reactions, and refined felt, rails, and dice materials",
+      "The Locker now previews complete looks with portraits, frames, backgrounds, nameplates, badges, and cosmetic effects. Equipped earned dice, tables, and portrait styles save to your profile; former temporary beta samples remain preview-only",
+      "Polished local setup, results, accounts, settings, friends, stats, and the Locker for phones, including large text, high contrast, reduced motion, and translated screens",
+      "Improved game-menu sound controls and short-screen dialogs. Backgrounding the game now stops old sound effects from replaying when you return, and failed music loading no longer retries continuously while offline",
+      "Reduced the main JavaScript entry by about 35 percent, added screen-loading recovery, and improved offline caching and updates so installed games include screens you haven't opened yet. Existing open games finish before an update takes over",
+    ],
+  },
+  {
     version: "0.7.3",
     date: "2026-09-21",
     notes: [
