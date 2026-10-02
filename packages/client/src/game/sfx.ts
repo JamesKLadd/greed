@@ -13,6 +13,11 @@ const MUTE_KEY = "greed:muted";
 let ctx: AudioContext | null = null;
 let sfxBus: GainNode | null = null;
 let musicBus: GainNode | null = null;
+let pageHidden = false;
+let needsGesture = false;
+let audioListenersInstalled = false;
+let uiClicksInstalled = false;
+const activeEffects = new Map<AudioScheduledSourceNode, () => void>();
 
 let muted = readMuted();
 let sfxVolume = 1; // 0..1, set from settings
@@ -27,10 +32,49 @@ function readMuted(): boolean {
 }
 
 function sfxLevel(): number {
-  return muted ? 0 : sfxVolume;
+  return muted || audioHidden() ? 0 : sfxVolume;
 }
 function musicLevel(): number {
-  return muted ? 0 : musicVolume;
+  return muted || audioHidden() ? 0 : musicVolume;
+}
+
+function audioHidden(): boolean {
+  return pageHidden || (typeof document !== "undefined" && document.hidden);
+}
+
+/** A suspended context must not save old dice/payoff sounds for the next visit. */
+function stopEffects(): void {
+  for (const [source, cleanup] of activeEffects) {
+    try {
+      source.stop();
+    } catch {
+      /* an already-ended source is harmless */
+    }
+    cleanup();
+  }
+  activeEffects.clear();
+}
+
+function trackEffect(source: AudioScheduledSourceNode, ...nodes: AudioNode[]): void {
+  const cleanup = () => {
+    activeEffects.delete(source);
+    source.onended = null;
+    source.disconnect();
+    for (const node of nodes) node.disconnect();
+  };
+  activeEffects.set(source, cleanup);
+  source.onended = cleanup;
+}
+
+function pauseBackgroundAudio(): void {
+  needsGesture = true;
+  stopEffects();
+  applyBusLevels();
+  if (ctx && ctx.state !== "closed") {
+    void ctx.suspend().catch(() => {
+      /* bus levels still silence browsers that cannot suspend */
+    });
+  }
 }
 
 export function isMuted(): boolean {
@@ -73,7 +117,7 @@ function applyBusLevels(): void {
 
 /** Lazily create the audio graph. Safe to call repeatedly. */
 function ensureContext(): AudioContext | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined" || audioHidden()) return null;
   if (!ctx) {
     const Ctor = window.AudioContext ?? (window as any).webkitAudioContext;
     if (!Ctor) return null;
@@ -85,29 +129,56 @@ function ensureContext(): AudioContext | null {
     musicBus.gain.value = musicLevel();
     musicBus.connect(ctx.destination);
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  // Keep gesture listeners armed for mobile audio interruptions and BFCache
+  // returns. A refused resume must not leave queued effects for a later tap.
+  if (ctx.state !== "running" || needsGesture) {
+    needsGesture = false;
+    const context = ctx;
+    void context
+      .resume()
+      .then(() => {
+        // A resume requested just before backgrounding may finish afterwards.
+        if (audioHidden()) pauseBackgroundAudio();
+        else applyBusLevels();
+      })
+      .catch(() => {
+        needsGesture = true;
+        stopEffects();
+      });
+  }
   updateMusicState();
   return ctx;
 }
 
 /**
- * Wire one-time listeners that resume/create the AudioContext on the first user
- * interaction (autoplay policy), and start the ambient music. Call once at start.
+ * Install page-lifetime listeners once. The first gesture unlocks audio; later
+ * gestures can unlock it again after a phone interruption or background visit.
  */
 export function primeAudioOnFirstGesture(): void {
-  if (typeof window === "undefined") return;
-  const handler = () => {
-    ensureContext();
-    window.removeEventListener("pointerdown", handler);
-    window.removeEventListener("keydown", handler);
+  if (typeof window === "undefined" || audioListenersInstalled) return;
+  audioListenersInstalled = true;
+  const gesture = () => ensureContext();
+  const visibility = () => {
+    if (audioHidden()) pauseBackgroundAudio();
+    else applyBusLevels();
   };
-  window.addEventListener("pointerdown", handler, { once: true });
-  window.addEventListener("keydown", handler, { once: true });
+  window.addEventListener("pointerdown", gesture);
+  window.addEventListener("keydown", gesture);
+  document.addEventListener("visibilitychange", visibility);
+  window.addEventListener("pagehide", () => {
+    pageHidden = true;
+    pauseBackgroundAudio();
+  });
+  window.addEventListener("pageshow", () => {
+    pageHidden = false;
+    visibility();
+  });
 }
 
 /** Play a soft click on any button press across the app. Call once at startup. */
 export function installUiClicks(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || uiClicksInstalled) return;
+  uiClicksInstalled = true;
   window.addEventListener(
     "pointerdown",
     (e) => {
@@ -145,6 +216,7 @@ function tone(
   g.gain.exponentialRampToValueAtTime(gain, start + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
   osc.connect(g).connect(sfxBus);
+  trackEffect(osc, g);
   osc.start(start);
   osc.stop(start + dur + 0.02);
 }
@@ -172,6 +244,7 @@ function noiseBurst(
   g.gain.setValueAtTime(gain, start);
   g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
   src.connect(filter).connect(g).connect(sfxBus);
+  trackEffect(src, filter, g);
   src.start(start);
   src.stop(start + dur + 0.02);
 }
@@ -184,7 +257,7 @@ function vary(amount = 0.03): number {
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 function uiClick(): void {
-  if (muted || sfxVolume <= 0) return;
+  if (muted || sfxVolume <= 0 || audioHidden()) return;
   const c = ensureContext();
   if (!c) return;
   noiseBurst(c.currentTime, 0.02, { freq: 2600 * vary(0.15), q: 1.2, gain: 0.06 });
@@ -210,7 +283,7 @@ type Sound =
 export function playBetaCue(
   kind: "score" | "bank" | "bigBank" | "hot" | "triple" | "straight" | "five" | "bust" | "win",
 ): void {
-  if (muted || sfxVolume <= 0 || document.hidden) return;
+  if (muted || sfxVolume <= 0 || audioHidden()) return;
   const c = ensureContext();
   if (!c || !sfxBus) return;
   const start = c.currentTime;
@@ -267,7 +340,7 @@ export interface PlayOptions {
 }
 
 export function play(sound: Sound, opts: PlayOptions = {}): void {
-  if (muted) return;
+  if (muted || sfxVolume <= 0 || audioHidden()) return;
   const c = ensureContext();
   if (!c || !sfxBus) return;
   const t = c.currentTime;
@@ -423,7 +496,9 @@ async function loadMusicBuffer(context: AudioContext): Promise<void> {
   } finally {
     musicLoading = false;
   }
-  updateMusicState();
+  // A failed load waits for another foreground gesture/settings change. Calling
+  // updateMusicState after failure immediately retried forever while offline.
+  if (musicBuffer) updateMusicState();
 }
 
 function startMusic(): void {
@@ -459,6 +534,9 @@ function updateMusicState(): void {
     stopMusic();
     return;
   }
+  // Preserve the looping source's position while the shared context is paused,
+  // but never start a freshly decoded track behind another app.
+  if (audioHidden()) return;
   if (!musicBuffer) {
     if (ctx) void loadMusicBuffer(ctx);
     return;

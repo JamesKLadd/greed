@@ -59,13 +59,22 @@
   inset: 0;
   background: rgba(3, 5, 9, 0.72);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   z-index: 50;
   backdrop-filter: blur(3px);
 }
 .overlay__card {
   width: min(440px, 100%);
+  /* Short landscape screens and focused fields can leave less room than the
+     dialog needs. The page is locked while open, so the card must own scroll. */
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: linear-gradient(178deg, var(--surface-1), var(--surface-2));
   border: 1px solid var(--line);
   border-radius: var(--r-cut);
@@ -741,8 +750,8 @@
   margin-top: 10px;
 }
 .overlay__card--scroll {
-  max-height: min(88vh, 760px);
-  overflow-y: auto;
+  max-height: min(88vh, 760px, 100%);
+  max-height: min(88dvh, 760px, 100%);
 }
 @media (max-width: 520px) {
   .rules__example {

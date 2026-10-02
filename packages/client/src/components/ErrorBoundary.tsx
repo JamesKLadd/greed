@@ -1,10 +1,13 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { translate } from "../i18n/translate.js";
-import type { Locale, MsgKey } from "../i18n/catalog.js";
+import type { MsgKey } from "../i18n/catalog.js";
+import { loadLocale } from "../i18n/i18n.js";
 import { BETA_SESSION_KEY } from "../beta/access.js";
 
 interface Props {
   children: ReactNode;
+  /** A screen can recover to Home without taking down the app/providers. */
+  fallback?: ReactNode;
 }
 interface State {
   error: Error | null;
@@ -16,13 +19,7 @@ interface State {
  * saved locale directly and use the pure translate() instead.
  */
 function crashT(key: MsgKey): string {
-  let locale: Locale = "en";
-  try {
-    if (localStorage.getItem("greed:locale") === "es") locale = "es";
-  } catch {
-    /* storage can throw in private mode; English is a fine fallback */
-  }
-  return translate(locale, key);
+  return translate(loadLocale(), key);
 }
 
 /** Catches render/runtime errors and shows a graceful crash screen. */
@@ -41,6 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     const { error } = this.state;
     if (!error) return this.props.children;
+    if (this.props.fallback !== undefined) return this.props.fallback;
 
     return (
       <div className="crash">

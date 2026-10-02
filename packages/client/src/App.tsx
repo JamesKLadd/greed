@@ -1,20 +1,8 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
-import { SetupScreen } from "./screens/SetupScreen.js";
-import { GameScreen } from "./screens/GameScreen.js";
-import { OnlineScreen } from "./screens/OnlineScreen.js";
-import { StatsScreen } from "./screens/StatsScreen.js";
-import { LeaderboardScreen } from "./screens/LeaderboardScreen.js";
-import { LockerScreen } from "./screens/LockerScreen.js";
-import { UpdateLogScreen } from "./screens/UpdateLogScreen.js";
-import { SettingsScreen } from "./screens/SettingsScreen.js";
-import { AuthScreen } from "./screens/AuthScreen.js";
-import { AccountScreen } from "./screens/AccountScreen.js";
-import { UiGallery } from "./screens/UiGallery.js";
-import { DailyScreen } from "./screens/DailyScreen.js";
-import { WeeklyScreen } from "./screens/WeeklyScreen.js";
-import { FriendsScreen } from "./screens/FriendsScreen.js";
+import { ErrorBoundary } from "./components/ErrorBoundary.js";
+import { ScreenLoadState } from "./components/ScreenLoadState.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { practiceSetup, type MatchSetup } from "./game/setup.js";
 import { verifyEmail } from "./net/auth.js";
@@ -22,6 +10,54 @@ import { useChallenges } from "./net/challenges.js";
 import { Toast } from "./components/Toast.js";
 import type { ToastMessage } from "./game/useGreed.js";
 import { useT } from "./i18n/i18n.js";
+
+// Load mode-specific UI only when opened. The build-generated offline shell
+// caches these chunks too, so deferred local play still works after install.
+const SetupScreen = lazy(() =>
+  import("./screens/SetupScreen.js").then((m) => ({ default: m.SetupScreen })),
+);
+const GameScreen = lazy(() =>
+  import("./screens/GameScreen.js").then((m) => ({ default: m.GameScreen })),
+);
+const OnlineScreen = lazy(() =>
+  import("./screens/OnlineScreen.js").then((m) => ({ default: m.OnlineScreen })),
+);
+const StatsScreen = lazy(() =>
+  import("./screens/StatsScreen.js").then((m) => ({ default: m.StatsScreen })),
+);
+const LeaderboardScreen = lazy(() =>
+  import("./screens/LeaderboardScreen.js").then((m) => ({ default: m.LeaderboardScreen })),
+);
+const LockerScreen = lazy(() =>
+  import("./screens/LockerScreen.js").then((m) => ({ default: m.LockerScreen })),
+);
+const UpdateLogScreen = lazy(() =>
+  import("./screens/UpdateLogScreen.js").then((m) => ({ default: m.UpdateLogScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import("./screens/SettingsScreen.js").then((m) => ({ default: m.SettingsScreen })),
+);
+const AuthScreen = lazy(() =>
+  import("./screens/AuthScreen.js").then((m) => ({ default: m.AuthScreen })),
+);
+const AccountScreen = lazy(() =>
+  import("./screens/AccountScreen.js").then((m) => ({ default: m.AccountScreen })),
+);
+const DailyScreen = lazy(() =>
+  import("./screens/DailyScreen.js").then((m) => ({ default: m.DailyScreen })),
+);
+const WeeklyScreen = lazy(() =>
+  import("./screens/WeeklyScreen.js").then((m) => ({ default: m.WeeklyScreen })),
+);
+const FriendsScreen = lazy(() =>
+  import("./screens/FriendsScreen.js").then((m) => ({ default: m.FriendsScreen })),
+);
+const UiGallery = import.meta.env.DEV
+  ? lazy(() => import("./screens/UiGallery.js").then((m) => ({ default: m.UiGallery })))
+  : null;
+const ScreenLoadReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/screenLoadReview/ScreenLoadReview.js"))
+  : null;
 
 // The composition study is deliberately excluded from shipped game code.
 const TablePrototype = import.meta.env.DEV
@@ -149,6 +185,13 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (ScreenLoadReview && new URLSearchParams(window.location.search).has("load-review")) {
+    return (
+      <Suspense fallback={<p>Opening loading review…</p>}>
+        <ScreenLoadReview />
+      </Suspense>
+    );
+  }
   if (SupportReview && new URLSearchParams(window.location.search).has("support-review")) {
     return (
       <Suspense fallback={<p>Opening supporting-screen review…</p>}>
@@ -201,12 +244,14 @@ export function App() {
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("table-online")) {
     return (
       <BetaActiveContext.Provider value={betaActive}>
-        <OnlineScreen
-          recordResults={false}
-          onExit={() => {
-            window.location.href = "/";
-          }}
-        />
+        <Suspense fallback={<ScreenLoadState onBack={() => (window.location.href = "/")} />}>
+          <OnlineScreen
+            recordResults={false}
+            onExit={() => {
+              window.location.href = "/";
+            }}
+          />
+        </Suspense>
       </BetaActiveContext.Provider>
     );
   }
@@ -231,8 +276,12 @@ export function App() {
       </Suspense>
     );
   }
-  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui")) {
-    return <UiGallery />;
+  if (UiGallery && new URLSearchParams(window.location.search).has("ui")) {
+    return (
+      <Suspense fallback={<p>Opening UI gallery…</p>}>
+        <UiGallery />
+      </Suspense>
+    );
   }
 
   const leaveGame = () => {
@@ -367,7 +416,13 @@ export function App() {
 
   return (
     <BetaActiveContext.Provider value={betaActive}>
-      {screen}
+      {mode === "home" ? (
+        screen
+      ) : (
+        <ErrorBoundary key={mode} fallback={<ScreenLoadState failed onBack={backHome} />}>
+          <Suspense fallback={<ScreenLoadState onBack={backHome} />}>{screen}</Suspense>
+        </ErrorBoundary>
+      )}
       {challenges.invite && (
         <ChallengeInvite
           invite={challenges.invite}

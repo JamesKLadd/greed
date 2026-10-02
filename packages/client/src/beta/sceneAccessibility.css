@@ -82,6 +82,29 @@
 .scene-menu {
   padding-top: max(22px, env(safe-area-inset-top));
   padding-bottom: max(22px, env(safe-area-inset-bottom));
+  padding-left: max(22px, env(safe-area-inset-left));
+  padding-right: max(22px, env(safe-area-inset-right));
+}
+.scene-menu .volume__pop .slider {
+  min-height: 44px;
+}
+.scene-menu .volume {
+  display: flex;
+  flex-direction: column;
+}
+.scene-menu .volume > .btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  gap: 8px;
+  justify-content: flex-start;
+}
+.volume__title {
+  display: none;
+}
+.scene-menu .volume__title {
+  display: inline;
 }
 
 @media (forced-colors: active) {

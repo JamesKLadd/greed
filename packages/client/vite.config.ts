@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 import { readFileSync } from "node:fs";
+import { offlineShellPlugin } from "./build/offline.js";
 
 const pkg = JSON.parse(
   readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf8"),
@@ -13,7 +14,7 @@ const protocolSrc = fileURLToPath(new URL("../protocol/src/index.ts", import.met
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), offlineShellPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

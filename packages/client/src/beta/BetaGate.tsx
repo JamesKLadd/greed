@@ -28,7 +28,12 @@ export function BetaGate() {
         {t(enabled ? "beta.classic" : "beta.enter")} <span aria-hidden="true">↗</span>
       </button>
       {open && (
-        <Modal title={t("beta.enter")} onClose={() => setOpen(false)} initialFocusRef={input}>
+        <Modal
+          title={t("beta.enter")}
+          onClose={() => setOpen(false)}
+          initialFocusRef={input}
+          scroll
+        >
           <p className="beta-gate__intro">{t("beta.gateIntro")}</p>
           <form
             onSubmit={(e) => {

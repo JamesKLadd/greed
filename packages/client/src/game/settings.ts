@@ -61,17 +61,41 @@ function defaults(): Settings {
   };
 }
 
+/** Old or damaged browser data must not feed invalid values to CSS/audio. */
+export function normalizeSettings(raw: unknown, fallback: Settings = defaults()): Settings {
+  const next = { ...fallback };
+  const parsed =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  if (parsed.textScale === "normal" || parsed.textScale === "large") {
+    next.textScale = parsed.textScale;
+  }
+  for (const key of [
+    "highContrast",
+    "colorblind",
+    "reduceMotion",
+    "showGuidance",
+    "showTurnScore",
+    "dice3d",
+    "hideRoomCode",
+  ] as const) {
+    if (typeof parsed[key] === "boolean") next[key] = parsed[key];
+  }
+  // An explicitly saved independent SFX preference wins over the old volume.
+  const sfx = parsed.sfxVolume === undefined ? parsed.volume : parsed.sfxVolume;
+  if (typeof sfx === "number" && Number.isFinite(sfx)) {
+    next.sfxVolume = Math.max(0, Math.min(1, sfx));
+  }
+  if (typeof parsed.musicVolume === "number" && Number.isFinite(parsed.musicVolume)) {
+    next.musicVolume = Math.max(0, Math.min(1, parsed.musicVolume));
+  }
+  return next;
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults();
-    const parsed = JSON.parse(raw) as Partial<Settings> & { volume?: number };
-    const merged = { ...defaults(), ...parsed };
-    // Back-compat: an older single `volume` maps to the SFX volume.
-    if (parsed.sfxVolume === undefined && typeof parsed.volume === "number") {
-      merged.sfxVolume = parsed.volume;
-    }
-    return merged;
+    return normalizeSettings(JSON.parse(raw));
   } catch {
     return defaults();
   }
@@ -100,7 +124,9 @@ export function applySettings(s: Settings): void {
 
 /** Merge a change, persist, apply live, and return the new settings. */
 export function updateSettings(patch: Partial<Settings>): Settings {
-  const next = { ...loadSettings(), ...patch };
+  // A malformed patch is ignored field by field instead of erasing a valid
+  // saved preference. Only the known normalized settings are written back.
+  const next = normalizeSettings(patch, loadSettings());
   save(next);
   applySettings(next);
   return next;

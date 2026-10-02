@@ -13,6 +13,9 @@ export const LOCALES: { code: Locale; label: string }[] = [
 ];
 
 export const en = {
+  "screen.loading": "Opening screen…",
+  "screen.unavailable": "Couldn’t open this screen",
+  "screen.recoverHint": "Return home or reload Greed to try again.",
   "beta.locker.browse": "Browse cosmetics",
   "beta.locker.selected": "Selected",
   "settings.section.interface": "Interface",
@@ -935,6 +938,9 @@ export const en = {
 export type MsgKey = keyof typeof en;
 
 export const es: Record<MsgKey, string> = {
+  "screen.loading": "Abriendo pantalla…",
+  "screen.unavailable": "No se pudo abrir esta pantalla",
+  "screen.recoverHint": "Vuelve al inicio o recarga Greed para intentarlo de nuevo.",
   "beta.locker.browse": "Explorar cosméticos",
   "beta.locker.selected": "Seleccionado",
   "settings.section.interface": "Interfaz",
@@ -1829,6 +1835,9 @@ export const es: Record<MsgKey, string> = {
 };
 
 export const fr: Record<MsgKey, string> = {
+  "screen.loading": "Ouverture de l’écran…",
+  "screen.unavailable": "Impossible d’ouvrir cet écran",
+  "screen.recoverHint": "Retournez à l’accueil ou rechargez Greed pour réessayer.",
   "beta.locker.browse": "Parcourir les cosmétiques",
   "beta.locker.selected": "Sélectionné",
   "settings.section.interface": "Interface",

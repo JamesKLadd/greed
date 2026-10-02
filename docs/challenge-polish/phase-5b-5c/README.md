@@ -107,6 +107,10 @@ Saved views:
 
 ## Resume here: Phase 6
 
+**Checkpoint update:** [Phase 6 implementation and browser validation are now
+documented](../phase-6/README.md). Real-phone sign-off and beta promotion remain
+pending. The steps below preserve the original device-validation scope.
+
 Use an iPhone/Safari and an Android/Chrome where available, including a modest
 device. Prioritize daily and weekly challenges, then the seated table. Record
 device/browser, route/mode, preferences and reproducible steps for each issue.

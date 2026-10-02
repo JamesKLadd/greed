@@ -187,6 +187,7 @@ export function ChallengeEntryDetails({
     <Modal
       title={entry.username}
       onClose={onClose}
+      scroll
       actions={
         <Button variant="ghost" onClick={onClose}>
           {t("common.close")}

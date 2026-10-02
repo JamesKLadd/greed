@@ -43,6 +43,7 @@ export function VolumeControls() {
         title={t("bar.volume")}
       >
         {muted ? "🔇" : "🔊"}
+        <span className="volume__title">{t("bar.volume")}</span>
       </button>
 
       {open && (
@@ -60,7 +61,7 @@ export function VolumeControls() {
               value={Math.round(settings.sfxVolume * 100)}
               aria-label={t("settings.sfx")}
               onChange={(e) => patch({ sfxVolume: Number(e.target.value) / 100 })}
-              onMouseUp={() => !muted && play("bank")}
+              onPointerUp={() => !muted && play("bank")}
               onKeyUp={() => !muted && play("bank")}
             />
           </div>

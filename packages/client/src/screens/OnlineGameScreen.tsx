@@ -105,9 +105,18 @@ export function OnlineGameScreen({
       spectating={net.isSpectator}
       // The board keeps showing the last position it had while the connection
       // is being re-made, and a frozen board with no explanation is exactly what
-      // this is here to prevent.
+      // this is here to prevent. The scene already owns its notice live region;
+      // only Classic needs the banner itself to announce the change.
       notice={
-        net.reconnecting ? <div className="banner banner--sd">{t("net.reconnecting")}</div> : null
+        net.reconnecting ? (
+          <div
+            className="banner banner--sd"
+            role={sceneActive ? undefined : "status"}
+            aria-live={sceneActive ? undefined : "polite"}
+          >
+            {t("net.reconnecting")}
+          </div>
+        ) : null
       }
       barLeft={
         <BarButton
