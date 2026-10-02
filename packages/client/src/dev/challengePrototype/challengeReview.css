@@ -1,0 +1,55 @@
+.challenge-review__tools {
+  width: min(100%, 640px);
+  margin: 24px auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+}
+
+.challenge-review__tools summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.challenge-review__tools p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.challenge-review__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+}
+
+.challenge-review__controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.challenge-review__controls select,
+.challenge-review__controls input {
+  width: 100%;
+  min-height: 44px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.challenge-review__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 12px;
+}
+
+.challenge-review__tools > a {
+  display: inline-block;
+  padding: 12px;
+  min-height: 44px;
+}

@@ -43,6 +43,9 @@ interface DailyScreenProps {
   onSignIn: () => void;
 }
 
+/** A failed move is reconciled with a read, never by repeating the move. */
+const resumeRun = async () => (await resumeDaily()).run;
+
 export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const t = useT();
   const { status: authStatus } = useAuth();
@@ -261,6 +264,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
               initial={runView}
               dice3d={dice3d}
               playMove={playDailyMove}
+              resumeRun={resumeRun}
               onFinished={onFinished}
             />
           )}

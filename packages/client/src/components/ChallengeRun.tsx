@@ -2,7 +2,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { appearanceVars } from "../beta/appearance.js";
 import { GameCelebration } from "../beta/Celebration.js";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
@@ -11,7 +11,7 @@ import { Button } from "../ui/index.js";
 import { rollCall } from "../game/rollCall.js";
 import { equippedDiceVars } from "../game/cosmetics.js";
 import { loadProfile } from "../game/profile.js";
-import { useT } from "../i18n/i18n.js";
+import { useI18n } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 
 /**
@@ -32,23 +32,63 @@ interface ChallengeRunProps {
   dice3d: boolean;
   /** Sends a move to whichever challenge this run belongs to. */
   playMove: PlayMove;
+  /** Read the authoritative position after a response is lost; never repeat a move. */
+  resumeRun?: () => Promise<RunView | null>;
   /** Called when the last turn resolves. */
   onFinished: () => void;
 }
 
-export function ChallengeRun({ initial, dice3d, playMove, onFinished }: ChallengeRunProps) {
-  const t = useT();
+export function ChallengeRun({
+  initial,
+  dice3d,
+  playMove,
+  resumeRun,
+  onFinished,
+}: ChallengeRunProps) {
+  const { t, n } = useI18n();
+  const helpId = useId();
   const beta = useBetaActive();
   const { appearance } = useAppearance();
-  const run = useChallengeRun(initial, playMove);
+  const run = useChallengeRun(initial, playMove, resumeRun);
+  const [holdNotice, setHoldNotice] = useState(false);
+  useEffect(() => setHoldNotice(false), [run.state]);
   // The player's equipped dice, read once for the life of the run: a skin
   // changed in the Locker mid-attempt would otherwise swap the dice underneath
   // them. The beta's own appearance vars go on the same element and are spread
   // after, so a beta look still wins where the two name the same property.
   const [diceSkin] = useState(() => equippedDiceVars(loadProfile()));
   const call = rollCall(run.state.turn);
-  useGameSounds(run.state);
+  useGameSounds(run.state, true);
   useRollSound(run.isRolling);
+  // Completed turns already includes the bust still being shown. Do not label
+  // its dice as belonging to the following turn during the readable pause.
+  const shownTurn = Math.max(
+    1,
+    Math.min(run.turn + (run.state.turn.outcome ? 0 : 1), run.totalTurns),
+  );
+  const status = run.isPending
+    ? run.pendingMove === "ROLL"
+      ? t("run.waitingRoll")
+      : run.pendingMove === "BANK"
+        ? t("run.savingBank")
+        : run.pendingMove
+          ? t("run.savingDice")
+          : t("run.syncing")
+    : run.needsSync
+      ? t("run.syncNeeded")
+      : run.isRolling
+        ? t("run.rolling")
+        : run.state.turn.outcome === "busted"
+          ? t("run.busted")
+          : run.state.turn.outcome === "banked"
+            ? t("run.bankedTurn")
+            : holdNotice
+              ? t("dice.keepOneHeld")
+              : run.state.turn.hotDice
+                ? t("controls.hotDice")
+                : run.state.turn.lastRoll === null
+                  ? t("controls.rollToStart")
+                  : t("controls.rollOrBank");
 
   // The server decides when the run is over; this only reports it upward, and
   // does it in an effect so the parent's state change isn't made during render.
@@ -62,22 +102,22 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
       style={beta ? { ...diceSkin, ...appearanceVars(appearance) } : diceSkin}
     >
       {beta && <GameCelebration state={run.state} isRolling={run.isRolling} showVisuals={false} />}
-      {run.error && <div className="banner banner--sd">{run.error}</div>}
-
       <div className="daily__meters">
-        <div className="meter">
+        <div className="meter daily__meter-turn">
           <span className="meter__label">{t("run.turn")}</span>
           <span className="meter__value">
-            {Math.min(run.turn + 1, run.totalTurns)}/{run.totalTurns}
+            {shownTurn}/{run.totalTurns}
           </span>
         </div>
-        <div className="meter">
-          <span className="meter__label">{t("run.banked")}</span>
-          <span className="meter__value">{run.state.players[0].total}</span>
+        <div className="meter daily__meter-banked">
+          <span className="meter__label">{t("run.bankedTotal")}</span>
+          <span className="meter__value">{n(run.state.players[0].total)}</span>
         </div>
-        <div className="meter">
-          <span className="meter__label">{t("controls.turnPoints")}</span>
-          <span className="meter__value">{run.state.turn.turnScore}</span>
+        <div className="meter daily__meter-risk">
+          <span className="meter__label">{t("run.atRisk")}</span>
+          <span className="meter__value">
+            {n(run.state.turn.outcome ? 0 : run.state.turn.turnScore)}
+          </span>
         </div>
       </div>
 
@@ -108,41 +148,49 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
           .join(" ")}
       >
         {run.state.turn.dice.map((v, i) => (
-          <Die
-            key={i}
-            value={v}
-            size={46}
-            locked={run.state.turn.locked[i] && !run.state.turn.hotDice}
-            rolling={run.isRolling && run.rollingIndices.includes(i)}
-            dim={run.state.turn.lastRoll === null && !run.isRolling}
-            dimensional={dice3d}
-            landing={
-              run.isRolling && run.rollingIndices.includes(i) ? run.rollingDice?.[i] : undefined
-            }
-            // Held dice are the player's to change here too: the five-of-a-kind
-            // is worth chasing in a daily run as much as anywhere else. Always
-            // passed, never withdrawn mid-throw — see toggleDisabled on Die.
-            onToggle={() => run.toggleDie(i)}
-            // Same rule the engine applies, so the last held die reads as
-            // unavailable instead of ignoring the tap.
-            toggleDisabled={run.isRolling || run.finished || !canToggleLock(run.state.turn, i)}
-            refusedReason={lastHeld(run.state.turn, i) ? t("dice.keepOneHeld") : undefined}
-            toggleLabel={run.state.turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
-          />
+          <span className="daily__dieCell" key={i}>
+            <Die
+              describedBy={helpId}
+              value={v}
+              size={46}
+              // Hot dice are still a held hand until the player rolls the fresh
+              // five. Match the button's pressed state to the real hold action.
+              locked={run.state.turn.locked[i] && !(run.state.turn.hotDice && run.isRolling)}
+              rolling={run.isRolling && run.rollingIndices.includes(i)}
+              dim={run.state.turn.lastRoll === null && !run.isRolling}
+              dimensional={dice3d}
+              landing={
+                run.isRolling && run.rollingIndices.includes(i) ? run.rollingDice?.[i] : undefined
+              }
+              // Held dice are the player's to change here too: the five-of-a-kind
+              // is worth chasing in a daily run as much as anywhere else. Always
+              // passed, never withdrawn mid-throw — see toggleDisabled on Die.
+              onToggle={() => {
+                if (!run.canToggleDice) return;
+                if (lastHeld(run.state.turn, i)) {
+                  setHoldNotice(true);
+                  return;
+                }
+                setHoldNotice(false);
+                run.toggleDie(i);
+              }}
+              // Same rule the engine applies, so the last held die reads as
+              // unavailable instead of ignoring the tap.
+              toggleDisabled={!run.canToggleDice || !canToggleLock(run.state.turn, i)}
+              refusedReason={
+                run.canToggleDice && lastHeld(run.state.turn, i) ? t("dice.keepOneHeld") : undefined
+              }
+              toggleLabel={run.state.turn.locked[i] ? t("aria.unhold") : t("aria.hold")}
+            />
+          </span>
         ))}
       </div>
 
-      <p className="daily__status">
-        {run.state.turn.outcome === "busted"
-          ? t("run.busted")
-          : run.state.turn.hotDice
-            ? t("controls.hotDice")
-            : run.state.turn.lastRoll === null
-              ? t("controls.rollToStart")
-              : t("controls.rollOrBank")}
+      <p className="daily__status" role="status" aria-live="polite" aria-atomic="true">
+        {status}
       </p>
 
-      <div className="daily__actions">
+      <div className="daily__actions" aria-busy={run.isPending}>
         <Button variant="roll" size="lg" disabled={!run.canRoll} onClick={run.roll}>
           {t("controls.rollDice")}
         </Button>
@@ -150,6 +198,19 @@ export function ChallengeRun({ initial, dice3d, playMove, onFinished }: Challeng
           {t("controls.bank")}
         </Button>
       </div>
+      <p id={helpId} className="daily__holdHelp">
+        {t("run.holdHint")}
+      </p>
+      {run.error && (
+        <div className="daily__moveError">
+          <p role="alert">{run.error}</p>
+          {run.needsSync && (
+            <Button disabled={run.isPending} onClick={run.retrySync}>
+              {t("run.retrySync")}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

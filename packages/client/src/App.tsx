@@ -33,6 +33,9 @@ const PlayableTableReview = import.meta.env.DEV
 const TableEventReview = import.meta.env.DEV
   ? lazy(() => import("./dev/tablePrototype/TableEventReview.js"))
   : null;
+const ChallengeReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/challengePrototype/ChallengeReview.js"))
+  : null;
 
 type Mode =
   | "home"
@@ -128,6 +131,13 @@ export function App() {
 
   // Dev-only visual reference for the design system (see UiGallery.tsx). Guarded
   // by import.meta.env.DEV so it is dropped from production builds entirely.
+  if (ChallengeReview && new URLSearchParams(window.location.search).has("challenge-play")) {
+    return (
+      <Suspense fallback={<p>Opening challenge fixture…</p>}>
+        <ChallengeReview />
+      </Suspense>
+    );
+  }
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("table-online")) {
     return (
       <BetaActiveContext.Provider value={betaActive}>

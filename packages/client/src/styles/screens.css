@@ -1404,6 +1404,70 @@
   gap: 12px;
   justify-content: center;
 }
+/* A visual cube may be smaller than a thumb target. Each owns a separate
+   cell, so widening the transparent button surface never steals a neighbour. */
+.daily__run .daily__dice {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 2px;
+  max-width: 340px;
+  margin: 0 auto 12px;
+  padding: 22px 0 6px;
+}
+.daily__dieCell {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 52px;
+}
+.daily__dieCell .die::before {
+  content: "";
+  position: absolute;
+  width: max(44px, 100%);
+  height: max(44px, 100%);
+  left: min(0px, calc(50% - 22px));
+  top: min(0px, calc(50% - 22px));
+}
+.daily__run .daily__status {
+  min-height: 3.2em;
+  display: grid;
+  place-items: center;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.daily__run .daily__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.daily__actions .btn {
+  min-height: 52px;
+  min-width: 0;
+  padding: 12px 8px;
+  overflow-wrap: anywhere;
+}
+.daily__holdHelp {
+  margin: 12px 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.daily__moveError {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--bad);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.daily__moveError p {
+  margin: 0;
+  line-height: 1.5;
+}
+.daily__moveError .btn {
+  min-height: 44px;
+  margin-top: 10px;
+}
 .daily__score {
   font-family: var(--ff-display);
   font-size: 3.25rem;

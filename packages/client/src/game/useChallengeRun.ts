@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyAction,
+  canToggleLock,
   diceToRoll,
   getLegalActions,
   runMoveStart,
@@ -8,6 +9,11 @@ import {
   type GameState,
   type RunMove,
 } from "@greed/core";
+import { useT } from "../i18n/i18n.js";
+import { apiErrorText } from "../i18n/apiError.js";
+import { ApiError } from "../net/auth.js";
+import { ROLL_ANIM_MS } from "./pacing.js";
+import { ChallengeMoveGuard } from "./challengeMoveGuard.js";
 
 /**
  * Drives a scored solo run against the server — the daily challenge or the
@@ -27,8 +33,9 @@ import {
  * but on the server's terms: a fresh secret seed, and only after the run in
  * hand has been played out.
  *
- * The ONE thing this hook applies locally is clearing a finished turn: the
- * server leaves the turn that just ended on screen and advances past it when the
+ * Local holds are optimistic and need no seed. The other local action clears
+ * a finished turn: the server leaves the turn that just ended on screen and
+ * advances past it when the
  * next move arrives, and this hook advances its own copy so the board isn't
  * still showing the last turn while the next one is being played. Advancing
  * deals nothing and needs no seed, so it can be done here safely.
@@ -45,14 +52,13 @@ export interface RunView {
 /** Sends one move and returns the position it reached. */
 export type PlayMove = (move: RunMove) => Promise<RunView>;
 
+/** Reads the current position without replaying a possibly accepted move. */
+export type ResumeRun = () => Promise<RunView | null>;
+
 /** How long a busted turn stays on screen before the board clears for the next. */
 const RESOLVE_MS = 1900;
-/**
- * How long a throw is in the air. Tracks `--cube-roll-ms` in tokens.css, the
- * same way the main game's controller does — the dice are told where they are
- * landing before they leave the felt, so the arc has to be given time to finish.
- */
-const ROLL_ANIM_MS = 650;
+/** The final bank gets a readable beat before the parent opens results. */
+const FINAL_BANK_MS = 900;
 
 export interface ChallengeRunController {
   state: GameState;
@@ -66,20 +72,37 @@ export interface ChallengeRunController {
   rollingDice: DieValue[] | null;
   canRoll: boolean;
   canBank: boolean;
-  /** Set when a move could not be sent; the run is unchanged and can be retried. */
+  /** Waiting for a move reply or the read that reconciles a failed request. */
+  isPending: boolean;
+  pendingMove: RunMove | null;
+  /** A network failure left acceptance uncertain; actions wait for a read. */
+  needsSync: boolean;
+  canToggleDice: boolean;
+  /** Localized error; a failed POST is never automatically repeated. */
   error: string | null;
   roll: () => void;
   bank: () => void;
   /** Hold a die, or put it back. */
   toggleDie: (index: number) => void;
+  retrySync: () => void;
 }
 
-export function useChallengeRun(initial: RunView, playMove: PlayMove): ChallengeRunController {
+export function useChallengeRun(
+  initial: RunView,
+  playMove: PlayMove,
+  resumeRun?: ResumeRun,
+): ChallengeRunController {
+  const t = useT();
   const [view, setView] = useState<RunView>(initial);
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<RunMove | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [needsSync, setNeedsSync] = useState(false);
+  const syncRequired = useRef(false);
+  const [closed, setClosed] = useState(false);
   /**
    * A move is in flight, or its result is still being held on screen.
    *
@@ -89,7 +112,7 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
    * three presses, or a wait, before it would move on to the next turn.
    */
   const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
+  const guard = useRef(new ChallengeMoveGuard());
   const timers = useRef(new Set<number>());
 
   const state = view.state;
@@ -104,27 +127,33 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
    * means "in flight, or being held on screen", so deferring to it gives the
    * final turn the same beat as the rest without a second timer to keep in step.
    */
-  const finished = view.complete && !busy;
+  const finished = (view.complete || closed) && !busy;
 
   // Pending timers outlive a render, but not the screen.
   useEffect(() => {
+    const session = guard.current;
+    session.activate();
     const pending = timers.current;
     return () => {
+      // Also invalidates replies to requests that cannot be cancelled. React's
+      // development effect remount may reactivate this guard, but an old token
+      // still cannot adopt a position or schedule another animation.
+      session.dispose();
       for (const id of pending) clearTimeout(id);
       pending.clear();
     };
   }, []);
 
-  const after = useCallback((ms: number, fn: () => void) => {
+  const after = useCallback((token: number, ms: number, fn: () => void) => {
     const id = window.setTimeout(() => {
       timers.current.delete(id);
-      fn();
+      if (guard.current.current(token)) fn();
     }, ms);
     timers.current.add(id);
   }, []);
 
-  const release = useCallback(() => {
-    busyRef.current = false;
+  const release = useCallback((token: number) => {
+    if (!guard.current.finish(token)) return;
     setBusy(false);
   }, []);
 
@@ -132,9 +161,9 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
    * Show the position the server sent back, then decide what the board does with
    * the turn that just ended.
    *
-   * A BUST is held so the losing roll can be read, then cleared. A BANK clears
-   * at once: the points have already moved to the total, so leaving the banked
-   * roll lit on the tray only made the next turn look like it was starting from
+   * A BUST is held so the losing roll can be read, then cleared. An ordinary
+   * BANK clears at once: the points have already moved to the total, so leaving
+   * the banked roll lit on the tray made the next turn look like it was starting from
    * the last turn's dice. Either way the board ends up on a fresh turn, which is
    * what the next move would have started from anyway.
    *
@@ -144,66 +173,80 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
    * about to take the board over anyway, so the last roll is left as it fell.
    */
   const land = useCallback(
-    (next: RunView) => {
+    (next: RunView, token: number) => {
+      if (!guard.current.current(token)) return;
       const outcome = next.state.turn.outcome;
       if (!outcome) {
         setView(next);
-        release();
+        release(token);
         return;
       }
       if (outcome === "banked") {
         setView(next.complete ? next : { ...next, state: runMoveStart(next.state) });
-        release();
+        if (next.complete) after(token, FINAL_BANK_MS, () => release(token));
+        else release(token);
         return;
       }
       setView(next);
       // The server has already recorded the turn, so nothing is riding on this
       // timer beyond how long the bust stays readable.
-      after(RESOLVE_MS, () => {
+      after(token, RESOLVE_MS, () => {
         if (!next.complete) {
           setView((v) => (v.state === next.state ? { ...v, state: runMoveStart(v.state) } : v));
         }
-        release();
+        release(token);
       });
     },
     [after, release],
   );
 
-  /**
-   * Hold a die, or put it back.
-   *
-   * Applied here the moment it is tapped and sent on afterwards, unlike a throw:
-   * holding deals no dice and needs no seed, so the client can work it out for
-   * itself and a tap lands without waiting for a round trip. The server still
-   * has to be told, because a run is replayed from its move list — the dice a
-   * later throw produces depend on which of them were held.
-   */
-  const holdSeq = useRef(0);
-  const toggleDie = useCallback(
-    (index: number) => {
-      if (busyRef.current || finished) return;
-      if (state.turn.outcome || state.turn.rollCount === 0) return;
-
-      setView((v) => ({ ...v, state: applyAction(v.state, { type: "TOGGLE_LOCK", index }) }));
-      const seq = ++holdSeq.current;
-      playMove(("H" + index) as RunMove)
-        .then((next) => {
-          // A reply to a tap that has already been overtaken describes a board
-          // two taps ago; the newest request is the only one worth adopting.
-          if (seq === holdSeq.current) setView(next);
-        })
-        .catch((err: unknown) => {
-          setError(err instanceof Error ? err.message : "Couldn't play that move.");
-        });
+  const sync = useCallback(
+    async (token: number) => {
+      setIsSyncing(true);
+      try {
+        if (!resumeRun) throw new Error("No recovery reader.");
+        const next = await resumeRun();
+        if (!guard.current.current(token)) return;
+        setIsSyncing(false);
+        syncRequired.current = false;
+        setNeedsSync(false);
+        setError(null);
+        if (next) land(next, token);
+        else {
+          // No open run may mean settlement or a period rollover. Refresh the
+          // parent screen; never infer a score or spend another attempt here.
+          setClosed(true);
+          release(token);
+        }
+      } catch (err: unknown) {
+        if (!guard.current.current(token)) return;
+        setIsSyncing(false);
+        setError(
+          apiErrorText(
+            t,
+            err instanceof ApiError && err.status === 0 ? null : err,
+            "run.syncFailed",
+          ),
+        );
+        release(token);
+      }
     },
-    [state, finished, playMove],
+    [land, release, resumeRun, t],
   );
 
   const act = useCallback(
     (move: RunMove) => {
-      if (busyRef.current || finished) return;
-      busyRef.current = true;
+      if (view.complete || closed || syncRequired.current) return;
+      const held = move.startsWith("H") ? Number(move.slice(1)) : null;
+      const from = runMoveStart(state);
+      const legal = getLegalActions(from);
+      if (held !== null && !canToggleLock(state.turn, held)) return;
+      if (move === "ROLL" && !legal.canRoll) return;
+      if (move === "BANK" && !legal.canBank) return;
+      const token = guard.current.begin();
+      if (token === null) return;
       setBusy(true);
+      setPendingMove(move);
       setError(null);
 
       // Clear any finished turn off the board before the move goes out. The
@@ -211,13 +254,23 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
       // rolling from the old one threw the new turn against the last turn's
       // board: dice that locked when it ended sat there lit and motionless while
       // only the ones that happened to be free tumbled.
-      const from = runMoveStart(state);
-      if (from !== state) setView((v) => ({ ...v, state: from }));
+      if (held !== null) {
+        // Holding deals nothing, so the checkbox can respond immediately. A
+        // later move still waits for acknowledgment: otherwise POST requests
+        // can overtake one another and the server rolls a different cup.
+        setView((v) => ({
+          ...v,
+          state: applyAction(v.state, { type: "TOGGLE_LOCK", index: held }),
+        }));
+      } else if (from !== state) setView((v) => ({ ...v, state: from }));
 
-      playMove(move)
-        .then((next) => {
+      void (async () => {
+        try {
+          const next = await playMove(move);
+          if (!guard.current.current(token)) return;
+          setPendingMove(null);
           if (move !== "ROLL") {
-            land(next);
+            land(next, token);
             return;
           }
           // The tumble starts when the faces come back, NOT when the button is
@@ -231,23 +284,46 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
           setRollingIndices(diceToRoll(from.turn));
           setRollingDice(next.state.turn.dice);
           setIsRolling(true);
-          after(ROLL_ANIM_MS, () => {
+          after(token, ROLL_ANIM_MS, () => {
             setIsRolling(false);
             setRollingIndices([]);
             setRollingDice(null);
-            land(next);
+            land(next, token);
           });
-        })
-        .catch((err: unknown) => {
+        } catch (err: unknown) {
+          if (!guard.current.current(token)) return;
+          // The server may have accepted a POST whose reply was lost. Restore
+          // the last confirmed board while a read settles that uncertainty;
+          // asking for the move again could roll twice or spend another turn.
+          setView(view);
+          setPendingMove(null);
           setIsRolling(false);
           setRollingIndices([]);
           setRollingDice(null);
-          release();
-          setError(err instanceof Error ? err.message : "Couldn't play that move.");
-        });
+          syncRequired.current = true;
+          setNeedsSync(true);
+          setError(
+            apiErrorText(
+              t,
+              err instanceof ApiError && err.status === 0 ? null : err,
+              "run.moveFailed",
+            ),
+          );
+          await sync(token);
+        }
+      })();
     },
-    [state, finished, after, land, release, playMove],
+    [state, view, closed, after, land, playMove, sync, t],
   );
+
+  const retrySync = useCallback(() => {
+    if (!needsSync || finished) return;
+    const token = guard.current.begin();
+    if (token === null) return;
+    setBusy(true);
+    setError(null);
+    void sync(token);
+  }, [finished, needsSync, sync]);
 
   // Mirrors the server's own legality probe: a finished turn may still be
   // showing, and the next move advances past it — so rolling is offered again
@@ -256,8 +332,8 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
   // when pressing it would actually do something.
   const showingOutcome = state.turn.outcome != null;
   const legal = getLegalActions(state);
-  const canRoll = !finished && !busy && (showingOutcome || legal.canRoll);
-  const canBank = !finished && !busy && !showingOutcome && legal.canBank;
+  const canRoll = !finished && !busy && !needsSync && (showingOutcome || legal.canRoll);
+  const canBank = !finished && !busy && !needsSync && !showingOutcome && legal.canBank;
 
   return {
     state,
@@ -269,9 +345,14 @@ export function useChallengeRun(initial: RunView, playMove: PlayMove): Challenge
     rollingDice,
     canRoll,
     canBank,
+    isPending: pendingMove !== null || isSyncing,
+    pendingMove,
+    needsSync,
+    canToggleDice: !finished && !busy && !needsSync && !showingOutcome && state.turn.rollCount > 0,
     error,
     roll: () => act("ROLL"),
     bank: () => act("BANK"),
-    toggleDie,
+    toggleDie: (index) => act(("H" + index) as RunMove),
+    retrySync,
   };
 }

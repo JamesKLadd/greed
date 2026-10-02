@@ -46,6 +46,9 @@ interface WeeklyScreenProps {
   onSignIn: () => void;
 }
 
+/** A failed move is reconciled with a read, never by repeating the move. */
+const resumeRun = async () => (await resumeWeekly()).run;
+
 export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   const t = useT();
   const { status: authStatus } = useAuth();
@@ -318,6 +321,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
               initial={runView}
               dice3d={dice3d}
               playMove={playWeeklyMove}
+              resumeRun={resumeRun}
               onFinished={onFinished}
             />
           )}

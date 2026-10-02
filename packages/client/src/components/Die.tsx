@@ -119,6 +119,7 @@ interface DieProps {
    * which a `disabled` button cannot be.
    */
   refusedReason?: string;
+  describedBy?: string;
 }
 
 function Face({ value, className = "" }: { value: number; className?: string }) {
@@ -143,6 +144,7 @@ export function Die({
   toggleDisabled = false,
   toggleLabel,
   refusedReason,
+  describedBy,
 }: DieProps) {
   const t = useT();
   const [shown, setShown] = useState<number>(value);
@@ -249,6 +251,7 @@ export function Die({
           }
         : { role: "img" })}
       aria-label={onToggle && hint ? face + " — " + hint : face}
+      aria-describedby={describedBy}
       style={style}
     >
       {dimensional ? (

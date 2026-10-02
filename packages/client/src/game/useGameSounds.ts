@@ -26,14 +26,15 @@ export function useRollSound(isRolling: boolean): void {
  * Plays a sound effect for each fresh event appended to the game log.
  * Shared by offline and online play — both drive the same GameState log.
  */
-export function useGameSounds(state: GameState | null | undefined): void {
+export function useGameSounds(state: GameState | null | undefined, skipHistory = false): void {
   const betaActive = useBetaActive();
-  const seen = useRef(0);
+  // A resumed challenge should sound only new moves, not replay every old bust.
+  const seen = useRef(skipHistory ? (state?.log.length ?? 0) : 0);
   // Rolls in the turn being read. Counted from the log rather than taken from
   // turn.rollCount because a batch of events (a reconnect replaying a burst of
   // state) is walked one at a time here, and each roll in it needs its own
   // escalation step.
-  const rolls = useRef(0);
+  const rolls = useRef(skipHistory && !state?.turn.outcome ? (state?.turn.rollCount ?? 0) : 0);
 
   useEffect(() => {
     if (!state) return;
