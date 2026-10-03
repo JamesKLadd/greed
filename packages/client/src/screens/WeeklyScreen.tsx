@@ -51,7 +51,7 @@ import {
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
 import { Button, Icon } from "../ui/index.js";
-import { resolveAvatar } from "../game/avatars.js";
+import { ChallengeAvatar } from "../components/ChallengeAvatar.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
 import { useI18n } from "../i18n/i18n.js";
@@ -433,15 +433,15 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
                   <ChallengeSummaryStats result={best} />
                 </ChallengeResult>
               )}
+            </>
+          )}
 
-              {status && !refreshFailed && (
-                <ChallengeStandings
-                  mode="weekly"
-                  entries={status.leaderboard}
-                  onRead={setReading}
-                />
-              )}
+          {!loading && status && !refreshFailed && (
+            <ChallengeStandings mode="weekly" entries={status.leaderboard} onRead={setReading} />
+          )}
 
+          {!loading && !runView && (
+            <>
               {unlocked.length > 0 && (
                 <div className="unlocks">
                   <div className="unlocks__head">
@@ -462,7 +462,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
               {champion && (
                 <div className="daily__herald">
                   <span className="daily__heraldFace">
-                    {resolveAvatar(champion.username, false, champion.avatar)}
+                    <ChallengeAvatar {...champion} />
                     <span className="daily__crown" aria-hidden="true">
                       👑
                     </span>
@@ -491,7 +491,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
               {status.champions.map((c) => (
                 <li className="daily-hall__row" key={c.week}>
                   <span className="daily-hall__face" aria-hidden="true">
-                    {resolveAvatar(c.username, false, c.avatar)}
+                    <ChallengeAvatar {...c} />
                   </span>
                   <span className="daily-hall__body">
                     <span className="daily-hall__name">{c.username}</span>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { RunResult } from "@greed/core";
 import type { DailyEntry } from "../net/daily.js";
 import type { WeeklyEntry } from "../net/weekly.js";
-import { resolveAvatar } from "../game/avatars.js";
+import { ChallengeAvatar } from "./ChallengeAvatar.js";
 import { useI18n } from "../i18n/i18n.js";
 import { Button, Modal } from "../ui/index.js";
 import { formatChallengeCountdown } from "../game/challengeCountdown.js";
@@ -152,7 +152,7 @@ export function ChallengeStandings<T extends DailyEntry>({
               >
                 <span className="daily__rank">#{entry.rank}</span>
                 <span className="daily__face" aria-hidden="true">
-                  {resolveAvatar(entry.username, false, entry.avatar)}
+                  <ChallengeAvatar {...entry} />
                   {entry.crown && <span className="daily__crown">👑</span>}
                 </span>
                 <span className="daily__name">
@@ -196,7 +196,7 @@ export function ChallengeEntryDetails({
     >
       <div className="daily-detail challenge-lobby__detail">
         <span className="daily-detail__face" aria-hidden="true">
-          {resolveAvatar(entry.username, false, entry.avatar)}
+          <ChallengeAvatar {...entry} />
           {entry.crown && <span className="daily__crown">👑</span>}
         </span>
         {entry.crown && (

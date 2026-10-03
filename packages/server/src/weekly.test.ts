@@ -42,6 +42,7 @@ interface Best {
   bestAt: number;
 }
 
+const portraits = new Map<string, unknown>();
 const open = new Map<string, Open>();
 const best = new Map<string, Best>();
 /** Attempts spent per player per DAY, as weekly_attempts would hold them. */
@@ -149,6 +150,7 @@ vi.mock("./db.js", () => ({
           .map(([week, board]) => ({
             username: `player-${board[0].user}`,
             avatar: null,
+            visual_beta: sql.includes("AS visual_beta") ? portraits.get(board[0].user) : undefined,
             week,
             score: board[0].row.score,
             user_id: board[0].user,
@@ -183,6 +185,7 @@ vi.mock("./db.js", () => ({
         rows: boardFor(params[0] as string).map((e, i) => ({
           username: `player-${e.user}`,
           avatar: null,
+          visual_beta: sql.includes("AS visual_beta") ? portraits.get(e.user) : undefined,
           score: e.row.score,
           turns: e.row.turns,
           best_turn: e.row.bestTurn,
@@ -318,6 +321,7 @@ const USER = "player-1";
 const CAPPED_WEEK = WEEKLY_CAP_FROM;
 
 beforeEach(() => {
+  portraits.clear();
   open.clear();
   best.clear();
   spentToday.clear();
@@ -901,5 +905,36 @@ describe("a day's worth of attempts", () => {
     expect(status.attemptsUsed).toBe(4);
     // The week's total is untouched — it is what "best of N attempts" means.
     expect(status.attempts).toBe(23);
+  });
+});
+
+describe("equipped challenge portraits", () => {
+  it("sends the account portrait on board rows and past winners", async () => {
+    const look = {
+      version: 1,
+      mascot: "panda",
+      frame: "diamond",
+      background: "sunset",
+      nameplate: "marquee",
+      badge: "",
+    };
+    portraits.set("rival", look);
+    record("rival", LAST_WEEK, 3000);
+    record("rival", WEEK, 1200);
+    const status = await weeklyStatus(USER, WEEK);
+    expect(status.leaderboard[0].visualBeta).toEqual(look);
+    expect(status.champion?.visualBeta).toEqual(look);
+    expect(status.champions[0].visualBeta).toEqual(look);
+    expect(status.champion).not.toHaveProperty("userId");
+
+    portraits.set("rival", { ...look, mascot: "frog" });
+    expect((await weeklyStatus(USER, WEEK)).leaderboard[0].visualBeta?.mascot).toBe("frog");
+  });
+
+  it("keeps old accounts and malformed portrait data readable", async () => {
+    record("rival", WEEK, 1200);
+    expect((await weeklyStatus(USER, WEEK)).leaderboard[0].visualBeta).toBeUndefined();
+    portraits.set("rival", { version: 999 });
+    expect((await weeklyStatus(USER, WEEK)).leaderboard[0].visualBeta).toBeUndefined();
   });
 });

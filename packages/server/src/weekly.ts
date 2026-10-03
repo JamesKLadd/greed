@@ -20,6 +20,7 @@
  * something that spoils a single attempt, so there is nothing to withhold.
  */
 
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import {
   WEEKLY_TURNS,
   canToggleLock,
@@ -59,6 +60,8 @@ export interface WeeklyEntry {
   username: string;
   /** Their equipped avatar id, so the row shows the face they chose. */
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
   turns: number;
   bestTurn: number;
@@ -82,6 +85,8 @@ export interface WeeklyChampion {
   week: string;
   username: string;
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
 }
 
@@ -573,7 +578,13 @@ export async function closedWeekPlacings(
 
 /** A champion as the client sees them — the account id stays here. */
 function strip(c: WeeklyChampion & { userId: string }): WeeklyChampion {
-  return { week: c.week, username: c.username, avatar: c.avatar, score: c.score };
+  return {
+    week: c.week,
+    username: c.username,
+    avatar: c.avatar,
+    visualBeta: c.visualBeta,
+    score: c.score,
+  };
 }
 
 /** Every week's winner, newest first. Closed weeks only. */
@@ -584,6 +595,7 @@ async function weeklyChampions(
   const { rows } = await query<{
     username: string;
     avatar: string | null;
+    visual_beta: unknown;
     week: string;
     score: number;
     user_id: string;
@@ -595,6 +607,7 @@ async function weeklyChampions(
         WHERE score > 0 AND week < $1::date
      )
      SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            u.profile -> 'visualBeta' AS visual_beta,
             to_char(k.week, 'YYYY-MM-DD') AS week, k.score, k.user_id
        FROM ranked k JOIN users u ON u.id = k.user_id
       WHERE k.rank = 1
@@ -606,6 +619,7 @@ async function weeklyChampions(
     week: r.week,
     username: r.username,
     avatar: r.avatar ?? "",
+    visualBeta: cleanBetaIdentity(r.visual_beta),
     score: r.score,
     userId: r.user_id,
   }));
@@ -649,6 +663,7 @@ export async function weeklyStatus(
   const board = await query<{
     username: string;
     avatar: string | null;
+    visual_beta: unknown;
     score: number;
     turns: number;
     best_turn: number;
@@ -660,6 +675,7 @@ export async function weeklyStatus(
     user_id: string;
   }>(
     `SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            u.profile -> 'visualBeta' AS visual_beta,
             r.score, r.turns, r.best_turn, r.busts, r.super_busts, r.hot_dice, r.attempts,
             r.user_id,
             RANK() OVER (ORDER BY ${WEEKLY_ORDER_R}) AS rank
@@ -716,6 +732,7 @@ export async function weeklyStatus(
     leaderboard: board.rows.map((r) => ({
       username: r.username,
       avatar: r.avatar ?? "",
+      visualBeta: cleanBetaIdentity(r.visual_beta),
       score: r.score,
       turns: r.turns,
       bestTurn: r.best_turn,

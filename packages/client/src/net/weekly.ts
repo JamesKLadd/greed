@@ -4,6 +4,7 @@
  * sees a seed.
  */
 
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import type { AttemptPeriod, RunMove, RunResult, GameState } from "@greed/core";
 import { api, ApiError } from "./auth.js";
 
@@ -23,6 +24,8 @@ export interface WeeklyEntry {
   username: string;
   /** Their equipped avatar id ("" to derive one from the name). */
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
   turns: number;
   bestTurn: number;
@@ -47,6 +50,8 @@ export interface WeeklyChampion {
   week: string;
   username: string;
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
 }
 
@@ -109,11 +114,17 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
     streak: raw.streak ?? 0,
     wins: raw.wins ?? 0,
     players: raw.players ?? 0,
-    champion: raw.champion ?? null,
-    champions: raw.champions ?? [],
+    champion: raw.champion
+      ? { ...raw.champion, visualBeta: cleanBetaIdentity(raw.champion.visualBeta) }
+      : null,
+    champions: (raw.champions ?? []).map((c) => ({
+      ...c,
+      visualBeta: cleanBetaIdentity(c.visualBeta),
+    })),
     leaderboard: (raw.leaderboard ?? []).map((e) => ({
       ...e,
       avatar: e.avatar ?? "",
+      visualBeta: cleanBetaIdentity(e.visualBeta),
       superBusts: e.superBusts ?? 0,
       hotDice: e.hotDice ?? 0,
       attempts: e.attempts ?? 0,

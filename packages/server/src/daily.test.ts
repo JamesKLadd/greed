@@ -23,6 +23,7 @@ interface Row {
   /** The run's biggest single turn — the board's tiebreak. See ranking.ts. */
   bestTurn: number;
 }
+const portraits = new Map<string, unknown>();
 const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
 /** Career best turn per user, as the users table would hold it. */
@@ -131,6 +132,7 @@ vi.mock("./db.js", () => ({
           .map(([day, board]) => ({
             username: `player-${board[0].user}`,
             avatar: null,
+            visual_beta: sql.includes("AS visual_beta") ? portraits.get(board[0].user) : undefined,
             day,
             score: board[0].row.score,
             user_id: board[0].user,
@@ -165,6 +167,7 @@ vi.mock("./db.js", () => ({
         rows: finished(params[0] as string).map((e, i) => ({
           username: `player-${e.user}`,
           avatar: null,
+          visual_beta: sql.includes("AS visual_beta") ? portraits.get(e.user) : undefined,
           score: e.row.score,
           turns: e.row.turns,
           best_turn: e.row.bestTurn,
@@ -244,6 +247,7 @@ async function playOut(user = USER) {
 }
 
 beforeEach(() => {
+  portraits.clear();
   rows.clear();
   bestTurns.clear();
   dailyWins.clear();
@@ -836,5 +840,51 @@ describe("reading another player's run", () => {
   it("stays withheld until this player's own run is in", async () => {
     record("rival", DAY, 3000);
     expect((await dailyStatus(USER, DAY)).leaderboard).toEqual([]);
+  });
+});
+
+describe("equipped challenge portraits", () => {
+  it("sends the account portrait on board rows and past winners", async () => {
+    const look = {
+      version: 1,
+      mascot: "owl",
+      frame: "neon",
+      background: "stars",
+      nameplate: "ticket",
+      badge: "",
+    };
+    portraits.set(USER, look);
+    for (const day of [DAY, "2026-08-11"]) {
+      rows.set(key(USER, day), {
+        moves: "",
+        seed: 1,
+        complete: true,
+        score: 1200,
+        turns: 10,
+        bestTurn: 500,
+      });
+    }
+    const status = await dailyStatus(USER, DAY);
+    expect(status.leaderboard[0].visualBeta).toEqual(look);
+    expect(status.champion?.visualBeta).toEqual(look);
+    expect(status.champions[0].visualBeta).toEqual(look);
+    expect(status.champion).not.toHaveProperty("userId");
+
+    portraits.set(USER, { ...look, mascot: "panda" });
+    expect((await dailyStatus(USER, DAY)).leaderboard[0].visualBeta?.mascot).toBe("panda");
+  });
+
+  it("keeps old accounts and malformed portrait data readable", async () => {
+    rows.set(key(USER, DAY), {
+      moves: "",
+      seed: 1,
+      complete: true,
+      score: 1200,
+      turns: 10,
+      bestTurn: 500,
+    });
+    expect((await dailyStatus(USER, DAY)).leaderboard[0].visualBeta).toBeUndefined();
+    portraits.set(USER, "invalid");
+    expect((await dailyStatus(USER, DAY)).leaderboard[0].visualBeta).toBeUndefined();
   });
 });

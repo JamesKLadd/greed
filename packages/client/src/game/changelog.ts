@@ -24,6 +24,14 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.1",
+    date: "2026-10-03",
+    notes: [
+      "The Weekly Challenge leaderboard now stays visible during a run",
+      "Daily and Weekly Challenges now show the profile pictures from the Locker beside player names",
+    ],
+  },
+  {
     version: "0.8.0",
     date: "2026-10-02",
     notes: [

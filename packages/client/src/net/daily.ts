@@ -1,6 +1,7 @@
 /** Daily challenge API. Scores come back from the server, which derives them by
  *  replaying the submitted moves — the client never reports a score. */
 
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import type { DailyMove, DailyResult, GameState } from "@greed/core";
 import { api } from "./auth.js";
 
@@ -21,6 +22,8 @@ export interface DailyEntry {
   username: string;
   /** Their equipped avatar id ("" to derive one from the name). */
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
   turns: number;
   bestTurn: number;
@@ -43,6 +46,8 @@ export interface DailyChampion {
   day: string;
   username: string;
   avatar: string;
+  /** Equipped Locker portrait, when supplied by the account/server. */
+  visualBeta?: BetaIdentity;
   score: number;
 }
 
@@ -83,11 +88,17 @@ function fill(raw: DailyStatus): DailyStatus {
     // The run summary itself now carries a field the old server never sent.
     run: raw.run ? { ...raw.run, superBusts: raw.run.superBusts ?? 0 } : null,
     wins: raw.wins ?? 0,
-    champion: raw.champion ?? null,
-    champions: raw.champions ?? [],
+    champion: raw.champion
+      ? { ...raw.champion, visualBeta: cleanBetaIdentity(raw.champion.visualBeta) }
+      : null,
+    champions: (raw.champions ?? []).map((c) => ({
+      ...c,
+      visualBeta: cleanBetaIdentity(c.visualBeta),
+    })),
     leaderboard: (raw.leaderboard ?? []).map((e) => ({
       ...e,
       avatar: e.avatar ?? "",
+      visualBeta: cleanBetaIdentity(e.visualBeta),
       superBusts: e.superBusts ?? 0,
       hotDice: e.hotDice ?? 0,
       wins: e.wins ?? 0,

@@ -185,7 +185,7 @@
 }
 .challenge-lobby__board .daily__row {
   display: grid;
-  grid-template-columns: auto 24px minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   min-height: 56px;
   gap: 8px;
   padding: 12px 10px;
@@ -250,4 +250,23 @@
     gap: 6px;
     font-size: var(--fs-sm);
   }
+}
+
+/* Keep the Locker portrait readable without taking space from names or scores. */
+.daily__face .beta-portrait,
+.daily-hall__face .beta-portrait {
+  width: 36px;
+  height: 36px;
+  border-width: 2px;
+  vertical-align: middle;
+}
+.daily__heraldFace .beta-portrait {
+  width: 44px;
+  height: 44px;
+  vertical-align: middle;
+}
+.daily-detail__face .beta-portrait {
+  width: 74px;
+  height: 74px;
+  vertical-align: middle;
 }
