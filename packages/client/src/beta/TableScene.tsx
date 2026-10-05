@@ -10,6 +10,7 @@ import { TableSurface } from "./TableSurface.js";
 import { useI18n } from "../i18n/i18n.js";
 import type { TableFeedback } from "./tableFeedback.js";
 import { teamName } from "../game/teams.js";
+import { GoalProgress } from "../components/GoalProgress.js";
 
 export interface ScenePlayer {
   id: string;
@@ -29,6 +30,8 @@ interface Props extends TableFeedback {
   viewerId?: string;
   activePlayerId?: string;
   finalRound?: boolean;
+  /** Individual race only; team progress belongs beside the shared totals. */
+  goal?: number;
   onPlayerDetails?: (player: ScenePlayer) => void;
   children?: ReactNode;
 }
@@ -50,6 +53,7 @@ export function TableScene({
   viewerId,
   activePlayerId,
   finalRound = false,
+  goal,
   banked,
   bustedId,
   onPlayerDetails,
@@ -77,7 +81,12 @@ export function TableScene({
       ref={ref}
       className={`tp-scene tp-scene--${geometry.mode}`}
       aria-label={t("scene.table", { count: ids.length })}
-      style={{ "--scene-die-edge": `${geometry.dieEdge}px` } as CSSProperties}
+      style={
+        {
+          "--scene-die-edge": `${geometry.dieEdge}px`,
+          "--scene-die-pitch": `${geometry.diePitch}px`,
+        } as CSSProperties
+      }
     >
       <div className="tp-room-light" aria-hidden="true" />
       <TableSurface />
@@ -160,6 +169,7 @@ export function TableScene({
             </button>
             <div
               className="tp-score"
+              data-goal={goal != null || undefined}
               style={placed(seat.score)}
               aria-label={t("scene.total", { name: player.name, points: score })}
             >
@@ -175,12 +185,17 @@ export function TableScene({
                         : geometry.scoreFont
                     }px`,
                     "--scene-score-fit": `${(seat.score.width / Math.max(1, score.length)) * 1.65}px`,
+                    "--scene-score-height": `${seat.score.height}px`,
                   } as CSSProperties
                 }
               >
                 {score}
               </strong>
-              <span>{own ? t("scene.youPoints") : t("scene.points")}</span>
+              {goal != null ? (
+                <GoalProgress score={player.score} goal={goal} name={player.name} />
+              ) : (
+                <span>{own ? t("scene.youPoints") : t("scene.points")}</span>
+              )}
             </div>
             {banked?.playerId === id && (
               <span

@@ -13,6 +13,12 @@ export const LOCALES: { code: Locale; label: string }[] = [
 ];
 
 export const en = {
+  "goal.target": "Goal: {goal}",
+  "goal.progress": "{name}: {score} of {goal} points toward the goal",
+  "goal.remaining": "{points} points to go",
+  "goal.teamRemaining": "This team needs {points} more points",
+  "goal.reached": "Goal reached",
+
   "growth.privacy": "Privacy",
   "growth.usage": "Share usage measurements",
   "growth.usageHint":
@@ -992,6 +998,12 @@ export const en = {
 export type MsgKey = keyof typeof en;
 
 export const es: Record<MsgKey, string> = {
+  "goal.target": "Meta: {goal}",
+  "goal.progress": "{name}: {score} de {goal} puntos hacia la meta",
+  "goal.remaining": "Faltan {points} puntos",
+  "goal.teamRemaining": "Este equipo necesita {points} puntos más",
+  "goal.reached": "Meta alcanzada",
+
   "growth.privacy": "Privacidad",
   "growth.usage": "Compartir mediciones de uso",
   "growth.usageHint":
@@ -1945,6 +1957,12 @@ export const es: Record<MsgKey, string> = {
 };
 
 export const fr: Record<MsgKey, string> = {
+  "goal.target": "Objectif : {goal}",
+  "goal.progress": "{name} : {score} sur {goal} points vers l’objectif",
+  "goal.remaining": "Encore {points} points",
+  "goal.teamRemaining": "Il reste {points} points à cette équipe",
+  "goal.reached": "Objectif atteint",
+
   "growth.privacy": "Confidentialité",
   "growth.usage": "Partager les mesures d’utilisation",
   "growth.usageHint":

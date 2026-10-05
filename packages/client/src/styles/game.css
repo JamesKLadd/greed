@@ -339,7 +339,8 @@
 }
 /* WIDE — the classic horizontal oval, seats all the way round the rail. */
 .felt[data-layout="wide"] {
-  width: min(820px, 100%);
+  /* Leave room for the rail pods so every score and goal bar stays on screen. */
+  width: min(820px, calc(100% - 96px));
   aspect-ratio: 16 / 10;
   max-height: 100%;
   --pod-w: 152px;
@@ -754,13 +755,7 @@
   color: var(--text-dim);
   font-style: italic;
 }
-/* Pods are a fixed height (the row stacking depends on it), so "thinking…" has
-   to take the place of something rather than add to the stack. It takes the
-   progress bar's row: while a seat is mid-turn, what it's doing right now
-   matters more than how close it is to the goal. */
-.pseat:has(.pseat__status) .pseat__bar {
-  display: none;
-}
+/* Goal progress remains visible while thinking or disconnected. */
 .pseat--current .pseat__status {
   color: var(--warn);
   animation: pulse-fade 1.3s ease-in-out infinite;
@@ -807,15 +802,6 @@
   height: 4px;
   margin-top: 5px;
 }
-.pseat__fill {
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--seat, var(--warn)) 55%, transparent),
-    var(--seat, var(--warn))
-  );
-  transition: width 0.4s ease;
-}
 
 .felt__center {
   position: absolute;
@@ -838,17 +824,17 @@
   /* Named, because the die size below has to subtract exactly these gaps to
      know what's left for the dice themselves — which also means widening this
      costs die size on a phone, where the row already fills the corridor. The
-     floor was 4px, which packed five dice into a solid block once they grew. */
-  --dice-gap: clamp(6px, 2cqw, 14px);
+     gap leaves room for larger dice on a narrow phone. */
+  --dice-gap: clamp(4px, 1.5cqw, 12px);
   gap: var(--dice-gap);
 }
 /*
- * Portrait dice are a tenth larger than the corridor arithmetic alone would
+ * Portrait dice are modestly larger than the corridor arithmetic alone would
  * give them — they're the thing you actually look at, and on a phone they were
  * smaller than they needed to be.
  *
- * It can't be a flat 1.1x, though, because the row was already spending most of
- * the corridor: past a certain mat width, 10% more die is more than the space
+ * It can't be a flat multiplier, though, because the row was already spending most of
+ * the corridor: past a certain mat width, a larger die is more than the space
  * between the seat pods. So the size is the SMALLER of what we want and what
  * fits — the second term measures the row exactly (five dice plus their four
  * real gaps, leaving 4px of air so the outermost die never touches a seat).
@@ -864,14 +850,14 @@
   font-size: clamp(
     22px,
     min(
-      calc((var(--corridor) - 36px) / 5 * 1.1),
+      calc((var(--corridor) - 36px) / 5 * 1.265),
       calc((var(--corridor) - 4 * var(--dice-gap) - 4px) / 5)
     ),
-    60px
+    69px
   );
 }
 .felt[data-layout="wide"] .felt__center .dice-tray .die {
-  font-size: clamp(26px, 15cqw, 60px);
+  font-size: clamp(30px, 17.25cqw, 69px);
 }
 
 /* What the turn is worth so far, printed over the dice carrying it. The slot
@@ -1612,12 +1598,6 @@
 }
 .pseat--teamed[data-team="1"] {
   border-left-color: var(--team-1);
-}
-.pseat--teamed .pseat__fill {
-  background: var(--team-0);
-}
-.pseat--teamed[data-team="1"] .pseat__fill {
-  background: var(--team-1);
 }
 
 /* On a phone the mat is already tight; the chips shrink rather than wrap, so

@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.3",
+    date: "2026-10-05",
+    notes: [
+      "Local and online games now show the goal score in the header and progress bars beside each player's banked score. Player details also show how many points are still needed",
+      "Team games now show shared progress toward the goal while keeping each player's personal contribution visible. Reaching the goal fills the bar without hiding higher scores during the final round",
+      "Made the dice larger on the illustrated table and adjusted Classic dice sizing where space permits, keeping all five dice visible on small screens",
+      "Improved Classic score cards and team totals on narrow phones and short landscape screens so goal bars remain visible during thinking, disconnected play, and the final round",
+      "Added accessible goal descriptions, reduced-motion and high-contrast support, and English, Spanish, and French translations for the new indicators",
+    ],
+  },
+  {
     version: "0.8.2",
     date: "2026-10-05",
     notes: [

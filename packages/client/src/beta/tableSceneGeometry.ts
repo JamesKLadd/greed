@@ -100,7 +100,7 @@ export function tableSceneGeometry(count: SceneCount, width: number, height: num
   const selfSize = wide ? (short ? 87 : 160) : short ? 108 : clamp(width * 0.34, 116, 190);
   const selfBelow = wide ? (short ? 65 : 75) : short ? 52 : 36;
   const scoreWidth = wide ? (short ? 60 : 88) : Math.min(66, width * 0.205);
-  const scoreHeight = wide && short ? 19 : 30;
+  const scoreHeight = wide ? (short ? 26 : 34) : 30;
   const seats: SceneSeat[] = TEMPLATES[count].map((slot) => {
     const [x, y, sx, sy, ny, fx, fy] = positions[slot];
     const view = slot === "self" ? "back" : slot.startsWith("far") ? "front" : "side";
@@ -137,7 +137,7 @@ export function tableSceneGeometry(count: SceneCount, width: number, height: num
           : view === "front" && count % 2 === 1
             ? Math.min(scoreWidth, width * 0.18)
             : scoreWidth,
-        view === "back" ? (wide && short ? 22 : 36) : scoreHeight,
+        view === "back" ? (wide && short ? 30 : 38) : scoreHeight,
       ),
       flag: centered((width * fx) / 100, (height * fy) / 100, flagWidth, flagHeight),
       flagAngle:
@@ -149,7 +149,9 @@ export function tableSceneGeometry(count: SceneCount, width: number, height: num
   return {
     mode,
     seats,
-    dieEdge: wide ? (short ? 27 : 40) : clamp(width * 0.078, 25, 34),
+    dieEdge: wide ? (short ? 31 : 46) : clamp(width * 0.09, 29, 39),
+    // Trim empty margins on narrow phones while preserving distinct 44px targets.
+    diePitch: wide ? (short ? 52 : 70) : clamp(width * 0.09 + 16, 44, 58),
     scoreFont: wide ? (short ? 15 : 22) : short ? 14 : 17,
   };
 }

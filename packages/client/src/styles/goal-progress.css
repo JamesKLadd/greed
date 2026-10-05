@@ -1,0 +1,256 @@
+.goal-progress {
+  --goal-fill: #e9ca85;
+  flex: 0 0 auto;
+  height: 5px;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #98ac925e;
+  border-radius: 4px;
+  background: #081c19;
+}
+.goal-progress__fill {
+  display: block;
+  height: 100%;
+  background: var(--goal-fill);
+  transition: width 0.3s ease;
+}
+.goal-progress[data-reached] {
+  border-color: var(--goal-fill);
+}
+.tp-score[data-goal] .goal-progress {
+  margin-top: 4px;
+  max-width: 60px;
+}
+.scene-game .tp-score[data-goal] strong,
+:root[data-text-scale="large"] .scene-game .tp-score[data-goal] strong {
+  font-size: min(
+    var(--scene-score-font),
+    var(--scene-score-fit),
+    calc(var(--scene-score-height) - 9px)
+  );
+}
+:root[data-text-scale="large"] .scene-game .tp-score[data-goal] strong {
+  font-size: min(
+    calc(var(--scene-score-font) * var(--text-scale)),
+    var(--scene-score-fit),
+    calc(var(--scene-score-height) - 9px)
+  );
+}
+.scene-game .tp-wordmark .scene-goal {
+  font-size: 10px;
+  line-height: 1.1;
+  letter-spacing: 0.3px;
+  color: #dce9de;
+  margin-top: 5px;
+}
+.scene-game .scene-teams {
+  width: clamp(78px, 24cqw, 110px);
+  margin-inline: auto;
+  gap: 7px;
+}
+.scene-team-score > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.scene-team-score .scene-team-marker {
+  display: none;
+}
+.scene-team-score .goal-progress {
+  margin-top: 3px;
+}
+[data-team="0"] > .goal-progress {
+  --goal-fill: var(--team-0);
+}
+[data-team="1"] > .goal-progress {
+  --goal-fill: var(--team-1);
+}
+.game__title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.game__title .game__logo {
+  margin: 0;
+}
+.game__goal {
+  display: block;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  margin-top: 3px;
+  color: var(--text-dim);
+}
+.pseat .goal-progress {
+  --goal-fill: var(--seat, #e9ca85);
+}
+.pseat__identity {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.pseat__identity .pseat__name {
+  width: 100%;
+}
+.pseat__identity .pseat__status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+.pseat--compact .pseat__identity {
+  flex: none;
+  width: 100%;
+}
+.pseat--compact:has(.pseat__status) .pseat__head {
+  flex-direction: row;
+  gap: 3px;
+}
+.pseat--compact:has(.pseat__status) .pseat__identity {
+  flex: 1;
+  width: auto;
+}
+.pseat--compact .goal-progress {
+  height: 4px;
+  margin-top: 2px;
+}
+/* The turn value already appears on the mat and Bank button. Keep compact
+   pods to their banked score so a long total cannot wrap over the goal bar. */
+.pseat--compact .pseat__turn {
+  display: none;
+}
+.teamchip {
+  flex-wrap: wrap;
+}
+.teamchip .goal-progress {
+  flex-basis: 100%;
+  height: 4px;
+}
+/* Stack the team totals inside the phone's dice corridor, clear of seat pods. */
+.felt[data-layout="portrait"] .felt__teams {
+  flex-direction: column;
+  width: min(160px, calc(var(--corridor) - 32px));
+  gap: 4px;
+}
+.felt[data-layout="portrait"] .teamchip {
+  padding: 2px 5px;
+  border-radius: 8px;
+  gap: 2px 4px;
+  font-size: 0.625rem;
+  line-height: 1.1;
+}
+.felt[data-layout="portrait"] .teamchip__score {
+  font-size: 0.75rem;
+  line-height: 1.1;
+}
+.felt[data-layout="portrait"] .teamchip__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Use the existing 100×56 short-landscape pod geometry for Classic as well.
+   Leave a lane between the dice, team bars, and the viewer's bottom card. */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root[data-presentation="classic"] .game__bar {
+    padding-block: 6px;
+  }
+  :root[data-presentation="classic"] .game__logo {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+  :root[data-presentation="classic"] .felt[data-layout="wide"] {
+    width: calc(100% - 120px);
+    height: calc(100% - 32px);
+    aspect-ratio: auto;
+    --pod-w: 100px;
+    --pod-h: 56px;
+    --pod-w-self: 100px;
+    --pod-h-self: 56px;
+  }
+  :root[data-presentation="classic"] .felt[data-layout="wide"] .pseat {
+    padding: 3px 7px;
+    height: 56px;
+    min-height: 0;
+  }
+  :root[data-presentation="classic"] .pseat__avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+  :root[data-presentation="classic"] .pseat__name {
+    font-size: 10px;
+  }
+  :root[data-presentation="classic"] .pseat__status {
+    font-size: 8px;
+    margin-top: 0;
+  }
+  :root[data-presentation="classic"] .pseat__meta {
+    margin-top: 2px;
+  }
+  :root[data-presentation="classic"] .pseat__total {
+    font-size: 17px;
+    line-height: 1.05;
+  }
+  :root[data-presentation="classic"] .pseat__you,
+  :root[data-presentation="classic"] .pseat__turn {
+    display: none;
+  }
+  :root[data-presentation="classic"] .pseat .goal-progress {
+    height: 3px;
+    margin-top: 1px;
+  }
+  :root[data-presentation="classic"] .felt__center {
+    gap: 3px;
+  }
+  :root[data-presentation="classic"] .felt__pot {
+    min-height: 24px;
+  }
+  :root[data-presentation="classic"] .felt__pot-value {
+    font-size: 24px;
+  }
+  :root[data-presentation="classic"] .felt[data-layout="wide"] .felt__center .die {
+    font-size: 39px;
+  }
+  :root[data-presentation="classic"] .felt__teams {
+    margin-top: 3px;
+    /* Put the two bars beside the bottom card when the final-round banner
+       leaves too little height to stack them above it. */
+    gap: calc(var(--pod-w-self) + 24px);
+  }
+  :root[data-presentation="classic"] .teamchip {
+    padding: 2px 5px;
+    gap: 2px 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+  :root[data-presentation="classic"] .teamchip__score {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+}
+:root[data-contrast="high"] .goal-progress {
+  border-color: #fff;
+  background: #000;
+  --goal-fill: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .goal-progress__fill {
+    transition: none;
+  }
+}
+:root[data-motion="reduced"] .goal-progress__fill {
+  transition: none;
+}
+@media (forced-colors: active) {
+  .goal-progress {
+    border-color: CanvasText;
+    background: Canvas;
+    forced-color-adjust: none;
+  }
+  .goal-progress__fill {
+    background: CanvasText;
+  }
+}

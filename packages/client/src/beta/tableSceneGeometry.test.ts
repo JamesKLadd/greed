@@ -71,7 +71,29 @@ describe("table scene geometry", () => {
           }
           expect(overlaps(seat.flag, seat.score)).toBe(false);
         }
-        expect(layout.dieEdge).toBeLessThanOrEqual(40);
+        expect(layout.dieEdge).toBeLessThanOrEqual(46);
+        const diceY =
+          h * (layout.mode === "short-wide" ? 0.65 : layout.mode === "wide" ? 0.66 : 0.68);
+        const touchEdge = Math.max(44, layout.dieEdge);
+        const targets = Array.from({ length: 5 }, (_, die) => ({
+          x: w / 2 + (die - 2) * layout.diePitch - touchEdge / 2,
+          y: diceY - touchEdge / 2,
+          width: touchEdge,
+          height: touchEdge,
+        }));
+        for (const [i, target] of targets.entries()) {
+          expect(target.x).toBeGreaterThanOrEqual(0);
+          expect(target.x + target.width).toBeLessThanOrEqual(w);
+          for (const other of targets.slice(i + 1)) {
+            expect(overlaps(target, other)).toBe(false);
+          }
+          for (const seat of layout.seats) {
+            expect(overlaps(target, seat.name)).toBe(false);
+            expect(overlaps({ ...target, y: target.y - 9 }, seat.name)).toBe(false);
+            expect(overlaps(target, seat.score)).toBe(false);
+            expect(overlaps({ ...target, y: target.y - 9 }, seat.score)).toBe(false);
+          }
+        }
       });
     }
 });

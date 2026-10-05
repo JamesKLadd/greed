@@ -19,6 +19,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { DEFAULT_APPEARANCE, MASCOTS } from "../beta/appearance.js";
 import { Mascot } from "../beta/Mascot.js";
+import { GoalProgress } from "./GoalProgress.js";
 
 interface TableViewProps {
   state: GameState;
@@ -132,8 +133,6 @@ export function TableView({
             // One crown per game: the leading side wears it on the scoreboard
             // instead, so four pods don't all sprout the same badge.
             const isLeader = !sides && p.total === leadTotal && p.total > 0;
-            const progress = sideTotals && side !== null ? sideTotals[side] : p.total;
-            const pct = Math.min(100, (progress / goal) * 100);
             const turnScore = isCurrent ? state.turn.turnScore : 0;
             const isYou = p.id === perspectiveId;
             const seatLook = betaLooks?.[p.id] ?? (isYou && !showPresence ? appearance : undefined);
@@ -245,30 +244,35 @@ export function TableView({
                     )}
                     {isCurrent && turnTimer !== undefined && <TurnRing timer={turnTimer} />}
                   </span>
-                  <span className="pseat__name">
-                    {isLeader && (
-                      <span className="pseat__crown" aria-label={t("aria.leader")}>
-                        👑
-                      </span>
-                    )}
-                    {p.name}
-                    {seatBadge && (
-                      <span
-                        title={t(`ach.${seatBadge.id}.title` as MsgKey)}
-                        aria-label={t(`ach.${seatBadge.id}.title` as MsgKey)}
+                  <div className="pseat__identity">
+                    <span className="pseat__name">
+                      {isLeader && (
+                        <span className="pseat__crown" aria-label={t("aria.leader")}>
+                          👑
+                        </span>
+                      )}
+                      {p.name}
+                      {seatBadge && (
+                        <span
+                          title={t(`ach.${seatBadge.id}.title` as MsgKey)}
+                          aria-label={t(`ach.${seatBadge.id}.title` as MsgKey)}
+                        >
+                          {" "}
+                          {seatBadge.icon}
+                        </span>
+                      )}
+                      {isYou && <span className="pseat__you"> {t("common.youParen")}</span>}
+                    </span>
+                    {(thinking || offline) && (
+                      <div
+                        className="pseat__status"
+                        title={offline ? t("table.offline") : t("table.thinking")}
                       >
-                        {" "}
-                        {seatBadge.icon}
-                      </span>
+                        {offline ? t("table.offline") : t("table.thinking")}
+                      </div>
                     )}
-                    {isYou && <span className="pseat__you"> {t("common.youParen")}</span>}
-                  </span>
-                </div>
-                {(thinking || offline) && (
-                  <div className="pseat__status">
-                    {offline ? t("table.offline") : t("table.thinking")}
                   </div>
-                )}
+                </div>
                 <div className="pseat__meta">
                   <span
                     key={betaActive ? p.total : undefined}
@@ -278,9 +282,9 @@ export function TableView({
                     {turnScore > 0 && <span className="pseat__turn"> +{turnScore}</span>}
                   </span>
                 </div>
-                <div className="pseat__bar">
-                  <div className="pseat__fill" style={{ width: `${pct}%` }} />
-                </div>
+                {!sides && (
+                  <GoalProgress score={p.total} goal={goal} name={p.name} className="pseat__bar" />
+                )}
               </div>
             );
           })}
@@ -357,6 +361,7 @@ export function TableView({
                 >
                   <span className="teamchip__name">{teamName(t, side)}</span>
                   <span className="teamchip__score">{total}</span>
+                  <GoalProgress score={total} goal={goal} name={teamName(t, side)} />
                 </div>
               ))}
             </div>

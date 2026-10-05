@@ -48,7 +48,8 @@ function ReviewTable({
   onBack: () => void;
 }) {
   const { t } = useI18n();
-  const Layout = useBetaActive() ? LocalTableGame : GameShell;
+  const beta = useBetaActive();
+  const Layout = beta ? LocalTableGame : GameShell;
   const [state, setState] = useState(initial);
   const [overlay, setOverlay] = useState<SceneOverlay>(null);
   const [clockTimer] = useState(() => ({
@@ -90,7 +91,7 @@ function ReviewTable({
       perspectiveId={youId}
       sceneOverlay={overlay}
       onSceneOverlay={setOverlay}
-      barTitle={<>GREED</>}
+      barTitle={<h1 className="game__logo">GREED</h1>}
       barLeft={
         <button className="tp-icon" onClick={onBack} aria-label="Back to polish review">
           ←
@@ -98,16 +99,18 @@ function ReviewTable({
       }
       barRight={
         <>
-          <p>Isolated sample: no server, recording or progression writes.</p>
+          {beta && <p>Isolated sample: no server, recording or progression writes.</p>}
           <Button
+            size={beta ? "md" : "icon"}
+            aria-label="Reset sample"
             onClick={() => {
               setState(initial);
               setOverlay(null);
             }}
           >
-            Reset sample
+            {beta ? "Reset sample" : "↻"}
           </Button>
-          <Button onClick={onBack}>Choose another sample</Button>
+          {beta && <Button onClick={onBack}>Choose another sample</Button>}
         </>
       }
     />

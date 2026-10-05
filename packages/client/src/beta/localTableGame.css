@@ -45,12 +45,12 @@
 .scene-dice .dice-tray {
   display: flex;
   flex-wrap: nowrap;
-  gap: 9px;
+  gap: 0;
   padding: 0;
 }
 .scene-dice .die {
   font-size: var(--scene-die-edge);
-  margin: 6px;
+  margin: 6px calc((var(--scene-die-pitch) - var(--scene-die-edge)) / 2);
   flex-shrink: 0;
 }
 .scene-dice .die::before {

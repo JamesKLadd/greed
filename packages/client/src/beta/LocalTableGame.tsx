@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isLastHeldDie, teamTotal } from "@greed/core";
+import { isLastHeldDie, teamTotal, scoreFor } from "@greed/core";
 import type { GameShellProps } from "../screens/GameShell.js";
 import { TableScene, type ScenePlayer } from "./TableScene.js";
 import { DiceTray } from "../components/DiceTray.js";
@@ -23,6 +23,7 @@ import { OnlineSeatStatus } from "./OnlineSeatStatus.js";
 import { emoteGlyph } from "../components/EmoteBar.js";
 import { useTableFeedback } from "./tableFeedback.js";
 import { pointsAtRisk } from "../game/turnPresentation.js";
+import { GoalProgress, goalProgress } from "../components/GoalProgress.js";
 
 export type SceneOverlay = { kind: "menu" } | { kind: "player"; id: string } | null;
 interface LocalTableGameProps extends GameShellProps {
@@ -76,6 +77,9 @@ export function LocalTableGame(props: LocalTableGameProps) {
   const selectedBadge = ACHIEVEMENTS.find((a) => a.id === selectedLook.badge);
   const activeOffline = props.online && !active.isBot && props.presence?.[active.id] === false;
   const atRisk = pointsAtRisk(state);
+  const selectedProgress = selected
+    ? goalProgress(scoreFor(state, state.players.indexOf(selected)), state.config.goal)
+    : null;
   return (
     <div
       className={`tp-screen scene-game${props.online ? " scene-game--online" : ""}`}
@@ -90,7 +94,10 @@ export function LocalTableGame(props: LocalTableGameProps) {
     >
       <header className="tp-header">
         {props.barLeft}
-        <span className="tp-wordmark">GREED</span>
+        <span className="tp-wordmark">
+          GREED
+          <span className="scene-goal">{t("goal.target", { goal: n(state.config.goal) })}</span>
+        </span>
         <button
           className="tp-icon"
           type="button"
@@ -115,6 +122,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
         viewerId={props.spectating ? undefined : (perspectiveId ?? undefined)}
         activePlayerId={state.phase === "game-over" ? undefined : active.id}
         finalRound={state.endgame.triggered}
+        goal={state.teams ? undefined : state.config.goal}
         {...feedback}
         onPlayerDetails={(player) => onSceneOverlay({ kind: "player", id: player.id })}
       >
@@ -137,12 +145,19 @@ export function LocalTableGame(props: LocalTableGameProps) {
           {state.teams && (
             <div className="scene-teams">
               {state.teams.map((_, i) => (
-                <span key={i} data-team={i}>
-                  <span className="scene-team-marker" aria-hidden="true">
-                    {i + 1}
+                <div key={i} data-team={i} className="scene-team-score">
+                  <span>
+                    <span className="scene-team-marker" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    {teamName(t, i)} <strong>{n(teamTotal(state, i))}</strong>
                   </span>
-                  {teamName(t, i)} <strong>{n(teamTotal(state, i))}</strong>
-                </span>
+                  <GoalProgress
+                    score={teamTotal(state, i)}
+                    goal={state.config.goal}
+                    name={teamName(t, i)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -275,6 +290,14 @@ export function LocalTableGame(props: LocalTableGameProps) {
                 {n(teamTotal(state, selected.team))}
               </p>
             )}
+            <p className="scene-details__goal">
+              {selectedProgress && selectedProgress.remaining > 0
+                ? t(
+                    selected.team != null && state.teams ? "goal.teamRemaining" : "goal.remaining",
+                    { points: n(selectedProgress.remaining) },
+                  )
+                : t("goal.reached")}
+            </p>
             {selected.id === last.id && <p>🏁 {t("scene.finalSeatDetail")}</p>}
             {selected.isBot && <p>{t("scene.bot")}</p>}
             {props.online && !selected.isBot && props.presence?.[selected.id] === false && (

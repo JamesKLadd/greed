@@ -9,7 +9,7 @@ import { GuidanceLine } from "../components/GuidanceLine.js";
 import { Toast } from "../components/Toast.js";
 import type { ToastMessage } from "../game/toasts.js";
 import { loadSettings } from "../game/settings.js";
-import { useT } from "../i18n/i18n.js";
+import { useI18n } from "../i18n/i18n.js";
 import { useBetaActive } from "../beta/BetaContext.js";
 import { GameCelebration } from "../beta/Celebration.js";
 
@@ -90,7 +90,7 @@ export function GameShell({
   floating,
   overlays,
 }: GameShellProps) {
-  const t = useT();
+  const { t, n } = useI18n();
   const betaActive = useBetaActive();
   const lastPlayer = state.players[state.order[state.order.length - 1]];
   // Read per render rather than once on mount, so coming back from Settings
@@ -101,7 +101,10 @@ export function GameShell({
     <div className="game" style={cosmetics}>
       <header className="game__bar">
         {barLeft}
-        {barTitle}
+        <div className="game__title">
+          {barTitle}
+          <span className="game__goal">{t("goal.target", { goal: n(state.config.goal) })}</span>
+        </div>
         <div className="game__bar-right">{barRight}</div>
       </header>
 
