@@ -33,6 +33,7 @@ import {
 } from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
 import { DAILY_ORDER, DAILY_ORDER_R } from "./ranking.js";
+import { challengeFriends } from "./challengeFriends.js";
 
 /** Cap on submitted move lists — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -82,6 +83,7 @@ export interface DailyStatus {
    * payload the client is trusted to keep to itself is not withheld at all.
    */
   leaderboard: DailyEntry[];
+  friendsLeaderboard: DailyEntry[];
   /** The player's own rank, even when outside the top slice. */
   yourRank: number | null;
   players: number;
@@ -495,6 +497,8 @@ export async function dailyStatus(
       )
     : { rows: [] };
 
+  // The daily's friends board follows the same server-side completion gate.
+  const friends = own ? await challengeFriends("daily", userId, day) : [];
   const total = await query<{ n: string }>(
     `SELECT COUNT(*)::text AS n FROM daily_runs WHERE day = $1 AND complete`,
     [day],
@@ -514,7 +518,11 @@ export async function dailyStatus(
   // screen and six on the leaderboard. Podiums stay live: they feed a badge
   // that is granted once and stored, not a number on display.
   await refreshCareerChallengeWins("daily", day);
-  const career = await careerChallengeWins("daily", [userId, ...board.rows.map((r) => r.user_id)]);
+  const career = await careerChallengeWins("daily", [
+    userId,
+    ...board.rows.map((r) => r.user_id),
+    ...friends.map((r) => r.user_id),
+  ]);
 
   // Past winners. Closed days only, so this is safe to send before the run.
   const champions = await dailyChampions(day);
@@ -554,6 +562,21 @@ export async function dailyStatus(
       crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
     })),
     yourRank: own ? Number(own.rank) : null,
+    friendsLeaderboard: friends.map((r) => ({
+      username: r.username,
+      avatar: r.avatar ?? "",
+      visualBeta: cleanBetaIdentity(r.visual_beta),
+      score: r.score,
+      turns: r.turns,
+      bestTurn: r.best_turn,
+      busts: r.busts,
+      superBusts: r.super_busts ?? 0,
+      hotDice: r.hot_dice,
+      wins: career.get(r.user_id) ?? 0,
+      rank: Number(r.rank),
+      you: r.user_id === userId ? true : undefined,
+      crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
+    })),
     players: Number(total.rows[0]?.n ?? 0),
     eliteEarned: mineClosed.podiums > 0,
     wins: career.get(userId) ?? 0,

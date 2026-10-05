@@ -839,7 +839,9 @@ describe("reading another player's run", () => {
 
   it("stays withheld until this player's own run is in", async () => {
     record("rival", DAY, 3000);
-    expect((await dailyStatus(USER, DAY)).leaderboard).toEqual([]);
+    const status = await dailyStatus(USER, DAY);
+    expect(status.leaderboard).toEqual([]);
+    expect(status.friendsLeaderboard).toEqual([]);
   });
 });
 

@@ -13,6 +13,61 @@ export const LOCALES: { code: Locale; label: string }[] = [
 ];
 
 export const en = {
+  "growth.privacy": "Privacy",
+  "growth.usage": "Share usage measurements",
+  "growth.usageHint":
+    "Help improve Greed with first-party play and sharing counts. No names, scores, or dice are collected. Kept for 30 days; respects browser privacy signals.",
+  "growth.privacyDetails": "Privacy details",
+  "growth.report": "Growth report",
+
+  "growth.saveImage": "Save score image",
+  "growth.imageSaved": "Score image ready to save.",
+  "growth.imageFailed": "Couldn’t create the image. You can still copy the message and link.",
+  "growth.joinRoom": "Sign in to join room {code}. Your invitation stays saved while you sign in.",
+  "growth.welcomeTitle": "Your first roll starts here",
+  "growth.welcomeBody":
+    "Bank your points or risk them for more. Try three practice turns, then take on today’s challenge.",
+  "growth.tryPractice": "Try a practice challenge",
+  "growth.practiceFree": "No account needed. Your daily attempt stays untouched.",
+  "growth.practiceTitle": "Practice challenge",
+  "growth.practiceIntro": "{turns} practice turns. Learn to roll, bank, and risk it.",
+  "growth.practiceDone": "You’re ready to roll",
+  "growth.practiceNext":
+    "In the daily challenge you get ten turns and one run a day. Sign in to save your score and compete.",
+  "growth.tryDaily": "Go to today’s challenge",
+  "growth.coachStart":
+    "Roll five dice. Scoring dice stay held automatically. Bank to keep points, or roll again to chase more.",
+  "growth.coachRolling":
+    "Watch where the dice land. A roll that scores nothing loses this turn’s points.",
+  "growth.coachChoice":
+    "You have {points} points at risk. Bank to keep them, or roll the remaining dice. A bust loses only this turn’s points.",
+  "growth.coachBust":
+    "That roll scored nothing, so this turn’s points are gone. Your banked total is safe. Try again on the next turn.",
+  "growth.coachHot":
+    "All five dice scored! Bank now, or roll five fresh dice and keep building this turn’s points.",
+  "growth.daily.ready": "Today’s challenge is ready · 10 turns",
+  "growth.daily.resume": "Continue your unfinished run",
+  "growth.daily.completed": "Today’s score is in · view and share",
+  "growth.nextWeekly": "Keep rolling in the weekly challenge",
+  "growth.shareDaily": "Share your daily score",
+  "growth.beatScore": "Can you beat my score?",
+  "growth.dailyShareText":
+    "Greed daily challenge — {day}\nI banked {score} points. Best turn: {best}. Can you beat my score?",
+  "growth.copy": "Copy link and message",
+  "growth.copied": "Copied. Send it to a friend!",
+  "growth.shared": "Shared!",
+  "growth.copyManually": "Select and copy this message to share it:",
+  "growth.inviteFriends": "Invite friends",
+  "growth.inviteHint":
+    "Bring a friend to this table. The link takes them to your room after sign-in.",
+  "growth.inviteText": "Join me for a game of Greed! Room: {code}.",
+  "growth.boardScope": "Choose leaderboard",
+  "growth.everyone": "Everyone",
+  "growth.friends": "Friends",
+  "growth.friendRanks": "Places among you and your friends who have played. Up to 100 results.",
+  "growth.theirFriendRank": "#{rank} among friends",
+  "growth.noFriendsYet": "No friends have a score here yet. Add a friend and compare your runs.",
+  "growth.findFriends": "Find friends",
   "screen.loading": "Opening screen…",
   "screen.unavailable": "Couldn’t open this screen",
   "screen.recoverHint": "Return home or reload Greed to try again.",
@@ -937,6 +992,63 @@ export const en = {
 export type MsgKey = keyof typeof en;
 
 export const es: Record<MsgKey, string> = {
+  "growth.privacy": "Privacidad",
+  "growth.usage": "Compartir mediciones de uso",
+  "growth.usageHint":
+    "Ayuda a mejorar Greed con recuentos de juego y compartidos. No se recopilan nombres, puntuaciones ni dados. Se conservan 30 días y se respetan las señales de privacidad del navegador.",
+  "growth.privacyDetails": "Detalles de privacidad",
+  "growth.report": "Informe de crecimiento",
+
+  "growth.saveImage": "Guardar imagen del resultado",
+  "growth.imageSaved": "Imagen del resultado lista para guardar.",
+  "growth.imageFailed": "No se pudo crear la imagen. Aún puedes copiar el mensaje y el enlace.",
+  "growth.joinRoom":
+    "Inicia sesión para entrar en la sala {code}. Tu invitación se conserva mientras lo haces.",
+  "growth.welcomeTitle": "Tu primer lanzamiento empieza aquí",
+  "growth.welcomeBody":
+    "Guarda tus puntos o arriesga para ganar más. Prueba tres turnos de práctica y luego el desafío de hoy.",
+  "growth.tryPractice": "Probar un desafío de práctica",
+  "growth.practiceFree": "No necesitas cuenta. Tu intento diario sigue intacto.",
+  "growth.practiceTitle": "Desafío de práctica",
+  "growth.practiceIntro": "{turns} turnos de práctica. Aprende a lanzar, guardar y arriesgar.",
+  "growth.practiceDone": "Ya puedes empezar",
+  "growth.practiceNext":
+    "El desafío diario tiene diez turnos y una partida al día. Inicia sesión para guardar tu puntuación y competir.",
+  "growth.tryDaily": "Ir al desafío de hoy",
+  "growth.coachStart":
+    "Lanza cinco dados. Los dados que puntúan se guardan automáticamente. Guarda los puntos o vuelve a lanzar para ganar más.",
+  "growth.coachRolling":
+    "Mira cómo caen los dados. Si un lanzamiento no puntúa, pierdes los puntos de este turno.",
+  "growth.coachChoice":
+    "Tienes {points} puntos en juego. Guárdalos o lanza los dados restantes. Si fallas, solo pierdes los puntos de este turno.",
+  "growth.coachBust":
+    "Ese lanzamiento no puntuó: pierdes los puntos del turno. Tu total guardado está a salvo. Prueba de nuevo en el siguiente turno.",
+  "growth.coachHot":
+    "¡Los cinco dados puntuaron! Guarda los puntos o lanza cinco dados nuevos para seguir sumando en este turno.",
+  "growth.daily.ready": "El desafío de hoy está listo · 10 turnos",
+  "growth.daily.resume": "Continúa tu partida pendiente",
+  "growth.daily.completed": "Tu puntuación de hoy está lista · ver y compartir",
+  "growth.nextWeekly": "Sigue lanzando en el desafío semanal",
+  "growth.shareDaily": "Compartir tu puntuación diaria",
+  "growth.beatScore": "¿Puedes superar mi puntuación?",
+  "growth.dailyShareText":
+    "Desafío diario de Greed — {day}\nGuardé {score} puntos. Mejor turno: {best}. ¿Puedes superar mi puntuación?",
+  "growth.copy": "Copiar enlace y mensaje",
+  "growth.copied": "¡Copiado! Envíalo a un amigo.",
+  "growth.shared": "¡Compartido!",
+  "growth.copyManually": "Selecciona y copia este mensaje para compartirlo:",
+  "growth.inviteFriends": "Invitar amigos",
+  "growth.inviteHint":
+    "Invita a un amigo a esta mesa. El enlace lo lleva a tu sala después de iniciar sesión.",
+  "growth.inviteText": "¡Juega a Greed conmigo! Sala: {code}.",
+  "growth.boardScope": "Elegir clasificación",
+  "growth.everyone": "Todos",
+  "growth.friends": "Amigos",
+  "growth.friendRanks": "Puestos entre tú y tus amigos que han jugado. Hasta 100 resultados.",
+  "growth.theirFriendRank": "N.º {rank} entre amigos",
+  "growth.noFriendsYet":
+    "Tus amigos aún no tienen puntuación aquí. Añade un amigo y comparad vuestras partidas.",
+  "growth.findFriends": "Buscar amigos",
   "screen.loading": "Abriendo pantalla…",
   "screen.unavailable": "No se pudo abrir esta pantalla",
   "screen.recoverHint": "Vuelve al inicio o recarga Greed para intentarlo de nuevo.",
@@ -1833,6 +1945,65 @@ export const es: Record<MsgKey, string> = {
 };
 
 export const fr: Record<MsgKey, string> = {
+  "growth.privacy": "Confidentialité",
+  "growth.usage": "Partager les mesures d’utilisation",
+  "growth.usageHint":
+    "Aidez à améliorer Greed avec des comptes de parties et de partages. Aucun nom, score ni dé collecté. Conservation de 30 jours ; respect des signaux de confidentialité du navigateur.",
+  "growth.privacyDetails": "Détails de confidentialité",
+  "growth.report": "Rapport de croissance",
+
+  "growth.saveImage": "Enregistrer l’image du score",
+  "growth.imageSaved": "L’image du score est prête à être enregistrée.",
+  "growth.imageFailed":
+    "Impossible de créer l’image. Vous pouvez toujours copier le message et le lien.",
+  "growth.joinRoom":
+    "Connectez-vous pour rejoindre le salon {code}. Votre invitation reste enregistrée pendant la connexion.",
+  "growth.welcomeTitle": "Votre premier lancer commence ici",
+  "growth.welcomeBody":
+    "Encaissez vos points ou risquez-les pour en gagner plus. Essayez trois tours d’entraînement, puis le défi du jour.",
+  "growth.tryPractice": "Essayer un défi d’entraînement",
+  "growth.practiceFree": "Sans compte. Votre tentative quotidienne reste intacte.",
+  "growth.practiceTitle": "Défi d’entraînement",
+  "growth.practiceIntro":
+    "{turns} tours d’entraînement. Apprenez à lancer, encaisser et prendre des risques.",
+  "growth.practiceDone": "Vous êtes prêt à jouer",
+  "growth.practiceNext":
+    "Le défi quotidien propose dix tours et une partie par jour. Connectez-vous pour enregistrer votre score et participer.",
+  "growth.tryDaily": "Aller au défi du jour",
+  "growth.coachStart":
+    "Lancez cinq dés. Les dés qui marquent sont conservés automatiquement. Encaissez ou relancez pour gagner plus.",
+  "growth.coachRolling":
+    "Regardez les dés tomber. Un lancer qui ne marque rien fait perdre les points de ce tour.",
+  "growth.coachChoice":
+    "Vous avez {points} points en jeu. Encaissez-les ou relancez les dés restants. Un échec ne fait perdre que les points de ce tour.",
+  "growth.coachBust":
+    "Ce lancer n’a rien marqué : les points du tour sont perdus. Votre total encaissé est sauf. Réessayez au prochain tour.",
+  "growth.coachHot":
+    "Les cinq dés ont marqué ! Encaissez ou lancez cinq dés neufs pour continuer à faire monter les points du tour.",
+  "growth.daily.ready": "Le défi du jour est prêt · 10 tours",
+  "growth.daily.resume": "Reprendre votre partie en cours",
+  "growth.daily.completed": "Votre score du jour est prêt · voir et partager",
+  "growth.nextWeekly": "Continuez avec le défi hebdomadaire",
+  "growth.shareDaily": "Partager votre score du jour",
+  "growth.beatScore": "Pouvez-vous battre mon score ?",
+  "growth.dailyShareText":
+    "Défi quotidien de Greed — {day}\nJ’ai encaissé {score} points. Meilleur tour : {best}. Pouvez-vous battre mon score ?",
+  "growth.copy": "Copier le lien et le message",
+  "growth.copied": "Copié ! Envoyez-le à un ami.",
+  "growth.shared": "Partagé !",
+  "growth.copyManually": "Sélectionnez et copiez ce message pour le partager :",
+  "growth.inviteFriends": "Inviter des amis",
+  "growth.inviteHint":
+    "Invitez un ami à cette table. Le lien le mène à votre salon après connexion.",
+  "growth.inviteText": "Venez jouer à Greed avec moi ! Salon : {code}.",
+  "growth.boardScope": "Choisir le classement",
+  "growth.everyone": "Tout le monde",
+  "growth.friends": "Amis",
+  "growth.friendRanks": "Places parmi vous et vos amis ayant joué. Jusqu’à 100 résultats.",
+  "growth.theirFriendRank": "Nº {rank} parmi les amis",
+  "growth.noFriendsYet":
+    "Vos amis n’ont pas encore de score ici. Ajoutez un ami et comparez vos parties.",
+  "growth.findFriends": "Trouver des amis",
   "screen.loading": "Ouverture de l’écran…",
   "screen.unavailable": "Impossible d’ouvrir cet écran",
   "screen.recoverHint": "Retournez à l’accueil ou rechargez Greed pour réessayer.",

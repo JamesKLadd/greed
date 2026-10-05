@@ -10,6 +10,8 @@ import { useAuth } from "../game/auth.js";
 import { hasUnreadRelease, markReleaseSeen } from "../game/changelog.js";
 import { Button, Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
+import { useDailyHomeStatus } from "../game/useDailyHomeStatus.js";
+import { hasPracticedChallenge } from "../game/practiceChallenge.js";
 
 export interface HomeScreenProps {
   onDaily: () => void;
@@ -28,6 +30,8 @@ export interface HomeScreenProps {
   onAccount: () => void;
   flash?: string | null;
   onDismissFlash?: () => void;
+  dailySubtitle?: string;
+  showChallengeIntro?: boolean;
 }
 
 const SEEN_KEY = "greed:onboarded";
@@ -54,6 +58,9 @@ export function HomeScreen(props: HomeScreenProps) {
   const betaActive = useBetaActive();
   const t = useT();
   const { status, user } = useAuth();
+  const dailyState = useDailyHomeStatus();
+  const dailySubtitle = dailyState ? t(`growth.daily.${dailyState}`) : t("daily.home.sub");
+  const showChallengeIntro = status === "anon" && !hasPracticedChallenge();
   const weeklyRation = weeklyAllowance();
   const [showRules, setShowRules] = useState(false);
   const { canInstall, promptInstall } = useInstallPrompt();
@@ -95,7 +102,11 @@ export function HomeScreen(props: HomeScreenProps) {
           </div>
         }
       >
-        <BetaHome {...props} />
+        <BetaHome
+          {...props}
+          dailySubtitle={dailySubtitle}
+          showChallengeIntro={showChallengeIntro}
+        />
       </Suspense>
     );
 
@@ -126,6 +137,16 @@ export function HomeScreen(props: HomeScreenProps) {
       )}
 
       <div className="home-menu">
+        {showChallengeIntro && (
+          <section className="growth-welcome">
+            <h2>{t("growth.welcomeTitle")}</h2>
+            <p>{t("growth.welcomeBody")}</p>
+            <Button variant="roll" size="lg" onClick={onPractice}>
+              {t("growth.tryPractice")}
+            </Button>
+            <small>{t("growth.practiceFree")}</small>
+          </section>
+        )}
         <button
           className={`btn btn--big home-menu__btn home-menu__learn${firstRun ? " home-menu__learn--pulse" : ""}`}
           onClick={practice}
@@ -143,7 +164,7 @@ export function HomeScreen(props: HomeScreenProps) {
             <Icon name="check" />
             {t("daily.home")}
           </span>
-          <span className="home-menu__sub">{t("daily.home.sub")}</span>
+          <span className="home-menu__sub">{dailySubtitle}</span>
         </button>
         <button className="btn btn--big home-menu__btn home-menu__weekly" onClick={onWeekly}>
           <span className="home-menu__label">

@@ -73,6 +73,8 @@ export interface WeeklyStatus {
   attemptsUsed: number;
   streak: number;
   leaderboard: WeeklyEntry[];
+  /** Null/absent on servers predating friends standings. */
+  friendsLeaderboard?: WeeklyEntry[] | null;
   yourRank: number | null;
   players: number;
   eliteEarned: boolean;
@@ -113,6 +115,16 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
     attemptsUsed: raw.attemptsUsed ?? raw.attempts ?? 0,
     streak: raw.streak ?? 0,
     wins: raw.wins ?? 0,
+    friendsLeaderboard:
+      raw.friendsLeaderboard?.map((e) => ({
+        ...e,
+        avatar: e.avatar ?? "",
+        visualBeta: cleanBetaIdentity(e.visualBeta),
+        superBusts: e.superBusts ?? 0,
+        hotDice: e.hotDice ?? 0,
+        wins: e.wins ?? 0,
+        attempts: e.attempts ?? 0,
+      })) ?? null,
     players: raw.players ?? 0,
     champion: raw.champion
       ? { ...raw.champion, visualBeta: cleanBetaIdentity(raw.champion.visualBeta) }

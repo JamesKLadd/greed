@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { RunResult } from "@greed/core";
 import type { DailyEntry } from "../net/daily.js";
 import type { WeeklyEntry } from "../net/weekly.js";
@@ -119,17 +119,45 @@ export function ChallengeStandings<T extends DailyEntry>({
   mode,
   entries,
   onRead,
+  friends,
+  onFriends,
 }: {
   mode: "daily" | "weekly";
   entries: T[];
-  onRead: (entry: T) => void;
+  onRead: (entry: T, friendsRank?: boolean) => void;
+  friends?: T[] | null;
+  onFriends?: () => void;
 }) {
   const { t, n } = useI18n();
+  const [scope, setScope] = useState<"everyone" | "friends">("everyone");
+  const showFriends = scope === "friends" && friends != null;
+  const visible = showFriends ? friends : entries;
   return (
     <section className="daily__board challenge-lobby__board">
       <h2 className="daily__boardTitle">
         {t(mode === "daily" ? "daily.leaderboard" : "weekly.leaderboard")}
       </h2>
+      {friends != null && (
+        <div className="growth-board-tabs" aria-label={t("growth.boardScope")}>
+          <Button pressed={!showFriends} onClick={() => setScope("everyone")}>
+            {t("growth.everyone")}
+          </Button>
+          <Button pressed={showFriends} onClick={() => setScope("friends")}>
+            {t("growth.friends")}
+          </Button>
+        </div>
+      )}
+      {showFriends && (
+        <div className="growth-board-note">
+          <p>{t("growth.friendRanks")}</p>
+          {friends.filter((e) => !e.you).length === 0 && <p>{t("growth.noFriendsYet")}</p>}
+          {onFriends && (
+            <Button variant="ghost" onClick={onFriends}>
+              {t("growth.findFriends")}
+            </Button>
+          )}
+        </div>
+      )}
       <p className="daily__note daily__note--hint">
         {t(mode === "daily" ? "daily.tapRow" : "weekly.tapRow")}
       </p>
@@ -137,18 +165,18 @@ export function ChallengeStandings<T extends DailyEntry>({
         <summary>{t("challenge.tiebreakExplain")}</summary>
         <p>{t("challenge.tiebreakDetail")}</p>
       </details>
-      {entries.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="daily__note">
           {t(mode === "daily" ? "challenge.noDailyRuns" : "weekly.noRuns")}
         </p>
       ) : (
         <ol className="standings">
-          {entries.map((entry) => (
+          {visible.map((entry) => (
             <li key={`${entry.rank}-${entry.username}`}>
               <button
                 type="button"
                 className={`standings__row daily__row${entry.you ? " standings__row--win" : ""}`}
-                onClick={() => onRead(entry)}
+                onClick={() => onRead(entry, showFriends)}
               >
                 <span className="daily__rank">#{entry.rank}</span>
                 <span className="daily__face" aria-hidden="true">
@@ -176,11 +204,13 @@ export function ChallengeEntryDetails({
   entry,
   players,
   onClose,
+  friendsRank = false,
 }: {
   mode: "daily" | "weekly";
   entry: DailyEntry | WeeklyEntry;
   players: number;
   onClose: () => void;
+  friendsRank?: boolean;
 }) {
   const { t, n } = useI18n();
   return (
@@ -206,10 +236,17 @@ export function ChallengeEntryDetails({
         )}
         <div className="daily__score">{n(entry.score)}</div>
         <p className="daily__note">
-          {t(mode === "daily" ? "daily.theirRank" : "weekly.theirRank", {
-            rank: entry.rank,
-            players,
-          })}
+          {t(
+            friendsRank
+              ? "growth.theirFriendRank"
+              : mode === "daily"
+                ? "daily.theirRank"
+                : "weekly.theirRank",
+            {
+              rank: entry.rank,
+              players,
+            },
+          )}
         </p>
         <p className="challenge-lobby__provisional">{t("challenge.standingsLive")}</p>
         <ChallengeSummaryStats result={entry} />

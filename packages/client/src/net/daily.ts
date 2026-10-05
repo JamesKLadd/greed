@@ -56,6 +56,8 @@ export interface DailyStatus {
   run: DailyResult | null;
   streak: number;
   leaderboard: DailyEntry[];
+  /** Null/absent on servers predating friends standings. */
+  friendsLeaderboard?: DailyEntry[] | null;
   yourRank: number | null;
   players: number;
   /**
@@ -88,6 +90,15 @@ function fill(raw: DailyStatus): DailyStatus {
     // The run summary itself now carries a field the old server never sent.
     run: raw.run ? { ...raw.run, superBusts: raw.run.superBusts ?? 0 } : null,
     wins: raw.wins ?? 0,
+    friendsLeaderboard:
+      raw.friendsLeaderboard?.map((e) => ({
+        ...e,
+        avatar: e.avatar ?? "",
+        visualBeta: cleanBetaIdentity(e.visualBeta),
+        superBusts: e.superBusts ?? 0,
+        hotDice: e.hotDice ?? 0,
+        wins: e.wins ?? 0,
+      })) ?? null,
     champion: raw.champion
       ? { ...raw.champion, visualBeta: cleanBetaIdentity(raw.champion.visualBeta) }
       : null,

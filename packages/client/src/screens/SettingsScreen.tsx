@@ -3,6 +3,7 @@ import { loadSettings, updateSettings, type Settings } from "../game/settings.js
 import { play } from "../game/sfx.js";
 import { LOCALES, useI18n } from "../i18n/i18n.js";
 import { Button, Screen } from "../ui/index.js";
+import { usageEnabled, setUsageEnabled } from "../game/growth.js";
 
 // Keep this component outside the screen: changing a setting must not remount
 // the switch and leave keyboard focus behind.
@@ -45,6 +46,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const { t, n, locale, setLocale } = useI18n();
   const ids = useId();
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  const [usage, setUsage] = useState(usageEnabled);
   const patch = (p: Partial<Settings>) => setSettings(updateSettings(p));
   const sfxPercent = Math.round(settings.sfxVolume * 100);
   const musicPercent = Math.round(settings.musicVolume * 100);
@@ -169,6 +171,22 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           value={settings.hideRoomCode}
           onChange={(v) => patch({ hideRoomCode: v })}
         />
+      </section>
+
+      <section className="support-section" aria-labelledby={`${ids}-privacy`}>
+        <h2 id={`${ids}-privacy`}>{t("growth.privacy")}</h2>
+        <SettingToggle
+          label={t("growth.usage")}
+          hint={t("growth.usageHint")}
+          value={usage}
+          onChange={(v) => {
+            setUsageEnabled(v);
+            setUsage(usageEnabled());
+          }}
+        />
+        <a href="/privacy/" target="_blank" rel="noreferrer">
+          {t("growth.privacyDetails")}
+        </a>
       </section>
 
       <section className="support-section" aria-labelledby={`${ids}-audio`}>

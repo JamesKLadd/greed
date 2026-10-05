@@ -8,6 +8,7 @@ import { hasUnreadRelease, markReleaseSeen } from "../game/changelog.js";
 import { Die } from "../components/Die.js";
 import { RulesModal } from "../components/RulesModal.js";
 import { Icon } from "../ui/index.js";
+import { Button } from "../ui/index.js";
 import { Brand } from "./Brand.js";
 import { BetaGate } from "./BetaGate.js";
 import { CelebrationDemo } from "./CelebrationDemo.js";
@@ -71,6 +72,16 @@ export default function BetaHome(p: HomeScreenProps) {
             <h2 id="beta-play-heading" className="beta-hub__heading">
               {t("beta.takeSeat")}
             </h2>
+            {p.showChallengeIntro && (
+              <section className="growth-welcome">
+                <h2>{t("growth.welcomeTitle")}</h2>
+                <p>{t("growth.welcomeBody")}</p>
+                <Button variant="roll" size="lg" onClick={p.onPractice}>
+                  {t("growth.tryPractice")}
+                </Button>
+                <small>{t("growth.practiceFree")}</small>
+              </section>
+            )}
             <div className="beta-hub__challenges">
               <button className="beta-hub__mode beta-hub__mode--daily" onClick={p.onDaily}>
                 <span className="beta-hub__mode-icon">
@@ -78,7 +89,7 @@ export default function BetaHome(p: HomeScreenProps) {
                 </span>
                 <span className="beta-hub__mode-copy">
                   <strong>{t("daily.home")}</strong>
-                  <small>{t("daily.home.sub")}</small>
+                  <small>{p.dailySubtitle ?? t("daily.home.sub")}</small>
                 </span>
                 <span className="beta-hub__arrow" aria-hidden="true">
                   →

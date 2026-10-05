@@ -24,9 +24,16 @@ interface AuthScreenProps {
   initialMode?: Mode;
   /** Present when the user arrived from a password-reset email link. */
   resetToken?: string;
+  contextHint?: string;
 }
 
-export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }: AuthScreenProps) {
+export function AuthScreen({
+  onDone,
+  onBack,
+  initialMode = "login",
+  resetToken,
+  contextHint,
+}: AuthScreenProps) {
   const t = useT();
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>(resetToken ? "reset" : initialMode);
@@ -146,6 +153,7 @@ export function AuthScreen({ onDone, onBack, initialMode = "login", resetToken }
       <header className="support-panel__heading">
         <h1>{title}</h1>
         <p className="support-panel__intro">{t("auth.tagline")}</p>
+        {contextHint && <p className="growth-invite">{contextHint}</p>}
       </header>
 
       {error && (

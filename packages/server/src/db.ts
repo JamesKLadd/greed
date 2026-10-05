@@ -125,6 +125,15 @@ async function applyOnce(id: string, repair: () => Promise<void | boolean>): Pro
 }
 
 export async function migrate(): Promise<void> {
+  await query(`CREATE TABLE IF NOT EXISTS growth_events (
+    id uuid PRIMARY KEY, visitor_id uuid NOT NULL, session_id uuid NOT NULL,
+    event text NOT NULL, source text NOT NULL, campaign text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await query(`CREATE INDEX IF NOT EXISTS growth_events_created_idx ON growth_events (created_at)`);
+  await query(
+    `CREATE INDEX IF NOT EXISTS growth_events_visitor_idx ON growth_events (visitor_id, created_at)`,
+  );
   await query(`
     CREATE TABLE IF NOT EXISTS users (
       id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -499,6 +508,11 @@ export async function prune(): Promise<void> {
   const cutoff = `${RETENTION_DAYS} days`;
   const jobs: [string, string, unknown[]][] = [
     ["expired sign-in tokens", `DELETE FROM auth_tokens WHERE expires_at < now()`, []],
+    [
+      "old usage measurements",
+      `DELETE FROM growth_events WHERE created_at < now() - $1::interval`,
+      [cutoff],
+    ],
     ["old matches", `DELETE FROM match_history WHERE played_at < now() - $1::interval`, [cutoff]],
     ["old daily runs", `DELETE FROM daily_runs WHERE day < (now() - $1::interval)::date`, [cutoff]],
     [

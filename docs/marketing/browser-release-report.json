@@ -1,0 +1,13 @@
+{
+  "landingWidths": [320, 390, 844, 1200],
+  "practiceCompleted": true,
+  "productionEvents": ["visit", "practice_started", "practice_completed"],
+  "settingsOptOut": true,
+  "privacyControls": true,
+  "doNotTrack": true,
+  "globalPrivacyControl": true,
+  "reportAnonymousStatus": 401,
+  "reportOtherUserStatus": 403,
+  "reportOwnerStatus": 200,
+  "pageErrors": []
+}

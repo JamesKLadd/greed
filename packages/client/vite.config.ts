@@ -28,6 +28,15 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["@greed/core", "@greed/bots", "@greed/protocol"],
   },
+  build: {
+    rollupOptions: {
+      input: {
+        game: fileURLToPath(new URL("./index.html", import.meta.url)),
+        welcome: fileURLToPath(new URL("./welcome/index.html", import.meta.url)),
+        privacy: fileURLToPath(new URL("./privacy/index.html", import.meta.url)),
+      },
+    },
+  },
   server: {
     fs: { allow: [repoRoot] },
   },

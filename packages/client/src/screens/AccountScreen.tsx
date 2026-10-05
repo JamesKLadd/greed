@@ -12,6 +12,7 @@ import { Mascot } from "../beta/Mascot.js";
 
 interface AccountScreenProps {
   onBack: () => void;
+  onGrowth?: () => void;
 }
 
 const RESEND_CD_KEY = "greed:verify-resent-at";
@@ -29,7 +30,7 @@ function formatCountdown(secs: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function AccountScreen({ onBack }: AccountScreenProps) {
+export function AccountScreen({ onBack, onGrowth }: AccountScreenProps) {
   const t = useT();
   const { status, user, logout, verificationRequired } = useAuth();
   const [cooldown, setCooldown] = useState(() => resendCooldownLeft());
@@ -101,6 +102,7 @@ export function AccountScreen({ onBack }: AccountScreenProps) {
       deletePassword={deletePassword}
       deleteError={deleteError}
       onBack={onBack}
+      onGrowth={onGrowth}
       onLogout={logout}
       onResend={() => void resend()}
       onBeginDelete={() => setConfirmingDelete(true)}
@@ -128,6 +130,7 @@ export interface AccountScreenViewProps {
   deleteError: string | null;
   onBack: () => void;
   onLogout: () => void;
+  onGrowth?: () => void;
   onResend: () => void;
   onBeginDelete: () => void;
   onDeletePasswordChange: (password: string) => void;
@@ -147,6 +150,7 @@ export function AccountScreenView({
   deleteError,
   onBack,
   onLogout,
+  onGrowth,
   onResend,
   onBeginDelete,
   onDeletePasswordChange,
@@ -226,6 +230,11 @@ export function AccountScreenView({
             <p className="daily__note">{t("account.logoutNote")}</p>
 
             <div className="setup__actions">
+              {user.growthAdmin && onGrowth && (
+                <Button variant="secondary" onClick={onGrowth}>
+                  {t("growth.report")}
+                </Button>
+              )}
               <Button variant="ghost" disabled={busy} onClick={onBack}>
                 {t("bar.home")}
               </Button>

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.2",
+    date: "2026-10-05",
+    notes: [
+      "Learn to play now opens a three-turn practice challenge with tips for rolling, banking, busts, and hot dice. Practice works offline and never uses a ranked attempt",
+      "The main menu now shows whether your Daily Challenge is ready to start, waiting to resume, or finished and ready to share",
+      "Daily results now include a shareable score card with your equipped portrait, score, best turn, and current place. Share a message and link, or save a score image",
+      "Daily and Weekly Challenges now have a Friends leaderboard alongside Everyone. Only accepted friends appear, and daily standings still unlock after you finish your run",
+      "Private online rooms now have shareable invitation links that keep your room saved through sign-in and lobby reloads",
+      "Added a mobile welcome page with an instant practice link, plus privacy information and a Settings switch for optional usage measurements",
+      "Improved challenge and sharing layouts on small screens, including large text, high contrast, and English, Spanish, and French translations",
+    ],
+  },
+  {
     version: "0.8.1",
     date: "2026-10-03",
     notes: [

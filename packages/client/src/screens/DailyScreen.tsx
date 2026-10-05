@@ -38,23 +38,32 @@ import {
   ChallengeClocks,
   ChallengeEntry,
   ChallengeEntryDetails,
-  ChallengeResult,
   ChallengeStandings,
-  ChallengeSummaryStats,
 } from "../components/ChallengeLobby.js";
 import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
+import { DailyShareCard } from "../components/DailyShareCard.js";
+import { recordGrowthEvent } from "../game/growth.js";
 
 interface DailyScreenProps {
   onBack: () => void;
   onSignIn: () => void;
+  onPractice: () => void;
+  onWeekly: () => void;
+  onFriends: () => void;
 }
 
 /** A failed move is reconciled with a read, never by repeating the move. */
 const resumeRun = async () => (await resumeDaily()).run;
 
-export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
+export function DailyScreen({
+  onBack,
+  onSignIn,
+  onPractice,
+  onWeekly,
+  onFriends,
+}: DailyScreenProps) {
   const { t, n } = useI18n();
   const { status: authStatus } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
@@ -71,7 +80,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   const [runView, setRunView] = useState<DailyRunView | null>(null);
   const [starting, setStarting] = useState(false);
   /** The board row being read in close-up, if any. */
-  const [reading, setReading] = useState<DailyEntry | null>(null);
+  const [reading, setReading] = useState<(DailyEntry & { friendsRank?: boolean }) | null>(null);
 
   /**
    * Fold everything the daily can earn into the profile: the podium badge, the
@@ -130,27 +139,31 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
   }, [authStatus, load]);
 
   /** The run is over: the server already has the score, so just re-read it. */
-  const onFinished = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setRunView(null);
-    try {
-      const next = await fetchDaily();
-      setStatus(next);
-      setDay(next.day);
-      // A turn banked in the run counts toward the career best like any other.
-      // The server has already folded it into the account (see daily.ts); this
-      // is the local copy catching up so the Stats screen agrees now rather
-      // than after the next sign-in.
-      const improved = next.run ? raiseBestTurn(next.run.bestTurn) : false;
-      if (improved) void syncProfileUp();
-      claim(next);
-    } catch (err) {
-      setError(apiErrorText(t, err, "daily.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t, claim]);
+  const onFinished = useCallback(
+    async (final: DailyRunView | null) => {
+      if (final?.complete) recordGrowthEvent("daily_completed");
+      setLoading(true);
+      setError(null);
+      setRunView(null);
+      try {
+        const next = await fetchDaily();
+        setStatus(next);
+        setDay(next.day);
+        // A turn banked in the run counts toward the career best like any other.
+        // The server has already folded it into the account (see daily.ts); this
+        // is the local copy catching up so the Stats screen agrees now rather
+        // than after the next sign-in.
+        const improved = next.run ? raiseBestTurn(next.run.bestTurn) : false;
+        if (improved) void syncProfileUp();
+        claim(next);
+      } catch (err) {
+        setError(apiErrorText(t, err, "daily.loadFailed"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t, claim],
+  );
 
   /** Claim today's run. The server creates it, so this cannot be undone. */
   const begin = useCallback(async () => {
@@ -158,6 +171,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
     setError(null);
     try {
       setRunView(await startDaily());
+      recordGrowthEvent("daily_started");
     } catch (err) {
       setError(apiErrorText(t, err, "daily.loadFailed"));
     } finally {
@@ -202,6 +216,12 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
             <>
               <p className="daily__note">{t("daily.signInRequired")}</p>
               <ChallengeEntry label={t("home.signIn")} onStart={onSignIn} />
+              <div className="growth-practice-link">
+                <p>{t("growth.practiceFree")}</p>
+                <Button variant="ghost" onClick={onPractice}>
+                  {t("growth.tryPractice")}
+                </Button>
+              </div>
             </>
           ) : (
             <>
@@ -231,9 +251,9 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                 <>
                   {played && status.run ? (
                     <>
-                      <ChallengeResult
-                        label={t("challenge.dailyResult")}
-                        score={status.run.score}
+                      <DailyShareCard
+                        day={status.day}
+                        result={status.run}
                         rankText={
                           status.yourRank
                             ? t("daily.yourRank", {
@@ -242,10 +262,11 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                               })
                             : undefined
                         }
-                      >
-                        <ChallengeSummaryStats result={status.run} />
-                      </ChallengeResult>
+                      />
                       <p className="daily__note challenge-lobby__complete">{t("daily.played")}</p>
+                      <Button variant="bank" onClick={onWeekly}>
+                        {t("growth.nextWeekly")}
+                      </Button>
                     </>
                   ) : (
                     <ChallengeEntry
@@ -264,7 +285,9 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
                     <ChallengeStandings
                       mode="daily"
                       entries={status.leaderboard}
-                      onRead={setReading}
+                      friends={status.friendsLeaderboard}
+                      onFriends={onFriends}
+                      onRead={(entry, friendsRank) => setReading({ ...entry, friendsRank })}
                     />
                   )}
                 </>
@@ -344,6 +367,7 @@ export function DailyScreen({ onBack, onSignIn }: DailyScreenProps) {
         <ChallengeEntryDetails
           mode="daily"
           entry={reading}
+          friendsRank={reading.friendsRank}
           players={status?.players ?? 0}
           onClose={() => setReading(null)}
         />

@@ -58,16 +58,18 @@ import { useI18n } from "../i18n/i18n.js";
 import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
+import { recordGrowthEvent } from "../game/growth.js";
 
 interface WeeklyScreenProps {
   onBack: () => void;
   onSignIn: () => void;
+  onFriends: () => void;
 }
 
 /** A failed move is reconciled with a read, never by repeating the move. */
 const resumeRun = async () => (await resumeWeekly()).run;
 
-export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
+export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps) {
   const { t, n } = useI18n();
   const { status: authStatus } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
@@ -106,7 +108,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   // remains a completed attempt even though it never replaces the board row.
   const [latestAttemptScore, setLatestAttemptScore] = useState<number | null>(null);
   /** The board row being read in close-up, if any. */
-  const [reading, setReading] = useState<WeeklyEntry | null>(null);
+  const [reading, setReading] = useState<(WeeklyEntry & { friendsRank?: boolean }) | null>(null);
 
   /**
    * Fold everything the weekly can earn into the profile: the champion badge,
@@ -186,6 +188,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
   /** An attempt is over: the server already has the score, so re-read it. */
   const onFinished = useCallback(
     async (final: RunView | null) => {
+      if (final?.complete) recordGrowthEvent("weekly_completed");
       setRunView(null);
       setLatestAttemptScore(final?.complete ? final.state.players[0].total : null);
       setLoading(true);
@@ -222,6 +225,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
       const next = await startWeekly();
       setLatestAttemptScore(null);
       setRunView(next);
+      recordGrowthEvent("weekly_started");
     } catch (err) {
       fail(err);
     } finally {
@@ -437,7 +441,13 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
           )}
 
           {!loading && status && !refreshFailed && (
-            <ChallengeStandings mode="weekly" entries={status.leaderboard} onRead={setReading} />
+            <ChallengeStandings
+              mode="weekly"
+              entries={status.leaderboard}
+              friends={status.friendsLeaderboard}
+              onFriends={onFriends}
+              onRead={(entry, friendsRank) => setReading({ ...entry, friendsRank })}
+            />
           )}
 
           {!loading && !runView && (
@@ -509,6 +519,7 @@ export function WeeklyScreen({ onBack, onSignIn }: WeeklyScreenProps) {
         <ChallengeEntryDetails
           mode="weekly"
           entry={reading}
+          friendsRank={reading.friendsRank}
           players={status?.players ?? 0}
           onClose={() => setReading(null)}
         />

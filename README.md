@@ -85,12 +85,12 @@ Roll 5 dice and press your luck:
 
 ## What's in the game
 
-- **Modes:** learn-to-play (a guided game with a coach hint bar), solo vs bots,
+- **Modes:** learn-to-play (a three-turn offline challenge with coaching), solo vs bots,
   local pass-and-play up to 8 seats, teams, online matchmaking and private rooms
   with spectating and rematch, plus two timed challenges.
-- **Daily challenge:** one 10-turn run per day, same dice for everybody.
+- **Daily challenge:** one 10-turn run per day, independent secret dice per player.
 - **Weekly challenge:** the same 10-turn run, reset **Monday 00:00
-  America/Chicago**, unlimited attempts with your best one standing. Fresh dice
+  America/Chicago**, ten attempts each day with your best one standing. Fresh dice
   every attempt; this week's board is public from the start.
   Both challenges are server-authoritative — the server keeps the seed secret,
   owns the move list and replays it to derive the score, so the client never
@@ -101,6 +101,10 @@ Roll 5 dice and press your luck:
   function, plus a dynamic program for the optimal turn.
 - **Accounts and social:** signup/login with optional email verification,
   friends, per-account match history and profiles.
+- **Mobile marketing:** shareable daily score images, Friends standings, and
+  private room invitation links. The `/welcome/` landing page leads into practice;
+  `/privacy/` explains optional first-party usage measurements. The owner can
+  open Account → Growth report. [Launch kit and promotional assets](docs/mobile-marketing.md).
 - **Leaderboards:** all-time, daily and weekly boards, with past champions.
 - **Progression:** 33 achievements, a stats screen, and a Locker of 18 dice
   skins and 14 table themes earned by playing.
@@ -166,6 +170,8 @@ npm run server            # listens on port 8787 (set PORT to change)
 
 - **`DATABASE_URL`** — Postgres. Unset degrades to guest play (see above).
 - **`JWT_SECRET`** — signs session tokens. Set it in any real deployment.
+- **`GROWTH_ADMIN_USERNAME`** — optional override for the private usage-report
+  owner (defaults to the existing James account).
 - **`PORT`**, **`ALLOWED_ORIGINS`**, **`APP_URL`** — listen port, CORS allow-list,
   and the base URL used in verification and password-reset links.
 - **`RESEND_API_KEY`**, **`EMAIL_FROM`**, **`REQUIRE_EMAIL_VERIFICATION`** —

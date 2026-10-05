@@ -36,6 +36,8 @@ interface ChallengeRunProps {
   resumeRun?: () => Promise<RunView | null>;
   /** Called when the last turn resolves. */
   onFinished: (final: RunView | null) => void;
+  /** Offline onboarding uses the same controls with contextual explanations. */
+  practice?: boolean;
 }
 
 export function ChallengeRun({
@@ -44,6 +46,7 @@ export function ChallengeRun({
   playMove,
   resumeRun,
   onFinished,
+  practice = false,
 }: ChallengeRunProps) {
   const { t, n } = useI18n();
   const helpId = useId();
@@ -106,6 +109,22 @@ export function ChallengeRun({
       style={beta ? { ...diceSkin, ...appearanceVars(appearance) } : diceSkin}
     >
       {beta && <GameCelebration state={run.state} isRolling={run.isRolling} showVisuals={false} />}
+      {practice && (
+        <p className="growth-coach" role="status">
+          {t(
+            run.isRolling || run.isPending
+              ? "growth.coachRolling"
+              : run.state.turn.outcome === "busted"
+                ? "growth.coachBust"
+                : run.state.turn.hotDice
+                  ? "growth.coachHot"
+                  : run.state.turn.lastRoll === null
+                    ? "growth.coachStart"
+                    : "growth.coachChoice",
+            { points: n(run.state.turn.turnScore) },
+          )}
+        </p>
+      )}
       <div className="daily__meters">
         <div className="meter daily__meter-turn">
           <span className="meter__label">{t("run.turn")}</span>

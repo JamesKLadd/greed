@@ -46,6 +46,7 @@ import {
 } from "./leaderboards.js";
 import { AccountError } from "./accounts.js";
 import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
+import { challengeFriends } from "./challengeFriends.js";
 
 /** Cap on a single attempt's move list — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -126,6 +127,7 @@ export interface WeeklyStatus {
    * daily's, which is withheld until the player's single attempt is in.
    */
   leaderboard: WeeklyEntry[];
+  friendsLeaderboard: WeeklyEntry[];
   /** The player's own rank, even when outside the top slice. */
   yourRank: number | null;
   players: number;
@@ -686,6 +688,7 @@ export async function weeklyStatus(
     [week, top],
   );
 
+  const friends = await challengeFriends("weekly", userId, week);
   const total = await query<{ n: string }>(
     `SELECT COUNT(*)::text AS n FROM weekly_runs WHERE week = $1`,
     [week],
@@ -697,7 +700,11 @@ export async function weeklyStatus(
   const mineClosed = placings.get(userId) ?? { wins: 0, podiums: 0 };
   // The career tally, not the live placings — see the same note in daily.ts.
   await refreshCareerChallengeWins("weekly", week);
-  const career = await careerChallengeWins("weekly", [userId, ...board.rows.map((r) => r.user_id)]);
+  const career = await careerChallengeWins("weekly", [
+    userId,
+    ...board.rows.map((r) => r.user_id),
+    ...friends.map((r) => r.user_id),
+  ]);
 
   const champions = await weeklyChampions(week);
   const reigning = champions[0] ?? null;
@@ -746,6 +753,22 @@ export async function weeklyStatus(
       crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
     })),
     yourRank: own ? Number(own.rank) : null,
+    friendsLeaderboard: friends.map((r) => ({
+      username: r.username,
+      avatar: r.avatar ?? "",
+      visualBeta: cleanBetaIdentity(r.visual_beta),
+      score: r.score,
+      turns: r.turns,
+      bestTurn: r.best_turn,
+      busts: r.busts,
+      superBusts: r.super_busts ?? 0,
+      hotDice: r.hot_dice,
+      attempts: r.attempts,
+      wins: career.get(r.user_id) ?? 0,
+      rank: Number(r.rank),
+      you: r.user_id === userId ? true : undefined,
+      crown: reigning && r.user_id === reigning.userId ? (true as const) : undefined,
+    })),
     players: Number(total.rows[0]?.n ?? 0),
     eliteEarned: mineClosed.podiums > 0,
     wins: career.get(userId) ?? 0,

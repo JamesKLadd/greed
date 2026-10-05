@@ -7,6 +7,7 @@
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { accountsEnabled } from "./db.js";
+import { growthReport, isGrowthAdmin, parseGrowthBatch, recordGrowth } from "./growth.js";
 import { sessionIsCurrent, verifySession } from "./auth.js";
 import { dailyKey, weekKey } from "@greed/core";
 import { clientKey, rateLimit } from "./rate-limit.js";
@@ -36,6 +37,10 @@ import {
 } from "./leaderboards.js";
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
+
+function withGrowthAdmin<T extends { user: { username: string } }>(result: T) {
+  return { ...result, user: { ...result.user, growthAdmin: isGrowthAdmin(result.user.username) } };
+}
 
 /** Origins allowed to call the API from a browser. */
 function allowedOrigin(origin: string | undefined): string | null {
@@ -169,6 +174,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     // Friend requests are the one social action that reaches another person,
     // so cap them; browsing profiles and lists is unrestricted.
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
+    "/api/growth": { limit: 30, windowMs: 60_000 },
+    "/api/growth/report": { limit: 30, windowMs: 60_000 },
   };
   const rule = LIMITS[path];
   if (rule) {
@@ -186,12 +193,29 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
   }
 
   try {
-    if (method === "POST" && path === "/api/auth/signup") {
+    if (method === "POST" && path === "/api/growth") {
+      if (req.headers.origin && !allowedOrigin(req.headers.origin))
+        throw new AccountError(403, "Origin not allowed.");
+      await recordGrowth(parseGrowthBatch(await readBody(req)));
+      json(res, 202, { accepted: true });
+    } else if (method === "GET" && path === "/api/growth/report") {
+      res.setHeader("Cache-Control", "no-store");
+      const { username } = await requireUser(req);
+      if (!isGrowthAdmin(username))
+        throw new AccountError(403, "This report is available to the game owner only.");
+      json(res, 200, await growthReport());
+    } else if (method === "POST" && path === "/api/auth/signup") {
       const b = (await readBody(req)) as Record<string, unknown>;
-      json(res, 201, await signup({ email: b.email, username: b.username, password: b.password }));
+      json(
+        res,
+        201,
+        withGrowthAdmin(
+          await signup({ email: b.email, username: b.username, password: b.password }),
+        ),
+      );
     } else if (method === "POST" && path === "/api/auth/login") {
       const b = (await readBody(req)) as Record<string, unknown>;
-      json(res, 200, await login({ login: b.login, password: b.password }));
+      json(res, 200, withGrowthAdmin(await login({ login: b.login, password: b.password })));
     } else if (method === "POST" && path === "/api/auth/verify") {
       const b = (await readBody(req)) as Record<string, unknown>;
       json(res, 200, { verified: await verifyEmail(b.token) });
@@ -200,7 +224,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       json(res, 200, await requestReset(b.email));
     } else if (method === "POST" && path === "/api/auth/reset") {
       const b = (await readBody(req)) as Record<string, unknown>;
-      json(res, 200, await resetPassword(b.token, b.password));
+      json(res, 200, withGrowthAdmin(await resetPassword(b.token, b.password)));
     } else if (method === "GET" && path === "/api/auth/username-available") {
       const u = url.searchParams.get("u") ?? "";
       let available = false;
@@ -305,7 +329,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       if (!account) throw new AccountError(404, "Account not found.", "account.missing");
       // The client can't infer this from the account alone, and it decides
       // whether any verification UI is worth showing at all.
-      json(res, 200, { ...account, verificationRequired: verificationRequired() });
+      json(res, 200, {
+        ...withGrowthAdmin(account),
+        verificationRequired: verificationRequired(),
+      });
     } else if (method === "POST" && path === "/api/me/delete") {
       const { id } = await requireUser(req);
       const b = (await readBody(req)) as Record<string, unknown>;

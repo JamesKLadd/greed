@@ -10,6 +10,7 @@
 import type { BotPersonality, GameAction, GameState } from "@greed/core";
 import type { BetaLook } from "./visual.js";
 export * from "./visual.js";
+export * from "./growth.js";
 
 export const DEFAULT_SERVER_PORT = 8787;
 

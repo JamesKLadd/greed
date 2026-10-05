@@ -18,6 +18,7 @@ export interface AccountUser {
   username: string;
   emailVerified: boolean;
   createdAt: string;
+  growthAdmin?: boolean;
 }
 
 export interface AuthResult {

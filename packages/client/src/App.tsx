@@ -1,10 +1,22 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ScreenLoadState } from "./components/ScreenLoadState.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
-import { practiceSetup, type MatchSetup } from "./game/setup.js";
+import { type MatchSetup } from "./game/setup.js";
+import { useAuth } from "./game/auth.js";
+import { readRoomInvitation, clearRoomInvitation } from "./game/share.js";
+import { recordGrowthEvent } from "./game/growth.js";
 import { verifyEmail } from "./net/auth.js";
 import { useChallenges } from "./net/challenges.js";
 import { Toast } from "./components/Toast.js";
@@ -43,6 +55,9 @@ const AuthScreen = lazy(() =>
 const AccountScreen = lazy(() =>
   import("./screens/AccountScreen.js").then((m) => ({ default: m.AccountScreen })),
 );
+const GrowthReportScreen = lazy(() =>
+  import("./screens/GrowthReportScreen.js").then((m) => ({ default: m.GrowthReportScreen })),
+);
 const DailyScreen = lazy(() =>
   import("./screens/DailyScreen.js").then((m) => ({ default: m.DailyScreen })),
 );
@@ -51,6 +66,11 @@ const WeeklyScreen = lazy(() =>
 );
 const FriendsScreen = lazy(() =>
   import("./screens/FriendsScreen.js").then((m) => ({ default: m.FriendsScreen })),
+);
+const PracticeChallengeScreen = lazy(() =>
+  import("./screens/PracticeChallengeScreen.js").then((m) => ({
+    default: m.PracticeChallengeScreen,
+  })),
 );
 const UiGallery = import.meta.env.DEV
   ? lazy(() => import("./screens/UiGallery.js").then((m) => ({ default: m.UiGallery })))
@@ -93,6 +113,7 @@ const SupportReview = import.meta.env.DEV
 
 type Mode =
   | "home"
+  | "practice"
   | "local"
   | "online"
   | "daily"
@@ -104,12 +125,26 @@ type Mode =
   | "updates"
   | "settings"
   | "auth"
-  | "account";
+  | "account"
+  | "growth";
 
 export function App() {
   const t = useT();
   const challenges = useChallenges();
-  const [mode, setMode] = useState<Mode>("home");
+  const { status: authStatus } = useAuth();
+  const [roomInvitation, setRoomInvitation] = useState(readRoomInvitation);
+  const invitationOpened = useRef(false);
+  const invitationJoined = useRef(false);
+  const [mode, setMode] = useState<Mode>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("growth") === "1"
+      ? "growth"
+      : params.get("practice") === "1"
+        ? "practice"
+        : params.get("challenge") === "daily"
+          ? "daily"
+          : "home";
+  });
   const [match, setMatch] = useState<MatchSetup | null>(null);
   const beta = useBeta();
   // All game modes share the default presentation or the chosen Classic fallback.
@@ -130,6 +165,28 @@ export function App() {
   const [authNext, setAuthNext] = useState<Mode | null>(null);
   // A one-line banner shown on Home after handling a verify link.
   const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    if (!roomInvitation || invitationOpened.current || authStatus === "loading") return;
+    // Account recovery links take priority over an unrelated saved room.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("reset") || params.has("verify")) return;
+    invitationOpened.current = true;
+    recordGrowthEvent("room_invite_opened");
+    if (authStatus === "authed") setMode("online");
+    else {
+      setAuthNext("online");
+      setMode("auth");
+    }
+  }, [roomInvitation, authStatus]);
+  const roomJoined = useCallback((inGame: boolean) => {
+    if (!invitationJoined.current) {
+      invitationJoined.current = true;
+      recordGrowthEvent("room_invite_joined");
+    }
+    // Lobby seats are removed on disconnect. Keep the invitation until play
+    // starts so refreshing a lobby rejoins it; active games use their token.
+    if (inGame) clearRoomInvitation();
+  }, []);
 
   // Handle account links arriving in the URL (?verify=… / ?reset=…), then strip
   // them so a refresh doesn't re-trigger the flow.
@@ -158,7 +215,11 @@ export function App() {
   // online play and let OnlineScreen join it.
   const joinCode = challenges.joinCode;
   useEffect(() => {
-    if (joinCode) setMode("online");
+    if (joinCode) {
+      clearRoomInvitation();
+      setRoomInvitation(null);
+      setMode("online");
+    }
   }, [joinCode]);
 
   // Challenge feedback ("waiting for X", "X declined", connection trouble) as a
@@ -288,22 +349,25 @@ export function App() {
     setMatch(null);
   };
 
-  // "Learn to play" is now just a gentle table (one easy bot). It used to also
-  // switch on a coaching hint bar; that guidance is on in every game now.
   const startPractice = () => {
-    setMatch(practiceSetup());
-    setMode("local");
+    setMode("practice");
   };
 
   const backHome = () => {
     setResetToken(undefined);
     setAuthNext(null);
+    if (roomInvitation) {
+      clearRoomInvitation();
+      setRoomInvitation(null);
+    }
     setMode("home");
   };
 
   // Every screen renders inside the same shell so a friend's challenge can
   // interrupt whatever the player is doing, wherever they are.
   const screen = (() => {
+    if (mode === "practice")
+      return <PracticeChallengeScreen onBack={backHome} onDaily={() => setMode("daily")} />;
     if (mode === "auth") {
       return (
         <AuthScreen
@@ -316,6 +380,11 @@ export function App() {
           onBack={backHome}
           initialMode={resetToken ? "reset" : "login"}
           resetToken={resetToken}
+          contextHint={
+            roomInvitation && authNext === "online"
+              ? t("growth.joinRoom", { code: roomInvitation })
+              : undefined
+          }
         />
       );
     }
@@ -324,6 +393,9 @@ export function App() {
       return (
         <DailyScreen
           onBack={() => setMode("home")}
+          onPractice={startPractice}
+          onWeekly={() => setMode("weekly")}
+          onFriends={() => setMode("friends")}
           onSignIn={() => {
             setAuthNext("daily");
             setMode("auth");
@@ -336,6 +408,7 @@ export function App() {
       return (
         <WeeklyScreen
           onBack={() => setMode("home")}
+          onFriends={() => setMode("friends")}
           onSignIn={() => {
             setAuthNext("weekly");
             setMode("auth");
@@ -356,17 +429,22 @@ export function App() {
       );
     }
 
-    if (mode === "account") return <AccountScreen onBack={() => setMode("home")} />;
+    if (mode === "account")
+      return <AccountScreen onBack={() => setMode("home")} onGrowth={() => setMode("growth")} />;
+    if (mode === "growth") return <GrowthReportScreen onBack={() => setMode("account")} />;
 
     if (mode === "online") {
       return (
         // Keyed by the invited room: accepting a challenge while already online
         // remounts the screen so it leaves the old room and joins the new one.
         <OnlineScreen
-          key={joinCode ?? "online"}
-          autoJoin={joinCode}
+          key={joinCode ?? roomInvitation ?? "online"}
+          autoJoin={joinCode ?? roomInvitation}
+          onJoined={roomInvitation && !joinCode ? roomJoined : undefined}
           onExit={() => {
             challenges.clearJoin();
+            clearRoomInvitation();
+            setRoomInvitation(null);
             setMode("home");
           }}
         />

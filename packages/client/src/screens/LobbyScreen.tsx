@@ -5,10 +5,12 @@ import { PERSONALITIES } from "../game/setup.js";
 import { useT } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
 import { Button, Screen } from "../ui/index.js";
+import { ShareAction } from "../components/ShareAction.js";
+import { gameLink } from "../game/share.js";
 
 const GOALS = [1000, 2000, 3000, 5000];
 
-export function LobbyScreen({ net }: { net: OnlineController }) {
+export function LobbyScreen({ net, onLeave }: { net: OnlineController; onLeave?: () => void }) {
   const t = useT();
   const lobby = net.lobby!;
   const me = lobby.seats.find((s) => s.id === net.youId);
@@ -40,6 +42,18 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
       {net.reconnecting && <div className="banner banner--sd">{t("net.reconnecting")}</div>}
 
       {net.isSpectator && <div className="banner banner--spectate">{t("spectate.lobbyWait")}</div>}
+      {!lobby.isPublic && !net.isSpectator && (
+        <section className="growth-invite">
+          <p>{t("growth.inviteHint")}</p>
+          <ShareAction
+            title="Greed"
+            text={t("growth.inviteText", { code: lobby.code })}
+            url={gameLink({ room: lobby.code })}
+            label={t("growth.inviteFriends")}
+            event="room_shared"
+          />
+        </section>
+      )}
 
       <div className="setup__row setup__row--head">
         <h2>{t("lobby.players", { count: lobby.seats.length })}</h2>
@@ -175,7 +189,7 @@ export function LobbyScreen({ net }: { net: OnlineController }) {
       )}
 
       <div className="setup__actions">
-        <Button variant="ghost" onClick={net.leave}>
+        <Button variant="ghost" onClick={onLeave ?? net.leave}>
           {t("bar.leave")}
         </Button>
         {!isHost && !net.isSpectator && (

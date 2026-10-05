@@ -1,0 +1,11 @@
+{
+  "dailyPrivacy": "passed",
+  "acceptedFriendsOnly": "passed",
+  "weeklyFriends": "passed",
+  "copy": "passed",
+  "scoreImageDownload": "passed",
+  "nativeImageShare": "passed",
+  "inviteThroughLoginAndReload": "passed",
+  "roomReconnect": "passed",
+  "pageErrors": []
+}

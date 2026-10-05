@@ -10,9 +10,11 @@ import { applySettings, loadSettings } from "./game/settings.js";
 import { registerServiceWorker, initInstallPrompt } from "./game/pwa.js";
 import "./styles.css";
 import { BetaProvider } from "./beta/BetaContext.js";
+import { initGrowth } from "./game/growth.js";
 
 // Apply saved accessibility/display preferences before first paint.
 applySettings(loadSettings());
+initGrowth();
 
 // Browsers keep audio suspended until the first interaction — arm it once,
 // and give every button a soft click.

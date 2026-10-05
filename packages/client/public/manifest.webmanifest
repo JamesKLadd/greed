@@ -1,7 +1,7 @@
 {
   "name": "Greed — dice game",
   "short_name": "Greed",
-  "description": "A push-your-luck 5-dice game. Play local co-op, against bots, or online.",
+  "description": "Five dice. One more roll. Daily and weekly challenges, shareable scores, and online play with friends.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

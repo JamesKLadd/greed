@@ -1,0 +1,37 @@
+{
+  "checked": [
+    {
+      "locale": "en",
+      "width": 320,
+      "height": 720,
+      "practiceComplete": true,
+      "noAccountRequests": true
+    },
+    {
+      "locale": "es",
+      "width": 390,
+      "height": 844,
+      "practiceComplete": true,
+      "noAccountRequests": true
+    },
+    {
+      "locale": "fr",
+      "width": 320,
+      "height": 720,
+      "practiceComplete": true,
+      "noAccountRequests": true
+    },
+    {
+      "locale": "en",
+      "width": 844,
+      "height": 390,
+      "practiceComplete": true,
+      "noAccountRequests": true
+    }
+  ],
+  "smallFrenchResults": "passed",
+  "blockedClipboardFallback": "passed",
+  "shareCancellation": "passed",
+  "olderServerCompatibility": "passed",
+  "pageErrors": []
+}
