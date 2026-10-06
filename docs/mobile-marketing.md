@@ -1,4 +1,4 @@
-# Greed mobile launch experiment — v0.8.2
+# Greed mobile launch experiment
 
 ## Positioning and destinations
 
@@ -60,7 +60,11 @@ Suggested decision signals: most willing testers finish practice without help; a
 
 Sign in as **James**, then open **Account → Growth report**, or visit `/?growth=1` while signed in. The server enforces ownership; another user cannot read it by guessing the URL. `GROWTH_ADMIN_USERNAME` can override the owner account when deploying a fork. No external analytics account or credential is required.
 
-The report covers the last 30 days. It counts random browser identifiers, not verified people. Compare unique browsers at practice start/completion and daily/weekly start/completion. Room conversion counts ordered open → join → completed events in one measured session. Reconnects, rematches, storage clearing, opt-outs, and browser privacy signals affect the counts; official game standings remain separate.
+The report covers the last 30 days. Its ordered paths show welcome → practice, welcome → daily, practice → daily, the daily account step → play, and room invitation → finished game. Each path counts sessions that reached its steps in order, with drop-off counts and completion rates. It never divides unrelated action totals to estimate conversion. A measured session expires after 30 minutes of inactivity; these are browser sessions, not verified people or lifetime first-time players.
+
+Within each path, campaign comparisons use that path’s first step as the denominator and attribute the whole path to that first step’s source and campaign. Compare completed sessions alongside volume, rather than choosing a pitch by welcome-page views alone. Paths overlap, so do not add their counts together. Someone who signs in or finishes a game in a later session will not complete the original path; reconnects, rematches, storage clearing, opt-outs, and browser privacy signals affect the counts. Events use server receipt times, so delayed or discarded batches can also affect ordering. Official game standings remain separate.
+
+New players can go directly from practice completion or the daily entry to account creation. Returning players have a sign-in option. Their daily destination survives a refresh, and signing in does not use an attempt: they still choose when to start the ranked run. The public weekly destination `/?challenge=weekly` also survives refreshes. See [the first-run review](marketing/first-run/README.md) for the development changes and mobile screenshots.
 
 Day-1/day-7 retention uses each browser’s first **observed** visit within this rolling window and an exact return day in America/Chicago. Only cohorts old enough to return enter the denominator. This is early launch retention, not lifetime new-user retention: a long-time player can enter the observed cohort after older records expire. The privacy page and Settings explain collection, the default, opt-out, and the 30-day limit.
 

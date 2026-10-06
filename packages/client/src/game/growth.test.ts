@@ -32,6 +32,69 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 describe("first-party usage choices", () => {
+  it("sends welcome actions before navigation without waiting for the batch timer", async () => {
+    const { recordGrowthEvent, flushGrowthEvents } = await import("./growth.js");
+    recordGrowthEvent("landing_viewed");
+    recordGrowthEvent("landing_practice_selected");
+    flushGrowthEvents();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(
+      JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).events.map(
+        (r: { event: string }) => r.event,
+      ),
+    ).toEqual(["landing_viewed", "landing_practice_selected"]);
+    vi.advanceTimersByTime(2000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("keeps the welcome campaign and session through practice and the account step", async () => {
+    const location = { pathname: "/welcome/", search: "?utm_campaign=bank_or_roll" };
+    vi.stubGlobal("window", { location, setTimeout, clearTimeout });
+    const { recordGrowthEvent } = await import("./growth.js");
+    recordGrowthEvent("landing_viewed");
+    recordGrowthEvent("landing_practice_selected");
+    location.pathname = "/";
+    location.search = "?practice=1&source=landing&utm_campaign=bank_or_roll";
+    recordGrowthEvent("practice_started");
+    location.search = "?challenge=daily&source=landing&utm_campaign=bank_or_roll";
+    recordGrowthEvent("daily_signin_opened");
+    recordGrowthEvent("daily_signin_completed");
+    vi.advanceTimersByTime(1600);
+    const records = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).events;
+    expect(new Set(records.map((r: { session: string }) => r.session)).size).toBe(1);
+    expect(
+      records.every(
+        (r: { source: string; campaign: string }) =>
+          r.source === "landing" && r.campaign === "bank_or_roll",
+      ),
+    ).toBe(true);
+    expect(
+      records.every(
+        (r: Record<string, unknown>) =>
+          Object.keys(r).sort().join(",") === "campaign,event,id,session,source,visitor",
+      ),
+    ).toBe(true);
+  });
+  it("attributes an untagged welcome visit consistently and rotates an idle session", async () => {
+    const location = { pathname: "/welcome/", search: "" };
+    vi.stubGlobal("window", { location, setTimeout, clearTimeout });
+    const { recordGrowthEvent } = await import("./growth.js");
+    recordGrowthEvent("landing_viewed");
+    location.pathname = "/";
+    location.search = "?practice=1&source=landing&utm_campaign=none";
+    recordGrowthEvent("practice_started");
+    vi.advanceTimersByTime(1600);
+    const first = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).events;
+    expect(first.map((r: { source: string; campaign: string }) => [r.source, r.campaign])).toEqual([
+      ["landing", "none"],
+      ["landing", "none"],
+    ]);
+    vi.advanceTimersByTime(31 * 60_000);
+    recordGrowthEvent("daily_started");
+    vi.advanceTimersByTime(1600);
+    const next = JSON.parse(vi.mocked(fetch).mock.calls[1][1]!.body as string).events[0];
+    expect(next.session).not.toBe(first[0].session);
+    expect(next.visitor).toBe(first[0].visitor);
+  });
   it("sends fixed actions and random IDs without account headers or URL contents", async () => {
     const { recordGrowthEvent } = await import("./growth.js");
     recordGrowthEvent("practice_started");

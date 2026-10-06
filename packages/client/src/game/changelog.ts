@@ -32,6 +32,12 @@ export const RELEASES: Release[] = [
       "Made the dice larger on the illustrated table and adjusted Classic dice sizing where space permits, keeping all five dice visible on small screens",
       "Improved Classic score cards and team totals on narrow phones and short landscape screens so goal bars remain visible during thinking, disconnected play, and the final round",
       "Added accessible goal descriptions, reduced-motion and high-contrast support, and English, Spanish, and French translations for the new indicators",
+      "Practice completion and Daily entry now offer direct account creation, with sign-in for returning players. Signed-in players can go straight from practice to today's challenge",
+      "Daily and Weekly challenge links now keep your destination through refreshes and account sign-in. Ranked attempts still begin only when you choose Start",
+      "Practice scores are now clearly marked as unranked, and banking tips confirm when your points are safe",
+      "Expanded the owner's growth report with ordered paths through practice, daily play, and room invitations, including drop-off counts, campaign completion rates, and clearer return-visit information",
+      "Improved welcome-page campaign tracking and measurement delivery during quick navigation, while preserving browser privacy signals and opt-out settings",
+      "Added English, Spanish, and French translations for the new onboarding and report text, plus updated privacy information and mobile launch materials",
     ],
   },
   {

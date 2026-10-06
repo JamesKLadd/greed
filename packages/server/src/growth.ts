@@ -3,6 +3,8 @@ import {
   GROWTH_EVENTS,
   GROWTH_SOURCES,
   GROWTH_CAMPAIGNS,
+  GROWTH_FUNNELS,
+  type GrowthFunnelReport,
   type GrowthRecord,
   type GrowthReport,
 } from "@greed/protocol";
@@ -46,9 +48,67 @@ export async function recordGrowth(events: GrowthRecord[]): Promise<void> {
     [JSON.stringify(events)],
   );
 }
+
+/** Keep each cohort's first entry and find the earliest valid next step.
+ * Equal timestamps are allowed: events received in one batch share now().
+ * The injected query lets integration tests use an isolated database schema.
+ */
+export async function readGrowthFunnels(
+  runQuery: typeof query = query,
+): Promise<GrowthFunnelReport[]> {
+  const selections = GROWTH_FUNNELS.map(({ id, events }) => {
+    const joins = events
+      .slice(1)
+      .map(
+        (event, i) => `LEFT JOIN LATERAL (
+      SELECT min(created_at) AS at FROM recent e
+      WHERE e.visitor_id = root.visitor_id AND e.session_id = root.session_id
+        AND e.event = '${event}' AND e.created_at >= ${i === 0 ? "root.created_at" : `step${i}.at`}
+    ) step${i + 1} ON true`,
+      )
+      .join("\n");
+    const counts = ["count(*)", ...events.slice(1).map((_, i) => `count(step${i + 1}.at)`)].join(
+      ", ",
+    );
+    return `SELECT '${id}' AS funnel, root.source, root.campaign, ARRAY[${counts}] AS steps
+      FROM (SELECT DISTINCT ON (visitor_id, session_id) * FROM recent
+        WHERE event = '${events[0]}' ORDER BY visitor_id, session_id, created_at, id) root
+      ${joins} GROUP BY root.source, root.campaign`;
+  });
+  // Vocabulary comes exclusively from protocol constants, never request input.
+  const result = await runQuery<{
+    funnel: string;
+    source: string;
+    campaign: string;
+    steps: string[];
+  }>(
+    `WITH recent AS NOT MATERIALIZED (
+      SELECT * FROM growth_events WHERE created_at > now() - interval '30 days'
+    ) ${selections.join("\nUNION ALL\n")}`,
+  );
+  return GROWTH_FUNNELS.map(({ id, events }) => {
+    const rows = result.rows.filter((row) => row.funnel === id);
+    return {
+      id,
+      steps: events.map((event, i) => ({
+        event,
+        sessions: rows.reduce((sum, row) => sum + Number(row.steps[i]), 0),
+      })),
+      channels: rows
+        .map((row) => ({
+          source: row.source,
+          campaign: row.campaign,
+          sessions: Number(row.steps[0]),
+          completed: Number(row.steps[events.length - 1]),
+        }))
+        .sort((a, b) => b.sessions - a.sessions),
+    };
+  });
+}
+
 export async function growthReport(): Promise<GrowthReport> {
   const recent = "created_at > now() - interval '30 days'";
-  const [totals, events, sources, retention, invitations] = await Promise.all([
+  const [totals, events, sources, retention, funnels] = await Promise.all([
     query<{ visitors: string }>(
       `SELECT count(DISTINCT visitor_id) AS visitors FROM growth_events WHERE ${recent}`,
     ),
@@ -70,17 +130,9 @@ export async function growthReport(): Promise<GrowthReport> {
     FROM (VALUES (1), (7)) AS horizon(day) LEFT JOIN cohorts c ON true GROUP BY horizon.day ORDER BY horizon.day`,
       [DAILY_ZONE, dailyKey()],
     ),
-    query<{ opened: string; joined: string; completed: string }>(`WITH funnel AS (
-      SELECT session_id,
-        min(created_at) FILTER (WHERE event = 'room_invite_opened') AS opened,
-        min(created_at) FILTER (WHERE event = 'room_invite_joined') AS joined,
-        max(created_at) FILTER (WHERE event = 'online_completed') AS completed
-      FROM growth_events WHERE ${recent} GROUP BY session_id
-    ) SELECT count(*) FILTER (WHERE opened IS NOT NULL) AS opened,
-      count(*) FILTER (WHERE joined >= opened) AS joined,
-      count(*) FILTER (WHERE joined >= opened AND completed >= joined) AS completed FROM funnel`),
+    readGrowthFunnels(),
   ]);
-  const f = invitations.rows[0];
+  const invitation = funnels.find((f) => f.id === "room_invite")!;
   return {
     days: 30,
     visitors: Number(totals.rows[0]?.visitors ?? 0),
@@ -96,9 +148,10 @@ export async function growthReport(): Promise<GrowthReport> {
       returned: Number(r.returned),
     })),
     invitations: {
-      opened: Number(f?.opened ?? 0),
-      joined: Number(f?.joined ?? 0),
-      completed: Number(f?.completed ?? 0),
+      opened: invitation.steps[0].sessions,
+      joined: invitation.steps[1].sessions,
+      completed: invitation.steps[2].sessions,
     },
+    funnels,
   };
 }

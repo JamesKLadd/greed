@@ -1,0 +1,43 @@
+{
+  "environment": "Local game server and disposable PostgreSQL; all accounts are test fixtures",
+  "checks": [
+    "320px large-text/high-contrast practice → account → reload: en",
+    "320px large-text/high-contrast practice → account → reload: es",
+    "320px large-text/high-contrast practice → account → reload: fr",
+    "practice playable without server measurements: off",
+    "practice playable without server measurements: dnt",
+    "practice playable without server measurements: gpc",
+    "practice playable without server measurements: blocked",
+    "returning player sign-in goes directly to Daily",
+    "signed-in player goes from practice to Daily without account form",
+    "direct daily entry offers account creation without practice"
+  ],
+  "primaryJourney": [
+    "welcome campaign → three unranked practice turns",
+    "new account → daily entry with no automatic attempt",
+    "reload preserves Daily",
+    "one completed daily run",
+    "weekly link and reload preserve Weekly",
+    "Home clears challenge destination"
+  ],
+  "telemetry": {
+    "fixedEvents": [
+      "landing_viewed",
+      "landing_practice_selected",
+      "visit",
+      "practice_started",
+      "practice_completed",
+      "practice_daily_selected",
+      "daily_signin_opened",
+      "daily_signin_completed",
+      "visit",
+      "daily_started",
+      "daily_completed"
+    ],
+    "sources": ["landing"],
+    "campaigns": ["bank_or_roll"],
+    "sameSession": true,
+    "containsAccountData": false
+  },
+  "browserExceptions": 0
+}

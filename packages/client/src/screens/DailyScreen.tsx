@@ -49,6 +49,7 @@ import { recordGrowthEvent } from "../game/growth.js";
 interface DailyScreenProps {
   onBack: () => void;
   onSignIn: () => void;
+  onCreateAccount?: () => void;
   onPractice: () => void;
   onWeekly: () => void;
   onFriends: () => void;
@@ -60,6 +61,7 @@ const resumeRun = async () => (await resumeDaily()).run;
 export function DailyScreen({
   onBack,
   onSignIn,
+  onCreateAccount,
   onPractice,
   onWeekly,
   onFriends,
@@ -215,7 +217,15 @@ export function DailyScreen({
           ) : authStatus !== "authed" ? (
             <>
               <p className="daily__note">{t("daily.signInRequired")}</p>
-              <ChallengeEntry label={t("home.signIn")} onStart={onSignIn} />
+              <ChallengeEntry
+                label={t(onCreateAccount ? "growth.createForDaily" : "home.signIn")}
+                onStart={onCreateAccount ?? onSignIn}
+              />
+              {onCreateAccount && (
+                <Button variant="ghost" onClick={onSignIn}>
+                  {t("growth.signInForDaily")}
+                </Button>
+              )}
               <div className="growth-practice-link">
                 <p>{t("growth.practiceFree")}</p>
                 <Button variant="ghost" onClick={onPractice}>

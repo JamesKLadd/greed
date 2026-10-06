@@ -37,6 +37,19 @@
 .growth-practice__finished > p {
   line-height: 1.5;
 }
+.growth-practice__score-label {
+  margin-bottom: 0;
+}
+.growth-practice__next {
+  display: grid;
+  gap: 10px;
+  margin-block: 20px;
+}
+.growth-practice__next .btn {
+  width: 100%;
+  min-height: 48px;
+  white-space: normal;
+}
 .growth-practice-link {
   margin-top: 20px;
   text-align: center;
@@ -170,4 +183,62 @@
   padding: 0.5rem;
   text-align: left;
   border-bottom: 1px solid currentColor;
+}
+.growth-report-screen .setup__panel {
+  min-width: 0;
+}
+.growth-report-screen p {
+  line-height: 1.55;
+}
+.growth-report-notes summary {
+  cursor: pointer;
+  padding-block: 10px;
+  min-height: 44px;
+}
+.growth-funnel {
+  border: 1px solid rgba(237, 205, 132, 0.35);
+  border-radius: 18px;
+  padding: 18px;
+  margin-block: 18px;
+}
+.growth-funnel h3 {
+  margin-top: 0;
+}
+.growth-funnel__steps {
+  padding-left: 1.5rem;
+}
+.growth-funnel__steps li {
+  margin-block: 16px;
+  padding-left: 4px;
+}
+.growth-funnel__step {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.growth-funnel__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(128, 128, 128, 0.2);
+  margin-block: 8px;
+  overflow: hidden;
+}
+.growth-funnel__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #c6a760);
+}
+.growth-funnel .growth-report table {
+  min-width: 420px;
+}
+.growth-report caption {
+  text-align: left;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+:root[data-contrast="high"] .growth-funnel {
+  border: 2px solid currentColor;
+}
+:root[data-contrast="high"] .growth-funnel__bar > span {
+  background: currentColor;
 }

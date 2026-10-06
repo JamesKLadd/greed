@@ -16,7 +16,8 @@ import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { type MatchSetup } from "./game/setup.js";
 import { useAuth } from "./game/auth.js";
 import { readRoomInvitation, clearRoomInvitation } from "./game/share.js";
-import { recordGrowthEvent } from "./game/growth.js";
+import { flushGrowthEvents, recordGrowthEvent } from "./game/growth.js";
+import { readPlayEntry, playEntryUrl } from "./game/entry.js";
 import { verifyEmail } from "./net/auth.js";
 import { useChallenges } from "./net/challenges.js";
 import { Toast } from "./components/Toast.js";
@@ -137,13 +138,7 @@ export function App() {
   const invitationJoined = useRef(false);
   const [mode, setMode] = useState<Mode>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("growth") === "1"
-      ? "growth"
-      : params.get("practice") === "1"
-        ? "practice"
-        : params.get("challenge") === "daily"
-          ? "daily"
-          : "home";
+    return params.get("growth") === "1" ? "growth" : readPlayEntry(window.location.search);
   });
   const [match, setMatch] = useState<MatchSetup | null>(null);
   const beta = useBeta();
@@ -163,6 +158,19 @@ export function App() {
   // Where to land after a successful sign-in (e.g. straight into online play when
   // the user signed in from the gated Online button).
   const [authNext, setAuthNext] = useState<Mode | null>(null);
+  const [authInitialMode, setAuthInitialMode] = useState<"login" | "signup">("login");
+  useEffect(() => {
+    const destination = mode === "auth" ? authNext : mode;
+    const entry =
+      destination === "daily" || destination === "weekly" || destination === "practice"
+        ? destination
+        : "home";
+    window.history.replaceState(
+      window.history.state,
+      "",
+      playEntryUrl(window.location.href, entry),
+    );
+  }, [mode, authNext]);
   // A one-line banner shown on Home after handling a verify link.
   const [flash, setFlash] = useState<string | null>(null);
   useEffect(() => {
@@ -353,6 +361,13 @@ export function App() {
     setMode("practice");
   };
 
+  const openAuth = (next: Mode | null, initial: "login" | "signup" = "login") => {
+    setAuthNext(next);
+    setAuthInitialMode(initial);
+    if (next === "daily") recordGrowthEvent("daily_signin_opened");
+    setMode("auth");
+  };
+
   const backHome = () => {
     setResetToken(undefined);
     setAuthNext(null);
@@ -367,23 +382,36 @@ export function App() {
   // interrupt whatever the player is doing, wherever they are.
   const screen = (() => {
     if (mode === "practice")
-      return <PracticeChallengeScreen onBack={backHome} onDaily={() => setMode("daily")} />;
+      return (
+        <PracticeChallengeScreen
+          onBack={backHome}
+          onDaily={() => setMode("daily")}
+          onCreateAccount={() => openAuth("daily", "signup")}
+          onSignIn={() => openAuth("daily")}
+        />
+      );
     if (mode === "auth") {
       return (
         <AuthScreen
           onDone={() => {
             const next = authNext;
+            if (next === "daily") {
+              recordGrowthEvent("daily_signin_completed");
+              flushGrowthEvents();
+            }
             setResetToken(undefined);
             setAuthNext(null);
             setMode(next ?? "home");
           }}
           onBack={backHome}
-          initialMode={resetToken ? "reset" : "login"}
+          initialMode={resetToken ? "reset" : authInitialMode}
           resetToken={resetToken}
           contextHint={
             roomInvitation && authNext === "online"
               ? t("growth.joinRoom", { code: roomInvitation })
-              : undefined
+              : authNext === "daily"
+                ? t("growth.dailyAccountHint")
+                : undefined
           }
         />
       );
@@ -392,14 +420,12 @@ export function App() {
     if (mode === "daily") {
       return (
         <DailyScreen
-          onBack={() => setMode("home")}
+          onBack={backHome}
           onPractice={startPractice}
           onWeekly={() => setMode("weekly")}
           onFriends={() => setMode("friends")}
-          onSignIn={() => {
-            setAuthNext("daily");
-            setMode("auth");
-          }}
+          onSignIn={() => openAuth("daily")}
+          onCreateAccount={() => openAuth("daily", "signup")}
         />
       );
     }
@@ -407,26 +433,15 @@ export function App() {
     if (mode === "weekly") {
       return (
         <WeeklyScreen
-          onBack={() => setMode("home")}
+          onBack={backHome}
           onFriends={() => setMode("friends")}
-          onSignIn={() => {
-            setAuthNext("weekly");
-            setMode("auth");
-          }}
+          onSignIn={() => openAuth("weekly")}
         />
       );
     }
 
     if (mode === "friends") {
-      return (
-        <FriendsScreen
-          onBack={() => setMode("home")}
-          onSignIn={() => {
-            setAuthNext("friends");
-            setMode("auth");
-          }}
-        />
-      );
+      return <FriendsScreen onBack={() => setMode("home")} onSignIn={() => openAuth("friends")} />;
     }
 
     if (mode === "account")
@@ -479,14 +494,8 @@ export function App() {
         onLocker={() => setMode("locker")}
         onUpdates={() => setMode("updates")}
         onSettings={() => setMode("settings")}
-        onAuth={() => {
-          setAuthNext(null);
-          setMode("auth");
-        }}
-        onAuthForOnline={() => {
-          setAuthNext("online");
-          setMode("auth");
-        }}
+        onAuth={() => openAuth(null)}
+        onAuthForOnline={() => openAuth("online")}
         onAccount={() => setMode("account")}
       />
     );

@@ -1,0 +1,151 @@
+{
+  "environment": "Isolated local PostgreSQL and local game server; no production data",
+  "checks": [
+    "owner report: 200",
+    "anonymous report: 401",
+    "other account report: 403",
+    "five ordered paths",
+    "campaign counts are monotonic",
+    "old server totals stay readable",
+    "server error can retry",
+    "empty report has no fabricated zero retention",
+    "320px large-text/high-contrast English, Spanish, French: no page overflow",
+    "no browser exceptions"
+  ],
+  "sampleFunnels": [
+    {
+      "id": "welcome",
+      "steps": [
+        {
+          "event": "landing_viewed",
+          "sessions": 5
+        },
+        {
+          "event": "landing_practice_selected",
+          "sessions": 5
+        },
+        {
+          "event": "practice_started",
+          "sessions": 4
+        },
+        {
+          "event": "practice_completed",
+          "sessions": 3
+        }
+      ],
+      "channels": [
+        {
+          "source": "landing",
+          "campaign": "bank_or_roll",
+          "sessions": 5,
+          "completed": 3
+        }
+      ]
+    },
+    {
+      "id": "welcome_daily",
+      "steps": [
+        {
+          "event": "landing_viewed",
+          "sessions": 5
+        },
+        {
+          "event": "landing_daily_selected",
+          "sessions": 0
+        },
+        {
+          "event": "daily_started",
+          "sessions": 0
+        },
+        {
+          "event": "daily_completed",
+          "sessions": 0
+        }
+      ],
+      "channels": [
+        {
+          "source": "landing",
+          "campaign": "bank_or_roll",
+          "sessions": 5,
+          "completed": 0
+        }
+      ]
+    },
+    {
+      "id": "practice_daily",
+      "steps": [
+        {
+          "event": "practice_started",
+          "sessions": 7
+        },
+        {
+          "event": "practice_completed",
+          "sessions": 5
+        },
+        {
+          "event": "practice_daily_selected",
+          "sessions": 5
+        },
+        {
+          "event": "daily_started",
+          "sessions": 3
+        },
+        {
+          "event": "daily_completed",
+          "sessions": 3
+        }
+      ],
+      "channels": [
+        {
+          "source": "landing",
+          "campaign": "bank_or_roll",
+          "sessions": 7,
+          "completed": 3
+        }
+      ]
+    },
+    {
+      "id": "daily_signin",
+      "steps": [
+        {
+          "event": "daily_signin_opened",
+          "sessions": 6
+        },
+        {
+          "event": "daily_signin_completed",
+          "sessions": 4
+        },
+        {
+          "event": "daily_started",
+          "sessions": 3
+        }
+      ],
+      "channels": [
+        {
+          "source": "landing",
+          "campaign": "bank_or_roll",
+          "sessions": 6,
+          "completed": 3
+        }
+      ]
+    },
+    {
+      "id": "room_invite",
+      "steps": [
+        {
+          "event": "room_invite_opened",
+          "sessions": 0
+        },
+        {
+          "event": "room_invite_joined",
+          "sessions": 0
+        },
+        {
+          "event": "online_completed",
+          "sessions": 0
+        }
+      ],
+      "channels": []
+    }
+  ]
+}

@@ -54,16 +54,18 @@ function context(): Omit<GrowthRecord, "id" | "event"> {
   const params = new URLSearchParams(window.location.search);
   const requested = params.get("source");
   const rawCampaign = params.get("utm_campaign");
+  const landing = /^\/welcome(?:\/|$)/.test(window.location.pathname);
   const source =
     GROWTH_SOURCES.find((s) => s === requested) ??
-    (params.has("room") ? "room_invite" : reuse ? old.source : "direct");
+    (params.has("room") ? "room_invite" : landing ? "landing" : reuse ? old.source : "direct");
   const campaign =
-    GROWTH_CAMPAIGNS.find((c) => c === rawCampaign) ?? (reuse ? old.campaign : "none");
+    GROWTH_CAMPAIGNS.find((c) => c === rawCampaign) ?? (reuse && !landing ? old.campaign : "none");
   const session = reuse ? (old.id as string) : crypto.randomUUID();
   sessionStorage.setItem(SESSION, JSON.stringify({ id: session, at: now, source, campaign }));
   return { visitor, session, source, campaign };
 }
-function flush(): void {
+/** Send before a welcome link navigates away; never hold up navigation. */
+export function flushGrowthEvents(): void {
   window.clearTimeout(timer);
   timer = undefined;
   if (!usageEnabled()) {
@@ -104,8 +106,8 @@ export function recordGrowthEvent(event: GrowthEvent): void {
     return;
   try {
     queue.push({ ...context(), id: crypto.randomUUID(), event });
-    if (queue.length >= 20) flush();
-    else if (timer === undefined) timer = window.setTimeout(flush, 1500);
+    if (queue.length >= 20) flushGrowthEvents();
+    else if (timer === undefined) timer = window.setTimeout(flushGrowthEvents, 1500);
   } catch {
     /* Unsupported crypto or storage disables collection. */
   }
@@ -114,9 +116,9 @@ export function initGrowth(landing = false): void {
   if (initialized) return;
   initialized = true;
   recordGrowthEvent(landing ? "landing_viewed" : "visit");
-  window.addEventListener("pagehide", flush);
+  window.addEventListener("pagehide", flushGrowthEvents);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flush();
+    if (document.visibilityState === "hidden") flushGrowthEvents();
     else recordGrowthEvent(landing ? "landing_viewed" : "visit");
   });
 }

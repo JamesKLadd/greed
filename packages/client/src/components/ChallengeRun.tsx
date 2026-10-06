@@ -116,11 +116,13 @@ export function ChallengeRun({
               ? "growth.coachRolling"
               : run.state.turn.outcome === "busted"
                 ? "growth.coachBust"
-                : run.state.turn.hotDice
-                  ? "growth.coachHot"
-                  : run.state.turn.lastRoll === null
-                    ? "growth.coachStart"
-                    : "growth.coachChoice",
+                : run.state.turn.outcome === "banked"
+                  ? "growth.coachBanked"
+                  : run.state.turn.hotDice
+                    ? "growth.coachHot"
+                    : run.state.turn.lastRoll === null
+                      ? "growth.coachStart"
+                      : "growth.coachChoice",
             { points: n(run.state.turn.turnScore) },
           )}
         </p>
