@@ -96,6 +96,8 @@ export interface Achievement {
   earned?: (s: GameSummary, p: Profile) => boolean;
 }
 
+export const TIDAL_WAVE_POINTS = 2500;
+
 export const ACHIEVEMENTS: Achievement[] = [
   {
     id: "first-win",
@@ -267,7 +269,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: "Tidal Wave",
     desc: "Bank 2500+ in a single turn.",
     tier: "gold",
-    earned: (s) => s.bestTurn >= 2500,
+    earned: (s) => s.bestTurn >= TIDAL_WAVE_POINTS,
   },
   {
     id: "unstoppable",

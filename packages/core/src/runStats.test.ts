@@ -16,6 +16,46 @@ import { diceToRoll } from "./turn.js";
 /** Roll until the turn ends, ten times over: every bust is on a full cup. */
 const ROLL_ONLY: RunMove[] = Array<RunMove>(200).fill("ROLL");
 
+describe("hot dice in a run", () => {
+  it("counts consecutive cleared mats, including a fresh full cup after hot dice", () => {
+    // Real solo-run RNG: the first two full cups are straights, worth 500 each.
+    const first = runPosition(35, ["ROLL"], DAILY_TURNS);
+    expect(first.state.turn.dice).toEqual([4, 5, 6, 3, 2]);
+    expect(first.result.hotDice).toBe(1);
+
+    const second = runPosition(35, ["ROLL", "ROLL"], DAILY_TURNS);
+    expect(second.state.turn.dice).toEqual([3, 5, 6, 2, 4]);
+    expect(second.state.turn.turnScore).toBe(1000);
+    expect(second.result.hotDice).toBe(2);
+    expect(second.result.hotDice).toBe(
+      second.state.log.filter((event) => event.type === "hot-dice").length,
+    );
+
+    const banked = runPosition(35, ["ROLL", "ROLL", "BANK"], DAILY_TURNS);
+    expect(banked.result.score).toBe(1000);
+    expect(banked.result.hotDice).toBe(2);
+  });
+
+  it("does not award more clears for repeatedly releasing and holding the same die", () => {
+    const moves: RunMove[] = ["ROLL", "H0", "H0", "H0", "H0"];
+    const restored = runPosition(35, moves, DAILY_TURNS);
+    expect(restored.state.turn.hotDice).toBe(true);
+    expect(restored.result.hotDice).toBe(1);
+
+    const rerolled = runPosition(35, [...moves, "ROLL"], DAILY_TURNS);
+    expect(rerolled.result.hotDice).toBe(2);
+  });
+
+  it("agrees with the engine's cleared-mat events over complete runs", () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const pos = runPosition(seed, ROLL_ONLY, DAILY_TURNS);
+      expect(pos.result.hotDice, `seed ${seed}`).toBe(
+        pos.state.log.filter((event) => event.type === "hot-dice").length,
+      );
+    }
+  });
+});
+
 describe("super busts in a run", () => {
   it("counts a bust on the opening throw of a turn", () => {
     // Rolling and never holding anything back means every throw after the first

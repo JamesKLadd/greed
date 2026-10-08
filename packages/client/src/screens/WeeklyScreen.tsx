@@ -30,6 +30,10 @@ import {
   ChallengeSummaryStats,
 } from "../components/ChallengeLobby.js";
 import type { RunView } from "../game/useChallengeRun.js";
+import {
+  claimChallengeTurnAchievement,
+  recordChallengeBestTurn,
+} from "../game/challengeProfile.js";
 import { weeklyLobbyNeedsRefresh } from "../game/weeklyLobbyCalendar.js";
 import {
   fetchWeekly,
@@ -128,6 +132,8 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       if (next.streak >= b.weeks) ids.push(b.id);
     }
     const won = ids.map(awardAchievement).filter((a): a is Achievement => a !== null);
+    const turnAward = claimChallengeTurnAchievement(next.best?.bestTurn ?? 0);
+    if (turnAward) won.push(turnAward);
 
     // The wins figure is the server's — only it can see where everyone else
     // finished. This is the local copy catching up, so the Stats screen agrees
@@ -189,6 +195,13 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
   const onFinished = useCallback(
     async (final: RunView | null) => {
       if (final?.complete) recordGrowthEvent("weekly_completed");
+      const improvedTurn = recordChallengeBestTurn(final);
+      const turnAward = final?.complete ? claimChallengeTurnAchievement(0) : null;
+      if (turnAward) {
+        setUnlocked((prev) => [...prev, turnAward]);
+        syncSteamAchievements([turnAward.id]);
+      }
+      if (improvedTurn || turnAward) void syncProfileUp();
       setRunView(null);
       setLatestAttemptScore(final?.complete ? final.state.players[0].total : null);
       setLoading(true);

@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { applyAction, createGame, getLegalActions } from "./game.js";
+import { scoreRoll } from "./scoring.js";
 import { canToggleLock, diceToRoll, heldScore, refreshTurn } from "./turn.js";
 import type { DieValue, GameState, TurnAward } from "./types.js";
 
@@ -41,6 +42,70 @@ const fives = (indices: number[]): TurnAward[] =>
   indices.map((i) => ({ kind: "fives", face: 5, dice: [i], points: 50 }));
 
 const tap = (g: GameState, index: number) => applyAction(g, { type: "TOGGLE_LOCK", index });
+
+describe("reconsidering a whole hand thrown together", () => {
+  const hands = [
+    { seed: 52, dice: [2, 1, 3, 5, 4], points: 500 },
+    { seed: 32, dice: [3, 5, 2, 6, 4], points: 500 },
+    { seed: 4341, dice: [1, 1, 1, 1, 1], points: 1000 },
+    { seed: 845, dice: [2, 2, 2, 2, 2], points: 1000 },
+    { seed: 253, dice: [3, 3, 3, 3, 3], points: 1000 },
+    { seed: 5466, dice: [4, 4, 4, 4, 4], points: 1000 },
+    { seed: 13271, dice: [5, 5, 5, 5, 5], points: 1000 },
+    { seed: 14590, dice: [6, 6, 6, 6, 6], points: 1000 },
+  ];
+
+  function opening(seed: number): GameState {
+    return applyAction(createGame(players, { goal: 10000, seed, startIndex: 0 }), {
+      type: "ROLL",
+    });
+  }
+
+  it.each(hands)("keeps the remaining dice's ordinary points for seed $seed", (hand) => {
+    const g = opening(hand.seed);
+    expect(g.turn.dice).toEqual(hand.dice);
+    expect(g.turn.turnScore).toBe(hand.points);
+
+    // Try every remaining subset, including breaking a triple of 5s down to
+    // singles. These dice arrived together, so any surviving triple is legal.
+    for (let held = 1; held < 31; held++) {
+      let after = g;
+      for (let i = 0; i < 5; i++) {
+        if (!(held & (1 << i))) after = tap(after, i);
+      }
+      const remaining = g.turn.dice.filter((_, i) => held & (1 << i));
+      expect(after.turn.turnScore, `held mask ${held}`).toBe(scoreRoll(remaining).points);
+      expect(after.turn.hotDice).toBe(false);
+      for (let i = 0; i < 5; i++) {
+        if (!(held & (1 << i))) after = tap(after, i);
+      }
+      expect(after.turn.turnScore).toBe(hand.points);
+      expect(after.turn.hotDice).toBe(true);
+    }
+  });
+
+  it("keeps the original straight's 1 and 5 paying after another die is rethrown", () => {
+    let g = tap(opening(52), 2); // release the 3 from [2,1,3,5,4]
+    expect(g.turn.turnScore).toBe(150);
+    g.rng = 7; // the replacement is a 1, not another straight
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.dice).toEqual([2, 1, 1, 5, 4]);
+    expect(g.turn.turnScore).toBe(250);
+    expect(g.turn.hotDice).toBe(false);
+    g = applyAction(g, { type: "BANK" });
+    expect(g.players[0].total).toBe(250);
+  });
+
+  it("keeps a triple from the original five of a kind after another die is rethrown", () => {
+    let g = tap(opening(14590), 0); // release any of the five 6s
+    expect(g.turn.turnScore).toBe(600);
+    g.rng = 7; // a 1 alongside the four original 6s
+    g = applyAction(g, { type: "ROLL" });
+    expect(g.turn.dice).toEqual([1, 6, 6, 6, 6]);
+    expect(g.turn.turnScore).toBe(700);
+    expect(g.turn.hotDice).toBe(false);
+  });
+});
 
 describe("five of a kind is built, not just rolled", () => {
   it("pays 1000 for five held dice of a face, whatever they were worth apart", () => {

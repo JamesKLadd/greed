@@ -56,7 +56,7 @@ export function OnlineGameScreen({
   const chrome = useGameChrome({
     state,
     legal,
-    canAct,
+    canAct: canAct && !net.isPendingAction,
     isRolling: net.isRolling,
     youId: recordResults && !net.isSpectator ? net.youId : null,
     blockingOverlayActive: sceneActive && sceneOverlay !== null,
@@ -91,6 +91,7 @@ export function OnlineGameScreen({
       rollingIndices={net.rollingIndices}
       rollingDice={net.rollingDice}
       canAct={canAct}
+      inputBlocked={net.isPendingAction}
       onRoll={net.roll}
       onBank={net.bank}
       onToggleDie={net.toggleDie}

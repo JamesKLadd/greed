@@ -71,6 +71,7 @@ export interface RunResult {
    * it is the only bust that can cost a whole turn's worth of hot dice.
    */
   superBusts: number;
+  /** Cleared mats recorded by the engine, including consecutive hot rolls. */
   hotDice: number;
   /** Largest single banked turn. */
   bestTurn: number;
@@ -131,7 +132,6 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
   let banks = 0;
   let busts = 0;
   let superBusts = 0;
-  let hotDice = 0;
   let bestTurn = 0;
 
   for (const move of moves) {
@@ -154,14 +154,12 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
     if (move === "BANK" && !legal.canBank) continue;
 
     const before = state.players[0].total;
-    const hotBefore = state.turn.hotDice;
     // Asked BEFORE the throw, because afterwards the locks have moved: a bust
     // holds nothing, and a hand that scored has locked whatever paid. This is
     // the cup as the player picked it up.
     const cup = move === "ROLL" ? diceToRoll(state.turn).length : 0;
     // Narrowed by the two guards above: only ROLL and BANK reach here.
     state = applyAction(state, { type: move as "ROLL" | "BANK" });
-    if (!hotBefore && state.turn.hotDice) hotDice += 1;
 
     if (state.turn.outcome) {
       if (state.turn.outcome === "banked") {
@@ -184,7 +182,9 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
       banks,
       busts,
       superBusts,
-      hotDice,
+      // A hot reroll can clear a SECOND mat while hotDice stays true. The
+      // engine logs each clear once, and restoring a lock does not add one.
+      hotDice: state.log.filter((event) => event.type === "hot-dice").length,
       bestTurn,
       complete: turns >= turnLimit,
     },

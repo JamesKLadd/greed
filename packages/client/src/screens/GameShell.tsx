@@ -30,6 +30,8 @@ export interface GameShellProps {
   rollingIndices: number[];
   rollingDice?: DieValue[] | null;
   canAct: boolean;
+  /** An online move is awaiting acknowledgment; preserve the dice's button elements. */
+  inputBlocked?: boolean;
   onRoll: () => void;
   onBank: () => void;
   /** Hold a die or put it back. Only offered while the turn is the viewer's. */
@@ -70,6 +72,7 @@ export function GameShell({
   rollingIndices,
   rollingDice,
   canAct,
+  inputBlocked = false,
   onRoll,
   onBank,
   onToggleDie,
@@ -146,6 +149,7 @@ export function GameShell({
             // handler away instead would swap the element the dice are drawn
             // in, which costs them their spin.
             onToggleDie={canAct ? onToggleDie : undefined}
+            diceDisabled={inputBlocked}
           />
         </div>
 
@@ -158,7 +162,7 @@ export function GameShell({
             state={state}
             legal={legal}
             isRolling={isRolling}
-            canAct={canAct}
+            canAct={canAct && !inputBlocked}
             onRoll={onRoll}
             onBank={onBank}
           />

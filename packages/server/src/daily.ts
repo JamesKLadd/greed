@@ -25,7 +25,8 @@ import {
   type GameState,
 } from "@greed/core";
 import { randomInt } from "node:crypto";
-import { query } from "./db.js";
+import { query, withChallengeTransaction } from "./db.js";
+import { publicGameState } from "./public-state.js";
 import {
   careerChallengeWins,
   raiseCareerBestTurn,
@@ -162,7 +163,7 @@ async function storedRun(userId: string, day: string): Promise<StoredRun | null>
 function viewOf(run: StoredRun): DailyRunView {
   const pos = dailyPosition(run.seed, run.moves);
   return {
-    state: pos.state,
+    state: publicGameState(pos.state),
     turns: pos.turns,
     totalTurns: DAILY_TURNS,
     // The stored flag wins: a run marked finished is finished, whatever a
@@ -179,7 +180,11 @@ function viewOf(run: StoredRun): DailyRunView {
  * once this has been called. Starting twice returns the run already in
  * progress rather than a new one.
  */
-export async function startDailyRun(userId: string, day = dailyKey()): Promise<DailyRunView> {
+export async function startDailyRun(userId: string, day?: string): Promise<DailyRunView> {
+  return withChallengeTransaction(userId, () => startDailyRunLocked(userId, day ?? dailyKey()));
+}
+
+async function startDailyRunLocked(userId: string, day: string): Promise<DailyRunView> {
   // A fresh, unguessable seed per run. DO NOT derive this from the day or the
   // player: the whole point is that nobody, the player included, can work out
   // their dice ahead of time.
@@ -326,7 +331,17 @@ async function dailyChampions(
 export async function playDailyMove(
   userId: string,
   rawMove: unknown,
-  day = dailyKey(),
+  day?: string,
+): Promise<DailyRunView> {
+  return withChallengeTransaction(userId, () =>
+    playDailyMoveLocked(userId, rawMove, day ?? dailyKey()),
+  );
+}
+
+async function playDailyMoveLocked(
+  userId: string,
+  rawMove: unknown,
+  day: string,
 ): Promise<DailyRunView> {
   if (!isDailyMove(rawMove)) throw new AccountError(400, "Invalid move.", "move.invalid");
   const move: DailyMove = rawMove;
@@ -395,7 +410,7 @@ export async function playDailyMove(
   );
 
   return {
-    state: after.state,
+    state: publicGameState(after.state),
     turns: after.turns,
     totalTurns: DAILY_TURNS,
     complete: r.complete,

@@ -1,8 +1,8 @@
 /**
  * Wire protocol shared by the online client and server.
  *
- * Greed has no hidden information (all scores and dice are public), so the server
- * simply broadcasts the whole authoritative GameState to every client. A client
+ * All current scores and dice are public. The server broadcasts the position
+ * with inert PRNG state and an opaque game identity in place of its seed. A client
  * knows which seat it controls via `youId` and compares it to the current
  * player's id to decide whether it may act.
  */

@@ -2,7 +2,7 @@ import { cleanBetaLook, type BetaLook } from "@greed/protocol";
 import { useBeta } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BotPersonality, DieValue, GameState } from "@greed/core";
+import type { BotPersonality, DieValue, GameAction, GameState } from "@greed/core";
 import type { EmoteId } from "@greed/protocol";
 import {
   decode,
@@ -13,7 +13,7 @@ import {
   type RollOffRow,
   type ServerMessage,
 } from "@greed/protocol";
-import { diceToRoll } from "@greed/core";
+import { canToggleLock, diceToRoll, getLegalActions } from "@greed/core";
 import { toastFor, type ToastMessage } from "../game/toasts.js";
 import { SERVER_URL } from "../game/online.js";
 import { loadProfile } from "../game/profile.js";
@@ -128,6 +128,8 @@ export interface OnlineController {
   toast: ToastMessage | null;
   rollOff: RollOffRow[] | null;
   isRolling: boolean;
+  /** Waiting for an action's authoritative board to arrive and finish presenting. */
+  isPendingAction: boolean;
   rollingIndices: number[];
   /** Faces the throw in flight will land on — see the same field on useGreed. */
   rollingDice: DieValue[] | null;
@@ -210,6 +212,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
   const [rollOff, setRollOff] = useState<RollOffRow[] | null>(null);
   const [rematchState, setRematchState] = useState<RematchState | null>(null);
   const [isRolling, setIsRolling] = useState(false);
+  const [isPendingAction, setIsPendingAction] = useState(false);
+  const pendingActionBoard = useRef<string | null>(null);
   const [rollingIndices, setRollingIndices] = useState<number[]>([]);
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
@@ -265,6 +269,10 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setIsRolling(false);
     setRollingIndices([]);
     setRollingDice(null);
+    if (pendingActionBoard.current !== null && pendingActionBoard.current !== boardKey(next)) {
+      pendingActionBoard.current = null;
+      setIsPendingAction(false);
+    }
     // Reset result readers with the snapshot itself, not the earlier welcome.
     // That packet can arrive in another browser task while the old board is
     // still visible; baselining there would replay a short reconnect catch-up.
@@ -336,9 +344,15 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
       // A shorter log than last time means a new game (rematch) — resync and
       // drop anything still waiting, which belongs to the game just ended.
       if (next.log.length < queuedLogLen.current) {
+        if (stepTimerRef.current != null) window.clearTimeout(stepTimerRef.current);
+        stepTimerRef.current = null;
         pendingRef.current = [];
+        lastQueuedRef.current = null;
+        displayedRef.current = null;
         queuedLogLen.current = 0;
         holdUntilRef.current = 0;
+        pendingActionBoard.current = null;
+        setIsPendingAction(false);
       }
       // Nothing new to show (a presence change, a vote, the clock): keep it out
       // of the queue entirely rather than re-showing the position it repeats.
@@ -371,6 +385,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     lastQueuedRef.current = null;
     displayedRef.current = null;
     queuedLogLen.current = 0;
+    pendingActionBoard.current = null;
+    setIsPendingAction(false);
     setIsRolling(false);
     setRollingIndices([]);
     setRollingDice(null);
@@ -553,6 +569,8 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
           break;
         case "error":
           setError(msg.message);
+          pendingActionBoard.current = null;
+          setIsPendingAction(false);
           if (reconnectingRef.current) {
             // The server turned our resume away — the room is gone, or the
             // session expired while we were away. Staying put would leave a
@@ -629,6 +647,36 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
       }
     },
     [ensureSocket],
+  );
+
+  const act = useCallback(
+    (action: GameAction) => {
+      // The network round trip is also part of a move. Before its reply begins
+      // tumbling, Roll used to remain live and a double tap sent two real throws.
+      // Holds share this latch so Roll cannot overtake a changed cup either.
+      if (
+        pendingActionBoard.current !== null ||
+        stepTimerRef.current !== null ||
+        pendingRef.current.length > 0 ||
+        reconnectingRef.current ||
+        spectateCodeRef.current !== null ||
+        wsRef.current?.readyState !== WebSocket.OPEN
+      )
+        return;
+      const state = displayedRef.current;
+      if (!state || state.phase === "game-over" || state.turn.outcome) return;
+      const current = state.players[state.turn.playerIndex];
+      if (current.isBot || current.id !== youIdRef.current) return;
+      const legal = getLegalActions(state);
+      if (action.type === "ROLL" && !legal.canRoll) return;
+      if (action.type === "BANK" && !legal.canBank) return;
+      if (action.type === "TOGGLE_LOCK" && !canToggleLock(state.turn, action.index)) return;
+      if (action.type !== "ROLL" && action.type !== "BANK" && action.type !== "TOGGLE_LOCK") return;
+      pendingActionBoard.current = boardKey(state);
+      setIsPendingAction(true);
+      send({ type: "game-action", action });
+    },
+    [send],
   );
 
   // The retry timer fires long after the render that armed it, so it reaches
@@ -719,6 +767,7 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     rollOff,
     rematchState,
     isRolling,
+    isPendingAction,
     rollingIndices,
     rollingDice,
     presence,
@@ -773,9 +822,9 @@ export function useOnlineGame(autoJoin?: { code: string; name: string }): Online
     setSeatTeam: (seatId, team) => send({ type: "set-seat-team", seatId, team }),
     setTurnTimerEnabled: (enabled) => send({ type: "set-turn-timer", enabled }),
     startGame: () => send({ type: "start-game" }),
-    roll: () => send({ type: "game-action", action: { type: "ROLL" } }),
-    bank: () => send({ type: "game-action", action: { type: "BANK" } }),
-    toggleDie: (index) => send({ type: "game-action", action: { type: "TOGGLE_LOCK", index } }),
+    roll: () => act({ type: "ROLL" }),
+    bank: () => act({ type: "BANK" }),
+    toggleDie: (index) => act({ type: "TOGGLE_LOCK", index }),
     rematch: () => send({ type: "rematch" }),
     toLobby: () => send({ type: "to-lobby" }),
     leave,

@@ -1,0 +1,168 @@
+{
+  "sampling": {
+    "samples": 5000000,
+    "source": "SHA-256",
+    "salt": "Greed dice fairness audit v1 / 2026-10-08"
+  },
+  "exactOdds": [
+    {
+      "dice": 1,
+      "outcomes": 6,
+      "busts": 4,
+      "bustProbability": 0.6666666666666666,
+      "hotDiceProbability": 0.3333333333333333,
+      "expectedPoints": 25
+    },
+    {
+      "dice": 2,
+      "outcomes": 36,
+      "busts": 16,
+      "bustProbability": 0.4444444444444444,
+      "hotDiceProbability": 0.1111111111111111,
+      "expectedPoints": 50
+    },
+    {
+      "dice": 3,
+      "outcomes": 216,
+      "busts": 60,
+      "bustProbability": 0.2777777777777778,
+      "hotDiceProbability": 0.05555555555555555,
+      "expectedPoints": 83.56481481481481
+    },
+    {
+      "dice": 4,
+      "outcomes": 1296,
+      "busts": 204,
+      "bustProbability": 0.1574074074074074,
+      "hotDiceProbability": 0.037037037037037035,
+      "expectedPoints": 129.97685185185185
+    },
+    {
+      "dice": 5,
+      "outcomes": 7776,
+      "busts": 600,
+      "bustProbability": 0.07716049382716049,
+      "hotDiceProbability": 0.05606995884773663,
+      "expectedPoints": 203.44650205761317
+    }
+  ],
+  "sampledBustsByCup": [
+    {
+      "dice": 1,
+      "events": 3333240,
+      "total": 5000000,
+      "rate": 0.666648,
+      "wilson95": [0.6662346696321139, 0.667061074299511],
+      "zScore": -0.0885437744844201
+    },
+    {
+      "dice": 2,
+      "events": 2222977,
+      "total": 5000000,
+      "rate": 0.4445954,
+      "wilson95": [0.4441598804069607, 0.44503100472676954],
+      "zScore": 0.6793000000001863
+    },
+    {
+      "dice": 3,
+      "events": 1390115,
+      "total": 5000000,
+      "rate": 0.278023,
+      "wilson95": [0.27763046683058373, 0.278415874255356],
+      "zScore": 1.2242233330689773
+    },
+    {
+      "dice": 4,
+      "events": 788456,
+      "total": 5000000,
+      "rate": 0.1576912,
+      "wilson95": [0.15737201330561373, 0.1580109126800458],
+      "zScore": 1.7424673789698955
+    },
+    {
+      "dice": 5,
+      "events": 386099,
+      "total": 5000000,
+      "rate": 0.0772198,
+      "wilson95": [0.07698614585606763, 0.07745410378052466],
+      "zScore": 0.496963294163477
+    }
+  ],
+  "postHotFullCup": {
+    "events": 21540,
+    "total": 279860,
+    "rate": 0.07696705495604945,
+    "wilson95": [0.07598534762884021, 0.07796037552796878],
+    "zScore": -0.3834895867421886
+  },
+  "postBustFullCup": {
+    "events": 29833,
+    "total": 386099,
+    "rate": 0.07726774739121313,
+    "wilson95": [0.07642970723682989, 0.07811419933834278],
+    "zScore": 0.24974711660078971
+  },
+  "faces": {
+    "counts": [4166542, 4168366, 4166687, 4167773, 4163222, 4167410],
+    "chiSquare": 3.97102448,
+    "degreesOfFreedom": 5
+  },
+  "adjacentFaces": {
+    "counts": [
+      693228, 695117, 694467, 696014, 693734, 693982, 694583, 697465, 694732, 694009, 693199,
+      694378, 694141, 693425, 694434, 695965, 694525, 694197, 695307, 693979, 694914, 695093,
+      692623, 695857, 693297, 694174, 693638, 693728, 695194, 693191, 694399, 694968, 694695,
+      693641, 693996, 695711
+    ],
+    "chiSquare": 48.942090560000004,
+    "degreesOfFreedom": 35
+  },
+  "fullCupOutcomes": {
+    "chiSquare": 7794.239180799928,
+    "degreesOfFreedom": 7775,
+    "minimumCount": 542,
+    "maximumCount": 737
+  },
+  "realEngine": {
+    "runs": 50000,
+    "openingFullCup": {
+      "events": 38692,
+      "total": 500000,
+      "rate": 0.077384,
+      "wilson95": [0.07664661626347036, 0.07812787753448217],
+      "zScore": 0.592262091490524
+    },
+    "postHotFullCup": {
+      "events": 16215,
+      "total": 209065,
+      "rate": 0.07755961064740631,
+      "wilson95": [0.07642080321040816, 0.07871394203669281],
+      "zScore": 0.6838803243945001
+    },
+    "referenceStrategy": "Auto-hold; roll until bust (no banking)",
+    "referenceStrategyScores": {
+      "mean": 0,
+      "maximum": 0,
+      "atLeast4250": {
+        "events": 0,
+        "total": 50000,
+        "rate": 0,
+        "wilson95": [0, 0.00007682327414500052],
+        "zScore": null
+      },
+      "atLeast5000": {
+        "events": 0,
+        "total": 50000,
+        "rate": 0,
+        "wilson95": [0, 0.00007682327414500052],
+        "zScore": null
+      }
+    }
+  },
+  "tenTurnOpeningBusts": {
+    "atLeastOne": 0.5520167447843358,
+    "atLeastTwo": 0.1774488056408039,
+    "atLeastThree": 0.03651605261857199
+  },
+  "interpretation": "Exact odds assume independent fair faces. Confidence intervals are binomial sampling intervals; chi-square summaries are diagnostics, not a security proof. Smaller cups can complete held full-mat hands and therefore bust less often than the throw-only table. The fixed reference strategy cannot establish the probability of a real leaderboard maximum without actual attempt counts and player decisions. Post-hot samples conditioned on the opening hand complement the separate real-engine samples, which include hot dice reached across throws."
+}

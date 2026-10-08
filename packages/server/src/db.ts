@@ -7,6 +7,7 @@
 
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { BEST_TOTAL_CEILING, DAILY_ZONE, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
 import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
@@ -14,6 +15,7 @@ import type { RunMove } from "@greed/core";
 const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
+const transactionClient = new AsyncLocalStorage<pg.PoolClient>();
 
 /**
  * Set when the database is configured but unusable, so the server stops
@@ -56,7 +58,42 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = [],
 ): Promise<QueryResult<T>> {
-  return getPool().query<T>(text, params);
+  return (transactionClient.getStore() ?? getPool()).query<T>(text, params);
+}
+
+/**
+ * Keep a challenge's read/replay/write sequence indivisible, even across server
+ * processes. Lock the account rather than an open-run row: a first start has no
+ * row to lock yet, and weekly settlement removes it. All nested query calls use
+ * the same connection so counting an attempt, recording it and freeing its slot
+ * either commit together or leave the previous position intact for a retry.
+ */
+export async function withChallengeTransaction<T>(
+  userId: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  const client = await getPool().connect();
+  let discard = false;
+  try {
+    await client.query("BEGIN");
+    // A separate namespace keeps challenge locks apart from unrelated locks.
+    // Hash collisions only make two accounts wait; they never weaken the lock.
+    await client.query("SELECT pg_advisory_xact_lock(1735549285, hashtext($1))", [userId]);
+    const result = await transactionClient.run(client, work);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // A lost connection must not hide the original failure or return an
+      // unusable connection to the pool.
+      discard = true;
+    }
+    throw error;
+  } finally {
+    client.release(discard || undefined);
+  }
 }
 
 /** Create the accounts schema if it doesn't exist. Safe to run on every boot. */
@@ -358,6 +395,29 @@ export async function migrate(): Promise<void> {
       applied_at timestamptz NOT NULL DEFAULT now()
     );
   `);
+  // Explicitly requested account grant. Preserve every other profile field and
+  // badge, and never add a duplicate if a challenge has already awarded it.
+  await applyOnce("tidal-wave-james-2026-10-08", async () => {
+    const { rowCount } = await query(
+      `UPDATE users
+          SET profile = jsonb_set(profile, '{achievements}',
+                CASE
+                  WHEN jsonb_typeof(profile -> 'achievements') = 'array'
+                    THEN CASE
+                      WHEN (profile -> 'achievements') @> '["tidal-wave"]'::jsonb
+                        THEN profile -> 'achievements'
+                      ELSE (profile -> 'achievements') || '["tidal-wave"]'::jsonb
+                    END
+                  ELSE '["tidal-wave"]'::jsonb
+                END),
+              updated_at = now()
+        WHERE lower(username) = 'james'`,
+    );
+    // A development database may not have this account. Do not consume the
+    // repair until its intended profile exists.
+    if (!rowCount) return false;
+    console.log("Repair: granted Tidal Wave to James.");
+  });
   // Who won each closed day and week, written once and never pruned. The career
   // columns above are counted from this — see refreshCareerChallengeWins for
   // why a count taken from the run tables could not be. One row per period, so

@@ -77,6 +77,7 @@ function closedBoards(today: string): Map<string, { user: string; row: Row }[]> 
 
 // A stub that understands only the handful of statements daily.ts issues.
 vi.mock("./db.js", () => ({
+  withChallengeTransaction: vi.fn(async <T>(_user: string, work: () => Promise<T>) => work()),
   query: async (sql: string, params: unknown[] = []) => {
     if (sql.includes("INSERT INTO career_stats") && sql.includes("daily_wins")) {
       // The refresh: bank each closed period's winner the first time it is
@@ -232,6 +233,7 @@ vi.mock("./db.js", () => ({
 }));
 
 const { startDailyRun, playDailyMove, resumeDailyRun, dailyStatus } = await import("./daily.js");
+const { withChallengeTransaction } = await import("./db.js");
 
 const DAY = "2026-08-12";
 const USER = "user-1";
@@ -256,6 +258,22 @@ beforeEach(() => {
 });
 
 describe("claiming a run", () => {
+  it("chooses the new challenge day if a queued start crosses midnight", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-09T04:59:59Z"));
+      vi.mocked(withChallengeTransaction).mockImplementationOnce(async (_user, work) => {
+        vi.setSystemTime(new Date("2026-10-09T05:00:00Z"));
+        return work();
+      });
+      await startDailyRun(USER);
+      expect(rows.has(key(USER, "2026-10-08"))).toBe(false);
+      expect(rows.has(key(USER, "2026-10-09"))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("creates the run on start, before a single move is played", async () => {
     await startDailyRun(USER, DAY);
     expect(rows.has(key(USER, DAY))).toBe(true);
@@ -289,6 +307,36 @@ describe("claiming a run", () => {
 });
 
 describe("the seed is the server's", () => {
+  it("redacts prediction inputs from start, move, resume and finished views", async () => {
+    let view = await startDailyRun(USER, DAY);
+    const check = (candidate: typeof view) => {
+      const wire = JSON.parse(JSON.stringify(candidate));
+      expect(wire.state.config.seed).toBe(0);
+      expect(wire.state.rng).toBe(0);
+      expect(wire).not.toHaveProperty("seed");
+    };
+    check(view);
+    view = await playDailyMove(USER, "ROLL", DAY);
+    check(view);
+    check((await resumeDailyRun(USER, DAY))!);
+    check(await startDailyRun(USER, DAY));
+
+    for (let guard = 0; !view.complete && guard < 400; guard++) {
+      view = await playDailyMove(
+        USER,
+        !view.state.turn.outcome && view.state.turn.turnScore > 0 ? "BANK" : "ROLL",
+        DAY,
+      );
+      check(view);
+    }
+    expect(view.complete).toBe(true);
+    const row = rows.get(key(USER, DAY))!;
+    const replay = dailyPosition(row.seed, row.moves.split(",") as DailyMove[]);
+    expect(view.state.turn).toEqual(replay.state.turn);
+    expect(view.state.players).toEqual(replay.state.players);
+    expect(replay.state.config.seed).toBe(row.seed);
+  });
+
   it("gives two players different dice on the same day", async () => {
     const a = await startDailyRun("player-a", DAY);
     const b = await startDailyRun("player-b", DAY);

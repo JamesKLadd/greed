@@ -3,8 +3,8 @@ import type { BetaLook } from "@greed/protocol";
  * Authoritative Greed server. The server owns every room's GameState and is the
  * only place actions are validated and applied (`@greed/core`), so clients can't
  * cheat. It also drives pacing — bot turns and the inter-turn advance run on
- * server timers so all clients see the same tempo. Because Greed has no hidden
- * information, the full GameState is broadcast to everyone.
+ * server timers so all clients see the same tempo. Everyone sees the current
+ * position, while the seed and PRNG state stay on the server.
  */
 
 import {
@@ -25,7 +25,8 @@ import { markOffline, markOnline } from "./presence.js";
 import { requireFriend } from "./social.js";
 import { recordMatch } from "./leaderboards.js";
 import { accountsEnabled } from "./db.js";
-import { randomUUID } from "node:crypto";
+import { publicGameState } from "./public-state.js";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
 import {
   canStart,
@@ -84,6 +85,13 @@ export interface GreedServerOptions {
 
 /** Minimum gap between one seat's emotes. */
 const EMOTE_COOLDOWN_MS = 1500;
+
+// Clients use config.seed to recognize a new game. An opaque token preserves
+// that identity without exposing the actual seed or changing the wire shape.
+const PUBLIC_GAME_KEY = randomBytes(32);
+function publicGameSeed(seed: number): number {
+  return createHmac("sha256", PUBLIC_GAME_KEY).update(String(seed)).digest().readUInt32BE(0);
+}
 
 /**
  * Minimum gap between one socket's rooms.
@@ -316,8 +324,8 @@ export class GreedServer {
   /**
    * Send an ALREADY-ENCODED message.
    *
-   * A game snapshot is the same bytes for everyone — Greed has no hidden
-   * information — but `send` was encoding it again for each socket, so an
+   * A public game snapshot is the same bytes for everyone, but `send` was
+   * encoding it again for each socket, so an
    * eight-seat table serialised the same object eight times per action. On a
    * table's busiest moment that is the one piece of work the server repeats for
    * no reason.
@@ -360,7 +368,7 @@ export class GreedServer {
     return {
       type: "game",
       code: room.code,
-      state: room.game,
+      state: publicGameState(room.game, publicGameSeed(room.game.config.seed)),
       presence,
       skins,
       turnTimerMs: left > 0 ? left : undefined,

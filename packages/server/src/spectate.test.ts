@@ -9,6 +9,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import type { AddressInfo } from "node:net";
 import { encode, decode, type ClientMessage, type ServerMessage } from "@greed/protocol";
 import { GreedServer } from "./server.js";
+import type { RoomStore } from "./rooms.js";
 
 interface TestClient {
   ws: WebSocket;
@@ -64,10 +65,11 @@ async function connect(url: string): Promise<TestClient> {
 describe("spectator mode", () => {
   let wss: WebSocketServer;
   let url: string;
+  let server: GreedServer;
 
   beforeEach(async () => {
     wss = new WebSocketServer({ port: 0 });
-    new GreedServer(wss);
+    server = new GreedServer(wss);
     await new Promise<void>((r) => wss.once("listening", () => r()));
     url = `ws://localhost:${(wss.address() as AddressInfo).port}`;
   });
@@ -197,6 +199,17 @@ describe("spectator mode", () => {
     const g = game as Extract<ServerMessage, { type: "game" }>;
     expect(g.code).toBe(code);
     expect(g.state.players).toHaveLength(2);
+    const authoritative = (server as unknown as { store: RoomStore }).store.get(code)!.game!;
+    expect(g.state.rng).toBe(0);
+    expect(g.state.config.seed).not.toBe(authoritative.config.seed);
+    expect(authoritative.rng).not.toBe(0);
+    const playerView = (await host.waitFor((m) => m.type === "game")) as Extract<
+      ServerMessage,
+      { type: "game" }
+    >;
+    expect(playerView.state.config.seed).toBe(g.state.config.seed);
+    expect(playerView.state.rng).toBe(0);
+    expect(playerView.state.turn.dice).toEqual(g.state.turn.dice);
 
     host.ws.close();
     spec.ws.close();

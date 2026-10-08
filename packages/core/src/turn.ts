@@ -11,7 +11,7 @@
 
 import { scoreRoll } from "./scoring.js";
 import { DICE_COUNT } from "./types.js";
-import type { DieValue, LegalActions, ScoreBreakdownEntry, TurnState } from "./types.js";
+import type { DieValue, LegalActions, ScoreBreakdownEntry, TurnAward, TurnState } from "./types.js";
 
 export function createTurn(playerIndex: number): TurnState {
   return {
@@ -187,9 +187,53 @@ export function heldHand(turn: TurnState): ScoreBreakdownEntry | null {
   return turn.locked.every(Boolean) ? fullHand(turn.dice) : null;
 }
 
-/** The awards still standing: every die they used is still held. */
-function standing(turn: TurnState) {
-  return turn.awards.filter((a) => a.dice.every((i) => turn.locked[i]));
+function isWholeHand(award: TurnAward): boolean {
+  return award.kind === "straight" || award.kind === "five-of-a-kind";
+}
+
+/** Ordinary awards for a surviving subset of dice from the SAME throw. */
+function subsetAwards(turn: TurnState, indices: number[]): TurnAward[] {
+  return scoreRoll(indices.map((i) => turn.dice[i])).breakdown.map((entry) => ({
+    kind: entry.kind,
+    face: entry.face,
+    dice: entry.indices.map((i) => indices[i]),
+    points: entry.points,
+  }));
+}
+
+/**
+ * A broken whole-hand award still has ordinary points underneath it. Keep its
+ * original throw together while dice are merely being tapped, so any three of
+ * five matching dice can still form the triple that throw earned.
+ */
+function standing(turn: TurnState): TurnAward[] {
+  return turn.awards.flatMap((award) => {
+    if (award.dice.every((i) => turn.locked[i])) return [award];
+    return isWholeHand(award)
+      ? subsetAwards(
+          turn,
+          award.dice.filter((i) => turn.locked[i]),
+        )
+      : [];
+  });
+}
+
+/**
+ * Once a released die is thrown again the whole-hand award is gone, but the
+ * ordinary awards for its surviving dice remain. Never rescore the full mat:
+ * triples still have to come from one throw, unlike the two whole-mat hands.
+ */
+export function awardsAfterRethrow(turn: TurnState, thrown: number[]): TurnAward[] {
+  const rethrown = new Set(thrown);
+  return turn.awards.flatMap((award) => {
+    if (!award.dice.some((i) => rethrown.has(i))) return [award];
+    return isWholeHand(award)
+      ? subsetAwards(
+          turn,
+          award.dice.filter((i) => !rethrown.has(i)),
+        )
+      : [];
+  });
 }
 
 /**

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.4",
+    date: "2026-10-08",
+    notes: [
+      "Investigated dice fairness across all roll outcomes and large simulations. Opening rolls and rolls after hot dice use the same odds; the dice generator and probabilities have not changed",
+      "Removed internal dice prediction information from challenge and online game responses",
+      "Fixed overlapping challenge requests losing progress or saving incomplete results, including requests waiting across a daily or weekly reset",
+      "Releasing dice from a rolled straight or five of a kind now preserves the remaining dice's ordinary points",
+      "Fixed rapid online inputs submitting extra rolls, and rematches showing animations from the previous game",
+      "Fixed consecutive hot dice being undercounted and career-best turns being missed in lower-scoring weekly attempts",
+      "Banking 2500+ in one turn now earns the Tidal Wave achievement in Daily and Weekly Challenges, including attempts that do not beat your standing score",
+    ],
+  },
+  {
     version: "0.8.3",
     date: "2026-10-05",
     notes: [

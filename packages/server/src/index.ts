@@ -1,6 +1,7 @@
 /** Bootstrap: start an HTTP + WebSocket server and hand connections to GreedServer. */
 
 import { createServer } from "node:http";
+import { createRequire } from "node:module";
 import { WebSocketServer } from "ws";
 import { DEFAULT_SERVER_PORT } from "@greed/protocol";
 import { GreedServer } from "./server.js";
@@ -21,6 +22,7 @@ for (const path of [".env.local", "../../.env.local", "../../../.env.local"]) {
 }
 
 const port = Number(process.env.PORT) || DEFAULT_SERVER_PORT;
+const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 
 // HTTP layer: the accounts REST API under /api/, plus a plain liveness endpoint
 // for hosts (Render, Railway, …). WebSocket upgrades are handed to the same
@@ -30,7 +32,7 @@ const httpServer = createServer((req, res) => {
     .then((handled) => {
       if (handled) return;
       if (req.url === "/health" || req.url === "/") {
-        res.writeHead(200, { "content-type": "text/plain" });
+        res.writeHead(200, { "content-type": "text/plain", "X-Greed-Version": version });
         res.end("Greed server OK");
         return;
       }

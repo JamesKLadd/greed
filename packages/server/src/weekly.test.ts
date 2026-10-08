@@ -100,6 +100,7 @@ function closedBoards(thisWeek: string): Map<string, { user: string; row: Best }
 // A stub that understands only the statements weekly.ts issues. Ordered
 // most-specific first: several of them mention the same tables.
 vi.mock("./db.js", () => ({
+  withChallengeTransaction: vi.fn(async <T>(_user: string, work: () => Promise<T>) => work()),
   query: async (sql: string, params: unknown[] = []) => {
     if (sql.includes("INSERT INTO career_stats") && sql.includes("weekly_wins")) {
       // The refresh: bank each closed period's winner the first time it is
@@ -307,6 +308,7 @@ vi.mock("./db.js", () => ({
 
 const { startWeeklyRun, playWeeklyMove, resumeWeeklyRun, weeklyStatus } =
   await import("./weekly.js");
+const { withChallengeTransaction } = await import("./db.js");
 
 const WEEK = "2026-08-24"; // a Monday
 const LAST_WEEK = "2026-08-17";
@@ -330,6 +332,41 @@ beforeEach(() => {
   careerWeeklyWins.clear();
   banked.clear();
   clock = 0;
+});
+
+describe("the seed is the server's", () => {
+  it("redacts prediction inputs from start, move, resume and settled views", async () => {
+    let view = await startWeeklyRun(USER, WEEK);
+    const check = (candidate: typeof view) => {
+      const wire = JSON.parse(JSON.stringify(candidate));
+      expect(wire.state.config.seed).toBe(0);
+      expect(wire.state.rng).toBe(0);
+      expect(wire).not.toHaveProperty("seed");
+      expect(wire.settled ?? {}).not.toHaveProperty("seed");
+    };
+    check(view);
+    const seed = open.get(USER)!.seed;
+    view = await playWeeklyMove(USER, "ROLL", WEEK);
+    check(view);
+    check((await resumeWeeklyRun(USER, WEEK))!);
+    check(await startWeeklyRun(USER, WEEK));
+
+    for (let guard = 0; !view.complete && guard < 400; guard++) {
+      view = await playWeeklyMove(
+        USER,
+        !view.state.turn.outcome && view.state.turn.turnScore > 0 ? "BANK" : "ROLL",
+        WEEK,
+      );
+      check(view);
+    }
+    expect(view.complete).toBe(true);
+    const row = best.get(key(USER, WEEK))!;
+    expect(row.seed).toBe(seed);
+    const replay = weeklyPosition(row.seed, row.moves.split(",") as WeeklyMove[]);
+    expect(view.state.turn).toEqual(replay.state.turn);
+    expect(view.state.players).toEqual(replay.state.players);
+    expect(replay.state.config.seed).toBe(row.seed);
+  });
 });
 
 /**
@@ -468,6 +505,38 @@ describe("the best attempt is the one that stands", () => {
 });
 
 describe("a week that has turned over", () => {
+  it("uses the new week if a queued start crosses the Monday reset", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-12T04:59:59Z"));
+      vi.mocked(withChallengeTransaction).mockImplementationOnce(async (_user, work) => {
+        vi.setSystemTime(new Date("2026-10-12T05:00:00Z"));
+        return work();
+      });
+      await startWeeklyRun(USER);
+      expect(open.get(USER)!.week).toBe("2026-10-12");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects a queued move that reaches its lock after the week has closed", async () => {
+    open.set(USER, { week: "2026-10-05", seed: 8675309, moves: "" });
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-12T04:59:59Z"));
+      vi.mocked(withChallengeTransaction).mockImplementationOnce(async (_user, work) => {
+        vi.setSystemTime(new Date("2026-10-12T05:00:00Z"));
+        return work();
+      });
+      await expect(playWeeklyMove(USER, "ROLL")).rejects.toThrow(/last week/i);
+      expect(open.has(USER)).toBe(false);
+      expect(best.has(key(USER, "2026-10-05"))).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("discards an attempt left open last week rather than resuming it", async () => {
     await startWeeklyRun(USER, LAST_WEEK);
     await playWeeklyMove(USER, "ROLL", LAST_WEEK);

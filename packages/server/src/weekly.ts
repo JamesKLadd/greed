@@ -38,7 +38,8 @@ import {
   type WeeklyResult,
 } from "@greed/core";
 import { randomInt } from "node:crypto";
-import { query } from "./db.js";
+import { query, withChallengeTransaction } from "./db.js";
+import { publicGameState } from "./public-state.js";
 import {
   careerChallengeWins,
   raiseCareerBestTurn,
@@ -238,7 +239,7 @@ async function standing(
 function viewOf(run: OpenRun): WeeklyRunView {
   const pos = weeklyPosition(run.seed, run.moves);
   return {
-    state: pos.state,
+    state: publicGameState(pos.state),
     turns: pos.turns,
     totalTurns: WEEKLY_TURNS,
     complete: pos.result.complete,
@@ -260,7 +261,20 @@ function viewOf(run: OpenRun): WeeklyRunView {
  * includes it. Checking before settling would hand out a fifty-first attempt to
  * anyone whose fiftieth had not been folded in yet.
  */
-export async function startWeeklyRun(userId: string, week = weekKey()): Promise<WeeklyRunView> {
+export async function startWeeklyRun(userId: string, week?: string): Promise<WeeklyRunView> {
+  // A request waiting on another tab's move can cross midnight; choose the
+  // period after obtaining the lock so a closed board cannot be rewritten.
+  const result = await withChallengeTransaction(userId, () =>
+    startWeeklyRunLocked(userId, week ?? weekKey()),
+  );
+  if (result instanceof AccountError) throw result;
+  return result;
+}
+
+async function startWeeklyRunLocked(
+  userId: string,
+  week: string,
+): Promise<WeeklyRunView | AccountError> {
   const open = await openRun(userId);
   if (open && open.week === week) {
     const view = viewOf(open);
@@ -280,7 +294,7 @@ export async function startWeeklyRun(userId: string, week = weekKey()): Promise<
 
   const { limit, per, used } = await standing(userId, week, dailyKey());
   if (limit !== null && used >= limit) {
-    throw per === "day"
+    return per === "day"
       ? new AccountError(
           409,
           `You have used all ${limit} attempts for today. New dice tomorrow.`,
@@ -428,8 +442,21 @@ async function raiseBestTurn(userId: string, points: number): Promise<void> {
 export async function playWeeklyMove(
   userId: string,
   rawMove: unknown,
-  week = weekKey(),
+  week?: string,
 ): Promise<WeeklyRunView & { settled?: WeeklyResult }> {
+  const result = await withChallengeTransaction(userId, () =>
+    playWeeklyMoveLocked(userId, rawMove, week ?? weekKey()),
+  );
+  // Cleanup/settlement must commit before reporting an expired/finished run.
+  if (result instanceof AccountError) throw result;
+  return result;
+}
+
+async function playWeeklyMoveLocked(
+  userId: string,
+  rawMove: unknown,
+  week: string,
+): Promise<(WeeklyRunView & { settled?: WeeklyResult }) | AccountError> {
   if (!isRunMove(rawMove)) throw new AccountError(400, "Invalid move.", "move.invalid");
   const move: WeeklyMove = rawMove;
 
@@ -440,7 +467,7 @@ export async function playWeeklyMove(
     // has already closed — and with it a champion someone has been crowned —
     // so the attempt is void and the player starts the new week fresh.
     await clearOpenRun(userId);
-    throw new AccountError(
+    return new AccountError(
       409,
       "That run belonged to last week. Start a new one.",
       "weekly.staleRun",
@@ -454,7 +481,7 @@ export async function playWeeklyMove(
     // An attempt that outlived its settlement (see startWeeklyRun). Settle it
     // rather than letting another move onto a finished run.
     await settle(userId, run);
-    throw new AccountError(409, "That run is already finished.", "run.finished");
+    return new AccountError(409, "That run is already finished.", "run.finished");
   }
 
   // Holding a die is judged against the turn as it stands — it does not start a
@@ -486,7 +513,7 @@ export async function playWeeklyMove(
   if (r.complete) {
     const settled = await settle(userId, { ...run, moves: next });
     return {
-      state: after.state,
+      state: publicGameState(after.state),
       turns: after.turns,
       totalTurns: WEEKLY_TURNS,
       complete: true,
@@ -496,7 +523,7 @@ export async function playWeeklyMove(
 
   await query(`UPDATE weekly_open SET moves = $2 WHERE user_id = $1`, [userId, next.join(",")]);
   return {
-    state: after.state,
+    state: publicGameState(after.state),
     turns: after.turns,
     totalTurns: WEEKLY_TURNS,
     complete: false,

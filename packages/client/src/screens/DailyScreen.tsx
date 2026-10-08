@@ -45,6 +45,10 @@ import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { DailyShareCard } from "../components/DailyShareCard.js";
 import { recordGrowthEvent } from "../game/growth.js";
+import {
+  claimChallengeTurnAchievement,
+  recordChallengeBestTurn,
+} from "../game/challengeProfile.js";
 
 interface DailyScreenProps {
   onBack: () => void;
@@ -104,6 +108,8 @@ export function DailyScreen({
       if (next.streak >= b.days) ids.push(b.id);
     }
     const won = ids.map(awardAchievement).filter((a): a is Achievement => a !== null);
+    const turnAward = claimChallengeTurnAchievement(next.run?.bestTurn ?? 0);
+    if (turnAward) won.push(turnAward);
 
     // The wins figure is the server's — only it can see where everyone else
     // finished. This is the local copy catching up, so the Stats screen agrees
@@ -144,6 +150,13 @@ export function DailyScreen({
   const onFinished = useCallback(
     async (final: DailyRunView | null) => {
       if (final?.complete) recordGrowthEvent("daily_completed");
+      const improvedTurn = recordChallengeBestTurn(final);
+      const turnAward = final?.complete ? claimChallengeTurnAchievement(0) : null;
+      if (turnAward) {
+        setUnlocked((prev) => [...prev, turnAward]);
+        syncSteamAchievements([turnAward.id]);
+      }
+      if (improvedTurn || turnAward) void syncProfileUp();
       setLoading(true);
       setError(null);
       setRunView(null);

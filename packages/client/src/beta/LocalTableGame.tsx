@@ -186,7 +186,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
             isRolling={isRolling}
             dice3d={settings.dice3d}
             onToggle={(i) => {
-              if (!canAct || isRolling) return;
+              if (!canAct || isRolling || props.inputBlocked) return;
               if (isLastHeldDie(state.turn, i)) {
                 setHeldNotice(true);
                 return;
@@ -194,7 +194,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
               setHeldNotice(false);
               props.onToggleDie?.(i);
             }}
-            disabled={!canAct}
+            disabled={!canAct || props.inputBlocked}
           />
         </div>
         <div
@@ -231,7 +231,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
             state={state}
             legal={props.legal}
             isRolling={isRolling}
-            canAct={canAct}
+            canAct={canAct && !props.inputBlocked}
             onRoll={props.onRoll}
             onBank={props.onBank}
             variant="scene"

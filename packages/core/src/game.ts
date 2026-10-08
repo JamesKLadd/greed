@@ -20,6 +20,7 @@
 import { rollDice, nextInt } from "./rng.js";
 import { scoreRoll } from "./scoring.js";
 import {
+  awardsAfterRethrow,
   canToggleLock,
   createTurn,
   diceToRoll,
@@ -322,10 +323,9 @@ function doRoll(state: GameState): GameState {
     return state;
   }
 
-  // Dice that have just been thrown carry nothing over from before: any award
-  // that used one of them describes a hand that no longer exists.
-  const rethrown = new Set(indices);
-  turn.awards = turn.awards.filter((a) => !a.dice.some((i) => rethrown.has(i)));
+  // The old hand no longer exists, but its surviving dice keep their ordinary
+  // points even if the original throw scored as a straight or five of a kind.
+  turn.awards = awardsAfterRethrow(turn, indices);
   // The throw's awards, moved from positions within the throw to seats on the
   // mat, so they can be checked against the locks later.
   for (const entry of result.breakdown) {

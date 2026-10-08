@@ -45,6 +45,7 @@ interface TableViewProps {
   dice3d?: boolean;
   /** Hold a die or put it back. Omitted when the dice are not yours to touch. */
   onToggleDie?: (index: number) => void;
+  diceDisabled?: boolean;
 }
 
 /**
@@ -69,6 +70,7 @@ export function TableView({
   showTurnScore = true,
   dice3d = true,
   onToggleDie,
+  diceDisabled = false,
 }: TableViewProps) {
   const showPresence = presence != null;
   const t = useT();
@@ -335,6 +337,7 @@ export function TableView({
             rollingDice={rollingDice}
             dice3d={dice3d}
             onToggle={onToggleDie}
+            disabled={diceDisabled}
           />
 
           {/* What the throw was, named. Held back while the dice are in the air
