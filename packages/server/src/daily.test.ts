@@ -23,6 +23,7 @@ interface Row {
   /** The run's biggest single turn — the board's tiebreak. See ranking.ts. */
   bestTurn: number;
 }
+const completions = new Set<string>();
 const portraits = new Map<string, unknown>();
 const rows = new Map<string, Row>();
 const key = (user: string, day: string) => `${user}|${day}`;
@@ -183,8 +184,18 @@ vi.mock("./db.js", () => ({
     if (sql.includes("COUNT(*)::text")) {
       return { rows: [{ n: String(finished(params[0] as string).length) }] };
     }
-    if (sql.includes("SELECT to_char(day")) {
-      return { rows: [] }; // streak: not what these tests are about
+    if (sql.includes("INSERT INTO daily_completions")) {
+      completions.add(key(user, day));
+      return { rows: [] };
+    }
+    if (sql.includes("WITH RECURSIVE streak_days")) {
+      let streak = 0;
+      const cursor = new Date(`${day}T00:00:00Z`);
+      while (completions.has(key(user, cursor.toISOString().slice(0, 10)))) {
+        streak += 1;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+      }
+      return { rows: [{ streak: String(streak) }] };
     }
     if (sql.includes("SELECT moves, seed, complete FROM daily_runs")) {
       const row = rows.get(key(user, day));
@@ -249,6 +260,7 @@ async function playOut(user = USER) {
 }
 
 beforeEach(() => {
+  completions.clear();
   portraits.clear();
   rows.clear();
   bestTurns.clear();
@@ -936,5 +948,35 @@ describe("equipped challenge portraits", () => {
     expect((await dailyStatus(USER, DAY)).leaderboard[0].visualBeta).toBeUndefined();
     portraits.set(USER, "invalid");
     expect((await dailyStatus(USER, DAY)).leaderboard[0].visualBeta).toBeUndefined();
+  });
+});
+
+describe("daily streak completion recording", () => {
+  it("counts beyond 31 and 400 days after old run records are gone", async () => {
+    const cursor = new Date(`${DAY}T00:00:00Z`);
+    for (let n = 0; n < 450; n++) {
+      completions.add(key(USER, cursor.toISOString().slice(0, 10)));
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+    expect(rows.size).toBe(0);
+    expect((await dailyStatus(USER, DAY)).streak).toBe(450);
+    completions.delete(key(USER, "2026-08-11"));
+    expect((await dailyStatus(USER, DAY)).streak).toBe(1);
+    completions.delete(key(USER, DAY));
+    expect((await dailyStatus(USER, DAY)).streak).toBe(0);
+  });
+
+  it("only counts a finished run and retains it after the replay log expires", async () => {
+    await startDailyRun(USER, DAY);
+    await playDailyMove(USER, "ROLL", DAY);
+    expect((await dailyStatus(USER, DAY)).streak).toBe(0);
+    expect(completions.size).toBe(0);
+    await playOut();
+    expect((await dailyStatus(USER, DAY)).streak).toBe(1);
+    expect(completions.size).toBe(1);
+    await expect(playDailyMove(USER, "ROLL", DAY)).rejects.toThrow(/already played/i);
+    expect(completions.size).toBe(1);
+    rows.clear();
+    expect((await dailyStatus(USER, DAY)).streak).toBe(1);
   });
 });

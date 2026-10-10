@@ -59,6 +59,11 @@ build on every push. Node 20.
 - Daily challenge: one run per day, 10 turns. The server generates a secret seed,
   owns the move list, and replays it to derive the score. The client never sees a
   seed and never reports a score.
+- Daily challenge streaks count `daily_completions`, a permanent record of
+  completed dates. The final move writes it in the same transaction as the run,
+  and migration/pruning copy completed dates from retained runs before cleanup.
+  Never count a streak from `daily_runs`: those expire after 30 days, which is
+  what capped streaks at 31. If copying completions fails, skip daily-run pruning.
 - Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
   best attempt of the week stands. Every attempt gets a fresh secret seed, and
   only one attempt may be open at a time. Unlike the daily, this week's board is

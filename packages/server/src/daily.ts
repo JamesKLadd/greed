@@ -35,6 +35,7 @@ import {
 import { AccountError } from "./accounts.js";
 import { DAILY_ORDER, DAILY_ORDER_R } from "./ranking.js";
 import { challengeFriends } from "./challengeFriends.js";
+import { currentDailyStreak, recordDailyCompletion } from "./daily-streaks.js";
 
 /** Cap on submitted move lists — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -409,6 +410,10 @@ async function playDailyMoveLocked(
     ],
   );
 
+  // The date is committed with the final move, so retries cannot lose or double
+  // count it, and a failed completion write rolls the scored run back too.
+  if (r.complete) await recordDailyCompletion(userId, day);
+
   return {
     state: publicGameState(after.state),
     turns: after.turns,
@@ -426,24 +431,6 @@ export async function resumeDailyRun(
   if (run === null || run.complete) return null;
   const view = viewOf(run);
   return view.complete ? null : view;
-}
-
-/** Consecutive days played, counting back from today. */
-async function currentStreak(userId: string, today: string): Promise<number> {
-  const { rows } = await query<{ day: string }>(
-    `SELECT to_char(day, 'YYYY-MM-DD') AS day FROM daily_runs
-       WHERE user_id = $1 AND day <= $2 AND complete
-       ORDER BY day DESC LIMIT 400`,
-    [userId, today],
-  );
-  let streak = 0;
-  const cursor = new Date(`${today}T00:00:00Z`);
-  for (const row of rows) {
-    if (row.day !== cursor.toISOString().slice(0, 10)) break;
-    streak += 1;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-  return streak;
 }
 
 /**
@@ -560,7 +547,7 @@ export async function dailyStatus(
           complete: true,
         }
       : null,
-    streak: await currentStreak(userId, day),
+    streak: await currentDailyStreak(userId, day),
     leaderboard: board.rows.map((r) => ({
       username: r.username,
       avatar: r.avatar ?? "",

@@ -11,6 +11,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { BEST_TOTAL_CEILING, DAILY_ZONE, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
 import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
+import { preserveDailyCompletions } from "./daily-streaks.js";
 
 const { Pool } = pg;
 
@@ -234,6 +235,16 @@ export async function migrate(): Promise<void> {
   await query(
     `CREATE INDEX IF NOT EXISTS daily_runs_day_score_idx ON daily_runs (day, score DESC);`,
   );
+  // Streaks outlive the 30-day run log. Dates alone are enough to prove a
+  // consecutive run; do not keep secret seeds or move histories indefinitely.
+  await query(`
+    CREATE TABLE IF NOT EXISTS daily_completions (
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day     date NOT NULL,
+      PRIMARY KEY (user_id, day)
+    );
+  `);
+  await preserveDailyCompletions();
   // ---- The weekly challenge -------------------------------------------------
   // One row per player per week, holding their BEST attempt: its seed and moves
   // (so it can always be re-verified, like a daily run), the stats of that run,
@@ -543,8 +554,8 @@ export const RETENTION_DAYS = 30;
  *
  * Three tables only ever grew: every finished online game, every daily run and
  * every weekly attempt, kept forever for boards that never look further back
- * than the current period. Thirty days is well past anything the game asks for
- * and leaves a month of history on a player's profile.
+ * than the current period. Streak completion dates and challenge wins are
+ * preserved separately; the replay logs can expire.
  *
  * Expired verification and reset tokens go too. Those were already refused once
  * `expires_at` passed — a link nobody ever clicked simply stayed in the table.
@@ -554,6 +565,15 @@ export const RETENTION_DAYS = 30;
  * the first pass didn't.
  */
 export async function prune(): Promise<void> {
+  // If archiving fails, keep daily runs for a later retry instead of deleting
+  // the only remaining evidence of a player's streak.
+  let dailyCompletionsSaved = false;
+  try {
+    await preserveDailyCompletions();
+    dailyCompletionsSaved = true;
+  } catch (err) {
+    console.error("[prune] could not preserve daily completions:", err);
+  }
   // Bank what the runs about to be deleted were worth, BEFORE deleting them.
   // A day taken outright is a career figure; the run proving it is a log entry
   // with a month to live, so the win is copied into challenge_wins — which this
@@ -594,6 +614,7 @@ export async function prune(): Promise<void> {
     ],
   ];
   for (const [what, sql, params] of jobs) {
+    if (what === "old daily runs" && !dailyCompletionsSaved) continue;
     try {
       const { rowCount } = await query(sql, params);
       if (rowCount) console.log(`Retention: cleared ${rowCount} ${what}.`);
