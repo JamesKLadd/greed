@@ -76,7 +76,8 @@ describe.each(CHALLENGES)("the $name challenge's standings order", (c) => {
   it("ranks the all-time board the same way, down to its last term", () => {
     // Across periods "first" means the earlier period rather than the earlier
     // instant, but a tie is still settled on the run, not on the calendar.
-    expect(c.allTime).toBe(`r.score DESC, r.best_turn DESC, r.${c.period} ASC`);
+    const missingTurns = c.name === "weekly" ? " NULLS LAST" : "";
+    expect(c.allTime).toBe(`r.score DESC, r.best_turn DESC${missingTurns}, r.${c.period} ASC`);
   });
 
   it("is the only ordering in its module — no query writes its own", () => {
@@ -112,8 +113,9 @@ describe("the career boards module", () => {
 });
 
 describe("the two challenges", () => {
-  it("differ only in the column standing for who got there first", () => {
-    const strip = (order: string) => order.split(", ").slice(0, 2).join(", ");
+  it("rank known score and best-turn values the same way", () => {
+    const strip = (order: string) =>
+      order.replace(" NULLS LAST", "").split(", ").slice(0, 2).join(", ");
     expect(strip(DAILY_ORDER)).toBe(strip(WEEKLY_ORDER));
     expect(strip(DAILY_ALLTIME_ORDER_R)).toBe(strip(WEEKLY_ALLTIME_ORDER_R));
   });

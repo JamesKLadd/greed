@@ -38,7 +38,9 @@ export const WEEKLY_ORDER_R = "r.score DESC, r.best_turn DESC, r.best_at ASC";
  * Same rule as far as it goes; the last term is the week rather than the
  * instant, because across weeks "“who got there first" means the earlier week.
  */
-export const WEEKLY_ALLTIME_ORDER_R = "r.score DESC, r.best_turn DESC, r.week ASC";
+// A winning score recovered from the old winner archive may lack its best
+// turn. Known tiebreaks rank ahead of unknown ones when total scores are level.
+export const WEEKLY_ALLTIME_ORDER_R = "r.score DESC, r.best_turn DESC NULLS LAST, r.week ASC";
 
 /**
  * The daily's standings. Same rule as the weekly's, with the day's own column

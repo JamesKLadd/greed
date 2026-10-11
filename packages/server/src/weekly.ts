@@ -49,6 +49,7 @@ import { AccountError } from "./accounts.js";
 import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
 import { challengeFriends } from "./challengeFriends.js";
 import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
+import { recordChallengeScore } from "./challenge-scores.js";
 
 /** Cap on a single attempt's move list — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -392,6 +393,7 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
       run.moves.join(","),
     ],
   );
+  await recordChallengeScore("weekly", userId, run.week);
   // The attempt is recorded, so the open slot is free for the next one. Done
   // after the write rather than before: an open row that outlives its
   // settlement is recoverable (see startWeeklyRun), one that dies before it

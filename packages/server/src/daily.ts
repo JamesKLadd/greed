@@ -36,6 +36,7 @@ import { AccountError } from "./accounts.js";
 import { DAILY_ORDER, DAILY_ORDER_R } from "./ranking.js";
 import { challengeFriends } from "./challengeFriends.js";
 import { currentDailyStreak, recordDailyCompletion } from "./daily-streaks.js";
+import { recordChallengeScore } from "./challenge-scores.js";
 
 /** Cap on submitted move lists — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -412,7 +413,10 @@ async function playDailyMoveLocked(
 
   // The date is committed with the final move, so retries cannot lose or double
   // count it, and a failed completion write rolls the scored run back too.
-  if (r.complete) await recordDailyCompletion(userId, day);
+  if (r.complete) {
+    await recordDailyCompletion(userId, day);
+    await recordChallengeScore("daily", userId, day);
+  }
 
   return {
     state: publicGameState(after.state),

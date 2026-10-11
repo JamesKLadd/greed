@@ -36,6 +36,7 @@ export const RELEASES: Release[] = [
       "Banking 2500+ in one turn now earns the Tidal Wave achievement in Daily and Weekly Challenges, including attempts that do not beat your standing score",
       "Fixed Daily Challenge streaks stopping at 31 days when older run records were cleared. Completed challenge dates are now preserved so streaks can keep growing",
       "Fixed past Weekly Challenge winners disappearing after 31 days. Winners and scores are now preserved for the previous 52 completed weeks (one year), with older recorded winners restored where available",
+      "Daily and Weekly Challenge all-time leaderboards now preserve scores permanently, including personal bests and rankings, while old replay data is cleared",
     ],
   },
   {

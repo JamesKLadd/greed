@@ -19,6 +19,7 @@ import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboa
 import type { RunMove } from "@greed/core";
 import { preserveDailyCompletions } from "./daily-streaks.js";
 import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
+import { preserveChallengeScores } from "./challenge-scores.js";
 
 const { Pool } = pg;
 
@@ -460,6 +461,30 @@ export async function migrate(): Promise<void> {
       score   integer
     );
   `);
+  // All-time boards need scores and their tiebreaks forever, but not replay
+  // seeds or moves. One compact result per player's day / best week suffices.
+  await query(`
+    CREATE TABLE IF NOT EXISTS daily_scores (
+      user_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day       date NOT NULL,
+      score     integer NOT NULL,
+      best_turn integer NOT NULL,
+      PRIMARY KEY (user_id, day)
+    );
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_scores (
+      user_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      week      date NOT NULL,
+      score     integer NOT NULL,
+      best_turn integer,
+      PRIMARY KEY (user_id, week)
+    );
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS daily_scores_rank_idx
+    ON daily_scores (score DESC, best_turn DESC, day ASC);`);
+  await query(`CREATE INDEX IF NOT EXISTS weekly_scores_rank_idx
+    ON weekly_scores (score DESC, best_turn DESC NULLS LAST, week ASC);`);
   // Two earlier repairs, "weekly-wins-open-week-2026-09" and
   // "challenge-wins-tiebreak-2026-09", recounted these columns from the run
   // tables and SET them to the answer. Both rested on a premise that was false
@@ -562,23 +587,22 @@ export async function migrate(): Promise<void> {
   await prune();
 }
 
-/** How long finished records are kept before they are cleared out. */
+/** How long replay logs are kept; compact challenge results never expire. */
 export const RETENTION_DAYS = 30;
 
 /**
  * Clear out what is no longer read.
  *
- * Three tables only ever grew: every finished online game, every daily run and
- * every weekly attempt, kept forever for boards that never look further back
- * than the current period. Streak completion dates and challenge wins are
- * preserved separately; the replay logs can expire.
+ * Match history and challenge replay logs expire after a month. Challenge
+ * scores, streak completion dates and wins are preserved separately forever;
+ * weekly winner summaries retain their 52-week window.
  *
  * Expired verification and reset tokens go too. Those were already refused once
  * `expires_at` passed — a link nobody ever clicked simply stayed in the table.
  *
  * Runs on boot, and again daily for a server that stays up (see `startPruning`).
- * Everything here is a plain DELETE by date, so running it twice does nothing
- * the first pass didn't.
+ * Summaries are copied before their replay logs can go. Repeating the sweep
+ * cannot duplicate results or lower previously archived best scores.
  */
 export async function prune(): Promise<void> {
   // If archiving fails, keep daily runs for a later retry instead of deleting
@@ -595,7 +619,14 @@ export async function prune(): Promise<void> {
   // with a month to live, so the win is copied into challenge_wins — which this
   // sweep never touches — before the run can go.
   let weeklyChampionsSaved = false;
+  const scoresSaved = { daily: false, weekly: false };
   for (const kind of ["daily", "weekly"] as const) {
+    try {
+      await preserveChallengeScores(kind);
+      scoresSaved[kind] = true;
+    } catch (err) {
+      console.error(`[prune] could not preserve ${kind} scores:`, err);
+    }
     try {
       await refreshCareerChallengeWins(kind);
       if (kind === "weekly") {
@@ -640,8 +671,9 @@ export async function prune(): Promise<void> {
     ],
   ];
   for (const [what, sql, params] of jobs) {
-    if (what === "old daily runs" && !dailyCompletionsSaved) continue;
-    if (what === "old weekly runs" && !weeklyChampionsSaved) continue;
+    if (what === "old daily runs" && (!dailyCompletionsSaved || !scoresSaved.daily)) continue;
+    if (what === "old weekly runs" && (!weeklyChampionsSaved || !scoresSaved.weekly)) continue;
+    if (what === "old weekly winner summaries" && !scoresSaved.weekly) continue;
     try {
       const { rowCount } = await query(sql, params);
       if (rowCount) console.log(`Retention: cleared ${rowCount} ${what}.`);

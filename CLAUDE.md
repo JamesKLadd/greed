@@ -72,10 +72,17 @@ build on every push. Node 20.
   52 closed weeks. Summaries copy the winner from `challenge_wins` and their
   score before the 30-day replay cleanup. Recovered older winners may have a
   null score; never invent one. If archiving fails, skip weekly-run pruning.
+- All-time Daily and Weekly score boards read `daily_scores` / `weekly_scores`,
+  compact results retained forever. Completion/settlement writes the score and
+  best-turn tiebreak in the same transaction as the run. Migration and pruning
+  backfill surviving runs before replay cleanup; skip pruning a kind whose
+  scores could not be copied. Never derive an all-time board from replay logs.
+  Keep all score summaries so the top 25, personal bests, ranks and run counts
+  stay accurate. Daily results still hide today until the viewer completes it.
 - Both challenges order their standings on **score, then the run's best turn,
   then who got there first**. `server/src/ranking.ts` holds the one copy of each
   — `DAILY_ORDER`, `WEEKLY_ORDER` and their aliased and all-time variants — and
-  all fourteen board, own-rank, placings, champion, tally and all-time queries
+  all board, own-rank, placings, champion, tally and all-time queries
   interpolate one of them. They were copies once, and a copy that drifted is
   what credited a weekly win for a week that had not finished.
 - Challenge WINS are a ledger, not a count. `challenge_wins` holds one row per

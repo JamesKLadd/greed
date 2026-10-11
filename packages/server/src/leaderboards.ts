@@ -468,15 +468,15 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
   let includeToday = false;
   if (userId) {
     const { rows } = await query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM daily_runs
-        WHERE user_id = $1 AND day = $2 AND complete`,
+      `SELECT count(*)::text AS n FROM daily_completions
+        WHERE user_id = $1 AND day = $2`,
       [userId, today],
     );
     includeToday = Number(rows[0]?.n ?? 0) > 0;
   }
   // Two forms of the same filter, so the ranking a player sees is the ranking
   // of the rows they are allowed to see rather than a top slice with holes in.
-  const scope = includeToday ? `r.complete` : `r.complete AND r.day < $1::date`;
+  const scope = includeToday ? `TRUE` : `r.day < $1::date`;
   const params = includeToday ? [] : [today];
 
   const { rows } = await query<{
@@ -488,7 +488,7 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
   }>(
     `SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
             RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
-       FROM daily_runs r JOIN users u ON u.id = r.user_id
+       FROM daily_scores r JOIN users u ON u.id = r.user_id
       WHERE ${scope} AND r.score > 0
       ORDER BY rank
       LIMIT ${DAILY_BOARD_SIZE}`,
@@ -496,7 +496,7 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
   );
 
   const { rows: totals } = await query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM daily_runs r WHERE ${scope} AND r.score > 0`,
+    `SELECT count(*)::text AS n FROM daily_scores r WHERE ${scope} AND r.score > 0`,
     params,
   );
 
@@ -513,7 +513,7 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
       `WITH ranked AS (
          SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
                 RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
-           FROM daily_runs r JOIN users u ON u.id = r.user_id
+           FROM daily_scores r JOIN users u ON u.id = r.user_id
           WHERE ${scope} AND r.score > 0
        )
        SELECT * FROM ranked WHERE user_id = ${mine} ORDER BY rank LIMIT 1`,
@@ -574,7 +574,7 @@ const WEEKLY_BOARD_SIZE = 25;
 /**
  * The best weekly scores ever posted.
  *
- * A row is a PLAYER'S WEEK, not an attempt: `weekly_runs` already keeps only
+ * A row is a PLAYER'S WEEK, not an attempt: `weekly_scores` keeps only
  * the best attempt of each week, so a great week appears once however many
  * tries it took. The date is half of what makes a score worth reading, and
  * someone who has had two blinding weeks has earned both of them.
@@ -599,14 +599,14 @@ export async function weeklyBest(
   }>(
     `SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
             RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
-       FROM weekly_runs r JOIN users u ON u.id = r.user_id
+       FROM weekly_scores r JOIN users u ON u.id = r.user_id
       WHERE r.score > 0
       ORDER BY rank
       LIMIT ${WEEKLY_BOARD_SIZE}`,
   );
 
   const { rows: totals } = await query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM weekly_runs r WHERE r.score > 0`,
+    `SELECT count(*)::text AS n FROM weekly_scores r WHERE r.score > 0`,
   );
 
   let yourBest: WeeklyBestEntry | null = null;
@@ -620,7 +620,7 @@ export async function weeklyBest(
       `WITH ranked AS (
          SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
                 RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
-           FROM weekly_runs r JOIN users u ON u.id = r.user_id
+           FROM weekly_scores r JOIN users u ON u.id = r.user_id
           WHERE r.score > 0
        )
        SELECT * FROM ranked WHERE user_id = $1 ORDER BY rank LIMIT 1`,
