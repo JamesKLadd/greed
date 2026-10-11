@@ -48,15 +48,13 @@ import {
 import { AccountError } from "./accounts.js";
 import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
 import { challengeFriends } from "./challengeFriends.js";
+import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
 
 /** Cap on a single attempt's move list — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
 
 /** How high on a FINISHED weekly board earns the badge. */
 const PODIUM_RANK = 10;
-
-/** How many past champions the weekly screen lists. */
-const CHAMPIONS_LIMIT = 200;
 
 export interface WeeklyEntry {
   username: string;
@@ -89,7 +87,8 @@ export interface WeeklyChampion {
   avatar: string;
   /** Equipped Locker portrait, when supplied by the account/server. */
   visualBeta?: BetaIdentity;
-  score: number;
+  /** Null when an older winner was recovered after their scored run expired. */
+  score: number | null;
 }
 
 export interface WeeklyStatus {
@@ -619,27 +618,21 @@ function strip(c: WeeklyChampion & { userId: string }): WeeklyChampion {
 /** Every week's winner, newest first. Closed weeks only. */
 async function weeklyChampions(
   thisWeek: string,
-  limit = CHAMPIONS_LIMIT,
+  limit = WEEKLY_HISTORY_WEEKS,
 ): Promise<(WeeklyChampion & { userId: string })[]> {
   const { rows } = await query<{
     username: string;
     avatar: string | null;
     visual_beta: unknown;
     week: string;
-    score: number;
+    score: number | null;
     user_id: string;
   }>(
-    `WITH ranked AS (
-       SELECT user_id, week, score,
-              RANK() OVER (PARTITION BY week ORDER BY ${WEEKLY_ORDER}) AS rank
-         FROM weekly_runs
-        WHERE score > 0 AND week < $1::date
-     )
-     SELECT u.username, u.profile ->> 'avatar' AS avatar,
+    `SELECT u.username, u.profile ->> 'avatar' AS avatar,
             u.profile -> 'visualBeta' AS visual_beta,
             to_char(k.week, 'YYYY-MM-DD') AS week, k.score, k.user_id
-       FROM ranked k JOIN users u ON u.id = k.user_id
-      WHERE k.rank = 1
+       FROM weekly_champions k JOIN users u ON u.id = k.user_id
+      WHERE k.week < $1::date AND k.week >= $1::date - ($2::int * 7)
       ORDER BY k.week DESC
       LIMIT $2`,
     [thisWeek, limit],
@@ -727,6 +720,7 @@ export async function weeklyStatus(
   const mineClosed = placings.get(userId) ?? { wins: 0, podiums: 0 };
   // The career tally, not the live placings — see the same note in daily.ts.
   await refreshCareerChallengeWins("weekly", week);
+  await preserveWeeklyChampions(week);
   const career = await careerChallengeWins("weekly", [
     userId,
     ...board.rows.map((r) => r.user_id),

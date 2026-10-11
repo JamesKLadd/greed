@@ -59,6 +59,8 @@ const weeklyWins = new Map<string, number>();
 const careerWeeklyWins = new Map<string, number>();
 /** Periods already written to the challenge_wins ledger. */
 const banked = new Set<string>();
+const winners = new Map<string, string>();
+const championHistory = new Map<string, { user: string; score: number | null }>();
 /** Monotonic clock standing in for now(), so best_at ordering is checkable. */
 let clock = 0;
 
@@ -110,6 +112,7 @@ vi.mock("./db.js", () => ({
       for (const [period, board] of closedBoards(thisWeek)) {
         if (!board.length || banked.has(period)) continue;
         banked.add(period);
+        winners.set(period, board[0].user);
         careerWeeklyWins.set(board[0].user, (careerWeeklyWins.get(board[0].user) ?? 0) + 1);
       }
       return { rows: [] };
@@ -141,20 +144,35 @@ vi.mock("./db.js", () => ({
           .filter((r) => r.wins !== "0" || r.podiums !== "0"),
       };
     }
-    if (sql.includes("WHERE k.rank = 1")) {
-      // Every closed week's winner, newest week first: [thisWeek, limit].
-      const [thisWeek, limit] = params as [string, number];
+    if (sql.includes("INSERT INTO weekly_champions")) {
+      const [thisWeek, weeks] = params as [string, number];
+      const cutoff = new Date(`${thisWeek}T00:00:00Z`);
+      cutoff.setUTCDate(cutoff.getUTCDate() - weeks * 7);
+      for (const [period, winner] of winners) {
+        if (period >= thisWeek || period < cutoff.toISOString().slice(0, 10)) continue;
+        const score = best.get(key(winner, period))?.score ?? null;
+        const existing = championHistory.get(period);
+        if (!existing) championHistory.set(period, { user: winner, score });
+        else if (existing.user === winner && existing.score === null) existing.score = score;
+      }
+      return { rows: [] };
+    }
+    if (sql.includes("FROM weekly_champions k")) {
+      const [thisWeek, weeks] = params as [string, number];
+      const cutoff = new Date(`${thisWeek}T00:00:00Z`);
+      cutoff.setUTCDate(cutoff.getUTCDate() - weeks * 7);
       return {
-        rows: [...closedBoards(thisWeek)]
+        rows: [...championHistory]
+          .filter(([week]) => week < thisWeek && week >= cutoff.toISOString().slice(0, 10))
           .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-          .slice(0, limit)
-          .map(([week, board]) => ({
-            username: `player-${board[0].user}`,
+          .slice(0, weeks)
+          .map(([week, winner]) => ({
+            username: `player-${winner.user}`,
             avatar: null,
-            visual_beta: sql.includes("AS visual_beta") ? portraits.get(board[0].user) : undefined,
+            visual_beta: sql.includes("AS visual_beta") ? portraits.get(winner.user) : undefined,
             week,
-            score: board[0].row.score,
-            user_id: board[0].user,
+            score: winner.score,
+            user_id: winner.user,
           })),
       };
     }
@@ -331,6 +349,8 @@ beforeEach(() => {
   weeklyWins.clear();
   careerWeeklyWins.clear();
   banked.clear();
+  winners.clear();
+  championHistory.clear();
   clock = 0;
 });
 
@@ -1005,5 +1025,37 @@ describe("equipped challenge portraits", () => {
     expect((await weeklyStatus(USER, WEEK)).leaderboard[0].visualBeta).toBeUndefined();
     portraits.set("rival", { version: 999 });
     expect((await weeklyStatus(USER, WEEK)).leaderboard[0].visualBeta).toBeUndefined();
+  });
+});
+
+describe("a year of weekly winners", () => {
+  it("retains winner names and scores after their replay records are cleared", async () => {
+    record("rival", LAST_WEEK, 3000);
+    expect((await weeklyStatus(USER, WEEK)).champion?.score).toBe(3000);
+    best.clear();
+    const status = await weeklyStatus(USER, WEEK);
+    expect(status.champion?.username).toBe("player-rival");
+    expect(status.champion?.score).toBe(3000);
+    expect(status.champions).toHaveLength(1);
+  });
+
+  it("includes exactly the previous 52 calendar weeks and excludes the open week", async () => {
+    const cursor = new Date(`${WEEK}T00:00:00Z`);
+    for (let n = 0; n < 60; n++) {
+      record("rival", cursor.toISOString().slice(0, 10), 3000);
+      cursor.setUTCDate(cursor.getUTCDate() - 7);
+    }
+    const status = await weeklyStatus(USER, WEEK);
+    expect(status.champions).toHaveLength(52);
+    expect(status.champions[0].week).toBe(LAST_WEEK);
+    expect(status.champions[51].week).toBe("2025-08-25");
+  });
+
+  it("recovers winners from the win ledger without inventing missing scores", async () => {
+    banked.add(LAST_WEEK);
+    winners.set(LAST_WEEK, "rival");
+    const status = await weeklyStatus(USER, WEEK);
+    expect(status.champion?.username).toBe("player-rival");
+    expect(status.champion?.score).toBeNull();
   });
 });

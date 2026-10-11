@@ -68,6 +68,10 @@ build on every push. Node 20.
   best attempt of the week stands. Every attempt gets a fresh secret seed, and
   only one attempt may be open at a time. Unlike the daily, this week's board is
   public from the start.
+- Past weekly winners come from `weekly_champions`, retained for the previous
+  52 closed weeks. Summaries copy the winner from `challenge_wins` and their
+  score before the 30-day replay cleanup. Recovered older winners may have a
+  null score; never invent one. If archiving fails, skip weekly-run pruning.
 - Both challenges order their standings on **score, then the run's best turn,
   then who got there first**. `server/src/ranking.ts` holds the one copy of each
   — `DAILY_ORDER`, `WEEKLY_ORDER` and their aliased and all-time variants — and

@@ -8,10 +8,17 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { BEST_TOTAL_CEILING, DAILY_ZONE, scoreDailyRun, scoreWeeklyRun } from "@greed/core";
+import {
+  BEST_TOTAL_CEILING,
+  DAILY_ZONE,
+  scoreDailyRun,
+  scoreWeeklyRun,
+  weekKey,
+} from "@greed/core";
 import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 import { preserveDailyCompletions } from "./daily-streaks.js";
+import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
 
 const { Pool } = pg;
 
@@ -444,6 +451,15 @@ export async function migrate(): Promise<void> {
   await query(
     `CREATE INDEX IF NOT EXISTS challenge_wins_user_idx ON challenge_wins (user_id, kind);`,
   );
+  // Keep a year of winner summaries after the scored replay logs expire.
+  // The permanent challenge_wins ledger remains the authority on who won.
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_champions (
+      week    date PRIMARY KEY,
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      score   integer
+    );
+  `);
   // Two earlier repairs, "weekly-wins-open-week-2026-09" and
   // "challenge-wins-tiebreak-2026-09", recounted these columns from the run
   // tables and SET them to the answer. Both rested on a premise that was false
@@ -578,11 +594,16 @@ export async function prune(): Promise<void> {
   // A day taken outright is a career figure; the run proving it is a log entry
   // with a month to live, so the win is copied into challenge_wins — which this
   // sweep never touches — before the run can go.
+  let weeklyChampionsSaved = false;
   for (const kind of ["daily", "weekly"] as const) {
     try {
       await refreshCareerChallengeWins(kind);
+      if (kind === "weekly") {
+        await preserveWeeklyChampions();
+        weeklyChampionsSaved = true;
+      }
     } catch (err) {
-      console.error(`[prune] could not bank ${kind} wins:`, err);
+      console.error(`[prune] could not preserve ${kind} results:`, err);
     }
   }
   const cutoff = `${RETENTION_DAYS} days`;
@@ -601,6 +622,11 @@ export async function prune(): Promise<void> {
       [cutoff],
     ],
     [
+      "old weekly winner summaries",
+      `DELETE FROM weekly_champions WHERE week < $1::date - ($2::int * 7)`,
+      [weekKey(), WEEKLY_HISTORY_WEEKS],
+    ],
+    [
       "old weekly attempt counts",
       `DELETE FROM weekly_attempts WHERE day < (now() - $1::interval)::date`,
       [cutoff],
@@ -615,6 +641,7 @@ export async function prune(): Promise<void> {
   ];
   for (const [what, sql, params] of jobs) {
     if (what === "old daily runs" && !dailyCompletionsSaved) continue;
+    if (what === "old weekly runs" && !weeklyChampionsSaved) continue;
     try {
       const { rowCount } = await query(sql, params);
       if (rowCount) console.log(`Retention: cleared ${rowCount} ${what}.`);

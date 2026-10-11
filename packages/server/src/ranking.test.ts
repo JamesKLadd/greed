@@ -1,8 +1,7 @@
 /**
  * The challenges' standings order, and the places that have to use it.
  *
- * Fourteen queries rank challenge runs, seven per challenge. They were fourteen
- * copies of two ORDER BYs, and a copy that drifts is not a theoretical worry
+ * Challenge queries share two ORDER BYs, and a copy that drifts is not a theoretical worry
  * here — a diverged boundary in the weekly's career tally is what credited a
  * win for a week that had not finished. So each order lives in one constant,
  * and this checks nobody has written their own again.
@@ -37,8 +36,8 @@ const CHALLENGES = [
     first: "best_at",
     period: "week",
     source: weekly,
-    /** Board, own rank, closed-period placings, champion. */
-    inSource: 4,
+    /** Board, own rank, closed-period placings. Champions use the settled ledger. */
+    inSource: 3,
   },
   {
     name: "daily",
@@ -87,7 +86,7 @@ describe.each(CHALLENGES)("the $name challenge's standings order", (c) => {
     expect(handWritten.map((m) => m[0])).toEqual([]);
   });
 
-  it("is used by the period's board, own rank, placings and champion", () => {
+  it("is used by each query that ranks runs in its module", () => {
     const uses = c.source.match(/\$\{(WEEKLY|DAILY)_ORDER(_R)?\}/g) ?? [];
     expect(uses.length).toBe(c.inSource);
   });

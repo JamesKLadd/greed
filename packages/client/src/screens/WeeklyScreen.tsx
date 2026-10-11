@@ -495,10 +495,12 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
                       {t("weekly.wonTheWeek", { name: champion.username })}
                     </strong>
                     <span className="daily__heraldSub">
-                      {t("weekly.wonWith", {
-                        week: formatDay(champion.week),
-                        score: n(champion.score),
-                      })}
+                      {champion.score === null
+                        ? formatDay(champion.week)
+                        : t("weekly.wonWith", {
+                            week: formatDay(champion.week),
+                            score: n(champion.score),
+                          })}
                     </span>
                   </span>
                 </div>
@@ -520,7 +522,7 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
                     <span className="daily-hall__name">{c.username}</span>
                     <span className="daily-hall__when">{formatDay(c.week)}</span>
                   </span>
-                  <span className="daily-hall__score">{n(c.score)}</span>
+                  <span className="daily-hall__score">{c.score === null ? "—" : n(c.score)}</span>
                 </li>
               ))}
             </ol>

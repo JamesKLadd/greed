@@ -35,6 +35,7 @@ export const RELEASES: Release[] = [
       "Fixed consecutive hot dice being undercounted and career-best turns being missed in lower-scoring weekly attempts",
       "Banking 2500+ in one turn now earns the Tidal Wave achievement in Daily and Weekly Challenges, including attempts that do not beat your standing score",
       "Fixed Daily Challenge streaks stopping at 31 days when older run records were cleared. Completed challenge dates are now preserved so streaks can keep growing",
+      "Fixed past Weekly Challenge winners disappearing after 31 days. Winners and scores are now preserved for the previous 52 completed weeks (one year), with older recorded winners restored where available",
     ],
   },
   {

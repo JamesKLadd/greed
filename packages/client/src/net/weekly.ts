@@ -52,7 +52,8 @@ export interface WeeklyChampion {
   avatar: string;
   /** Equipped Locker portrait, when supplied by the account/server. */
   visualBeta?: BetaIdentity;
-  score: number;
+  /** Null for a recovered winner whose original score was already deleted. */
+  score: number | null;
 }
 
 export interface WeeklyStatus {
@@ -127,10 +128,15 @@ function fill(raw: WeeklyStatus): WeeklyStatus {
       })) ?? null,
     players: raw.players ?? 0,
     champion: raw.champion
-      ? { ...raw.champion, visualBeta: cleanBetaIdentity(raw.champion.visualBeta) }
+      ? {
+          ...raw.champion,
+          score: raw.champion.score ?? null,
+          visualBeta: cleanBetaIdentity(raw.champion.visualBeta),
+        }
       : null,
     champions: (raw.champions ?? []).map((c) => ({
       ...c,
+      score: c.score ?? null,
       visualBeta: cleanBetaIdentity(c.visualBeta),
     })),
     leaderboard: (raw.leaderboard ?? []).map((e) => ({
