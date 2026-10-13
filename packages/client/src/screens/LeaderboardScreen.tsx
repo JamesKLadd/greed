@@ -25,11 +25,8 @@ import "../styles/leaderboard-portraits.css";
 /**
  * Career boards and your own match history.
  *
- * The boards read the same synced profile the Stats screen shows, so the two can
- * never disagree. That also means they are only as honest as the clients that
- * reported them — the merge is monotonic, so a figure can be inflated but never
- * silently rolled back — which is why this is framed as a scoreboard rather than
- * a ranked ladder.
+ * Values and ranks come from server-owned records. Equipped portraits are read
+ * live from the account so every category follows the player's latest Locker look.
  */
 
 type Tab = LeaderboardCategory | "daily" | "weekly" | "history";
@@ -144,7 +141,16 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                   className={e.you ? "board__row board__row--you" : "board__row"}
                 >
                   <span className="board__rank">#{e.rank}</span>
-                  <span className="board__name">{e.username}</span>
+                  <span className="board__identity">
+                    <span className="board__avatar" aria-hidden="true">
+                      <ChallengeAvatar {...e} />
+                    </span>
+                    <span className="board__name">
+                      <span className="board__username" title={e.username}>
+                        {e.username}
+                      </span>
+                    </span>
+                  </span>
                   <span className="board__value">{n(e.value)}</span>
                 </li>
               ))}
@@ -152,8 +158,13 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           )}
           {/* Your own standing, even when you are nowhere near the top slice. */}
           {board.yourRank !== null && (
-            <p className="daily__note">
-              {t("board.yourRank", { rank: board.yourRank, players: board.players })}
+            <p className="daily__note board__best">
+              {board.yourEntry && (
+                <span className="board__avatar" aria-hidden="true">
+                  <ChallengeAvatar {...board.yourEntry} />
+                </span>
+              )}
+              <span>{t("board.yourRank", { rank: board.yourRank, players: board.players })}</span>
             </p>
           )}
           {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}

@@ -79,7 +79,7 @@ build on every push. Node 20.
   scores could not be copied. Never derive an all-time board from replay logs.
   Keep all score summaries so the top 25, personal bests, ranks and run counts
   stay accurate. Daily results still hide today until the viewer completes it.
-- All-time score rows show the account's currently equipped avatar / Locker
+- Every leaderboard row shows the account's currently equipped avatar / Locker
   portrait, not a look frozen at the time of the run. New personal-best markers
   compare against known all-time history read before play; failed or late history
   must neither invent a record nor block playing a challenge.

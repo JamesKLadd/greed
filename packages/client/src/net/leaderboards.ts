@@ -30,6 +30,8 @@ export const ONLINE_CATEGORIES: readonly LeaderboardCategory[] = [
 
 export interface LeaderboardEntry {
   username: string;
+  avatar: string;
+  visualBeta?: BetaIdentity;
   value: number;
   rank: number;
   you?: boolean;
@@ -40,6 +42,8 @@ export interface LeaderboardView {
   entries: LeaderboardEntry[];
   yourRank: number | null;
   yourValue: number | null;
+  /** Own equipped portrait and standing, including players outside the top 25. */
+  yourEntry?: LeaderboardEntry | null;
   players: number;
 }
 
@@ -54,8 +58,13 @@ export interface MatchRecord {
 }
 
 /** Boards are public — a signed-out visitor sees them, just without their own rank. */
-export function fetchLeaderboard(category: LeaderboardCategory): Promise<LeaderboardView> {
-  return api<LeaderboardView>(`/api/leaderboard?category=${category}`, { auth: true });
+export async function fetchLeaderboard(category: LeaderboardCategory): Promise<LeaderboardView> {
+  const raw = await api<LeaderboardView>(`/api/leaderboard?category=${category}`, { auth: true });
+  return {
+    ...raw,
+    entries: (raw.entries ?? []).map(fillIdentity),
+    yourEntry: raw.yourEntry ? fillIdentity(raw.yourEntry) : null,
+  };
 }
 
 export function fetchMatches(): Promise<{ matches: MatchRecord[] }> {

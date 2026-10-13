@@ -1,4 +1,4 @@
-/* Challenge score boards use the same equipped identity as the Locker. Keep
+/* Every leaderboard uses the same equipped identity as the Locker. Keep
    the date beneath the name, with a fixed portrait and readable score column. */
 .board__identity {
   display: flex;

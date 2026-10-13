@@ -1,10 +1,80 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "./auth.js";
-import { fetchDailyBest, fetchWeeklyBest } from "./leaderboards.js";
+import {
+  fetchDailyBest,
+  fetchLeaderboard,
+  fetchWeeklyBest,
+  LEADERBOARD_CATEGORIES,
+} from "./leaderboards.js";
 
 vi.mock("./auth.js", () => ({ api: vi.fn() }));
 
 beforeEach(() => vi.mocked(api).mockReset());
+
+describe.each(LEADERBOARD_CATEGORIES)("%s career leaderboard portraits", (category) => {
+  it("keeps equipped identity for rows and an own standing outside the top 25", async () => {
+    const visualBeta = {
+      version: 1,
+      mascot: "panda",
+      frame: "brass",
+      background: "felt",
+      nameplate: "classic",
+      badge: "",
+    };
+    const entry = { username: "Winner", avatar: "panda", visualBeta, value: 100, rank: 1 };
+    const own = { ...entry, username: "Player", value: 5, rank: 30, you: true };
+    vi.mocked(api).mockResolvedValue({
+      category,
+      entries: [entry],
+      yourEntry: own,
+      yourRank: 30,
+      yourValue: 5,
+      players: 40,
+    });
+    const board = await fetchLeaderboard(category);
+    expect(board.entries[0]).toEqual(entry);
+    expect(board.yourEntry).toEqual(own);
+    expect(board.yourRank).toBe(30);
+    expect(board.yourValue).toBe(5);
+    expect(board.players).toBe(40);
+  });
+});
+
+describe("career leaderboard compatibility", () => {
+  it("accepts an older server without row portraits or own identity", async () => {
+    const entry = { username: "Winner", value: 100, rank: 1 };
+    vi.mocked(api).mockResolvedValue({
+      category: "wins",
+      entries: [entry],
+      yourRank: 30,
+      yourValue: 5,
+      players: 40,
+    });
+    const board = await fetchLeaderboard("wins");
+    expect(board.entries[0]).toMatchObject({ ...entry, avatar: "" });
+    expect(board.entries[0].visualBeta).toBeUndefined();
+    expect(board.yourEntry).toBeNull();
+    expect(board.yourRank).toBe(30);
+  });
+
+  it("sanitizes malformed career portraits and leaves anonymous personal standings empty", async () => {
+    vi.mocked(api).mockResolvedValue({
+      category: "wins",
+      entries: [{ username: "Winner", avatar: 4, visualBeta: "invalid", value: 100, rank: 1 }],
+      yourEntry: null,
+      yourRank: null,
+      yourValue: null,
+      players: 40,
+    });
+    const board = await fetchLeaderboard("wins");
+    expect(board.entries[0].avatar).toBe("");
+    expect(board.entries[0].visualBeta).toBeUndefined();
+    expect(board.entries[0].value).toBe(100);
+    expect(board.entries[0].rank).toBe(1);
+    expect(board.yourEntry).toBeNull();
+    expect(board.yourRank).toBeNull();
+  });
+});
 
 describe.each([
   ["daily", fetchDailyBest, "day"],

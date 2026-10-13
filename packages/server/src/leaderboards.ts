@@ -1,16 +1,9 @@
 /**
  * Lifetime leaderboards and per-player match history.
  *
- * The leaderboard numbers come out of the `profile` jsonb on `users` — the same
- * monotonic profile the client syncs up after every game — rather than from a
- * separate tally. That means there is exactly one place a career stat lives, so
- * a board can never disagree with the Stats screen a player is looking at.
- *
- * The trade-off is that these figures are only as honest as the client that
- * reported them: the profile merge is monotonic (see accounts.ts), so a value
- * can be inflated but never quietly rolled back. Ranked play would need
- * server-derived stats; these boards are a social scoreboard, not a ladder, and
- * are labelled as such.
+ * Career standings read server-maintained `career_stats`; challenge score
+ * boards read permanent compact score records. Account profiles provide only
+ * the player's current equipped identity and never determine their rank.
  */
 
 import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
@@ -40,6 +33,9 @@ export function isLeaderboardCategory(v: unknown): v is LeaderboardCategory {
 
 export interface LeaderboardEntry {
   username: string;
+  avatar: string;
+  /** The equipped Locker portrait, read live from the account. */
+  visualBeta?: BetaIdentity;
   value: number;
   rank: number;
   you?: boolean;
@@ -51,7 +47,29 @@ export interface LeaderboardView {
   /** The caller's rank, even when they fall outside the returned slice. */
   yourRank: number | null;
   yourValue: number | null;
+  /** The caller's equipped identity and standing, including outside the top 25. */
+  yourEntry: LeaderboardEntry | null;
   players: number;
+}
+
+interface CareerLeaderboardRow {
+  id: string;
+  username: string;
+  avatar: string | null;
+  visual_beta: unknown;
+  value: string;
+  rank: string;
+}
+
+function careerEntry(r: CareerLeaderboardRow, userId: string | null): LeaderboardEntry {
+  return {
+    username: r.username,
+    avatar: r.avatar ?? "",
+    visualBeta: cleanBetaIdentity(r.visual_beta),
+    value: Number(r.value),
+    rank: Number(r.rank),
+    you: userId != null && r.id === userId,
+  };
 }
 
 /** How many rows a board returns. */
@@ -83,17 +101,17 @@ export async function leaderboard(
   userId: string | null,
 ): Promise<LeaderboardView> {
   // The four online boards are written as games finish, so they are already
-  // current. The two challenge boards are a tally of the run tables, and this
-  // is what keeps them from lagging behind the days and weeks that have closed
-  // since anybody last looked.
+  // current. The challenge boards first settle any newly closed periods into
+  // the permanent winner ledger, keeping lifetime tallies current.
   if (category === "dailyWins") await refreshCareerChallengeWins("daily");
   if (category === "weeklyWins") await refreshCareerChallengeWins("weekly");
 
   const value = `c.${FIELD[category]}`;
 
-  const { rows } = await query<{ username: string; value: string; rank: string; id: string }>(
+  const { rows } = await query<CareerLeaderboardRow>(
     `WITH ranked AS (
-       SELECT u.id, u.username, ${value} AS value,
+       SELECT u.id, u.username, u.profile ->> 'avatar' AS avatar,
+              u.profile -> 'visualBeta' AS visual_beta, ${value} AS value,
               RANK() OVER (ORDER BY ${value} DESC, u.created_at ASC) AS rank
        FROM career_stats c JOIN users u ON u.id = c.user_id
        WHERE ${value} > 0
@@ -106,35 +124,30 @@ export async function leaderboard(
     `SELECT count(*)::text AS count FROM career_stats c WHERE ${value} > 0`,
   );
 
-  let yourRank: number | null = null;
-  let yourValue: number | null = null;
+  let yourEntry: LeaderboardEntry | null = null;
   if (userId) {
-    const { rows: own } = await query<{ value: string; rank: string }>(
+    const { rows: own } = await query<CareerLeaderboardRow>(
       `WITH ranked AS (
-         SELECT u.id, ${value} AS value,
+         SELECT u.id, u.username, u.profile ->> 'avatar' AS avatar,
+                u.profile -> 'visualBeta' AS visual_beta, ${value} AS value,
                 RANK() OVER (ORDER BY ${value} DESC, u.created_at ASC) AS rank
          FROM career_stats c JOIN users u ON u.id = c.user_id
          WHERE ${value} > 0
        )
-       SELECT value, rank FROM ranked WHERE id = $1`,
+       SELECT * FROM ranked WHERE id = $1`,
       [userId],
     );
     if (own[0]) {
-      yourRank = Number(own[0].rank);
-      yourValue = Number(own[0].value);
+      yourEntry = careerEntry(own[0], userId);
     }
   }
 
   return {
     category,
-    entries: rows.map((r) => ({
-      username: r.username,
-      value: Number(r.value),
-      rank: Number(r.rank),
-      you: userId != null && r.id === userId,
-    })),
-    yourRank,
-    yourValue,
+    entries: rows.map((r) => careerEntry(r, userId)),
+    yourRank: yourEntry?.rank ?? null,
+    yourValue: yourEntry?.value ?? null,
+    yourEntry,
     players: Number(totals[0]?.count ?? 0),
   };
 }
