@@ -203,7 +203,11 @@ export function AccountScreenView({
 
           {verificationRequired && !user.emailVerified && (
             <div className="account__resend">
-              <Button disabled={busy || cooldown > 0} onClick={onResend}>
+              <Button
+                loading={busy && !confirmingDelete}
+                disabled={busy || cooldown > 0}
+                onClick={onResend}
+              >
                 {busy && !confirmingDelete
                   ? t("account.sending")
                   : cooldown > 0
@@ -274,13 +278,14 @@ export function AccountScreenView({
                   <Button variant="ghost" disabled={busy} onClick={onCancelDelete}>
                     {t("common.cancel")}
                   </Button>
-                  <button
+                  <Button
                     className="btn btn--danger"
+                    loading={busy}
                     disabled={busy || deletePassword.length === 0}
                     onClick={onConfirmDelete}
                   >
                     {busy ? t("account.deleting") : t("account.deleteForever")}
-                  </button>
+                  </Button>
                 </div>
               </>
             )}

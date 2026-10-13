@@ -277,14 +277,46 @@ describe("phone audio lifecycle", () => {
     audio.primeAudioOnFirstGesture();
     audio.installUiClicks();
     audio.installUiClicks();
-    expect(win.count("pointerdown")).toBe(2); // graph priming + click cue
+    expect(win.count("pointerdown")).toBe(1); // graph priming
+    expect(win.count("click")).toBe(1);
     expect(win.count("keydown")).toBe(1);
     expect(win.count("pagehide")).toBe(1);
     expect(win.count("pageshow")).toBe(1);
     expect(page.count("visibilitychange")).toBe(1);
-    win.emit("pointerdown", { closest: () => true });
+    win.emit("click", {
+      closest: () => ({ matches: () => false, getAttribute: () => null }),
+    });
     await settle();
     expect(Context.all).toHaveLength(1);
     expect(Context.all[0].sources.filter((source) => !source.loop)).toHaveLength(1);
   });
+
+  it("plays one cue on activation, including a keyboard click, rather than touch-down", async () => {
+    const audio = await import("./sfx.js");
+    audio.installUiClicks();
+    const target = { closest: () => ({ matches: () => false, getAttribute: () => null }) };
+    win.emit("pointerdown", target);
+    expect(Context.all).toHaveLength(0);
+    win.emit("click", target);
+    await settle();
+    expect(Context.all[0].sources.filter((source) => !source.loop)).toHaveLength(1);
+    win.emit("click", target);
+    expect(Context.all[0].sources.filter((source) => !source.loop)).toHaveLength(2);
+  });
+
+  it.each(["disabled", "aria-disabled", "aria-busy"])(
+    "does not acknowledge a button marked %s as an accepted action",
+    async (state) => {
+      const audio = await import("./sfx.js");
+      audio.installUiClicks();
+      win.emit("click", {
+        closest: () => ({
+          matches: () => state === "disabled",
+          getAttribute: (name: string) => (name === state ? "true" : null),
+        }),
+      });
+      await settle();
+      expect(Context.all).toHaveLength(0);
+    },
+  );
 });

@@ -2,11 +2,13 @@ import { lazy, Suspense, useState, type CSSProperties } from "react";
 import { useBetaActive } from "../beta/BetaContext.js";
 const BetaLocker = lazy(() => import("../beta/BetaLocker.js"));
 import { Die } from "../components/Die.js";
+import { UnlockProgress } from "../components/UnlockProgress.js";
 import { equipCosmetic, loadProfile } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
 import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
 import { AVATARS, isUnlocked as avatarUnlocked } from "../game/avatars.js";
 import { seatColor } from "../game/theme.js";
+import { cosmeticUnlockProgress } from "../game/unlockProgress.js";
 import { useT } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { Button, Screen } from "../ui/index.js";
@@ -47,37 +49,38 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
       <ul className="locker-grid">
         {items.map((c, i) => {
           const unlocked = !c.unlock || c.unlock(profile);
-          const equipped = profile[kind] === c.id;
+          const equipped = unlocked && profile[kind] === c.id;
           return (
-            <li
-              key={c.id}
-              className={[
-                "locker-card",
-                equipped ? "locker-card--equipped" : "",
-                unlocked ? "" : "locker-card--locked",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={
-                unlocked
-                  ? () => {
-                      setProfile(equipCosmetic(kind, c.id));
-                      void syncProfileUp();
-                    }
-                  : undefined
-              }
-              role={unlocked ? "button" : undefined}
-              aria-disabled={!unlocked}
-            >
-              {preview(c, i)}
-              <span className="locker-name">{t(`cosmetic.${c.id}.name` as MsgKey)}</span>
-              {equipped ? (
-                <span className="locker-tag locker-tag--on">{t("locker.equipped")}</span>
-              ) : unlocked ? (
-                <span className="locker-tag">{t("locker.tapToEquip")}</span>
-              ) : (
-                <span className="locker-lock">🔒 {t(`cosmetic.${c.id}.req` as MsgKey)}</span>
-              )}
+            <li key={c.id}>
+              <button
+                type="button"
+                className={[
+                  "locker-card",
+                  equipped ? "locker-card--equipped" : "",
+                  unlocked ? "" : "locker-card--locked",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                disabled={!unlocked}
+                aria-pressed={equipped}
+                onClick={() => {
+                  setProfile(equipCosmetic(kind, c.id));
+                  void syncProfileUp();
+                }}
+              >
+                {preview(c, i)}
+                <span className="locker-name">{t(`cosmetic.${c.id}.name` as MsgKey)}</span>
+                {equipped ? (
+                  <span className="locker-tag locker-tag--on">{t("locker.equipped")}</span>
+                ) : unlocked ? (
+                  <span className="locker-tag">{t("locker.tapToEquip")}</span>
+                ) : (
+                  <>
+                    <span className="locker-lock">🔒 {t(`cosmetic.${c.id}.req` as MsgKey)}</span>
+                    <UnlockProgress progress={cosmeticUnlockProgress(c.id, profile)} />
+                  </>
+                )}
+              </button>
             </li>
           );
         })}
@@ -86,7 +89,11 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
   );
 
   return (
-    <Screen title={t("locker.title")} tagline={t("locker.tagline", { done: unlockedCount, total })}>
+    <Screen
+      className="classic-locker"
+      title={t("locker.title")}
+      tagline={t("locker.tagline", { done: unlockedCount, total })}
+    >
       {section(t("locker.dice"), "dice", DICE_SKINS, (c) => (
         <div className="locker-preview locker-preview--dice" style={c.vars as CSSProperties}>
           <Die value={5} size={32} />

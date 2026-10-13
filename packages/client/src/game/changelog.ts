@@ -37,6 +37,10 @@ export const RELEASES: Release[] = [
       "Fixed Daily Challenge streaks stopping at 31 days when older run records were cleared. Completed challenge dates are now preserved so streaks can keep growing",
       "Fixed past Weekly Challenge winners disappearing after 31 days. Winners and scores are now preserved for the previous 52 completed weeks (one year), with older recorded winners restored where available",
       "Daily and Weekly Challenge all-time leaderboards now preserve scores permanently, including personal bests and rankings, while old replay data is cleared",
+      "Daily and Weekly all-time leaderboards now show equipped Locker portraits beside scores and personal bests",
+      "Weekly results now show how much your best improved or confirm that your standing best remains. Daily and Weekly runs subtly highlight new all-time personal bests without opening a popup",
+      "Locker previews now show unlock requirements with progress from your saved stats, and explain when an item is only a preview sample",
+      "Added clearer pending-button feedback, keyboard activation sounds and focus indicators, plus fixes for long names on narrow phones and landscape screens",
     ],
   },
   {

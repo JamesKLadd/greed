@@ -1,0 +1,47 @@
+/* A legal unbroken username can outgrow the account chip even at 390px with
+   larger text. Wrap it inside the chip so the complete name stays readable. */
+.beta-home--polished .beta-hub__account span {
+  overflow-wrap: anywhere;
+}
+
+/* Challenge detail titles are player names. The card owns its vertical scroll,
+   but a single long name otherwise clips horizontally on portrait phones and
+   short landscape screens. Let the title grow instead of reducing its type. */
+.overlay__card:has(.challenge-lobby__detail) .overlay__title {
+  overflow-wrap: anywhere;
+}
+
+/* Portraits narrow the name column on a phone. Names may use an ellipsis, but
+   keep the run date complete so two results can still be told apart. */
+.board__identity .board__when {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* At 320px, a portrait and a five-digit score leave room for only two letters
+   in the name. Give the score a second line so the player remains recognizable.
+   The 39px inset matches the small portrait and its gap in this layout. */
+@media (max-width: 360px) {
+  .board__row:has(.board__identity) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 4px;
+  }
+
+  .board__row:has(.board__identity) .board__rank {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .board__row:has(.board__identity) .board__identity {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .board__row:has(.board__identity) .board__value {
+    grid-column: 2;
+    grid-row: 2;
+    margin-inline-start: 39px;
+  }
+}

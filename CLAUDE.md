@@ -79,6 +79,13 @@ build on every push. Node 20.
   scores could not be copied. Never derive an all-time board from replay logs.
   Keep all score summaries so the top 25, personal bests, ranks and run counts
   stay accurate. Daily results still hide today until the viewer completes it.
+- All-time score rows show the account's currently equipped avatar / Locker
+  portrait, not a look frozen at the time of the run. New personal-best markers
+  compare against known all-time history read before play; failed or late history
+  must neither invent a record nor block playing a challenge.
+- Locker unlock progress is preview information only. A career best turn can
+  come from challenges without granting a solo-game badge; never grant rewards
+  from a progress counter, or invent exact challenge streaks from earned badges.
 - Both challenges order their standings on **score, then the run's best turn,
   then who got there first**. `server/src/ranking.ts` holds the one copy of each
   — `DAILY_ORDER`, `WEEKLY_ORDER` and their aliased and all-time variants — and

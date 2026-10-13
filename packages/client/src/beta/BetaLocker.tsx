@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Die } from "../components/Die.js";
+import { UnlockProgress } from "../components/UnlockProgress.js";
 import { ACHIEVEMENTS, loadProfile, type Profile } from "../game/profile.js";
 import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
 import { useT, type MsgKey } from "../i18n/i18n.js";
@@ -22,6 +23,7 @@ import {
 import { CelebrationArt } from "./Celebration.js";
 import { CELEBRATION_MS, type CelebrationKind } from "./celebrations.js";
 import { playBetaCue } from "../game/sfx.js";
+import { achievementUnlockProgress, cosmeticUnlockProgress } from "../game/unlockProgress.js";
 
 type Category = "dice" | "table" | "mascot" | "frame" | "background" | "nameplate" | "badge";
 export default function BetaLocker({ onBack }: { onBack: () => void }) {
@@ -96,17 +98,32 @@ export function BetaLockerView({
               : category === "nameplate"
                 ? [...NAMEPLATES]
                 : ["", ...ACHIEVEMENTS.map((a) => a.id)];
-  const available = (id: string) =>
-    canEquipAppearance({ ...DEFAULT_APPEARANCE, [category]: id }, profile);
-  const itemName = (id: string) =>
-    category === "badge"
+  const available = (id: string, kind: Category = category) =>
+    canEquipAppearance({ ...DEFAULT_APPEARANCE, [kind]: id }, profile);
+  const itemName = (id: string, kind: Category = category) =>
+    kind === "badge"
       ? id
         ? t(`ach.${id}.title` as MsgKey)
         : t("beta.locker.none")
-      : (category === "dice" && DICE_SKINS.some((c) => c.id === id)) ||
-          (category === "table" && TABLE_THEMES.some((c) => c.id === id))
+      : (kind === "dice" && DICE_SKINS.some((c) => c.id === id)) ||
+          (kind === "table" && TABLE_THEMES.some((c) => c.id === id))
         ? t(`cosmetic.${id}.name` as MsgKey)
         : label(id);
+  const requirement = (kind: Category, id: string) => {
+    if (kind === "badge") return t(`ach.${id}.desc` as MsgKey);
+    const cosmetic =
+      kind === "dice"
+        ? DICE_SKINS.find((c) => c.id === id)
+        : kind === "table"
+          ? TABLE_THEMES.find((c) => c.id === id)
+          : undefined;
+    return cosmetic && !isUnlocked(cosmetic, profile)
+      ? t(`cosmetic.${id}.req` as MsgKey)
+      : t("locker.previewSample");
+  };
+  const progress = (kind: Category, id: string) =>
+    kind === "badge" ? achievementUnlockProgress(id, profile) : cosmeticUnlockProgress(id, profile);
+  const lockedSelections = categories.filter((kind) => !available(draft[kind], kind));
   const preview = (kind: CelebrationKind) => {
     clearTimeout(timer.current);
     setEffect({ kind, nonce: Date.now() });
@@ -201,7 +218,9 @@ export function BetaLockerView({
           <button
             className="btn btn--roll beta-locker__equip"
             disabled={!allowed}
-            aria-describedby="beta-locker-equip-note"
+            aria-describedby={
+              allowed ? "beta-locker-equip-note" : "beta-locker-equip-note beta-locker-requirements"
+            }
             onClick={() => {
               onEquip(draft);
               setSaved(true);
@@ -218,6 +237,17 @@ export function BetaLockerView({
                   : "beta.locker.equipmentNote",
             )}
           </p>
+          {!allowed && (
+            <ul id="beta-locker-requirements" className="beta-locker__requirements">
+              {lockedSelections.map((kind) => (
+                <li key={kind}>
+                  <strong>{itemName(draft[kind], kind)}</strong>
+                  <span>{requirement(kind, draft[kind])}</span>
+                  <UnlockProgress progress={progress(kind, draft[kind])} />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
         <section
           id="beta-look-collection"
@@ -256,9 +286,6 @@ export function BetaLockerView({
               .filter((id) => !owned || available(id))
               .map((id) => {
                 const look: Appearance = { ...draft, [category]: id };
-                const cosmetic = (category === "dice" ? DICE_SKINS : TABLE_THEMES).find(
-                  (c) => c.id === id,
-                );
                 const locked = !available(id);
                 return (
                   <button
@@ -294,13 +321,12 @@ export function BetaLockerView({
                     )}
                     <small>{locked ? t("beta.locker.previewOnly") : t("beta.locker.try")}</small>
                     {locked && (
-                      <span className="beta-collection-card__requirement">
-                        {cosmetic && !isUnlocked(cosmetic, profile)
-                          ? t(`cosmetic.${id}.req` as MsgKey)
-                          : category === "badge"
-                            ? t(`ach.${id}.desc` as MsgKey)
-                            : ""}
-                      </span>
+                      <>
+                        <span className="beta-collection-card__requirement">
+                          {requirement(category, id)}
+                        </span>
+                        <UnlockProgress progress={progress(category, id)} />
+                      </>
                     )}
                   </button>
                 );

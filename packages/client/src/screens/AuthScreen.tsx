@@ -205,7 +205,7 @@ export function AuthScreen({
               required
               onChange={(e) => setPassword(e.target.value)}
             />
-            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
+            <Button type="submit" variant="roll" size="lg" loading={busy} disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.login")}
             </Button>
             <div className="auth__links">
@@ -278,7 +278,7 @@ export function AuthScreen({
               required
               onChange={(e) => setPassword(e.target.value)}
             />
-            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
+            <Button type="submit" variant="roll" size="lg" loading={busy} disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.signup")}
             </Button>
             <div className="auth__links">
@@ -307,7 +307,7 @@ export function AuthScreen({
               required
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
+            <Button type="submit" variant="roll" size="lg" loading={busy} disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.sendReset")}
             </Button>
             <div className="auth__links">
@@ -335,7 +335,7 @@ export function AuthScreen({
               required
               onChange={(e) => setPassword(e.target.value)}
             />
-            <Button type="submit" variant="roll" size="lg" disabled={!canSubmit}>
+            <Button type="submit" variant="roll" size="lg" loading={busy} disabled={!canSubmit}>
               {busy ? t("auth.working") : t("auth.setPassword")}
             </Button>
           </>

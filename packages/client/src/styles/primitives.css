@@ -35,6 +35,49 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+.btn--loading:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+.btn__spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.5em;
+  vertical-align: -0.15em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: button-pending 0.8s linear infinite;
+}
+@keyframes button-pending {
+  to {
+    transform: rotate(360deg);
+  }
+}
+button:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 3px;
+}
+.segmented__btn,
+.bar-btn {
+  transition:
+    background 0.12s ease,
+    filter 0.12s ease;
+}
+.segmented__btn:active:not(:disabled),
+.bar-btn:active:not(:disabled) {
+  filter: brightness(0.88);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn__spinner {
+    animation: none !important;
+  }
+}
+:root[data-motion="reduced"] .btn__spinner {
+  animation: none !important;
+}
 /* Ghost buttons appear both on panels and directly on the room, so they stay a
    real (if quieter) slab — a translucent fill goes muddy over the lamp pool. */
 .btn--ghost {

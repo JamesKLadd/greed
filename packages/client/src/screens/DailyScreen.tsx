@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DAILY_TURNS, dailyKey, msUntilNextDaily } from "@greed/core";
 import { ChallengeRun } from "../components/ChallengeRun.js";
+import { ChallengePersonalBest } from "../components/ChallengePersonalBest.js";
 import {
   fetchDaily,
   playDailyMove,
@@ -28,6 +29,7 @@ import {
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
 import { syncProfileUp } from "../net/auth.js";
+import { fetchDailyBest } from "../net/leaderboards.js";
 
 import { Button, Icon } from "../ui/index.js";
 import { ChallengeAvatar } from "../components/ChallengeAvatar.js";
@@ -49,6 +51,11 @@ import {
   claimChallengeTurnAchievement,
   recordChallengeBestTurn,
 } from "../game/challengeProfile.js";
+import {
+  improvesPersonalBest,
+  readScoreBaseline,
+  type ScoreBaseline,
+} from "../game/challengeScoreFeedback.js";
 
 interface DailyScreenProps {
   onBack: () => void;
@@ -61,6 +68,8 @@ interface DailyScreenProps {
 
 /** A failed move is reconciled with a read, never by repeating the move. */
 const resumeRun = async () => (await resumeDaily()).run;
+// Ancillary history cannot prevent a player from starting or resuming a run.
+const readPersonalBest = () => readScoreBaseline(fetchDailyBest);
 
 export function DailyScreen({
   onBack,
@@ -71,7 +80,7 @@ export function DailyScreen({
   onFriends,
 }: DailyScreenProps) {
   const { t, n } = useI18n();
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
   // effect on the way back rather than on the next run.
   const { dice3d } = loadSettings();
@@ -85,6 +94,9 @@ export function DailyScreen({
   // on, by design.
   const [runView, setRunView] = useState<DailyRunView | null>(null);
   const [starting, setStarting] = useState(false);
+  const personalBestBeforeRun = useRef<ScoreBaseline>(undefined);
+  const [personalBestDay, setPersonalBestDay] = useState<string | null>(null);
+  const requestSession = useRef(0);
   /** The board row being read in close-up, if any. */
   const [reading, setReading] = useState<(DailyEntry & { friendsRank?: boolean }) | null>(null);
 
@@ -124,31 +136,51 @@ export function DailyScreen({
   }, []);
 
   const load = useCallback(async () => {
+    const session = requestSession.current;
     setLoading(true);
     setError(null);
     try {
-      const [next, open] = await Promise.all([fetchDaily(), resumeDaily()]);
+      const [next, open, priorBest] = await Promise.all([
+        fetchDaily(),
+        resumeDaily(),
+        readPersonalBest(),
+      ]);
+      if (session !== requestSession.current) return;
+      personalBestBeforeRun.current = open.run?.complete ? undefined : priorBest;
       setStatus(next);
       setDay(next.day);
+      setPersonalBestDay((previous) => (previous === next.day ? previous : null));
       // Yesterday's board may have closed since the last visit.
       claim(next);
       // A run left half-played picks up exactly where it was left.
       setRunView(open.run);
     } catch (err) {
-      setError(apiErrorText(t, err, "daily.loadFailed"));
+      if (session === requestSession.current) setError(apiErrorText(t, err, "daily.loadFailed"));
     } finally {
-      setLoading(false);
+      if (session === requestSession.current) setLoading(false);
     }
   }, [t, claim]);
 
   useEffect(() => {
+    requestSession.current += 1;
+    setPersonalBestDay(null);
+    setStarting(false);
+    personalBestBeforeRun.current = undefined;
     if (authStatus === "authed") void load();
-    else setLoading(false);
-  }, [authStatus, load]);
+    else {
+      setLoading(false);
+      setStatus(null);
+      setRunView(null);
+    }
+    return () => {
+      requestSession.current += 1;
+    };
+  }, [authStatus, user?.id, load]);
 
   /** The run is over: the server already has the score, so just re-read it. */
   const onFinished = useCallback(
     async (final: DailyRunView | null) => {
+      const session = requestSession.current;
       if (final?.complete) recordGrowthEvent("daily_completed");
       const improvedTurn = recordChallengeBestTurn(final);
       const turnAward = final?.complete ? claimChallengeTurnAchievement(0) : null;
@@ -157,13 +189,23 @@ export function DailyScreen({
         syncSteamAchievements([turnAward.id]);
       }
       if (improvedTurn || turnAward) void syncProfileUp();
+      const newRecord =
+        final?.complete &&
+        improvesPersonalBest(final.state.players[0].total, personalBestBeforeRun.current);
       setLoading(true);
       setError(null);
       setRunView(null);
       try {
         const next = await fetchDaily();
+        if (session !== requestSession.current) return;
         setStatus(next);
         setDay(next.day);
+        // A midnight recovery can return tomorrow's lobby instead of this run.
+        setPersonalBestDay(
+          newRecord && next.day === day && next.run?.score === final?.state.players[0].total
+            ? next.day
+            : null,
+        );
         // A turn banked in the run counts toward the career best like any other.
         // The server has already folded it into the account (see daily.ts); this
         // is the local copy catching up so the Stats screen agrees now rather
@@ -172,25 +214,32 @@ export function DailyScreen({
         if (improved) void syncProfileUp();
         claim(next);
       } catch (err) {
-        setError(apiErrorText(t, err, "daily.loadFailed"));
+        if (session === requestSession.current) setError(apiErrorText(t, err, "daily.loadFailed"));
       } finally {
-        setLoading(false);
+        if (session === requestSession.current) setLoading(false);
       }
     },
-    [t, claim],
+    [t, claim, day],
   );
 
   /** Claim today's run. The server creates it, so this cannot be undone. */
   const begin = useCallback(async () => {
+    const session = requestSession.current;
     setStarting(true);
     setError(null);
     try {
-      setRunView(await startDaily());
+      const priorBest = await readPersonalBest();
+      if (session !== requestSession.current) return;
+      personalBestBeforeRun.current = priorBest;
+      setPersonalBestDay(null);
+      const next = await startDaily();
+      if (session !== requestSession.current) return;
+      setRunView(next);
       recordGrowthEvent("daily_started");
     } catch (err) {
-      setError(apiErrorText(t, err, "daily.loadFailed"));
+      if (session === requestSession.current) setError(apiErrorText(t, err, "daily.loadFailed"));
     } finally {
-      setStarting(false);
+      if (session === requestSession.current) setStarting(false);
     }
   }, [t]);
 
@@ -200,6 +249,7 @@ export function DailyScreen({
   const nextIn = useDailyCountdown(day, () => {
     if (authStatus !== "authed" || runView || loading || starting) return;
     setDay(dailyKey());
+    setPersonalBestDay(null);
     void load();
   });
   const champion = status?.champion ?? null;
@@ -274,18 +324,25 @@ export function DailyScreen({
                 <>
                   {played && status.run ? (
                     <>
-                      <DailyShareCard
-                        day={status.day}
-                        result={status.run}
-                        rankText={
-                          status.yourRank
-                            ? t("daily.yourRank", {
-                                rank: status.yourRank,
-                                players: status.players,
-                              })
-                            : undefined
+                      <div
+                        className={
+                          personalBestDay === status.day ? "challenge-score-record" : undefined
                         }
-                      />
+                      >
+                        {personalBestDay === status.day && <ChallengePersonalBest announce />}
+                        <DailyShareCard
+                          day={status.day}
+                          result={status.run}
+                          rankText={
+                            status.yourRank
+                              ? t("daily.yourRank", {
+                                  rank: status.yourRank,
+                                  players: status.players,
+                                })
+                              : undefined
+                          }
+                        />
+                      </div>
                       <p className="daily__note challenge-lobby__complete">{t("daily.played")}</p>
                       <Button variant="bank" onClick={onWeekly}>
                         {t("growth.nextWeekly")}

@@ -31,6 +31,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Toggle state: renders the `on` styling and sets aria-pressed. */
   pressed?: boolean;
+  /** A pending action: keep the label, show feedback, and prevent duplicate presses. */
+  loading?: boolean;
   /** Secondary line under the label (the tall home-menu buttons). */
   subLabel?: ReactNode;
   children: ReactNode;
@@ -40,6 +42,8 @@ export function Button({
   variant = "secondary",
   size = "md",
   pressed,
+  loading = false,
+  disabled,
   subLabel,
   className,
   children,
@@ -53,10 +57,14 @@ export function Button({
         VARIANT_CLASS[variant],
         SIZE_CLASS[size],
         pressed && "btn--on",
+        loading && "btn--loading",
         className,
       )}
       aria-pressed={pressed}
+      aria-busy={loading || rest["aria-busy"]}
+      disabled={disabled || loading}
     >
+      {loading && <span className="btn__spinner" aria-hidden="true" />}
       {children}
       {subLabel != null && <span className="home-menu__sub">{subLabel}</span>}
     </button>

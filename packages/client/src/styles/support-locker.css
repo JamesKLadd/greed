@@ -63,6 +63,90 @@
 .beta-locker .beta-locker__equip {
   min-height: 52px;
 }
+.locker-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: auto;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.locker-progress progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  background: var(--surface-3);
+  color: var(--good);
+  accent-color: var(--good);
+}
+.locker-progress progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.locker-progress progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--good);
+}
+.locker-progress progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--good);
+}
+.beta-locker__requirements {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 12px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.beta-locker__requirements li {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.beta-locker__requirements li > span {
+  color: var(--text-dim);
+}
+.beta-locker__requirements .locker-progress {
+  margin-top: 3px;
+}
+.classic-locker .locker-card {
+  width: 100%;
+  height: 100%;
+  color: var(--text);
+  font: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.classic-locker .locker-card--locked {
+  /* A locked reward is still a full-colour preview, with readable requirements. */
+  opacity: 1;
+}
+.classic-locker .locker-lock {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.classic-locker .locker-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.classic-locker .locker-progress {
+  text-align: center;
+}
 .beta-locker__browse {
   display: none;
 }

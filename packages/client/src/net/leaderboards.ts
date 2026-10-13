@@ -1,6 +1,7 @@
 /** Lifetime leaderboards and match history. Both are read-only views the server
  *  derives; the client never posts a standing. */
 
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import { api } from "./auth.js";
 
 export const LEADERBOARD_CATEGORIES = [
@@ -64,6 +65,8 @@ export function fetchMatches(): Promise<{ matches: MatchRecord[] }> {
 /** One run on the all-time daily board. */
 export interface DailyBestEntry {
   username: string;
+  avatar: string;
+  visualBeta?: BetaIdentity;
   /** YYYY-MM-DD. A plain date, not an instant — see formatDay in the screen. */
   day: string;
   score: number;
@@ -80,13 +83,22 @@ export interface DailyBestView {
 }
 
 /** The best daily runs ever played. Public, like the other boards. */
-export function fetchDailyBest(): Promise<DailyBestView> {
-  return api<DailyBestView>("/api/leaderboard/daily", { auth: true });
+export async function fetchDailyBest(): Promise<DailyBestView> {
+  const raw = await api<DailyBestView>("/api/leaderboard/daily", { auth: true });
+  return {
+    ...raw,
+    entries: (raw.entries ?? []).map(fillIdentity),
+    yourBest: raw.yourBest ? fillIdentity(raw.yourBest) : null,
+    runs: raw.runs ?? 0,
+    todayHidden: raw.todayHidden ?? true,
+  };
 }
 
 /** One player's week on the all-time weekly board. */
 export interface WeeklyBestEntry {
   username: string;
+  avatar: string;
+  visualBeta?: BetaIdentity;
   /** The week's Monday, as YYYY-MM-DD — see formatDay in the screen. */
   week: string;
   score: number;
@@ -112,8 +124,17 @@ export async function fetchWeeklyBest(): Promise<WeeklyBestView> {
   const raw = await api<WeeklyBestView>("/api/leaderboard/weekly", { auth: true });
   return {
     ...raw,
-    entries: raw.entries ?? [],
-    yourBest: raw.yourBest ?? null,
+    entries: (raw.entries ?? []).map(fillIdentity),
+    yourBest: raw.yourBest ? fillIdentity(raw.yourBest) : null,
     runs: raw.runs ?? 0,
+  };
+}
+
+/** New clients also receive rows from the older server during deployment. */
+function fillIdentity<T extends { avatar: string; visualBeta?: BetaIdentity }>(entry: T): T {
+  return {
+    ...entry,
+    avatar: typeof entry.avatar === "string" ? entry.avatar : "",
+    visualBeta: cleanBetaIdentity(entry.visualBeta),
   };
 }

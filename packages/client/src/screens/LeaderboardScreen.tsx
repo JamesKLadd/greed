@@ -19,6 +19,8 @@ import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { teamName } from "../game/teams.js";
 import { Button, Screen } from "../ui/index.js";
+import { ChallengeAvatar } from "../components/ChallengeAvatar.js";
+import "../styles/leaderboard-portraits.css";
 
 /**
  * Career boards and your own match history.
@@ -170,9 +172,16 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                   className={e.you ? "board__row board__row--you" : "board__row"}
                 >
                   <span className="board__rank">#{e.rank}</span>
-                  <span className="board__name">
-                    {e.username}
-                    <span className="board__when">{formatDay(e.day)}</span>
+                  <span className="board__identity">
+                    <span className="board__avatar" aria-hidden="true">
+                      <ChallengeAvatar {...e} />
+                    </span>
+                    <span className="board__name">
+                      <span className="board__username" title={e.username}>
+                        {e.username}
+                      </span>
+                      <span className="board__when">{formatDay(e.day)}</span>
+                    </span>
                   </span>
                   <span className="board__value">{n(e.score)}</span>
                 </li>
@@ -181,13 +190,18 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           )}
           {/* Your own best run, even when it is nowhere near the top slice. */}
           {daily.yourBest && (
-            <p className="daily__note">
-              {t("board.yourBestRun", {
-                score: n(daily.yourBest.score),
-                date: formatDay(daily.yourBest.day),
-                rank: daily.yourBest.rank,
-                runs: daily.runs,
-              })}
+            <p className="daily__note board__best">
+              <span className="board__avatar" aria-hidden="true">
+                <ChallengeAvatar {...daily.yourBest} />
+              </span>
+              <span>
+                {t("board.yourBestRun", {
+                  score: n(daily.yourBest.score),
+                  date: formatDay(daily.yourBest.day),
+                  rank: daily.yourBest.rank,
+                  runs: daily.runs,
+                })}
+              </span>
             </p>
           )}
           {/* Said plainly, because a board that quietly omits today is worse
@@ -212,9 +226,16 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                   className={e.you ? "board__row board__row--you" : "board__row"}
                 >
                   <span className="board__rank">#{e.rank}</span>
-                  <span className="board__name">
-                    {e.username}
-                    <span className="board__when">{formatDay(e.week)}</span>
+                  <span className="board__identity">
+                    <span className="board__avatar" aria-hidden="true">
+                      <ChallengeAvatar {...e} />
+                    </span>
+                    <span className="board__name">
+                      <span className="board__username" title={e.username}>
+                        {e.username}
+                      </span>
+                      <span className="board__when">{formatDay(e.week)}</span>
+                    </span>
                   </span>
                   <span className="board__value">{n(e.score)}</span>
                 </li>
@@ -222,13 +243,18 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             </ol>
           )}
           {weekly.yourBest && (
-            <p className="daily__note">
-              {t("board.yourBestWeek", {
-                score: n(weekly.yourBest.score),
-                date: formatDay(weekly.yourBest.week),
-                rank: weekly.yourBest.rank,
-                runs: weekly.runs,
-              })}
+            <p className="daily__note board__best">
+              <span className="board__avatar" aria-hidden="true">
+                <ChallengeAvatar {...weekly.yourBest} />
+              </span>
+              <span>
+                {t("board.yourBestWeek", {
+                  score: n(weekly.yourBest.score),
+                  date: formatDay(weekly.yourBest.week),
+                  rank: weekly.yourBest.rank,
+                  runs: weekly.runs,
+                })}
+              </span>
             </p>
           )}
           {signedOut && <p className="daily__status">{t("board.signInForRank")}</p>}

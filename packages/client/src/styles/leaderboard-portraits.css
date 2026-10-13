@@ -1,0 +1,61 @@
+/* Challenge score boards use the same equipped identity as the Locker. Keep
+   the date beneath the name, with a fixed portrait and readable score column. */
+.board__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.board__identity .board__name {
+  min-width: 0;
+}
+
+.board__username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  font-size: 1.5rem;
+}
+
+.board__avatar .beta-portrait {
+  width: 40px;
+  height: 40px;
+}
+
+.board__best {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.board__best > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .board__identity {
+    gap: 7px;
+  }
+
+  .board__avatar,
+  .board__avatar .beta-portrait {
+    width: 32px;
+    height: 32px;
+  }
+
+  .board__avatar {
+    flex-basis: 32px;
+  }
+}

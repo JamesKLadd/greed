@@ -14,6 +14,7 @@
  */
 
 import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
+import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import { query } from "./db.js";
 import {
   DAILY_ALLTIME_ORDER_R,
@@ -430,6 +431,9 @@ export async function matchHistory(userId: string): Promise<MatchRecord[]> {
 /** One run on the all-time daily board: who, which day, what they scored. */
 export interface DailyBestEntry {
   username: string;
+  avatar: string;
+  /** The equipped Locker portrait, read live from the account. */
+  visualBeta?: BetaIdentity;
   /** The challenge's day, as YYYY-MM-DD. Formatted by the client, in its own
    *  timezone — an ISO instant would land on the wrong date west of UTC. */
   day: string;
@@ -481,12 +485,15 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
 
   const { rows } = await query<{
     username: string;
+    avatar: string | null;
+    visual_beta: unknown;
     day: string;
     score: number;
     rank: string;
     user_id: string;
   }>(
-    `SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
+    `SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            u.profile -> 'visualBeta' AS visual_beta, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
             RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
        FROM daily_scores r JOIN users u ON u.id = r.user_id
       WHERE ${scope} AND r.score > 0
@@ -506,12 +513,15 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
     const mine = includeToday ? `$1` : `$2`;
     const { rows: own } = await query<{
       username: string;
+      avatar: string | null;
+      visual_beta: unknown;
       day: string;
       score: number;
       rank: string;
     }>(
       `WITH ranked AS (
-         SELECT u.username, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
+         SELECT u.username, u.profile ->> 'avatar' AS avatar,
+                u.profile -> 'visualBeta' AS visual_beta, to_char(r.day, 'YYYY-MM-DD') AS day, r.score, r.user_id,
                 RANK() OVER (ORDER BY ${DAILY_ALLTIME_ORDER_R}) AS rank
            FROM daily_scores r JOIN users u ON u.id = r.user_id
           WHERE ${scope} AND r.score > 0
@@ -523,6 +533,8 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
     if (r) {
       yourBest = {
         username: r.username,
+        avatar: r.avatar ?? "",
+        visualBeta: cleanBetaIdentity(r.visual_beta),
         day: r.day,
         score: r.score,
         rank: Number(r.rank),
@@ -534,6 +546,8 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
   return {
     entries: rows.map((r) => ({
       username: r.username,
+      avatar: r.avatar ?? "",
+      visualBeta: cleanBetaIdentity(r.visual_beta),
       day: r.day,
       score: r.score,
       rank: Number(r.rank),
@@ -552,6 +566,9 @@ export async function dailyBest(userId: string | null, today: string): Promise<D
 /** One attempt on the all-time weekly board: who, which week, what they scored. */
 export interface WeeklyBestEntry {
   username: string;
+  avatar: string;
+  /** The equipped Locker portrait, read live from the account. */
+  visualBeta?: BetaIdentity;
   /** The challenge week's Monday, as YYYY-MM-DD. Formatted by the client, in
    *  its own timezone — an ISO instant would land on the wrong date west of UTC. */
   week: string;
@@ -592,12 +609,15 @@ export async function weeklyBest(
   void _thisWeek; // kept in the signature: see the note above about filtering
   const { rows } = await query<{
     username: string;
+    avatar: string | null;
+    visual_beta: unknown;
     week: string;
     score: number;
     rank: string;
     user_id: string;
   }>(
-    `SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
+    `SELECT u.username, u.profile ->> 'avatar' AS avatar,
+            u.profile -> 'visualBeta' AS visual_beta, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
             RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
        FROM weekly_scores r JOIN users u ON u.id = r.user_id
       WHERE r.score > 0
@@ -613,12 +633,15 @@ export async function weeklyBest(
   if (userId) {
     const { rows: own } = await query<{
       username: string;
+      avatar: string | null;
+      visual_beta: unknown;
       week: string;
       score: number;
       rank: string;
     }>(
       `WITH ranked AS (
-         SELECT u.username, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
+         SELECT u.username, u.profile ->> 'avatar' AS avatar,
+                u.profile -> 'visualBeta' AS visual_beta, to_char(r.week, 'YYYY-MM-DD') AS week, r.score, r.user_id,
                 RANK() OVER (ORDER BY ${WEEKLY_ALLTIME_ORDER_R}) AS rank
            FROM weekly_scores r JOIN users u ON u.id = r.user_id
           WHERE r.score > 0
@@ -630,6 +653,8 @@ export async function weeklyBest(
     if (r) {
       yourBest = {
         username: r.username,
+        avatar: r.avatar ?? "",
+        visualBeta: cleanBetaIdentity(r.visual_beta),
         week: r.week,
         score: r.score,
         rank: Number(r.rank),
@@ -641,6 +666,8 @@ export async function weeklyBest(
   return {
     entries: rows.map((r) => ({
       username: r.username,
+      avatar: r.avatar ?? "",
+      visualBeta: cleanBetaIdentity(r.visual_beta),
       week: r.week,
       score: r.score,
       rank: Number(r.rank),

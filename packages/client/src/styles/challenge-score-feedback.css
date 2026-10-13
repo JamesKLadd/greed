@@ -1,0 +1,46 @@
+.challenge-score-record__notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  color: var(--gold);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.challenge-score-record__notice svg {
+  flex: 0 0 auto;
+}
+.challenge-score-record__score,
+.challenge-score-record .growth-result__score {
+  animation: challenge-score-record 1400ms ease-out;
+}
+.challenge-lobby__latest .challenge-score-record__notice {
+  justify-content: flex-start;
+  text-align: left;
+}
+@keyframes challenge-score-record {
+  0%,
+  100% {
+    text-shadow: none;
+  }
+  45% {
+    text-shadow: 0 0 18px var(--gold);
+  }
+}
+:root[data-motion="reduced"] .challenge-score-record__score,
+:root[data-motion="reduced"] .challenge-score-record .growth-result__score {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .challenge-score-record__score,
+  .challenge-score-record .growth-result__score {
+    animation: none;
+  }
+}

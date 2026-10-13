@@ -175,15 +175,23 @@ export function primeAudioOnFirstGesture(): void {
   });
 }
 
-/** Play a soft click on any button press across the app. Call once at startup. */
+/** Follow actual button activation, including keyboards, rather than pointer-down. */
 export function installUiClicks(): void {
   if (typeof window === "undefined" || uiClicksInstalled) return;
   uiClicksInstalled = true;
   window.addEventListener(
-    "pointerdown",
+    "click",
     (e) => {
-      const el = e.target as HTMLElement | null;
-      if (el && el.closest("button")) uiClick();
+      const el = e.target as Element | null;
+      const button = el?.closest?.("button");
+      if (
+        button &&
+        !button.matches(":disabled") &&
+        button.getAttribute("aria-disabled") !== "true" &&
+        button.getAttribute("aria-busy") !== "true"
+      ) {
+        uiClick();
+      }
     },
     true,
   );

@@ -25,6 +25,7 @@ export function ChallengeEntry({
   return (
     <section className="challenge-lobby__entry" aria-busy={busy}>
       <Button
+        loading={busy}
         className="challenge-lobby__action"
         variant="roll"
         size="lg"

@@ -90,6 +90,68 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
       kind === "daily" ? dailyBest(user, day) : weeklyBest(user, week);
 
     it.each(["daily", "weekly"] as const)(
+      "shows current Locker portraits on the %s all-time board and personal best",
+      async (kind) => {
+        const portrait = {
+          version: 1,
+          mascot: "owl",
+          frame: "neon",
+          background: "stars",
+          nameplate: "ticket",
+          badge: "",
+        };
+        await query("UPDATE users SET profile = $2::jsonb WHERE id = $1", [
+          winner,
+          JSON.stringify({ avatar: "cat", visualBeta: portrait }),
+        ]);
+        await query("UPDATE users SET profile = $2::jsonb WHERE id = $1", [
+          rival,
+          JSON.stringify({
+            visualBeta: { version: 1, mascot: "unknown", frame: null, badge: "<script>" },
+          }),
+        ]);
+        await run(kind, winner, 400, 9000);
+        await run(kind, rival, 401, 8000);
+        await prune();
+
+        const results = await board(kind, winner);
+        expect(results.entries[0]).toMatchObject({
+          username: "Winner",
+          avatar: "cat",
+          visualBeta: portrait,
+          score: 9000,
+          rank: 1,
+        });
+        expect(results.yourBest).toMatchObject({ avatar: "cat", visualBeta: portrait, you: true });
+        expect(results.entries[1]).toMatchObject({
+          avatar: "",
+          visualBeta: {
+            version: 1,
+            mascot: "fox",
+            frame: "brass",
+            background: "felt",
+            nameplate: "classic",
+            badge: "",
+          },
+        });
+
+        // Equipment is live account data; changing it must not rewrite or rank a score.
+        const updated = { ...portrait, mascot: "frog" };
+        await query("UPDATE users SET profile = $2::jsonb WHERE id = $1", [
+          winner,
+          JSON.stringify({ avatar: "cat", visualBeta: updated }),
+        ]);
+        await query("UPDATE users SET profile = '{}'::jsonb WHERE id = $1", [rival]);
+        const refreshed = await board(kind, winner);
+        expect(refreshed.entries[0]).toMatchObject({ visualBeta: updated, score: 9000, rank: 1 });
+        expect(refreshed.yourBest).toMatchObject({ visualBeta: updated, score: 9000, rank: 1 });
+        expect(refreshed.entries[1].avatar).toBe("");
+        expect(refreshed.entries[1].visualBeta).toBeUndefined();
+        expect(refreshed.runs).toBe(2);
+      },
+    );
+
+    it.each(["daily", "weekly"] as const)(
       "keeps the %s top 25, personal best, ranks and counts after years-old replays expire",
       async (kind) => {
         for (let i = 0; i < 40; i++) await run(kind, winner, 400 + i, 5000 - i);

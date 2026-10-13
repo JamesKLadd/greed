@@ -21,6 +21,7 @@ import {
   type AttemptPeriod,
 } from "@greed/core";
 import { ChallengeRun } from "../components/ChallengeRun.js";
+import { ChallengePersonalBest } from "../components/ChallengePersonalBest.js";
 import {
   ChallengeClocks,
   ChallengeEntry,
@@ -35,6 +36,13 @@ import {
   recordChallengeBestTurn,
 } from "../game/challengeProfile.js";
 import { weeklyLobbyNeedsRefresh } from "../game/weeklyLobbyCalendar.js";
+import {
+  improvesPersonalBest,
+  readScoreBaseline,
+  weeklyScoreOutcome,
+  type ScoreBaseline,
+} from "../game/challengeScoreFeedback.js";
+import { fetchWeeklyBest } from "../net/leaderboards.js";
 import {
   fetchWeekly,
   playWeeklyMove,
@@ -72,10 +80,12 @@ interface WeeklyScreenProps {
 
 /** A failed move is reconciled with a read, never by repeating the move. */
 const resumeRun = async () => (await resumeWeekly()).run;
+// Failure to load record history suppresses the marker, not the challenge.
+const readPersonalBest = () => readScoreBaseline(fetchWeeklyBest);
 
 export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps) {
   const { t, n } = useI18n();
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
   // effect on the way back rather than on the next attempt.
   const { dice3d } = loadSettings();
@@ -111,6 +121,11 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
   // Keep the just-finished score apart from the standing best. A weaker retry
   // remains a completed attempt even though it never replaces the board row.
   const [latestAttemptScore, setLatestAttemptScore] = useState<number | null>(null);
+  const weeklyBestBeforeRun = useRef<number | null>(null);
+  const personalBestBeforeRun = useRef<ScoreBaseline>(undefined);
+  const [latestWeeklyBestBefore, setLatestWeeklyBestBefore] = useState<number | null>(null);
+  const [latestPersonalBest, setLatestPersonalBest] = useState(false);
+  const requestSession = useRef(0);
   /** The board row being read in close-up, if any. */
   const [reading, setReading] = useState<(WeeklyEntry & { friendsRank?: boolean }) | null>(null);
 
@@ -159,11 +174,22 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
   );
 
   const load = useCallback(async () => {
+    const session = requestSession.current;
     setLoading(true);
     setError(null);
     try {
-      const [next, open] = await Promise.all([fetchWeekly(), resumeWeekly()]);
-      if (next.week !== loadedWeek.current) setLatestAttemptScore(null);
+      const [next, open, priorBest] = await Promise.all([
+        fetchWeekly(),
+        resumeWeekly(),
+        readPersonalBest(),
+      ]);
+      if (session !== requestSession.current) return;
+      if (next.week !== loadedWeek.current) {
+        setLatestAttemptScore(null);
+        setLatestPersonalBest(false);
+      }
+      weeklyBestBeforeRun.current = next.best?.score ?? null;
+      personalBestBeforeRun.current = open.run?.complete ? undefined : priorBest;
       loadedWeek.current = next.week;
       setStatus(next);
       setWeek(next.week);
@@ -174,14 +200,21 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       // An attempt left half-played picks up exactly where it was left.
       setRunView(open.run);
     } catch (err) {
-      setRefreshFailed(true);
-      fail(err);
+      if (session === requestSession.current) {
+        setRefreshFailed(true);
+        fail(err);
+      }
     } finally {
-      setLoading(false);
+      if (session === requestSession.current) setLoading(false);
     }
   }, [claim, fail]);
 
   useEffect(() => {
+    requestSession.current += 1;
+    setLatestPersonalBest(false);
+    setLatestAttemptScore(null);
+    setStarting(false);
+    personalBestBeforeRun.current = undefined;
     if (authStatus === "authed") void load();
     else {
       setLoading(false);
@@ -189,11 +222,15 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       setRunView(null);
       setLatestAttemptScore(null);
     }
-  }, [authStatus, load]);
+    return () => {
+      requestSession.current += 1;
+    };
+  }, [authStatus, user?.id, load]);
 
   /** An attempt is over: the server already has the score, so re-read it. */
   const onFinished = useCallback(
     async (final: RunView | null) => {
+      const session = requestSession.current;
       if (final?.complete) recordGrowthEvent("weekly_completed");
       const improvedTurn = recordChallengeBestTurn(final);
       const turnAward = final?.complete ? claimChallengeTurnAchievement(0) : null;
@@ -204,16 +241,28 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       if (improvedTurn || turnAward) void syncProfileUp();
       setRunView(null);
       setLatestAttemptScore(final?.complete ? final.state.players[0].total : null);
+      setLatestWeeklyBestBefore(weeklyBestBeforeRun.current);
+      setLatestPersonalBest(
+        final?.complete
+          ? improvesPersonalBest(final.state.players[0].total, personalBestBeforeRun.current)
+          : false,
+      );
       setLoading(true);
       setError(null);
       try {
         const next = await fetchWeekly();
+        if (session !== requestSession.current) return;
         loadedWeek.current = next.week;
         setStatus(next);
         setWeek(next.week);
         setDay(dailyKey());
         setRefreshFailed(false);
-        if (next.week !== week) setLatestAttemptScore(null);
+        if (next.week !== week) {
+          setLatestAttemptScore(null);
+          setLatestPersonalBest(false);
+        } else if (next.best?.score !== final?.state.players[0].total) {
+          setLatestPersonalBest(false);
+        }
         // A turn banked in an attempt counts toward the career best like any
         // other. The server has already folded it into the account (see
         // weekly.ts); this is the local copy catching up.
@@ -221,10 +270,12 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
         if (improved) void syncProfileUp();
         claim(next);
       } catch (err) {
-        setRefreshFailed(true);
-        fail(err);
+        if (session === requestSession.current) {
+          setRefreshFailed(true);
+          fail(err);
+        }
       } finally {
-        setLoading(false);
+        if (session === requestSession.current) setLoading(false);
       }
     },
     [claim, fail, week],
@@ -232,19 +283,26 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
 
   /** Open an attempt. With one already open the server returns THAT one. */
   const begin = useCallback(async () => {
+    const session = requestSession.current;
     setStarting(true);
     setError(null);
     try {
+      const priorBest = await readPersonalBest();
+      if (session !== requestSession.current) return;
+      personalBestBeforeRun.current = priorBest;
+      weeklyBestBeforeRun.current = status?.best?.score ?? null;
       const next = await startWeekly();
+      if (session !== requestSession.current) return;
       setLatestAttemptScore(null);
+      setLatestPersonalBest(false);
       setRunView(next);
       recordGrowthEvent("weekly_started");
     } catch (err) {
-      fail(err);
+      if (session === requestSession.current) fail(err);
     } finally {
-      setStarting(false);
+      if (session === requestSession.current) setStarting(false);
     }
-  }, [fail]);
+  }, [fail, status?.best?.score]);
 
   const clocks = useWeeklyClocks(
     { week, day, period: status ? status.attemptPeriod : weekRation.per },
@@ -254,6 +312,7 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       setWeek(weekKey());
       setDay(dailyKey());
       setLatestAttemptScore(null);
+      setLatestPersonalBest(false);
       void load();
     },
   );
@@ -334,6 +393,10 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
         : perDay
           ? t("weekly.attemptsLeft.day", { n: left ?? 0, total: limit })
           : t("weekly.attemptsLeft", { n: left ?? 0, total: limit });
+  const latestOutcome =
+    latestAttemptScore !== null && best && !refreshFailed
+      ? weeklyScoreOutcome(latestAttemptScore, latestWeeklyBestBefore, best.score)
+      : null;
 
   return (
     <div className="setup setup--challenge challenge-lobby">
@@ -430,10 +493,21 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
               {latestAttemptScore !== null && (
                 <div className="challenge-lobby__latest" role="status">
                   <span>{t("challenge.latestAttempt")}</span>
-                  <strong>
+                  <strong
+                    className={latestPersonalBest ? "challenge-score-record__score" : undefined}
+                  >
                     {n(latestAttemptScore)} {t("challenge.points")}
                   </strong>
-                  <p className="daily__note daily__note--hint">{t("challenge.weeklyBestStands")}</p>
+                  {latestOutcome && (
+                    <p className="daily__note daily__note--hint">
+                      {latestOutcome.kind === "improved"
+                        ? t("weekly.bestImproved", { gain: n(latestOutcome.gain) })
+                        : latestOutcome.kind === "first"
+                          ? t("weekly.bestSet")
+                          : t("weekly.bestStands", { score: n(latestOutcome.score) })}
+                    </p>
+                  )}
+                  {latestPersonalBest && !refreshFailed && <ChallengePersonalBest />}
                 </div>
               )}
 

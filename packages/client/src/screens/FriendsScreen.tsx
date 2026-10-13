@@ -42,6 +42,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<string | null>(null);
 
@@ -109,11 +110,12 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
   const add = () => {
     const u = name.trim();
     if (!u || busy) return;
+    setAdding(true);
     void run(async () => {
       const next = await requestFriend(u);
       setName("");
       return next;
-    });
+    }).finally(() => setAdding(false));
   };
 
   return (
@@ -124,6 +126,7 @@ export function FriendsScreen({ onBack, onSignIn }: FriendsScreenProps) {
         name={name}
         error={error}
         busy={busy}
+        adding={adding}
         loading={loading}
         onlineEnabled={ONLINE_ENABLED}
         challengesConnected={challenges.connected}
@@ -152,6 +155,7 @@ export interface FriendsScreenViewProps {
   name: string;
   error: string | null;
   busy: boolean;
+  adding?: boolean;
   loading: boolean;
   onlineEnabled: boolean;
   challengesConnected: boolean;
@@ -173,6 +177,7 @@ export function FriendsScreenView({
   name,
   error,
   busy,
+  adding = false,
   loading,
   onlineEnabled,
   challengesConnected,
@@ -269,7 +274,7 @@ export function FriendsScreenView({
               disabled={busy}
               onChange={(e) => onNameChange(e.target.value)}
             />
-            <Button type="submit" variant="roll" disabled={busy || !name.trim()}>
+            <Button type="submit" variant="roll" loading={adding} disabled={busy || !name.trim()}>
               {t("social.add")}
             </Button>
           </form>
