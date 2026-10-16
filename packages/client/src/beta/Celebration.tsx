@@ -3,6 +3,7 @@ import type { GameState } from "@greed/core";
 import { useI18n, useT } from "../i18n/i18n.js";
 import { playBetaCue } from "../game/sfx.js";
 import { createCelebrationPlayer } from "./celebrationPlayer.js";
+import { SeasonalWinFlourish } from "../components/SeasonalScenery.js";
 import {
   CELEBRATION_MS,
   readCelebration,
@@ -30,6 +31,7 @@ export function CelebrationArt({
       style={{ "--celebration-ms": `${CELEBRATION_MS[cue.kind]}ms` } as CSSProperties}
     >
       {major && <div className="beta-celebration__rays" />}
+      {cue.kind === "win" && <SeasonalWinFlourish />}
       <div className="beta-celebration__sign">
         <span className="beta-celebration__pips">● ● ● ● ●</span>
         <strong>{t(`beta.event.${cue.kind}`)}</strong>
@@ -78,6 +80,7 @@ function SceneCelebrationArt({ cue, nonce }: { cue: Cue; nonce: number }) {
       }
     >
       <div className="scene-event__lettering">
+        {cue.kind === "win" && <SeasonalWinFlourish />}
         <strong>{title}</strong>
         <span className="scene-event__player">{cue.player}</span>
         {cue.points != null && cue.points > 0 && (

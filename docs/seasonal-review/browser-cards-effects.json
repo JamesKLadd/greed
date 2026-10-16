@@ -1,0 +1,81 @@
+{
+  "generated": "2026-10-16T03:12:28.504Z",
+  "records": [
+    {
+      "name": "halloween-win-flourish-reduced-motion",
+      "display": "block",
+      "animation": "none",
+      "pointerEvents": "none",
+      "visibleGroups": ["seasonal-set seasonal-set--halloween"]
+    },
+    {
+      "name": "halloween-daily-dom-share-card",
+      "fixtureMount": true,
+      "theme": "halloween",
+      "width": 358,
+      "background": "radial-gradient(at 50% 0%, rgb(84, 55, 71), rgb(36, 29, 53))",
+      "border": "rgb(237, 189, 134)",
+      "portrait": true,
+      "scrollWidth": 390,
+      "viewport": 390,
+      "text": "GREEDOct 15, 2026Your score today2,350pointsSample result for seasonal reviewCurrent standings · places can change until the challenge closes.Best turn: 650Can you beat my score?"
+    },
+    {
+      "name": "halloween-share-image-with-equipped-cat",
+      "size": 1090313,
+      "fixture": true,
+      "portrait": true
+    },
+    {
+      "name": "christmas-win-flourish-reduced-motion",
+      "display": "block",
+      "animation": "none",
+      "pointerEvents": "none",
+      "visibleGroups": ["seasonal-set seasonal-set--christmas"]
+    },
+    {
+      "name": "christmas-daily-dom-share-card",
+      "fixtureMount": true,
+      "theme": "christmas",
+      "width": 358,
+      "background": "radial-gradient(at 50% 0%, rgb(49, 85, 69), rgb(19, 43, 40))",
+      "border": "rgb(242, 214, 155)",
+      "portrait": true,
+      "scrollWidth": 390,
+      "viewport": 390,
+      "text": "GREEDOct 15, 2026Your score today2,350pointsSample result for seasonal reviewCurrent standings · places can change until the challenge closes.Best turn: 650Can you beat my score?"
+    },
+    {
+      "name": "christmas-share-image-with-equipped-cat",
+      "size": 1079210,
+      "fixture": true,
+      "portrait": true
+    },
+    {
+      "name": "summer-win-flourish-reduced-motion",
+      "display": "block",
+      "animation": "none",
+      "pointerEvents": "none",
+      "visibleGroups": ["seasonal-set seasonal-set--summer"]
+    },
+    {
+      "name": "summer-daily-dom-share-card",
+      "fixtureMount": true,
+      "theme": "summer",
+      "width": 358,
+      "background": "radial-gradient(at 50% 0%, rgb(40, 92, 97), rgb(19, 44, 58))",
+      "border": "rgb(255, 210, 163)",
+      "portrait": true,
+      "scrollWidth": 390,
+      "viewport": 390,
+      "text": "GREEDOct 15, 2026Your score today2,350pointsSample result for seasonal reviewCurrent standings · places can change until the challenge closes.Best turn: 650Can you beat my score?"
+    },
+    {
+      "name": "summer-share-image-with-equipped-cat",
+      "size": 1092560,
+      "fixture": true,
+      "portrait": true
+    }
+  ],
+  "errors": []
+}

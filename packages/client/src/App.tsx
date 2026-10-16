@@ -18,6 +18,7 @@ import { useAuth } from "./game/auth.js";
 import { readRoomInvitation, clearRoomInvitation } from "./game/share.js";
 import { flushGrowthEvents, recordGrowthEvent } from "./game/growth.js";
 import { readPlayEntry, playEntryUrl } from "./game/entry.js";
+import { refreshSeasonalTheme } from "./game/seasonal.js";
 import { verifyEmail } from "./net/auth.js";
 import { useChallenges } from "./net/challenges.js";
 import { Toast } from "./components/Toast.js";
@@ -141,6 +142,22 @@ export function App() {
     return params.get("growth") === "1" ? "growth" : readPlayEntry(window.location.search);
   });
   const [match, setMatch] = useState<MatchSetup | null>(null);
+  useEffect(() => {
+    const refresh = () => refreshSeasonalTheme();
+    const resume = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", refresh);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, []);
   const beta = useBeta();
   // All game modes share the default presentation or the chosen Classic fallback.
   const betaActive = beta.enabled;

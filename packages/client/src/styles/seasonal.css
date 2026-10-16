@@ -1,0 +1,397 @@
+/* Seasonal room dressing sits around earned cosmetics. The verbs, dice states,
+   player colors, and table geometry retain their existing visual contracts. */
+:root[data-season="halloween"] {
+  --season-room: #110f20;
+  --season-light: #443054;
+  --season-panel: #292035;
+  --season-panel-deep: #191625;
+  --season-border: #80627e;
+  --season-trim: #edbd86;
+  --season-muted: #d1c1d2;
+  --season-cloth-top: #50335e;
+  --season-cloth-mid: #322343;
+  --season-cloth-edge: #1d192b;
+  --season-wood-light: #ac805b;
+  --season-wood-dark: #352837;
+  --season-card-top: #543747;
+  --season-card-bottom: #241d35;
+  --surface-1: #292333;
+  --surface-2: #1c1928;
+  --surface-3: #3c3045;
+  --line: #5d4b67;
+  --line-strong: #8f7695;
+  --text-dim: #c7b9cc;
+}
+:root[data-season="christmas"] {
+  --season-room: #101c1b;
+  --season-light: #35493b;
+  --season-panel: #253e36;
+  --season-panel-deep: #172622;
+  --season-border: #8c8061;
+  --season-trim: #f2d69b;
+  --season-muted: #cfdbcc;
+  --season-cloth-top: #245d48;
+  --season-cloth-mid: #143c30;
+  --season-cloth-edge: #102a24;
+  --season-wood-light: #a78a5b;
+  --season-wood-dark: #3c2b24;
+  --season-card-top: #315545;
+  --season-card-bottom: #132b28;
+  --surface-1: #293a31;
+  --surface-2: #192822;
+  --surface-3: #3c4f41;
+  --line: #536858;
+  --line-strong: #8c9c7d;
+  --text-dim: #c4d0c1;
+}
+:root[data-season="summer"] {
+  --season-room: #0f242b;
+  --season-light: #384b49;
+  --season-panel: #214148;
+  --season-panel-deep: #162d36;
+  --season-border: #7c9d96;
+  --season-trim: #ffd2a3;
+  --season-muted: #c7ddd4;
+  --season-cloth-top: #206877;
+  --season-cloth-mid: #164a56;
+  --season-cloth-edge: #10313c;
+  --season-wood-light: #d1b080;
+  --season-wood-dark: #685449;
+  --season-card-top: #285c61;
+  --season-card-bottom: #132c3a;
+  --surface-1: #253e45;
+  --surface-2: #162b34;
+  --surface-3: #35535a;
+  --line: #4f7376;
+  --line-strong: #88aaa5;
+  --text-dim: #bed6d5;
+}
+
+/* Equal-specificity palette overrides follow the base presentation; the final
+   accessibility layer and explicit high-contrast surfaces remain authoritative. */
+:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"]) {
+  --room-1: var(--season-light);
+  --room-2: var(--season-room);
+  --room-3: var(--season-room);
+  background: var(--season-room);
+}
+:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"]) body,
+:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"])
+  :is(.beta-home, .game, .tp-screen) {
+  background:
+    radial-gradient(
+      ellipse at 85% 0,
+      color-mix(in srgb, var(--season-trim) 9%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(ellipse at 15% 15%, var(--season-light), transparent 65%), var(--season-room);
+}
+:root[data-season="halloween"] :is(.beta-home, .game, .tp-screen),
+:root[data-season="christmas"] :is(.beta-home, .game, .tp-screen),
+:root[data-season="summer"] :is(.beta-home, .game, .tp-screen) {
+  --hub-border: var(--season-border);
+  --hub-muted: var(--season-muted);
+}
+:root[data-season="halloween"] .tp-scene,
+:root[data-season="christmas"] .tp-scene,
+:root[data-season="summer"] .tp-scene {
+  background: radial-gradient(ellipse at 50% 0, var(--season-light), transparent 72%);
+}
+:root[data-season="halloween"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand),
+:root[data-season="christmas"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand),
+:root[data-season="summer"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand) {
+  color: var(--season-trim);
+}
+:root[data-season="halloween"] .tp-room-light,
+:root[data-season="christmas"] .tp-room-light,
+:root[data-season="summer"] .tp-room-light {
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--season-trim) 44%, transparent),
+    transparent 68%
+  );
+}
+
+.seasonal-scenery,
+.seasonal-name,
+.seasonal-set,
+.seasonal-win {
+  display: none;
+}
+.seasonal-scenery {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  overflow: visible;
+}
+.seasonal-scenery--hero {
+  inset: 0 -12px auto;
+  width: calc(100% + 24px);
+  height: auto;
+  max-height: 100%;
+  z-index: -1;
+}
+.seasonal-scenery--room {
+  inset: 0 0 auto;
+  width: 100%;
+  height: auto;
+  max-height: 42%;
+  z-index: 0;
+  opacity: 0.85;
+}
+:root[data-season="halloween"] :is(.seasonal-scenery, .seasonal-set--halloween, .seasonal-win),
+:root[data-season="christmas"] :is(.seasonal-scenery, .seasonal-set--christmas, .seasonal-win),
+:root[data-season="summer"] :is(.seasonal-scenery, .seasonal-set--summer, .seasonal-win) {
+  display: block;
+}
+:root[data-season="halloween"] .seasonal-name--halloween,
+:root[data-season="christmas"] .seasonal-name--christmas,
+:root[data-season="summer"] .seasonal-name--summer {
+  display: inline;
+}
+:root[data-season="halloween"] .seasonal-default-name,
+:root[data-season="christmas"] .seasonal-default-name,
+:root[data-season="summer"] .seasonal-default-name {
+  display: none;
+}
+.beta-hub__hero,
+.setup__hero--seasonal {
+  position: relative;
+  isolation: isolate;
+}
+.game > .seasonal-scenery--room {
+  top: 52px;
+}
+.seasonal-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 30px 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+  color-scheme: dark;
+}
+
+/* A seasonal cloth is provided only for the default mat. Descendant variables
+   override inherited inline defaults without touching an equipped Locker mat. */
+:root[data-season="halloween"] [data-seasonal-table="default"] :is(.tp-scene, .felt),
+:root[data-season="christmas"] [data-seasonal-table="default"] :is(.tp-scene, .felt),
+:root[data-season="summer"] [data-seasonal-table="default"] :is(.tp-scene, .felt) {
+  --felt-1: var(--season-cloth-top);
+  --felt-2: var(--season-cloth-mid);
+  --felt-edge: var(--season-cloth-edge);
+  --rail-1: var(--season-wood-light);
+  --rail-2: var(--season-wood-dark);
+}
+:root[data-season="halloween"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop,
+:root[data-season="christmas"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop,
+:root[data-season="summer"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop {
+  stop-color: var(--season-wood-dark);
+}
+:root[data-season="halloween"]
+  [data-seasonal-table="default"]
+  .tp-surface__rail-gradient
+  stop:is(:first-child, :last-child),
+:root[data-season="christmas"]
+  [data-seasonal-table="default"]
+  .tp-surface__rail-gradient
+  stop:is(:first-child, :last-child),
+:root[data-season="summer"]
+  [data-seasonal-table="default"]
+  .tp-surface__rail-gradient
+  stop:is(:first-child, :last-child) {
+  stop-color: var(--season-wood-light);
+}
+:root[data-season="halloween"] .daily__run[data-seasonal-table="default"],
+:root[data-season="christmas"] .daily__run[data-seasonal-table="default"],
+:root[data-season="summer"] .daily__run[data-seasonal-table="default"] {
+  background: radial-gradient(ellipse at top, var(--season-cloth-top), var(--season-cloth-mid));
+}
+
+:root[data-season="halloween"]
+  :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite),
+:root[data-season="christmas"]
+  :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite),
+:root[data-season="summer"]
+  :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite) {
+  border-color: var(--season-border);
+  background:
+    radial-gradient(
+      ellipse at top left,
+      color-mix(in srgb, var(--season-trim) 6%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(155deg, var(--season-panel), var(--season-panel-deep));
+}
+:root[data-season="halloween"]
+  :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online),
+:root[data-season="christmas"]
+  :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online),
+:root[data-season="summer"]
+  :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online) {
+  border-color: var(--season-border);
+  background: linear-gradient(115deg, var(--season-panel), var(--season-panel-deep));
+}
+:root[data-season="halloween"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffe0ae, #f4ac67);
+  border-color: #f8d49e;
+}
+:root[data-season="halloween"] .beta-hub__mode--weekly {
+  background: linear-gradient(115deg, #59385f, #30233f);
+}
+:root[data-season="christmas"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffebba, #dfbc79);
+  border-color: #f7dfa4;
+}
+:root[data-season="christmas"] .beta-hub__mode--weekly {
+  --mode-icon: #ffcfcc;
+  --mode-detail: #f5d2cf;
+  background: linear-gradient(115deg, #60343d, #36282f);
+  border-color: #bc8b89;
+}
+:root[data-season="summer"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffe8b6, #f1af84);
+  border-color: #ffdda3;
+}
+:root[data-season="summer"] .beta-hub__mode--weekly {
+  --mode-icon: #c3f1e5;
+  --mode-detail: #d0e5e1;
+  background: linear-gradient(115deg, #2e5862, #203a4c);
+  border-color: #8ab9b6;
+}
+:root[data-season="christmas"] .beta-hub__mode--daily::after {
+  content: "";
+  flex: 0 0 10px;
+  align-self: stretch;
+  border-inline: 2px solid #d79887;
+  background: #a74b53;
+  border-radius: 2px;
+}
+:root[data-season="summer"] .beta-hub__mode--daily,
+:root[data-season="summer"] .growth-result__card {
+  border-style: double;
+  border-width: 3px;
+}
+
+/* Seasonal results match the exported score image, while the player's portrait
+   and all result text stay intact. Decorative borders reserve their own space. */
+:root[data-season="halloween"] .growth-result__card,
+:root[data-season="christmas"] .growth-result__card,
+:root[data-season="summer"] .growth-result__card {
+  border-color: var(--season-trim);
+  background: radial-gradient(ellipse at top, var(--season-card-top), var(--season-card-bottom));
+  box-shadow:
+    inset 0 0 0 5px var(--season-card-bottom),
+    inset 0 0 0 6px var(--season-border);
+}
+:root[data-season="halloween"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #43304e,
+    0 0 0 4px #dca35f;
+}
+:root[data-season="christmas"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #9d4650,
+    0 0 0 4px #e8c787;
+}
+:root[data-season="summer"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #477c7b,
+    0 0 0 4px #ffd0a0;
+}
+.seasonal-win {
+  position: absolute;
+  width: 100%;
+  inset: 0;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  animation: seasonal-win-arrive 650ms ease-out both;
+}
+@keyframes seasonal-win-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Keep high-contrast surfaces authoritative even where beta styles use literal
+   colors. Decoration fades away, and no animation runs continuously. */
+:root[data-contrast="high"] :is(.seasonal-scenery, .seasonal-win) {
+  display: none;
+}
+:root[data-contrast="high"]:is(
+    [data-season="halloween"],
+    [data-season="christmas"],
+    [data-season="summer"]
+  )
+  :is(
+    .setup__panel,
+    .overlay__card,
+    .scene-menu,
+    .growth-welcome,
+    .growth-coach,
+    .growth-invite,
+    .growth-result__card,
+    .beta-hub__account,
+    .beta-hub__mode--local,
+    .beta-hub__mode--online
+  ) {
+  color: #fff;
+  background: #10151d;
+  border-color: #a2aebd;
+}
+:root[data-contrast="high"]:is(
+    [data-season="halloween"],
+    [data-season="christmas"],
+    [data-season="summer"]
+  )
+  .beta-hub__mode--daily {
+  --mode-ink: #17120b;
+  --mode-detail: #302819;
+  --mode-icon: #302819;
+  background: #ffe6a6;
+  border-color: #fff;
+}
+:root[data-contrast="high"]:is(
+    [data-season="halloween"],
+    [data-season="christmas"],
+    [data-season="summer"]
+  )
+  .beta-hub__mode--weekly {
+  --mode-ink: #fff;
+  --mode-detail: #e3e8f0;
+  --mode-icon: #fff;
+  background: #201c2b;
+  border-color: #fff;
+}
+@media (max-width: 360px), (max-height: 480px) {
+  .seasonal-scenery--room {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seasonal-win {
+    animation: none;
+  }
+}
+:root[data-motion="reduced"] .seasonal-win {
+  animation: none;
+}
+@media (forced-colors: active) {
+  .seasonal-scenery,
+  .seasonal-win {
+    display: none !important;
+  }
+}

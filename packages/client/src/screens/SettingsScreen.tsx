@@ -4,6 +4,7 @@ import { play } from "../game/sfx.js";
 import { LOCALES, useI18n } from "../i18n/i18n.js";
 import { Button, Screen } from "../ui/index.js";
 import { usageEnabled, setUsageEnabled } from "../game/growth.js";
+import { isSeasonalPreference, SEASONAL_PREFERENCES } from "../game/seasonal.js";
 
 // Keep this component outside the screen: changing a setting must not remount
 // the switch and leave keyboard focus behind.
@@ -66,6 +67,39 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <h1>{t("settings.title")}</h1>
         <p className="support-panel__intro">{t("settings.tagline")}</p>
       </header>
+
+      <section className="support-section" aria-labelledby={`${ids}-seasonal`}>
+        <h2 id={`${ids}-seasonal`}>{t("settings.seasonal.section")}</h2>
+        <div className="settings-row settings-row--choice">
+          <div className="settings-row__text">
+            <label className="settings-row__label" htmlFor={`${ids}-seasonal-choice`}>
+              {t("settings.seasonal.label")}
+            </label>
+            <span className="settings-row__hint" id={`${ids}-seasonal-hint`}>
+              {t("settings.seasonal.hint")}
+            </span>
+          </div>
+          <select
+            id={`${ids}-seasonal-choice`}
+            className="seasonal-select"
+            value={settings.seasonalTheme}
+            aria-describedby={`${ids}-seasonal-hint ${ids}-seasonal-dates`}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (isSeasonalPreference(value)) patch({ seasonalTheme: value });
+            }}
+          >
+            {SEASONAL_PREFERENCES.map((preference) => (
+              <option key={preference} value={preference}>
+                {t(`settings.seasonal.${preference}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="settings-row__hint" id={`${ids}-seasonal-dates`}>
+          {t("settings.seasonal.dates")}
+        </p>
+      </section>
 
       <section className="support-section" aria-labelledby={`${ids}-interface`}>
         <h2 id={`${ids}-interface`}>{t("settings.section.interface")}</h2>

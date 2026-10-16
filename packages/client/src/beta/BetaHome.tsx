@@ -10,6 +10,7 @@ import { RulesModal } from "../components/RulesModal.js";
 import { Icon } from "../ui/index.js";
 import { Button } from "../ui/index.js";
 import { Brand } from "./Brand.js";
+import { SeasonalName, SeasonalScenery } from "../components/SeasonalScenery.js";
 import { BetaGate } from "./BetaGate.js";
 import { CelebrationDemo } from "./CelebrationDemo.js";
 import "../styles/beta-home-polish.css";
@@ -56,7 +57,10 @@ export default function BetaHome(p: HomeScreenProps) {
       )}
       <div className="beta-hub__layout">
         <section className="beta-hub__hero" aria-label="Greed">
-          <p className="beta-hub__eyebrow">{t("beta.gameNight")}</p>
+          <SeasonalScenery />
+          <p className="beta-hub__eyebrow">
+            <SeasonalName fallback={t("beta.gameNight")} />
+          </p>
           <h1>
             <Brand compact />
           </h1>

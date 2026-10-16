@@ -1,0 +1,445 @@
+{
+  "generated": "2026-10-16T03:06:54.147Z",
+  "base": "http://127.0.0.1:5173",
+  "records": [
+    {
+      "name": "halloween-home",
+      "season": "halloween",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "headline": "GREED✦",
+      "custom": {
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Log in / Sign up",
+          "disabled": false
+        },
+        {
+          "text": "Try a practice challenge",
+          "disabled": false
+        },
+        {
+          "text": "Daily challengeYour own dice · one run a day→",
+          "disabled": false
+        },
+        {
+          "text": "Weekly challenge10 attempts a day · your best score counts→",
+          "disabled": false
+        },
+        {
+          "text": "Local gamePass-and-play or vs. bots→",
+          "disabled": false
+        },
+        {
+          "text": "Play onlineSign in to play online→",
+          "disabled": false
+        },
+        {
+          "text": "Learn to playNew here? Start with a guided game→",
+          "disabled": false
+        },
+        {
+          "text": "Locker",
+          "disabled": false
+        },
+        {
+          "text": "Friends",
+          "disabled": false
+        },
+        {
+          "text": "Leaderboards",
+          "disabled": false
+        },
+        {
+          "text": "Stats",
+          "disabled": false
+        },
+        {
+          "text": "How to play",
+          "disabled": false
+        },
+        {
+          "text": "Settings",
+          "disabled": false
+        },
+        {
+          "text": "Update log",
+          "disabled": false
+        },
+        {
+          "text": "Try the big moments",
+          "disabled": false
+        },
+        {
+          "text": "Return to Classic ↗",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "halloween-table",
+      "season": "halloween",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "custom": {
+        "rootStyle": "--die-c1: #fff4d6; --die-c2: #e6cf98; --die-c3: #151c22; --die-pip: #30281a; --die-pip2: #cab77b; --die-lip: #ac8e56; --felt-1: #10523f; --felt-2: #07352e; --felt-edge: #051d20; --rail-1: #7a5330; --rail-2: #43301c; --beta-die-pattern: repeating-linear-gradient(45deg,transparent 0 9px,#8a65231c 9px 10px); --beta-particle-radius: 50%; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);",
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Menu",
+          "disabled": false
+        },
+        {
+          "text": "Pip",
+          "disabled": false
+        },
+        {
+          "text": "Cleo",
+          "disabled": false
+        },
+        {
+          "text": "▸Bear",
+          "disabled": false
+        },
+        {
+          "text": "James",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "Roll1 die",
+          "disabled": false
+        },
+        {
+          "text": "Bank350",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "share-halloween",
+      "type": "image/png",
+      "size": 1079591,
+      "fixture": true
+    },
+    {
+      "name": "christmas-home",
+      "season": "christmas",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "headline": "GREED✦",
+      "custom": {
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Log in / Sign up",
+          "disabled": false
+        },
+        {
+          "text": "Try a practice challenge",
+          "disabled": false
+        },
+        {
+          "text": "Daily challengeYour own dice · one run a day→",
+          "disabled": false
+        },
+        {
+          "text": "Weekly challenge10 attempts a day · your best score counts→",
+          "disabled": false
+        },
+        {
+          "text": "Local gamePass-and-play or vs. bots→",
+          "disabled": false
+        },
+        {
+          "text": "Play onlineSign in to play online→",
+          "disabled": false
+        },
+        {
+          "text": "Learn to playNew here? Start with a guided game→",
+          "disabled": false
+        },
+        {
+          "text": "Locker",
+          "disabled": false
+        },
+        {
+          "text": "Friends",
+          "disabled": false
+        },
+        {
+          "text": "Leaderboards",
+          "disabled": false
+        },
+        {
+          "text": "Stats",
+          "disabled": false
+        },
+        {
+          "text": "How to play",
+          "disabled": false
+        },
+        {
+          "text": "Settings",
+          "disabled": false
+        },
+        {
+          "text": "Update log",
+          "disabled": false
+        },
+        {
+          "text": "Try the big moments",
+          "disabled": false
+        },
+        {
+          "text": "Return to Classic ↗",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "christmas-table",
+      "season": "christmas",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "custom": {
+        "rootStyle": "--die-c1: #fff4d6; --die-c2: #e6cf98; --die-c3: #151c22; --die-pip: #30281a; --die-pip2: #cab77b; --die-lip: #ac8e56; --felt-1: #10523f; --felt-2: #07352e; --felt-edge: #051d20; --rail-1: #7a5330; --rail-2: #43301c; --beta-die-pattern: repeating-linear-gradient(45deg,transparent 0 9px,#8a65231c 9px 10px); --beta-particle-radius: 50%; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);",
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Menu",
+          "disabled": false
+        },
+        {
+          "text": "Pip",
+          "disabled": false
+        },
+        {
+          "text": "Cleo",
+          "disabled": false
+        },
+        {
+          "text": "▸Bear",
+          "disabled": false
+        },
+        {
+          "text": "James",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "Roll1 die",
+          "disabled": false
+        },
+        {
+          "text": "Bank350",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "share-christmas",
+      "type": "image/png",
+      "size": 1068472,
+      "fixture": true
+    },
+    {
+      "name": "summer-home",
+      "season": "summer",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "headline": "GREED✦",
+      "custom": {
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Log in / Sign up",
+          "disabled": false
+        },
+        {
+          "text": "Try a practice challenge",
+          "disabled": false
+        },
+        {
+          "text": "Daily challengeYour own dice · one run a day→",
+          "disabled": false
+        },
+        {
+          "text": "Weekly challenge10 attempts a day · your best score counts→",
+          "disabled": false
+        },
+        {
+          "text": "Local gamePass-and-play or vs. bots→",
+          "disabled": false
+        },
+        {
+          "text": "Play onlineSign in to play online→",
+          "disabled": false
+        },
+        {
+          "text": "Learn to playNew here? Start with a guided game→",
+          "disabled": false
+        },
+        {
+          "text": "Locker",
+          "disabled": false
+        },
+        {
+          "text": "Friends",
+          "disabled": false
+        },
+        {
+          "text": "Leaderboards",
+          "disabled": false
+        },
+        {
+          "text": "Stats",
+          "disabled": false
+        },
+        {
+          "text": "How to play",
+          "disabled": false
+        },
+        {
+          "text": "Settings",
+          "disabled": false
+        },
+        {
+          "text": "Update log",
+          "disabled": false
+        },
+        {
+          "text": "Try the big moments",
+          "disabled": false
+        },
+        {
+          "text": "Return to Classic ↗",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "summer-table",
+      "season": "summer",
+      "presentation": "beta",
+      "lang": "en",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "custom": {
+        "rootStyle": "--die-c1: #fff4d6; --die-c2: #e6cf98; --die-c3: #151c22; --die-pip: #30281a; --die-pip2: #cab77b; --die-lip: #ac8e56; --felt-1: #10523f; --felt-2: #07352e; --felt-edge: #051d20; --rail-1: #7a5330; --rail-2: #43301c; --beta-die-pattern: repeating-linear-gradient(45deg,transparent 0 9px,#8a65231c 9px 10px); --beta-particle-radius: 50%; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);",
+        "feltFill": null
+      },
+      "buttons": [
+        {
+          "text": "Menu",
+          "disabled": false
+        },
+        {
+          "text": "Pip",
+          "disabled": false
+        },
+        {
+          "text": "Cleo",
+          "disabled": false
+        },
+        {
+          "text": "▸Bear",
+          "disabled": false
+        },
+        {
+          "text": "James",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "✓",
+          "disabled": false
+        },
+        {
+          "text": "Roll1 die",
+          "disabled": false
+        },
+        {
+          "text": "Bank350",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "name": "share-summer",
+      "type": "image/png",
+      "size": 1082274,
+      "fixture": true
+    }
+  ],
+  "errors": []
+}

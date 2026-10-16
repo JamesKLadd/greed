@@ -1,0 +1,499 @@
+{
+  "generated": "2026-10-16T03:14:34.741Z",
+  "records": [
+    {
+      "name": "halloween-settings-en-320",
+      "theme": "halloween",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectWidth": 250,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "halloween",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "halloween-practice-en-320",
+      "theme": "halloween",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectOptions": [],
+      "settings": {
+        "seasonalTheme": "halloween",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "christmas-settings-es-320",
+      "theme": "christmas",
+      "presentation": "beta",
+      "locale": "es",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectWidth": 250,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automático · calendario de temporada"
+        },
+        {
+          "value": "classic",
+          "label": "Clásico · Greed original"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · El salón embrujado"
+        },
+        {
+          "value": "christmas",
+          "label": "Navidad · El refugio junto al fuego"
+        },
+        {
+          "value": "summer",
+          "label": "Verano · El club del paseo marítimo"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "christmas",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "christmas-practice-es-320",
+      "theme": "christmas",
+      "presentation": "beta",
+      "locale": "es",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectOptions": [],
+      "settings": {
+        "seasonalTheme": "christmas",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "summer-settings-fr-320",
+      "theme": "summer",
+      "presentation": "beta",
+      "locale": "fr",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectWidth": 250,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatique · calendrier saisonnier"
+        },
+        {
+          "value": "classic",
+          "label": "Classique · Greed original"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · Le salon hanté"
+        },
+        {
+          "value": "christmas",
+          "label": "Noël · Le chalet au coin du feu"
+        },
+        {
+          "value": "summer",
+          "label": "Été · Le club du bord de mer"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "summer",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "summer-practice-fr-320",
+      "theme": "summer",
+      "presentation": "beta",
+      "locale": "fr",
+      "contrast": "high",
+      "motion": "reduced",
+      "scale": "large",
+      "width": 320,
+      "scrollWidth": 320,
+      "selectOptions": [],
+      "settings": {
+        "seasonalTheme": "summer",
+        "textScale": "large",
+        "highContrast": true,
+        "reduceMotion": true,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "manual-choice-halloween",
+      "theme": "halloween",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "halloween",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "manual-choice-christmas",
+      "theme": "christmas",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "christmas",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "manual-choice-summer",
+      "theme": "summer",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "summer",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "manual-choice-classic",
+      "theme": "classic",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "classic",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "manual-choice-automatic",
+      "theme": "halloween",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "automatic",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "choice-survives-reload",
+      "theme": "summer",
+      "presentation": "beta",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectWidth": 320,
+      "selectOptions": [
+        {
+          "value": "automatic",
+          "label": "Automatic · seasonal calendar"
+        },
+        {
+          "value": "classic",
+          "label": "Classic · original Greed"
+        },
+        {
+          "value": "halloween",
+          "label": "Halloween · The Haunted Parlor"
+        },
+        {
+          "value": "christmas",
+          "label": "Christmas · The Fireside Lodge"
+        },
+        {
+          "value": "summer",
+          "label": "Summer · The Boardwalk Club"
+        }
+      ],
+      "settings": {
+        "seasonalTheme": "summer",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    },
+    {
+      "name": "classic-presentation-seasonal-choice",
+      "theme": "summer",
+      "presentation": "classic",
+      "locale": "en",
+      "contrast": "normal",
+      "motion": "full",
+      "scale": "normal",
+      "width": 390,
+      "scrollWidth": 390,
+      "selectOptions": [],
+      "settings": {
+        "seasonalTheme": "summer",
+        "textScale": "normal",
+        "highContrast": false,
+        "colorblind": false,
+        "reduceMotion": false,
+        "showGuidance": false,
+        "showTurnScore": true,
+        "dice3d": true,
+        "hideRoomCode": false,
+        "sfxVolume": 0,
+        "musicVolume": 0
+      }
+    }
+  ],
+  "errors": []
+}

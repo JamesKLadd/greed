@@ -84,6 +84,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
     <div
       className={`tp-screen scene-game${props.online ? " scene-game--online" : ""}`}
       style={props.cosmetics}
+      data-seasonal-table={props.seasonalDefaultTable ? "default" : undefined}
       data-notices={Boolean(
         heldNotice ||
         settings.showGuidance ||

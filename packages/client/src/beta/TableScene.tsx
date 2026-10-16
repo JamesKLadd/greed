@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CharacterSprite } from "./characters/index.js";
+import { SeasonalScenery } from "../components/SeasonalScenery.js";
 import {
   sceneSeatOrder,
   tableSceneGeometry,
@@ -89,6 +90,7 @@ export function TableScene({
       }
     >
       <div className="tp-room-light" aria-hidden="true" />
+      <SeasonalScenery placement="room" />
       <TableSurface />
       <div className="tp-felt-brand" aria-hidden="true">
         <span>◆</span> GREED <span>◆</span>

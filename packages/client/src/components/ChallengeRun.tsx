@@ -5,6 +5,7 @@ import { GameCelebration } from "../beta/Celebration.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
+import { useSeasonalGame } from "../game/useSeasonalGame.js";
 import { useGameSounds, useRollSound } from "../game/useGameSounds.js";
 import { Die } from "./Die.js";
 import { Button } from "../ui/index.js";
@@ -53,6 +54,7 @@ export function ChallengeRun({
   const beta = useBetaActive();
   const { appearance } = useAppearance();
   const run = useChallengeRun(initial, playMove, resumeRun);
+  useSeasonalGame();
   const [holdNotice, setHoldNotice] = useState(false);
   const reportedFinish = useRef(false);
   useEffect(() => setHoldNotice(false), [run.state]);
@@ -106,6 +108,7 @@ export function ChallengeRun({
   return (
     <div
       className="daily__run"
+      data-seasonal-table={!beta || appearance.table === "club" ? "default" : undefined}
       style={beta ? { ...diceSkin, ...appearanceVars(appearance) } : diceSkin}
     >
       {beta && <GameCelebration state={run.state} isRolling={run.isRolling} showVisuals={false} />}

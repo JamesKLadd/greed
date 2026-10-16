@@ -1,5 +1,10 @@
 import { setColorblindPalette } from "./theme.js";
 import { setSfxVolume, setMusicVolume } from "./sfx.js";
+import {
+  applySeasonalPreference,
+  isSeasonalPreference,
+  type SeasonalPreference,
+} from "./seasonal.js";
 
 /**
  * User accessibility & display preferences, persisted to localStorage and applied
@@ -8,6 +13,7 @@ import { setSfxVolume, setMusicVolume } from "./sfx.js";
  */
 
 export interface Settings {
+  seasonalTheme: SeasonalPreference;
   textScale: "normal" | "large";
   highContrast: boolean;
   colorblind: boolean;
@@ -48,6 +54,7 @@ const STORAGE_KEY = "greed:settings";
 
 function defaults(): Settings {
   return {
+    seasonalTheme: "automatic",
     textScale: "normal",
     highContrast: false,
     colorblind: false,
@@ -66,6 +73,7 @@ export function normalizeSettings(raw: unknown, fallback: Settings = defaults())
   const next = { ...fallback };
   const parsed =
     raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  if (isSeasonalPreference(parsed.seasonalTheme)) next.seasonalTheme = parsed.seasonalTheme;
   if (parsed.textScale === "normal" || parsed.textScale === "large") {
     next.textScale = parsed.textScale;
   }
@@ -91,26 +99,46 @@ export function normalizeSettings(raw: unknown, fallback: Settings = defaults())
   return next;
 }
 
+// A denied write must not make the next volume change erase a live appearance
+// choice. Keep this browser's last settings in memory until it can save again.
+const memory = new WeakMap<Storage, Settings>();
+const unsaved = new WeakSet<Storage>();
+let inaccessibleStorageSettings: Settings | undefined;
+
 export function loadSettings(): Settings {
+  let storage: Storage | undefined;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaults();
-    return normalizeSettings(JSON.parse(raw));
+    storage = localStorage;
+    const cached = memory.get(storage);
+    if (cached && unsaved.has(storage)) return { ...cached };
+    const raw = storage.getItem(STORAGE_KEY);
+    const settings = raw ? normalizeSettings(JSON.parse(raw)) : defaults();
+    memory.set(storage, settings);
+    inaccessibleStorageSettings = settings;
+    return { ...settings };
   } catch {
-    return defaults();
+    return {
+      ...((storage ? memory.get(storage) : inaccessibleStorageSettings) ?? defaults()),
+    };
   }
 }
 
 function save(s: Settings): void {
+  inaccessibleStorageSettings = s;
+  let storage: Storage | undefined;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    storage = localStorage;
+    memory.set(storage, s);
+    storage.setItem(STORAGE_KEY, JSON.stringify(s));
+    unsaved.delete(storage);
   } catch {
-    /* ignore */
+    if (storage) unsaved.add(storage);
   }
 }
 
 /** Apply settings to the document root and the live audio/palette hooks. */
 export function applySettings(s: Settings): void {
+  applySeasonalPreference(s.seasonalTheme);
   if (typeof document !== "undefined") {
     const root = document.documentElement;
     root.dataset.textScale = s.textScale;

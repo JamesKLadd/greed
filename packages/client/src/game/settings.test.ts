@@ -8,11 +8,13 @@ import {
 } from "./settings.js";
 import { setSfxVolume, setMusicVolume } from "./sfx.js";
 import { setColorblindPalette } from "./theme.js";
+import { applySeasonalPreference, pinSeasonalGame, releaseSeasonalGame } from "./seasonal.js";
 
 vi.mock("./sfx.js", () => ({ setSfxVolume: vi.fn(), setMusicVolume: vi.fn() }));
 vi.mock("./theme.js", () => ({ setColorblindPalette: vi.fn() }));
 
 const DEFAULTS: Settings = {
+  seasonalTheme: "automatic",
   textScale: "normal",
   highContrast: false,
   colorblind: false,
@@ -25,6 +27,7 @@ const DEFAULTS: Settings = {
   musicVolume: 0.5,
 };
 const SAVED: Settings = {
+  seasonalTheme: "christmas",
   textScale: "large",
   highContrast: true,
   colorblind: true,
@@ -38,6 +41,7 @@ const SAVED: Settings = {
 };
 let data: Map<string, string>;
 let dataset: Record<string, string>;
+const gameOwner = {};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,6 +52,9 @@ beforeEach(() => {
     setItem: vi.fn((key: string, value: string) => data.set(key, value)),
   });
   vi.stubGlobal("document", { documentElement: { dataset } });
+  releaseSeasonalGame(gameOwner);
+  applySeasonalPreference("automatic");
+  delete dataset.season;
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -72,6 +79,7 @@ describe("saved settings upgrades", () => {
   it("rejects malformed enums and booleans without coercing strings or numbers", () => {
     expect(
       normalizeSettings({
+        seasonalTheme: "winter",
         textScale: "huge",
         highContrast: "false",
         colorblind: 1,
@@ -123,7 +131,12 @@ describe("live settings updates", () => {
     expect(JSON.parse(data.get("greed:settings")!)).toEqual(next);
     expect(data.get("greed:profile")).toBe("earned progress");
     expect(data.size).toBe(2);
-    expect(dataset).toEqual({ textScale: "large", contrast: "high", motion: "reduced" });
+    expect(dataset).toEqual({
+      textScale: "large",
+      contrast: "high",
+      motion: "reduced",
+      season: "christmas",
+    });
     expect(setSfxVolume).toHaveBeenLastCalledWith(0.35);
     expect(setMusicVolume).toHaveBeenLastCalledWith(1);
     expect(setColorblindPalette).toHaveBeenLastCalledWith(true);
@@ -132,7 +145,12 @@ describe("live settings updates", () => {
   it("applies valid false/off preferences instead of replacing them with defaults", () => {
     data.set("greed:settings", JSON.stringify(SAVED));
     applySettings(SAVED);
-    expect(dataset).toEqual({ textScale: "large", contrast: "high", motion: "reduced" });
+    expect(dataset).toEqual({
+      textScale: "large",
+      contrast: "high",
+      motion: "reduced",
+      season: "christmas",
+    });
     const next = updateSettings({ highContrast: false, reduceMotion: false, sfxVolume: 0 });
     expect(next).toEqual({ ...SAVED, highContrast: false, reduceMotion: false, sfxVolume: 0 });
     expect(dataset.contrast).toBe("normal");
@@ -149,5 +167,40 @@ describe("live settings updates", () => {
     expect(() => updateSettings({ textScale: "large", musicVolume: 0 })).not.toThrow();
     expect(dataset.textScale).toBe("large");
     expect(setMusicVolume).toHaveBeenLastCalledWith(0);
+    updateSettings({ seasonalTheme: "summer" });
+    updateSettings({ sfxVolume: 0.2 });
+    expect(loadSettings()).toEqual({
+      ...DEFAULTS,
+      textScale: "large",
+      musicVolume: 0,
+      seasonalTheme: "summer",
+      sfxVolume: 0.2,
+    });
+    expect(dataset.season).toBe("summer");
+  });
+
+  it("keeps live choices when storage can be read but refuses writes", () => {
+    vi.mocked(localStorage.setItem).mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+    updateSettings({ seasonalTheme: "halloween" });
+    updateSettings({ musicVolume: 0.2 });
+    expect(loadSettings()).toEqual({
+      ...DEFAULTS,
+      seasonalTheme: "halloween",
+      musicVolume: 0.2,
+    });
+    expect(dataset.season).toBe("halloween");
+  });
+
+  it("does not let an audio update redecorate a game pinned to its starting season", () => {
+    data.set("greed:settings", JSON.stringify(SAVED));
+    applySettings(SAVED);
+    pinSeasonalGame(gameOwner, "local");
+    updateSettings({ seasonalTheme: "summer" });
+    updateSettings({ sfxVolume: 0 });
+    expect(dataset.season).toBe("christmas");
+    releaseSeasonalGame(gameOwner);
+    expect(dataset.season).toBe("summer");
   });
 });

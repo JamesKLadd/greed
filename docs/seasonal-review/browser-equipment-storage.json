@@ -1,0 +1,121 @@
+{
+  "generated": "2026-10-16T03:09:35.395Z",
+  "records": [
+    {
+      "name": "custom-equipment-classic",
+      "theme": "classic",
+      "die": "#ff6b63",
+      "felt": "#14315a",
+      "feltStop": "color(srgb 0.12451 0.230392 0.377255)",
+      "profile": {
+        "dice": "crimson",
+        "table": "midnight",
+        "wins": 5,
+        "achievements": ["first-win"],
+        "visualBeta": {
+          "version": 1,
+          "mascot": "cat",
+          "frame": "brass",
+          "background": "felt",
+          "nameplate": "classic",
+          "badge": ""
+        }
+      },
+      "attrs": {
+        "class": "tp-screen scene-game",
+        "data-notices": "false",
+        "style": "--die-c1: #ff6b63; --die-c2: #d23b34; --die-c3: #a52822; --die-pip: #2a0a08; --die-pip2: #ff9d97; --die-lip: rgba(80,10,10,0.3); --felt-1: #14315a; --felt-2: #0c1f3d; --felt-edge: #060f22; --rail-1: #4a5a7a; --rail-2: #1c2740; --beta-die-pattern: none; --beta-particle-radius: 1px; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);"
+      }
+    },
+    {
+      "name": "custom-equipment-halloween",
+      "theme": "halloween",
+      "die": "#ff6b63",
+      "felt": "#14315a",
+      "feltStop": "color(srgb 0.12451 0.230392 0.377255)",
+      "profile": {
+        "dice": "crimson",
+        "table": "midnight",
+        "wins": 5,
+        "achievements": ["first-win"],
+        "visualBeta": {
+          "version": 1,
+          "mascot": "cat",
+          "frame": "brass",
+          "background": "felt",
+          "nameplate": "classic",
+          "badge": ""
+        }
+      },
+      "attrs": {
+        "class": "tp-screen scene-game",
+        "data-notices": "false",
+        "style": "--die-c1: #ff6b63; --die-c2: #d23b34; --die-c3: #a52822; --die-pip: #2a0a08; --die-pip2: #ff9d97; --die-lip: rgba(80,10,10,0.3); --felt-1: #14315a; --felt-2: #0c1f3d; --felt-edge: #060f22; --rail-1: #4a5a7a; --rail-2: #1c2740; --beta-die-pattern: none; --beta-particle-radius: 1px; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);"
+      }
+    },
+    {
+      "name": "custom-equipment-christmas",
+      "theme": "christmas",
+      "die": "#ff6b63",
+      "felt": "#14315a",
+      "feltStop": "color(srgb 0.12451 0.230392 0.377255)",
+      "profile": {
+        "dice": "crimson",
+        "table": "midnight",
+        "wins": 5,
+        "achievements": ["first-win"],
+        "visualBeta": {
+          "version": 1,
+          "mascot": "cat",
+          "frame": "brass",
+          "background": "felt",
+          "nameplate": "classic",
+          "badge": ""
+        }
+      },
+      "attrs": {
+        "class": "tp-screen scene-game",
+        "data-notices": "false",
+        "style": "--die-c1: #ff6b63; --die-c2: #d23b34; --die-c3: #a52822; --die-pip: #2a0a08; --die-pip2: #ff9d97; --die-lip: rgba(80,10,10,0.3); --felt-1: #14315a; --felt-2: #0c1f3d; --felt-edge: #060f22; --rail-1: #4a5a7a; --rail-2: #1c2740; --beta-die-pattern: none; --beta-particle-radius: 1px; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);"
+      }
+    },
+    {
+      "name": "custom-equipment-summer",
+      "theme": "summer",
+      "die": "#ff6b63",
+      "felt": "#14315a",
+      "feltStop": "color(srgb 0.12451 0.230392 0.377255)",
+      "profile": {
+        "dice": "crimson",
+        "table": "midnight",
+        "wins": 5,
+        "achievements": ["first-win"],
+        "visualBeta": {
+          "version": 1,
+          "mascot": "cat",
+          "frame": "brass",
+          "background": "felt",
+          "nameplate": "classic",
+          "badge": ""
+        }
+      },
+      "attrs": {
+        "class": "tp-screen scene-game",
+        "data-notices": "false",
+        "style": "--die-c1: #ff6b63; --die-c2: #d23b34; --die-c3: #a52822; --die-pip: #2a0a08; --die-pip2: #ff9d97; --die-lip: rgba(80,10,10,0.3); --felt-1: #14315a; --felt-2: #0c1f3d; --felt-edge: #060f22; --rail-1: #4a5a7a; --rail-2: #1c2740; --beta-die-pattern: none; --beta-particle-radius: 1px; --beta-particle-ms: 950ms; --beta-effect-color: #ffe5a5; --beta-table-pattern: repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px);"
+      }
+    },
+    {
+      "name": "blocked-storage-live-choice-and-next-patch",
+      "summer": "summer",
+      "stillSummer": "summer",
+      "value": "summer"
+    },
+    {
+      "name": "invalid-saved-theme-recovers",
+      "value": "automatic",
+      "theme": "halloween"
+    }
+  ],
+  "errors": []
+}

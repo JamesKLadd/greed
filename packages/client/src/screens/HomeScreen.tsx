@@ -12,6 +12,7 @@ import { Button, Icon } from "../ui/index.js";
 import { useT } from "../i18n/i18n.js";
 import { useDailyHomeStatus } from "../game/useDailyHomeStatus.js";
 import { hasPracticedChallenge } from "../game/practiceChallenge.js";
+import { SeasonalName, SeasonalScenery } from "../components/SeasonalScenery.js";
 
 export interface HomeScreenProps {
   onDaily: () => void;
@@ -125,9 +126,12 @@ export function HomeScreen(props: HomeScreenProps) {
         ) : null}
       </div>
 
-      <div className="setup__hero">
+      <div className="setup__hero setup__hero--seasonal">
+        <SeasonalScenery />
         <h1 className="setup__logo">GREED</h1>
-        <p className="setup__tagline">{t("home.tagline")}</p>
+        <p className="setup__tagline">
+          <SeasonalName fallback={t("home.tagline")} />
+        </p>
       </div>
 
       {flash && (

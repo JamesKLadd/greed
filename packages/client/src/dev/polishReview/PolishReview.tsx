@@ -88,6 +88,7 @@ function ReviewTable({
       onToggleDie={(index) => setState((s) => applyAction(s, { type: "TOGGLE_LOCK", index }))}
       toast={null}
       cosmetics={appearanceVars(DEFAULT_APPEARANCE)}
+      seasonalDefaultTable
       perspectiveId={youId}
       sceneOverlay={overlay}
       onSceneOverlay={setOverlay}

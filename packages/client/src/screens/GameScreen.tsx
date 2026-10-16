@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGreed } from "../game/useGreed.js";
+import { useSeasonalGame } from "../game/useSeasonalGame.js";
 import type { MatchSetup } from "../game/setup.js";
 import { loadProfile } from "../game/profile.js";
 import { cosmeticVars } from "../game/cosmetics.js";
@@ -27,6 +28,7 @@ interface GameScreenProps {
 /** Offline play: local pass-and-play, or one human against bots. */
 export function GameScreen({ setup, onExit, recordResults = true }: GameScreenProps) {
   const ctl = useGreed(setup);
+  useSeasonalGame(ctl.rollOff);
   const { state } = ctl;
   const t = useT();
   const betaActive = useBetaActive();
@@ -94,6 +96,7 @@ export function GameScreen({ setup, onExit, recordResults = true }: GameScreenPr
       onToggleDie={ctl.toggleDie}
       toast={ctl.toast}
       cosmetics={betaActive ? { ...cosmetics, ...appearanceVars(appearance) } : cosmetics}
+      seasonalDefaultTable={betaActive ? appearance.table === "club" : profile.table === "classic"}
       perspectiveId={viewerId}
       avatars={avatars}
       barLeft={

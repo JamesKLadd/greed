@@ -24,6 +24,11 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.5",
+    date: "2026-10-15",
+    notes: ["Added seasonal themes to the menus & game for Halloween, Christmas, and Summer"],
+  },
+  {
     version: "0.8.4",
     date: "2026-10-08",
     notes: [

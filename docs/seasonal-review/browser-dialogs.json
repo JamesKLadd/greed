@@ -1,0 +1,102 @@
+{
+  "generated": "2026-10-16T03:18:00.006Z",
+  "records": [
+    {
+      "name": "halloween-win-results-final-dialog",
+      "theme": "halloween",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 0.929412 0.741176 0.52549 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(41, 32, 53), rgb(25, 22, 37))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(128, 98, 126)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": null
+    },
+    {
+      "name": "halloween-win-flourish-final-dialog",
+      "theme": "halloween",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 0.929412 0.741176 0.52549 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(41, 32, 53), rgb(25, 22, 37))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(128, 98, 126)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": "block"
+    },
+    {
+      "name": "christmas-win-results-final-dialog",
+      "theme": "christmas",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 0.94902 0.839216 0.607843 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(37, 62, 54), rgb(23, 38, 34))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(140, 128, 97)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": null
+    },
+    {
+      "name": "christmas-win-flourish-final-dialog",
+      "theme": "christmas",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 0.94902 0.839216 0.607843 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(37, 62, 54), rgb(23, 38, 34))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(140, 128, 97)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": "block"
+    },
+    {
+      "name": "summer-win-results-final-dialog",
+      "theme": "summer",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 1 0.823529 0.639216 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(33, 65, 72), rgb(22, 45, 54))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(124, 157, 150)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": null
+    },
+    {
+      "name": "summer-win-flourish-final-dialog",
+      "theme": "summer",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 1 0.823529 0.639216 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(33, 65, 72), rgb(22, 45, 54))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(124, 157, 150)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": "block"
+    },
+    {
+      "name": "halloween-menu-normal",
+      "theme": "halloween",
+      "contrast": "normal",
+      "background": "radial-gradient(at 0% 0%, color(srgb 0.929412 0.741176 0.52549 / 0.06), rgba(0, 0, 0, 0) 65%), linear-gradient(155deg, rgb(41, 32, 53), rgb(25, 22, 37))",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "border": "rgb(128, 98, 126)",
+      "color": "rgb(255, 241, 210)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": "block"
+    },
+    {
+      "name": "halloween-menu-high-contrast",
+      "theme": "halloween",
+      "contrast": "high",
+      "background": "none",
+      "backgroundColor": "rgb(16, 21, 29)",
+      "border": "rgb(162, 174, 189)",
+      "color": "rgb(255, 255, 255)",
+      "width": 390,
+      "scrollWidth": 390,
+      "decorationDisplay": "none"
+    }
+  ],
+  "errors": []
+}

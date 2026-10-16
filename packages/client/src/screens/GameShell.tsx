@@ -12,6 +12,7 @@ import { loadSettings } from "../game/settings.js";
 import { useI18n } from "../i18n/i18n.js";
 import { useBetaActive } from "../beta/BetaContext.js";
 import { GameCelebration } from "../beta/Celebration.js";
+import { SeasonalScenery } from "../components/SeasonalScenery.js";
 
 /**
  * The in-game screen's layout, shared by offline and online play.
@@ -40,6 +41,8 @@ export interface GameShellProps {
 
   /** Equipped cosmetics, applied as inline custom properties on the root. */
   cosmetics?: CSSProperties;
+  /** Seasonal cloth applies only to the default mat; earned furniture stays equipped. */
+  seasonalDefaultTable?: boolean;
   /** Which seat sits at the bottom of the table. */
   perspectiveId?: string | null;
   presence?: Record<string, boolean>;
@@ -78,6 +81,7 @@ export function GameShell({
   onToggleDie,
   toast,
   cosmetics,
+  seasonalDefaultTable,
   perspectiveId,
   presence,
   emotes,
@@ -101,7 +105,12 @@ export function GameShell({
   const { showGuidance, showTurnScore, dice3d } = loadSettings();
 
   return (
-    <div className="game" style={cosmetics}>
+    <div
+      className="game"
+      style={cosmetics}
+      data-seasonal-table={seasonalDefaultTable ? "default" : undefined}
+    >
+      <SeasonalScenery placement="room" />
       <header className="game__bar">
         {barLeft}
         <div className="game__title">

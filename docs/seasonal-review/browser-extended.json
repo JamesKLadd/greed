@@ -1,0 +1,774 @@
+{
+  "generated": "2026-10-16T03:04:12.891Z",
+  "records": [
+    {
+      "name": "halloween-eight-seat-320-large-highcontrast",
+      "theme": "halloween",
+      "presentation": "beta",
+      "width": 320,
+      "scrollWidth": 320,
+      "scene": "tp-screen scene-game",
+      "defaultTable": "default",
+      "feltStop": "color(srgb 0.348039 0.237843 0.392157)",
+      "scenePointer": "none",
+      "goalbars": 8,
+      "buttons": [
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "View Penelope Winters’s details · Penelope Winters: 0 points · Current turn",
+          "disabled": false
+        },
+        {
+          "label": "▸Penelope Winters",
+          "disabled": false
+        },
+        {
+          "label": "View Theodore Sterlin’s details · Theodore Sterlin: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Theodore Sterlin",
+          "disabled": false
+        },
+        {
+          "label": "View Maximilian Banks’s details · Maximilian Banks: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Maximilian Banks",
+          "disabled": false
+        },
+        {
+          "label": "View Wellington Rowan’s details · Wellington Rowan: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Wellington Rowan",
+          "disabled": false
+        },
+        {
+          "label": "View Anastasia Willow’s details · Anastasia Willow: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Anastasia Willow",
+          "disabled": false
+        },
+        {
+          "label": "View Christopher Moss’s details · Christopher Moss: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Christopher Moss",
+          "disabled": false
+        },
+        {
+          "label": "View Montgomery Finch’s details · Montgomery Finch: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Montgomery Finch",
+          "disabled": false
+        },
+        {
+          "label": "View Alexandria Vale’s details · Alexandria Vale: 0 points · Last in turn order · final seat of the round.",
+          "disabled": false
+        },
+        {
+          "label": "Alexandria Vale",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "die showing 4 — Tap to hold this die",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "Roll1 die",
+          "disabled": false
+        },
+        {
+          "label": "Bank300",
+          "disabled": false
+        }
+      ],
+      "decorations": [
+        {
+          "class": "seasonal-set seasonal-set--halloween",
+          "display": "block"
+        },
+        {
+          "class": "seasonal-set seasonal-set--christmas",
+          "display": "none"
+        },
+        {
+          "class": "seasonal-set seasonal-set--summer",
+          "display": "none"
+        }
+      ],
+      "practiceBackground": null
+    },
+    {
+      "name": "halloween-six-seat-teams-320-large-highcontrast",
+      "theme": "halloween",
+      "presentation": "beta",
+      "width": 320,
+      "scrollWidth": 320,
+      "scene": "tp-screen scene-game",
+      "defaultTable": "default",
+      "feltStop": "color(srgb 0.348039 0.237843 0.392157)",
+      "scenePointer": "none",
+      "goalbars": 2,
+      "buttons": [
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "View Wellington Rowan’s details · Wellington Rowan: 0 points · Current turn · Team 1 · Amber",
+          "disabled": false
+        },
+        {
+          "label": "▸Wellington Rowan1",
+          "disabled": false
+        },
+        {
+          "label": "View Penelope Winters’s details · Penelope Winters: 0 points · Team 2 · Teal",
+          "disabled": false
+        },
+        {
+          "label": "Penelope Winters2",
+          "disabled": false
+        },
+        {
+          "label": "View Alexandria Vale’s details · Alexandria Vale: 0 points · Team 1 · Amber",
+          "disabled": false
+        },
+        {
+          "label": "Alexandria Vale1",
+          "disabled": false
+        },
+        {
+          "label": "View Christopher Moss’s details · Christopher Moss: 0 points · Team 2 · Teal",
+          "disabled": false
+        },
+        {
+          "label": "Christopher Moss2",
+          "disabled": false
+        },
+        {
+          "label": "View Montgomery Finch’s details · Montgomery Finch: 0 points · Team 1 · Amber",
+          "disabled": false
+        },
+        {
+          "label": "Montgomery Finch1",
+          "disabled": false
+        },
+        {
+          "label": "View Maximilian Banks’s details · Maximilian Banks: 0 points · Last in turn order · final seat of the round. · Team 2 · Teal",
+          "disabled": false
+        },
+        {
+          "label": "Maximilian Banks2",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "die showing 4 — Tap to hold this die",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "✓",
+          "disabled": false
+        },
+        {
+          "label": "Roll1 die",
+          "disabled": false
+        },
+        {
+          "label": "Bank300",
+          "disabled": false
+        }
+      ],
+      "decorations": [
+        {
+          "class": "seasonal-set seasonal-set--halloween",
+          "display": "block"
+        },
+        {
+          "class": "seasonal-set seasonal-set--christmas",
+          "display": "none"
+        },
+        {
+          "class": "seasonal-set seasonal-set--summer",
+          "display": "none"
+        }
+      ],
+      "practiceBackground": null
+    },
+    {
+      "name": "christmas-mocked-online-clock",
+      "theme": "christmas",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "scene": "tp-screen scene-game scene-game--online",
+      "defaultTable": "default",
+      "feltStop": "color(srgb 0.184118 0.394314 0.310196)",
+      "scenePointer": "none",
+      "goalbars": 4,
+      "buttons": [
+        {
+          "label": "←",
+          "disabled": false
+        },
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "View James’s details · James: 0 points · Last in turn order · final seat of the round.",
+          "disabled": false
+        },
+        {
+          "label": "You",
+          "disabled": false
+        },
+        {
+          "label": "View Pip’s details · Pip: 0 points · Current turn",
+          "disabled": false
+        },
+        {
+          "label": "▸Pip",
+          "disabled": false
+        },
+        {
+          "label": "View Cleo’s details · Cleo: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Cleo",
+          "disabled": false
+        },
+        {
+          "label": "View Bear’s details · Bear: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Bear",
+          "disabled": false
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "Roll5 dice",
+          "disabled": true
+        },
+        {
+          "label": "Bank0",
+          "disabled": true
+        }
+      ],
+      "decorations": [
+        {
+          "class": "seasonal-set seasonal-set--halloween",
+          "display": "none"
+        },
+        {
+          "class": "seasonal-set seasonal-set--christmas",
+          "display": "block"
+        },
+        {
+          "class": "seasonal-set seasonal-set--summer",
+          "display": "none"
+        }
+      ],
+      "practiceBackground": null
+    },
+    {
+      "name": "christmas-mocked-online-reconnecting",
+      "theme": "christmas",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "scene": "tp-screen scene-game scene-game--online",
+      "defaultTable": "default",
+      "feltStop": "color(srgb 0.184118 0.394314 0.310196)",
+      "scenePointer": "none",
+      "goalbars": 4,
+      "buttons": [
+        {
+          "label": "←",
+          "disabled": false
+        },
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "View James’s details · James: 0 points · Last in turn order · final seat of the round.",
+          "disabled": false
+        },
+        {
+          "label": "You",
+          "disabled": false
+        },
+        {
+          "label": "View Pip’s details · Pip: 0 points · Current turn",
+          "disabled": false
+        },
+        {
+          "label": "▸Pip",
+          "disabled": false
+        },
+        {
+          "label": "View Cleo’s details · Cleo: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Cleo",
+          "disabled": false
+        },
+        {
+          "label": "View Bear’s details · Bear: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Bear",
+          "disabled": false
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "Roll5 dice",
+          "disabled": true
+        },
+        {
+          "label": "Bank0",
+          "disabled": true
+        }
+      ],
+      "decorations": [
+        {
+          "class": "seasonal-set seasonal-set--halloween",
+          "display": "none"
+        },
+        {
+          "class": "seasonal-set seasonal-set--christmas",
+          "display": "block"
+        },
+        {
+          "class": "seasonal-set seasonal-set--summer",
+          "display": "none"
+        }
+      ],
+      "practiceBackground": null
+    },
+    {
+      "name": "christmas-mocked-online-spectator",
+      "theme": "christmas",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "scene": "tp-screen scene-game scene-game--online",
+      "defaultTable": "default",
+      "feltStop": "color(srgb 0.184118 0.394314 0.310196)",
+      "scenePointer": "none",
+      "goalbars": 4,
+      "buttons": [
+        {
+          "label": "←",
+          "disabled": false
+        },
+        {
+          "label": "Menu",
+          "disabled": false
+        },
+        {
+          "label": "View James’s details · James: 0 points · Current turn",
+          "disabled": false
+        },
+        {
+          "label": "▸James",
+          "disabled": false
+        },
+        {
+          "label": "View Bear’s details · Bear: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Bear",
+          "disabled": false
+        },
+        {
+          "label": "View Cleo’s details · Cleo: 0 points",
+          "disabled": false
+        },
+        {
+          "label": "Cleo",
+          "disabled": false
+        },
+        {
+          "label": "View Pip’s details · Pip: 0 points · Last in turn order · final seat of the round.",
+          "disabled": false
+        },
+        {
+          "label": "Pip",
+          "disabled": false
+        },
+        {
+          "label": "die showing 4",
+          "disabled": true
+        },
+        {
+          "label": "✓",
+          "disabled": true
+        },
+        {
+          "label": "die showing 4",
+          "disabled": true
+        },
+        {
+          "label": "die showing 6",
+          "disabled": true
+        },
+        {
+          "label": "die showing 6",
+          "disabled": true
+        }
+      ],
+      "decorations": [
+        {
+          "class": "seasonal-set seasonal-set--halloween",
+          "display": "none"
+        },
+        {
+          "class": "seasonal-set seasonal-set--christmas",
+          "display": "block"
+        },
+        {
+          "class": "seasonal-set seasonal-set--summer",
+          "display": "none"
+        }
+      ],
+      "practiceBackground": null
+    },
+    {
+      "name": "halloween-practice-default-cloth",
+      "theme": "halloween",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "defaultTable": "default",
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "← Home",
+          "disabled": false
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "Roll dice",
+          "disabled": false
+        },
+        {
+          "label": "Bank",
+          "disabled": true
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": "radial-gradient(at 50% 0%, rgb(80, 51, 94), rgb(50, 35, 67))"
+    },
+    {
+      "name": "halloween-win-results",
+      "theme": "halloween",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "Review local setup",
+          "disabled": false
+        },
+        {
+          "label": "Review results",
+          "disabled": false
+        },
+        {
+          "label": "Review table state",
+          "disabled": false
+        },
+        {
+          "label": "Play again",
+          "disabled": false
+        },
+        {
+          "label": "Leave",
+          "disabled": false
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": null
+    },
+    {
+      "name": "christmas-practice-default-cloth",
+      "theme": "christmas",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "defaultTable": "default",
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "← Home",
+          "disabled": false
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "Roll dice",
+          "disabled": false
+        },
+        {
+          "label": "Bank",
+          "disabled": true
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": "radial-gradient(at 50% 0%, rgb(36, 93, 72), rgb(20, 60, 48))"
+    },
+    {
+      "name": "christmas-win-results",
+      "theme": "christmas",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "Review local setup",
+          "disabled": false
+        },
+        {
+          "label": "Review results",
+          "disabled": false
+        },
+        {
+          "label": "Review table state",
+          "disabled": false
+        },
+        {
+          "label": "Play again",
+          "disabled": false
+        },
+        {
+          "label": "Leave",
+          "disabled": false
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": null
+    },
+    {
+      "name": "summer-practice-default-cloth",
+      "theme": "summer",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "defaultTable": "default",
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "← Home",
+          "disabled": false
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "die showing 1",
+          "disabled": true
+        },
+        {
+          "label": "Roll dice",
+          "disabled": false
+        },
+        {
+          "label": "Bank",
+          "disabled": true
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": "radial-gradient(at 50% 0%, rgb(32, 104, 119), rgb(22, 74, 86))"
+    },
+    {
+      "name": "summer-win-results",
+      "theme": "summer",
+      "presentation": "beta",
+      "width": 390,
+      "scrollWidth": 390,
+      "feltStop": null,
+      "scenePointer": null,
+      "goalbars": 0,
+      "buttons": [
+        {
+          "label": "Review local setup",
+          "disabled": false
+        },
+        {
+          "label": "Review results",
+          "disabled": false
+        },
+        {
+          "label": "Review table state",
+          "disabled": false
+        },
+        {
+          "label": "Play again",
+          "disabled": false
+        },
+        {
+          "label": "Leave",
+          "disabled": false
+        }
+      ],
+      "decorations": [],
+      "practiceBackground": null
+    }
+  ],
+  "errors": []
+}

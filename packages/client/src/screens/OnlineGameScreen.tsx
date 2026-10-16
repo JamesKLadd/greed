@@ -11,6 +11,7 @@ import { TurnHistory } from "../components/TurnHistory.js";
 import { EmoteBar } from "../components/EmoteBar.js";
 import { VolumeControls } from "../components/VolumeControls.js";
 import { useGameChrome } from "../game/useGameChrome.js";
+import { useSeasonalGame } from "../game/useSeasonalGame.js";
 import { diceVarsById, tableVars } from "../game/cosmetics.js";
 import { loadProfile } from "../game/profile.js";
 import { loadSettings } from "../game/settings.js";
@@ -34,6 +35,7 @@ export function OnlineGameScreen({
   const sceneActive =
     beta && !(import.meta.env.DEV && new URLSearchParams(window.location.search).has("old-table"));
   const state = net.game!;
+  useSeasonalGame(undefined, state);
   const current = state.players[state.turn.playerIndex];
   const canAct = canActOnline(state, net.youId, net.isSpectator, net.reconnecting);
   const legal = getLegalActions(state);
@@ -46,7 +48,8 @@ export function OnlineGameScreen({
   // CURRENT player's equipped skin (broadcast by the server). The mat is the
   // viewer's own and holds still for the whole game — it is never broadcast, so
   // nobody else's screen changes with it.
-  const [myTable] = useState(() => tableVars(loadProfile()));
+  const [myProfile] = useState(loadProfile);
+  const [myTable] = useState(() => tableVars(myProfile));
   const diceVars = diceVarsById(net.skins[current.id] ?? "ivory");
   const classicCosmetics = useMemo(() => ({ ...myTable, ...diceVars }), [myTable, diceVars]);
   const cosmetics = beta
@@ -97,6 +100,7 @@ export function OnlineGameScreen({
       onToggleDie={net.toggleDie}
       toast={net.toast}
       cosmetics={cosmetics}
+      seasonalDefaultTable={beta ? appearance.table === "club" : myProfile.table === "classic"}
       perspectiveId={net.youId}
       presence={net.presence}
       emotes={net.emotes}

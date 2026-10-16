@@ -1,0 +1,103 @@
+{
+  "generated": "2026-10-16T03:12:32.791Z",
+  "records": [
+    {
+      "time": "2026-06-01T04:59:59Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "time": "2026-06-01T05:00:00Z",
+      "expected": "summer",
+      "theme": "summer"
+    },
+    {
+      "time": "2026-09-01T04:59:59Z",
+      "expected": "summer",
+      "theme": "summer"
+    },
+    {
+      "time": "2026-09-01T05:00:00Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "time": "2026-10-01T04:59:59Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "time": "2026-10-01T05:00:00Z",
+      "expected": "halloween",
+      "theme": "halloween"
+    },
+    {
+      "time": "2026-11-01T04:59:59Z",
+      "expected": "halloween",
+      "theme": "halloween"
+    },
+    {
+      "time": "2026-11-01T05:00:00Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "time": "2026-12-01T05:59:59Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "time": "2026-12-01T06:00:00Z",
+      "expected": "christmas",
+      "theme": "christmas"
+    },
+    {
+      "time": "2027-01-01T05:59:59Z",
+      "expected": "christmas",
+      "theme": "christmas"
+    },
+    {
+      "time": "2027-01-01T06:00:00Z",
+      "expected": "christmas",
+      "theme": "christmas"
+    },
+    {
+      "time": "2027-01-06T05:59:59Z",
+      "expected": "christmas",
+      "theme": "christmas"
+    },
+    {
+      "time": "2027-01-06T06:00:00Z",
+      "expected": "classic",
+      "theme": "classic"
+    },
+    {
+      "name": "practice-pins-at-midnight-and-releases-on-home",
+      "started": "halloween",
+      "pinned": "halloween",
+      "released": "classic"
+    },
+    {
+      "name": "menu-refreshes-without-reload",
+      "before": "classic",
+      "after": "halloween"
+    },
+    {
+      "name": "daily-guest-entry-does-not-pin",
+      "before": "halloween",
+      "after": "classic"
+    },
+    {
+      "name": "weekly-guest-entry-does-not-pin",
+      "before": "halloween",
+      "after": "classic"
+    },
+    {
+      "name": "isolated-weekly-run-reset-renews-season",
+      "weeklyStarted": "halloween",
+      "weeklyPinned": "halloween",
+      "weeklyNext": "classic"
+    }
+  ],
+  "errors": []
+}

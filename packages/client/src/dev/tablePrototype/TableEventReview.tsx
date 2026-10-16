@@ -101,6 +101,7 @@ function FixturePlayback({
       onToggleDie={(index) => act({ type: "TOGGLE_LOCK", index })}
       toast={null}
       cosmetics={appearanceVars(appearance)}
+      seasonalDefaultTable={appearance.table === "club"}
       perspectiveId={state.players[state.order[0]].id}
       sceneOverlay={overlay}
       onSceneOverlay={setOverlay}
