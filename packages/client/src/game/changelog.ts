@@ -26,7 +26,11 @@ export const RELEASES: Release[] = [
   {
     version: "0.8.5",
     date: "2026-10-15",
-    notes: ["Added seasonal themes to the menus & game for Halloween, Christmas, and Summer"],
+    notes: [
+      "Added seasonal themes to the menus & game for Halloween, Christmas, and Summer",
+      "Local and online bots now aim for larger turns when far behind, with stronger catch-up play as the leader approaches the goal while keeping their different temperaments",
+      "Bots now account for straights and five of a kind built from held dice, and make better final-round and sudden-death decisions about ties and opponents still to play",
+    ],
   },
   {
     version: "0.8.4",
@@ -47,8 +51,6 @@ export const RELEASES: Release[] = [
       "Weekly results now show how much your best improved or confirm that your standing best remains. Daily and Weekly runs subtly highlight new all-time personal bests without opening a popup",
       "Locker previews now show unlock requirements with progress from your saved stats, and explain when an item is only a preview sample",
       "Added clearer pending-button feedback, keyboard activation sounds and focus indicators, plus fixes for long names on narrow phones and landscape screens",
-      "Local and online bots now aim for larger turns when far behind, with stronger catch-up play as the leader approaches the goal while keeping their different temperaments",
-      "Bots now account for straights and five of a kind built from held dice, and make better final-round and sudden-death decisions about ties and opponents still to play",
     ],
   },
   {
