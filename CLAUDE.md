@@ -25,8 +25,8 @@ build on every push. Node 20.
 - `packages/core` — the engine. Pure, no rendering, no network, seeded RNG
   threaded through state. `run.ts` + `zone.ts` are the pieces the daily and
   weekly challenges share; `daily.ts` and `weekly.ts` are just calendars on top.
-- `packages/bots` — exhaustive roll model computed from the real `scoreRoll`,
-  plus a DP for the optimal turn.
+- `packages/bots` — exhaustive next-throw model using the real scoring and held
+  mat, plus a cached dice-count DP approximation for later throws.
 - `packages/protocol` — client↔server message contracts.
 - `packages/server` — authoritative WebSocket server + the REST API for
   accounts, friends, leaderboards and both challenges.
@@ -56,6 +56,13 @@ build on every push. Node 20.
   restating it.
 - Bots have ONE skill level. What differs is temperament
   (cautious/balanced/reckless). There is no difficulty setting.
+  Local and online play share `decide`: targets rise with the deficit and the
+  leader's proximity to the goal, including shared team totals. Ordinary catch-up
+  targets are bounded for custom goals; desperate final-round turns still chase
+  the opposing score. A lead is guaranteed only after the last opposing response
+  in the active order (sudden death uses its contenders, not the original anchor).
+  The next-throw model includes straights/five of a kind built from held dice and
+  replacement awards. Never inspect the RNG or seed to choose a bot action.
 - Daily challenge: one run per day, 10 turns. The server generates a secret seed,
   owns the move list, and replays it to derive the score. The client never sees a
   seed and never reports a score.

@@ -168,6 +168,8 @@ describe("personality is what distinguishes one bot from another", () => {
       turn: {
         ...base.turn,
         turnScore: 300,
+        dice: [1, 1, 1, 2, 3],
+        awards: [{ kind: "ones", face: 1, dice: [0, 1, 2], points: 300 }],
         rollCount: 2,
         locked: [true, true, true, false, false],
         awaitingDecision: true,

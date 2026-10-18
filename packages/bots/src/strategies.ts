@@ -2,17 +2,15 @@
  * Bot decision-making. A strategy answers one question each time it is the bot's
  * turn to act: given the current game state, do I ROLL again or BANK?
  *
- * There is ONE standard skill level. Every bot solves the turn the same way — as
- * a dynamic program over the exact roll model, i.e. the risk-neutral optimal
- * continue/stop policy (it naturally chases low-risk hot-dice re-rolls) — with
- * positional awareness and correct endgame play.
+ * There is ONE standard skill level. Every bot uses a cached risk-neutral turn
+ * value as its baseline, adjusted for the actual held hand, score gap, proximity
+ * to the goal, and the responses still to come in the final round.
  *
  * What makes one bot feel different from another is its **personality**, read
  * from the player's `botPersonality`:
  *
- *  - cautious: banks a good turn rather than pressing it. Needs a clear edge to
- *              keep rolling, and stops outright once a turn is worth protecting.
- *  - balanced: plays the optimal line, no temperament either way.
+ *  - cautious: protects a good turn, but raises its target when falling behind.
+ *  - balanced: follows expected turn value, no temperament either way.
  *  - reckless: pushes every turn to a big number before it will even consider
  *              banking, then keeps rolling on a thinner edge than the odds like.
  *
@@ -20,15 +18,14 @@
  * barely moves how a bot behaves; over-rolling with few dice left is what
  * actually changes a game, so that is the lever the personalities pull hardest.
  *
- * Endgame rule (all bots): in the final round there is no point banking a total
- * that would still be behind first place — you can only win by at least tying
- * the leader, so keep rolling until you do (or bust). The last seat, if it can
- * reach the goal first, banks immediately for the win.
+ * All bots chase a losing final-round total and bank a guaranteed win. Ties and
+ * leads that opponents can still answer remain risk decisions, including during
+ * sudden death. Nothing in the policy reads future dice or the engine's RNG.
  */
 
-import { diceRemaining, getLegalActions, rivalBest, scoreFor } from "@greed/core";
+import { getLegalActions, rivalBest, scoreFor, teamOf } from "@greed/core";
 import type { BotPersonality, GameAction, GameState } from "@greed/core";
-import { rollModel } from "./probabilities.js";
+import { rollModel, turnRollModel } from "./probabilities.js";
 
 export interface BotContext {
   /** Overrides the player's own `botPersonality` (defaults to "balanced"). */
@@ -48,18 +45,12 @@ interface Temperament {
   ceiling: number;
 }
 
-/**
- * Measured over ~9,600 turns each (points per turn attempted in brackets, with
- * the optimal line worth ~262): cautious banks ~275 a turn and busts 14% [237],
- * balanced banks ~363 and busts 28% [262], reckless banks ~570 and busts 60%
- * [230]. So the temperaments are plainly different to play against without any
- * of them being a pushover.
- */
+/** Close races retain distinct temperaments; catch-up pressure adapts all three. */
 const TEMPERAMENTS: Record<BotPersonality, Temperament> = {
   // Takes the money: a high bar to continue, and a hard stop once the turn is
   // worth protecting.
   cautious: { bias: 1.3, floor: 0, ceiling: 600 },
-  // The house line — pure optimal play.
+  // The house line — no extra temperament bias.
   balanced: { bias: 1, floor: 0, ceiling: 0 },
   // Chases the big turn: rolls to a properly greedy number before it will even
   // look at the odds, then keeps going on a thinner edge than they justify.
@@ -73,6 +64,8 @@ const TEMPERAMENTS: Record<BotPersonality, Temperament> = {
  */
 const valueMemo = new Map<number, number>();
 function optimalValue(score: number, k: number): number {
+  // A manually held, non-paying die can leave a takeover bot unable to roll.
+  if (k === 0) return score;
   // Beyond any realistic turn total, banking always wins — bounds the recursion.
   if (score >= 12000) return score;
   const key = score * 8 + k;
@@ -90,13 +83,26 @@ function optimalValue(score: number, k: number): number {
 }
 
 /** Expected value of taking one more roll now, then playing optimally afterwards. */
-function expectedValueOfRolling(score: number, k: number): number {
-  const model = rollModel(k);
+function expectedValueOfRolling(state: GameState): number {
+  // The next throw accounts for the held mat and replacement whole-hand awards.
+  // Subsequent throws use the cached generic continuation approximation.
+  const model = turnRollModel(state.turn);
   let eRoll = 0;
   for (const t of model.transitions) {
-    eRoll += t.p * optimalValue(score + t.gain, t.kNext);
+    eRoll += t.p * optimalValue(state.turn.turnScore + t.gain, t.kNext);
   }
   return eRoll;
+}
+
+/** Is there still an opposing seat that can answer our bank this round? */
+function opponentsRemain(state: GameState): boolean {
+  const sudden = state.phase === "sudden-death" ? state.suddenDeath : null;
+  const order = sudden?.contenders ?? state.order;
+  const pointer = sudden?.pointer ?? state.turnPointer;
+  const myTeam = teamOf(state, state.turn.playerIndex);
+  return order
+    .slice(pointer + 1)
+    .some((i) => (myTeam === null ? i !== state.turn.playerIndex : teamOf(state, i) !== myTeam));
 }
 
 /**
@@ -112,16 +118,46 @@ function endgameAwareDecision(state: GameState): GameAction | null {
   const isLastSeat = turn.playerIndex === state.order[state.order.length - 1];
 
   // Last seat first to the goal wins outright — lock it in.
-  if (!state.endgame.triggered && isLastSeat && prospective >= goal) {
+  if (state.phase === "playing" && !state.endgame.triggered && isLastSeat && prospective >= goal) {
     return { type: "BANK" };
   }
 
-  if (state.endgame.triggered) {
-    // Final round: only bank if it at least ties first place; otherwise chase.
+  if (state.endgame.triggered || state.phase === "sudden-death") {
+    // A losing bank cannot recover this round. Once tied, dice odds matter:
+    // banking can secure sudden death, while hot dice may win outright.
     const target = rivalBest(state, turn.playerIndex);
-    return prospective >= target ? { type: "BANK" } : { type: "ROLL" };
+    if (prospective < target) return { type: "ROLL" };
+    if (prospective > target && !opponentsRemain(state)) return { type: "BANK" };
   }
   return null;
+}
+
+/**
+ * Adapt to the size of a deficit, not just whether one exists. Small gaps keep
+ * normal personality play. A large gap raises the minimum useful bank, softens
+ * caution, and lifts its ceiling; the target rises further when the leader is
+ * only one or two ordinary (~300-point) turns from the goal.
+ */
+function positionalTemperament(state: GameState, base: Temperament): Temperament {
+  const own = scoreFor(state, state.turn.playerIndex);
+  const leader = rivalBest(state, state.turn.playerIndex);
+  const gap = Math.max(0, leader - own);
+  const goal = Math.max(1, state.config.goal);
+  const severity = Math.min(1, Math.max(0, (gap / goal - 0.1) / 0.5));
+  const pressure = severity * (0.5 + 0.5 * Math.min(1, leader / goal));
+  const turnsRemaining = Math.max(1, (goal - leader) / 300);
+  // Custom goals can be enormous. Build the deficit back over several turns;
+  // only demand a desperate single-turn chase when the leader is nearly home.
+  const steadyTarget = Math.min(600, goal * 0.3 * pressure);
+  const catchUpTarget = Math.min(
+    gap,
+    Math.ceil(Math.max(steadyTarget, (gap / turnsRemaining) * severity) / 50) * 50,
+  );
+  return {
+    bias: 1 + (base.bias - 1) * (1 - pressure * 0.75),
+    floor: Math.max(base.floor, catchUpTarget),
+    ceiling: base.ceiling > 0 ? base.ceiling + catchUpTarget : 0,
+  };
 }
 
 export function decide(state: GameState, ctx: BotContext = {}): GameAction {
@@ -139,7 +175,7 @@ export function decide(state: GameState, ctx: BotContext = {}): GameAction {
 
   const personality =
     ctx.personality ?? state.players[turn.playerIndex].botPersonality ?? "balanced";
-  const { bias, floor, ceiling } = TEMPERAMENTS[personality];
+  const { bias, floor, ceiling } = positionalTemperament(state, TEMPERAMENTS[personality]);
 
   if (turn.turnScore < floor) return { type: "ROLL" };
   if (ceiling > 0 && turn.turnScore >= ceiling) return { type: "BANK" };
@@ -147,7 +183,5 @@ export function decide(state: GameState, ctx: BotContext = {}): GameAction {
   const behind = scoreFor(state, turn.playerIndex) < rivalBest(state, turn.playerIndex);
   // Push harder when trailing, protect points when ahead, then apply temperament.
   const threshold = turn.turnScore * (behind ? 0.85 : 1.15) * bias;
-  return expectedValueOfRolling(turn.turnScore, diceRemaining(turn)) > threshold
-    ? { type: "ROLL" }
-    : { type: "BANK" };
+  return expectedValueOfRolling(state) > threshold ? { type: "ROLL" } : { type: "BANK" };
 }

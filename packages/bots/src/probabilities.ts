@@ -5,8 +5,17 @@
  * borrowed from generic Farkle). 6^5 = 7776 outcomes, so this is cheap and cached.
  */
 
-import { scoreRoll, DICE_COUNT } from "@greed/core";
-import type { DieValue } from "@greed/core";
+import {
+  awardsAfterRethrow,
+  diceRemaining,
+  diceToRoll,
+  heldScore,
+  refreshTurn,
+  scoreRoll,
+  throwCompletesHand,
+  DICE_COUNT,
+} from "@greed/core";
+import type { DieValue, TurnState } from "@greed/core";
 
 export interface RollStats {
   /** Probability the throw scores nothing (a bust). */
@@ -63,9 +72,9 @@ export function rollStats(k: number): RollStats {
 export interface RollTransition {
   /** Probability of this (gain, kNext) outcome among all throws of k dice. */
   p: number;
-  /** Points scored on the throw. */
+  /** Change in the turn's points, including replacement whole-mat awards. */
   gain: number;
-  /** Dice available for the next throw (remaining, or a fresh DICE_COUNT on hot dice). */
+  /** Dice available next: fresh DICE_COUNT on hot dice, or 0 when only banking is legal. */
   kNext: number;
 }
 
@@ -119,4 +128,85 @@ export function rollModel(k: number): RollModel {
     modelCache.set(clamped, m);
   }
   return m;
+}
+
+const turnModelCache = new Map<string, RollModel>();
+
+/**
+ * Exact outcomes of the NEXT throw with the visible held dice, automatically
+ * holding its scoring dice as the engine does. Whole-mat hands replace the
+ * held awards rather than simply adding what the thrown dice paid alone.
+ *
+ * This is not an exact full-turn policy: a caller may still use the smaller
+ * dice-count model to estimate later throws. Neither model reads the RNG.
+ */
+export function turnRollModel(turn: TurnState): RollModel {
+  const thrown = diceToRoll(turn);
+  const k = thrown.length;
+  if (turn.hotDice || turn.rollCount === 0) return rollModel(k);
+
+  const held = turn.locked.flatMap((locked, i) => (locked ? [turn.dice[i]] : []));
+  const pointsHeld = heldScore(turn);
+  // A disconnected human can leave non-paying dice held. Those dice stop a mat
+  // from becoming hot even when every new die scores, unlike automatic holds.
+  const allHeldPay = turn.locked.every((locked, i) => {
+    if (!locked) return true;
+    const lockedWithoutDie = [...turn.locked];
+    lockedWithoutDie[i] = false;
+    return heldScore({ ...turn, locked: lockedWithoutDie }) < pointsHeld;
+  });
+  const key = `${held.sort().join("")}|${pointsHeld}|${k}|${Number(allHeldPay)}`;
+  const cached = turnModelCache.get(key);
+  if (cached) return cached;
+
+  const total = 6 ** k;
+  let bust = 0;
+  const agg = new Map<string, RollTransition>();
+  const dice = new Array<DieValue>(k).fill(1);
+  const recurse = (pos: number): void => {
+    if (pos !== k) {
+      for (let f = 1; f <= 6; f++) {
+        dice[pos] = f as DieValue;
+        recurse(pos + 1);
+      }
+      return;
+    }
+
+    const next: TurnState = { ...turn, dice: [...turn.dice], locked: [...turn.locked] };
+    thrown.forEach((index, i) => (next.dice[index] = dice[i]));
+    const result = scoreRoll(dice);
+    const madeHand = throwCompletesHand(next, thrown);
+    if (result.points === 0 && !madeHand) {
+      bust++;
+      return;
+    }
+
+    next.awards = awardsAfterRethrow(next, thrown);
+    for (const award of result.breakdown) {
+      next.awards.push({
+        kind: award.kind,
+        face: award.face,
+        dice: award.indices.map((i) => thrown[i]),
+        points: award.points,
+      });
+    }
+    thrown.forEach((index, i) => {
+      if (result.scoringMask[i] || madeHand) next.locked[index] = true;
+    });
+    refreshTurn(next);
+    const gain = heldScore(next) - pointsHeld;
+    const kNext = diceRemaining(next);
+    const outcomeKey = `${gain}|${kNext}`;
+    const existing = agg.get(outcomeKey);
+    if (existing) existing.p++;
+    else agg.set(outcomeKey, { p: 1, gain, kNext });
+  };
+  recurse(0);
+
+  const model = {
+    bustProb: bust / total,
+    transitions: [...agg.values()].map((t) => ({ ...t, p: t.p / total })),
+  };
+  turnModelCache.set(key, model);
+  return model;
 }
