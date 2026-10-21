@@ -3,6 +3,7 @@ import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPool, migrate, query } from "./db.js";
 import { LEADERBOARD_CATEGORIES, leaderboard } from "./leaderboards.js";
+import { statsSettled } from "./rollStats.js";
 
 // Only a disposable local test database, with each suite isolated in its own schema.
 describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
@@ -17,6 +18,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
       frame: "neon",
       background: "stars",
       nameplate: "ticket",
+      // Boards show the hat a player is wearing now, like the rest of the look.
+      hat: "santa-hat",
       badge: "",
     };
     let admin: pg.Pool;
@@ -31,6 +34,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
     });
 
     beforeEach(async () => {
+      // A finished run files its statistics in the background; let it land first.
+      await statsSettled();
       await query("TRUNCATE users CASCADE");
       await query(
         `INSERT INTO users (id, email, username, password_hash, created_at, profile)
@@ -92,6 +97,7 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
             frame: "brass",
             background: "felt",
             nameplate: "classic",
+            hat: "none",
             badge: "",
           },
         });

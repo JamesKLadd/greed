@@ -7,8 +7,10 @@ import {
   isUnlocked,
 } from "../game/cosmetics.js";
 import type { Profile } from "../game/profile.js";
-import { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES, cleanBetaIdentity } from "@greed/protocol";
-export { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES };
+import { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES, HATS, cleanBetaIdentity } from "@greed/protocol";
+import { adventDoorFor, adventUnlocked } from "../game/advent.js";
+import { holidayUnlocker } from "../game/holidayDice.js";
+export { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES, HATS };
 
 export const APPEARANCE_KEY = "greed:visual-beta:appearance:v1";
 export const SAMPLE_DICE = ["house", "circuit", "volcanic"] as const;
@@ -22,6 +24,7 @@ export interface Appearance {
   background: string;
   nameplate: string;
   badge: string;
+  hat: string;
 }
 export const DEFAULT_APPEARANCE: Appearance = {
   version: 1,
@@ -32,6 +35,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   background: "felt",
   nameplate: "classic",
   badge: "",
+  hat: "none",
 };
 const pick = (value: unknown, ids: readonly string[], fallback: string) =>
   typeof value === "string" && ids.includes(value) ? value : fallback;
@@ -46,6 +50,7 @@ export function normalizeAppearance(raw: unknown): Appearance {
     frame: pick(p.frame, FRAMES, "brass"),
     background: pick(p.background, BACKGROUNDS, "felt"),
     nameplate: pick(p.nameplate, NAMEPLATES, "classic"),
+    hat: pick(p.hat, HATS, "none"),
     badge: typeof p.badge === "string" && p.badge.length < 64 ? p.badge : "",
   };
 }
@@ -63,6 +68,17 @@ export function writeAppearance(storage: Pick<Storage, "setItem">, value: Appear
     /* The provider keeps the selection in memory. */
   }
 }
+/**
+ * Whether a hat is the player's: a holiday hat comes with its holiday's badge,
+ * an advent hat with its door. "none" is always theirs.
+ */
+export function hatUnlocked(hat: string, p: Profile): boolean {
+  if (hat === "none") return true;
+  if (adventDoorFor(hat) !== undefined) return adventUnlocked(hat, p);
+  const badge = holidayUnlocker(hat);
+  return badge !== undefined && p.achievements.includes(badge);
+}
+
 export function canEquipAppearance(a: Appearance, p: Profile): boolean {
   return (
     a.version === 1 &&
@@ -72,6 +88,8 @@ export function canEquipAppearance(a: Appearance, p: Profile): boolean {
     FRAMES.includes(a.frame as (typeof FRAMES)[number]) &&
     BACKGROUNDS.includes(a.background as (typeof BACKGROUNDS)[number]) &&
     NAMEPLATES.includes(a.nameplate as (typeof NAMEPLATES)[number]) &&
+    HATS.includes(a.hat as (typeof HATS)[number]) &&
+    hatUnlocked(a.hat, p) &&
     (!a.badge || p.achievements.includes(a.badge))
   );
 }
@@ -92,6 +110,7 @@ export function resolveEquippedAppearance(
     dice: dice && dice.id !== "ivory" && isUnlocked(dice, p) ? dice.id : "house",
     table: table && table.id !== "classic" && isUnlocked(table, p) ? table.id : "club",
     badge: p.achievements.includes(identity.badge) ? identity.badge : "",
+    hat: hatUnlocked(identity.hat, p) ? identity.hat : "none",
   };
 }
 
@@ -105,6 +124,36 @@ export function profileWithAppearance(a: Appearance, p: Profile): Profile | null
     visualBeta: cleanBetaIdentity(a),
   };
 }
+/**
+ * A felt's weave, drawn on the small tile the table repeats (10-14px). Only the
+ * new look has the tile to draw it on; Classic shows the same felts as colour.
+ */
+const TABLE_PATTERNS: Record<string, string> = {
+  afterhours: "radial-gradient(circle,#d1c1ff30 1px,transparent 1.5px)",
+  // The holiday felts.
+  "confetti-felt":
+    "radial-gradient(circle at 25% 30%,#ffd76e66 1px,transparent 1.6px),radial-gradient(circle at 75% 70%,#ff8fc066 1px,transparent 1.6px)",
+  "sweetheart-felt": "radial-gradient(circle,#ffc2cf33 1.4px,transparent 2px)",
+  "clover-felt":
+    "radial-gradient(circle at 30% 30%,#7ee08a40 1.5px,transparent 2px),radial-gradient(circle at 70% 70%,#7ee08a30 1px,transparent 1.5px)",
+  "beach-towel-felt": "repeating-linear-gradient(90deg,#ffffff22 0 3px,transparent 3px 7px)",
+  "haunted-felt":
+    "repeating-linear-gradient(45deg,#bba6b91c 0 1px,transparent 1px 6px),repeating-linear-gradient(-45deg,#bba6b912 0 1px,transparent 1px 6px)",
+  "harvest-felt":
+    "repeating-linear-gradient(0deg,#f2b23c22 0 2px,transparent 2px 7px),repeating-linear-gradient(90deg,#00000022 0 2px,transparent 2px 7px)",
+  "tartan-felt":
+    "repeating-linear-gradient(0deg,#b8323c33 0 3px,transparent 3px 7px),repeating-linear-gradient(90deg,#b8323c33 0 3px,transparent 3px 7px),repeating-linear-gradient(90deg,#f2d27a22 0 1px,transparent 1px 7px)",
+  // Behind the advent calendar's doors.
+  "peppermint-felt": "repeating-linear-gradient(45deg,#ffffff1f 0 3px,transparent 3px 7px)",
+  "snowfall-felt":
+    "radial-gradient(circle at 30% 30%,#ffffff40 1px,transparent 1.6px),radial-gradient(circle at 75% 65%,#ffffff2a 0.8px,transparent 1.4px)",
+  "fireside-felt": "repeating-linear-gradient(0deg,#00000018 0 2px,transparent 2px 6px)",
+  "gift-wrap-felt":
+    "repeating-linear-gradient(90deg,#d8b25a26 0 2px,transparent 2px 7px),radial-gradient(circle,#d7263d33 1.2px,transparent 1.8px)",
+  "aurora-felt":
+    "linear-gradient(120deg,#7fd6c218,transparent 60%),radial-gradient(circle,#ffffff22 0.8px,transparent 1.3px)",
+};
+
 export function appearanceVars(a: Appearance): CSSProperties {
   const skin = DICE_SKINS.find((c) => c.id === a.dice);
   const dice: Record<string, string> = skin
@@ -150,8 +199,7 @@ export function appearanceVars(a: Appearance): CSSProperties {
     "--beta-effect-color":
       a.dice === "circuit" ? "#65ffe8" : a.dice === "volcanic" ? "#ff9765" : "#ffe5a5",
     "--beta-table-pattern":
-      a.table === "afterhours"
-        ? "radial-gradient(circle,#d1c1ff30 1px,transparent 1.5px)"
-        : "repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px)",
+      TABLE_PATTERNS[a.table] ??
+      "repeating-linear-gradient(45deg,#ffffff04 0 1px,transparent 1px 5px)",
   } as CSSProperties;
 }

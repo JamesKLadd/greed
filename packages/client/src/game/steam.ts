@@ -52,6 +52,17 @@ export const STEAM_ACHIEVEMENT_IDS: Record<string, string> = {
   "trick-or-treat": "ACH_TRICK_OR_TREAT",
   "deck-the-halls": "ACH_DECK_THE_HALLS",
   "beach-day": "ACH_BEACH_DAY",
+  "happy-new-year": "ACH_HAPPY_NEW_YEAR",
+  "be-mine": "ACH_BE_MINE",
+  "luck-of-the-irish": "ACH_LUCK_OF_THE_IRISH",
+  "gobble-gobble": "ACH_GOBBLE_GOBBLE",
+  "newyear-champion": "ACH_NEW_YEAR_CHAMPION",
+  "valentines-champion": "ACH_VALENTINES_CHAMPION",
+  "stpatricks-champion": "ACH_ST_PATRICKS_CHAMPION",
+  "summer-champion": "ACH_SUMMER_CHAMPION",
+  "halloween-champion": "ACH_HALLOWEEN_CHAMPION",
+  "thanksgiving-champion": "ACH_THANKSGIVING_CHAMPION",
+  "christmas-champion": "ACH_CHRISTMAS_CHAMPION",
 };
 
 interface TauriInternals {

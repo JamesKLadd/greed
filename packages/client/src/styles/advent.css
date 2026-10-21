@@ -1,0 +1,193 @@
+/* ---------- The advent calendar (AdventScreen.tsx, AdventEntry.tsx) ---------- */
+
+/* Home's entry: a slim card under the hero, December only. */
+.advent-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 520px);
+  margin: 8px auto 4px;
+  padding: 10px 14px;
+  border: 1px solid #c9a05a;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(135deg, #ffffff0d 0 6px, transparent 6px 12px),
+    linear-gradient(110deg, #7d1a26, #4a1018);
+  color: #fff7ec;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  position: relative;
+  z-index: 1;
+}
+.advent-entry:focus-visible {
+  outline: 2px solid #ffe08a;
+  outline-offset: 2px;
+}
+.advent-entry__icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.advent-entry__copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.advent-entry__copy small {
+  color: #f3d9c9;
+  font-size: 0.75rem;
+}
+.advent-entry__arrow {
+  font-weight: 700;
+}
+.beta-hub__hero .advent-entry {
+  margin-top: 14px;
+}
+
+/* The screen. */
+.advent__progress {
+  margin: 0 0 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.advent__doors {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .advent__doors {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.advent-door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 104px;
+  padding: 22px 4px 8px;
+  border-radius: 12px;
+  text-align: center;
+  min-width: 0;
+}
+.advent-door__number {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+/* A shut door: the calendar's red, panelled. */
+.advent-door--shut {
+  background:
+    linear-gradient(#ffffff10, #ffffff10) padding-box,
+    linear-gradient(160deg, #8e1f2c, #5a1019);
+  border: 1px solid #b2525c;
+  color: #f6dcd6;
+}
+.advent-door--shut .advent-door__number {
+  color: #ffe08a;
+}
+/* The next door: lit, and saying how to open it. */
+.advent-door--next {
+  background: linear-gradient(160deg, #b8323c, #7a1a24);
+  border: 2px solid #ffe08a;
+  color: #fff7ec;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #ffe08a 30%, transparent);
+}
+.advent-door--next .advent-door__number {
+  color: #ffe08a;
+}
+/* Behind today's date but not next: openable, waiting its turn. */
+.advent-door--ready {
+  background: linear-gradient(160deg, #a52a35, #6e1720);
+  border: 1px dashed #ffe08a;
+  color: #fff1e6;
+}
+.advent-door--ready .advent-door__number {
+  color: #ffe08a;
+}
+/* An open door: what was behind it. */
+.advent-door--open {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+.advent-door--open .advent-door__number {
+  color: var(--text-mute);
+}
+.advent-door__hint {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+}
+.advent-door__art {
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+}
+.advent-door__name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.advent-door__kind {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
+}
+
+/* Item pictures, shared by the screen and the popup. */
+.advent-art {
+  display: inline-grid;
+  place-items: center;
+}
+.advent-art--felt {
+  border-radius: 8px;
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-1), var(--felt-2));
+  box-shadow:
+    inset 0 0 0 2px var(--rail-1),
+    inset 0 0 0 4px var(--rail-2);
+}
+.advent-art--face {
+  line-height: 1;
+}
+.advent-art--hat svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.advent-gift__art {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  margin: 4px 0 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at 50% 30%, #2b4a6b, #142233);
+}
+
+:root[data-contrast="high"]
+  :is(.advent-door--shut, .advent-door--ready, .advent-door--next, .advent-entry) {
+  background: #10151d;
+  border-color: #fff;
+  color: #fff;
+}
+@media (forced-colors: active) {
+  .advent-door,
+  .advent-entry {
+    border: 1px solid CanvasText;
+  }
+  .advent-door--next {
+    border: 2px solid Highlight;
+  }
+}

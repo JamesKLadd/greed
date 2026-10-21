@@ -33,6 +33,8 @@ export const RELEASES: Release[] = [
       "Added holiday dice you can only earn by playing on the holiday: pumpkin dice on Halloween, tree ornament dice on Christmas Day, and beach ball dice any day of summer. Signing in on the day unlocks them with a popup",
       "Added statistical data for every throw: compare your busts, three of a kind, straights, five of a kind and hot dice against the exact odds, see your score over time, and export it all as a CSV. Find it under View Statistical Data in the Daily Challenge, Weekly Challenge and Stats screens",
       "Statistical data now also counts games left unfinished, and adds your decisions against the best play for points, your banking habits, where your points come from, your luck over time and how it compares with other players, a 7, 30 or 100 day view, and a decisions CSV",
+      "Added New Year's, Valentine's Day, St. Patrick's Day and Thanksgiving themes, each with its own shaped dice. Every holiday now also gives a matching face, a hat for your character and a felt",
+      "Straights and five of a kind get a seasonal burst, December brings an advent calendar with something behind all 24 doors, and winning a holiday's Daily or Weekly earns a trophy, gold holiday dice and a themed spot in Past winners",
     ],
   },
   {

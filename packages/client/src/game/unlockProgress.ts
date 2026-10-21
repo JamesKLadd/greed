@@ -1,5 +1,6 @@
 import type { Profile } from "./profile.js";
-import { daysUntilHoliday, holidayForAchievement } from "./holidayDice.js";
+import { adventDoorFor } from "./advent.js";
+import { daysUntilHoliday, holidayForAchievement, holidayUnlocker } from "./holidayDice.js";
 
 export type ProgressMetric =
   "games" | "wins" | "bestTurn" | "bestStreak" | "banked" | "hotDice" | "weeklyWins";
@@ -56,9 +57,6 @@ const COSMETIC_ACHIEVEMENTS: Record<string, string> = {
   laurel: "daily-elite",
   regalia: "weekly-champion",
   keystone: "weekly-streak-8",
-  pumpkin: "trick-or-treat",
-  ornament: "deck-the-halls",
-  "beach-ball": "beach-day",
   "crimson-felt": "flawless",
   royal: "hat-trick",
   sunset: "landslide",
@@ -138,6 +136,10 @@ export function cosmeticUnlockProgress(
 ): UnlockProgress | null {
   const direct = DIRECT_COUNTERS[id];
   if (direct) return counterProgress(direct, profile);
-  const achievement = COSMETIC_ACHIEVEMENTS[id];
+  // An advent item's requirement already names its door; there is nothing to
+  // count toward before December.
+  if (adventDoorFor(id) !== undefined) return null;
+  // A holiday piece waits on its holiday's badge (or, gold dice, its trophy).
+  const achievement = holidayUnlocker(id) ?? COSMETIC_ACHIEVEMENTS[id];
   return achievement ? achievementUnlockProgress(achievement, profile, date) : null;
 }

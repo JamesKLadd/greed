@@ -236,15 +236,31 @@ export async function recordRollRun(
     playedAt,
     { decisions: collector.decisionsFor(RUN_PLAYER_ID) },
   );
-  await recordRollGame(userId, key, game);
+  // The audit first and the game row last: the game row's arrival is what tells
+  // a reader the run has been filed, so everything else must already be there.
   await recordDiceAudit(key, mode, tableFaces(position.state), playedAt);
+  await recordRollGame(userId, key, game);
 }
+
+/** Statistics writes still in flight; see `statsSettled`. */
+const pending = new Set<Promise<void>>();
 
 /** Fire-and-forget wrapper: statistics must never fail the thing being measured. */
 export function fileQuietly(what: string, work: () => Promise<void>): void {
-  void work().catch((err) =>
-    console.error(`[roll stats] could not record ${what}:`, (err as Error).message),
-  );
+  const job = work()
+    .catch((err) => console.error(`[roll stats] could not record ${what}:`, (err as Error).message))
+    .finally(() => pending.delete(job));
+  pending.add(job);
+}
+
+/**
+ * Resolves once every statistics write in flight has finished, however it
+ * finished. For tests: a finished run files its throws AFTER the move that
+ * finished it has returned, so a test that clears the tables straight away
+ * (TRUNCATE users CASCADE) can race that write into a deadlock.
+ */
+export async function statsSettled(): Promise<void> {
+  while (pending.size > 0) await Promise.allSettled([...pending]);
 }
 
 /**

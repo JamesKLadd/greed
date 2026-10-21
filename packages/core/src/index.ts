@@ -9,3 +9,4 @@ export * from "./game.js";
 export * from "./run.js";
 export * from "./daily.js";
 export * from "./weekly.js";
+export * from "./holidays.js";

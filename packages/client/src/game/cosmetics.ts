@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Profile } from "./profile.js";
+import { adventDoorFor, adventUnlocked } from "./advent.js";
 
 /**
  * Unlockable cosmetics: dice skins and table themes. Each carries a set of CSS
@@ -9,12 +10,31 @@ import type { Profile } from "./profile.js";
 
 /**
  * The body a set of dice is cast in. Every skin but the holiday ones is a cube;
- * those are a pumpkin, a tree ornament and a beach ball, drawn by Die.tsx as a
- * standing token in the same square a cube occupies.
+ * those are drawn by Die.tsx (DieShell.tsx) as a standing token in the same
+ * square a cube occupies.
  */
-export type DieShape = "cube" | "pumpkin" | "ornament" | "beach-ball";
+export type DieShape =
+  | "cube"
+  | "pumpkin"
+  | "ornament"
+  | "beach-ball"
+  | "disco-ball"
+  | "heart"
+  | "pot-of-gold"
+  | "acorn"
+  | "gift-box";
 
-export const DIE_SHAPES: readonly DieShape[] = ["cube", "pumpkin", "ornament", "beach-ball"];
+export const DIE_SHAPES: readonly DieShape[] = [
+  "cube",
+  "pumpkin",
+  "ornament",
+  "beach-ball",
+  "disco-ball",
+  "heart",
+  "pot-of-gold",
+  "acorn",
+  "gift-box",
+];
 
 /**
  * The custom property that carries a skin's shape alongside its colours.
@@ -42,6 +62,11 @@ export interface Cosmetic {
   requirement?: string;
   /** True when the profile has earned it (omit => free from the start). */
   unlock?: (p: Profile) => boolean;
+}
+
+/** "Open advent door 5": the requirement every advent item states. */
+function adventRequirement(id: string): string {
+  return `Open advent door ${adventDoorFor(id)}`;
 }
 
 export const DICE_SKINS: Cosmetic[] = [
@@ -374,6 +399,302 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(20,40,80,0.24)",
     },
   },
+  {
+    id: "disco-ball",
+    name: "Mirror Ball",
+    shape: "disco-ball",
+    requirement: "Play on New Year's Eve or Day",
+    unlock: (p) => p.achievements.includes("happy-new-year"),
+    vars: {
+      "--die-c1": "#ffffff",
+      "--die-c2": "#c9d0dc",
+      "--die-c3": "#6f7889",
+      "--die-pip": "#151a2b",
+      "--die-pip2": "#4a5470",
+      "--die-lip": "rgba(20,25,45,0.28)",
+    },
+  },
+  {
+    id: "candy-heart",
+    name: "Candy Heart",
+    shape: "heart",
+    requirement: "Play on Valentine's Day",
+    unlock: (p) => p.achievements.includes("be-mine"),
+    vars: {
+      "--die-c1": "#ffb3c7",
+      "--die-c2": "#ff5c8a",
+      "--die-c3": "#c21e56",
+      "--die-pip": "#fbe3ea",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(110,0,35,0.3)",
+    },
+  },
+  {
+    id: "pot-of-gold",
+    name: "Pot of Gold",
+    shape: "pot-of-gold",
+    requirement: "Play on St. Patrick's Day",
+    unlock: (p) => p.achievements.includes("luck-of-the-irish"),
+    vars: {
+      "--die-c1": "#5d646d",
+      "--die-c2": "#33383f",
+      "--die-c3": "#15181c",
+      "--die-pip": "#c9961c",
+      "--die-pip2": "#fff1a8",
+      "--die-lip": "rgba(0,0,0,0.35)",
+    },
+  },
+  {
+    id: "acorn",
+    name: "Acorn",
+    shape: "acorn",
+    requirement: "Play on Thanksgiving",
+    unlock: (p) => p.achievements.includes("gobble-gobble"),
+    vars: {
+      "--die-c1": "#e3a865",
+      "--die-c2": "#b06d30",
+      "--die-c3": "#6e3f17",
+      "--die-pip": "#2c1606",
+      "--die-pip2": "#6b3b14",
+      "--die-lip": "rgba(60,30,5,0.32)",
+    },
+  },
+  // The trophy dice: each holiday set again, in gold, for whoever won that
+  // holiday's Daily or Weekly. Their one condition is the trophy badge, which
+  // only the server hands out (see holidayDice.ts).
+  {
+    id: "gold-disco-ball",
+    name: "Golden Mirror Ball",
+    shape: "disco-ball",
+    requirement: "Win the New Year's Daily or Weekly",
+    unlock: (p) => p.achievements.includes("newyear-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-heart",
+    name: "Golden Heart",
+    shape: "heart",
+    requirement: "Win the Valentine's Daily or Weekly",
+    unlock: (p) => p.achievements.includes("valentines-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-pot",
+    name: "Solid Gold Pot",
+    shape: "pot-of-gold",
+    requirement: "Win the St. Patrick's Daily or Weekly",
+    unlock: (p) => p.achievements.includes("stpatricks-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-beach-ball",
+    name: "Golden Beach Ball",
+    shape: "beach-ball",
+    requirement: "Win the Fourth of July Daily or Weekly",
+    unlock: (p) => p.achievements.includes("summer-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-pumpkin",
+    name: "Golden Pumpkin",
+    shape: "pumpkin",
+    requirement: "Win the Halloween Daily or Weekly",
+    unlock: (p) => p.achievements.includes("halloween-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-acorn",
+    name: "Golden Acorn",
+    shape: "acorn",
+    requirement: "Win the Thanksgiving Daily or Weekly",
+    unlock: (p) => p.achievements.includes("thanksgiving-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  {
+    id: "gold-ornament",
+    name: "Golden Ornament",
+    shape: "ornament",
+    requirement: "Win the Christmas Daily or Weekly",
+    unlock: (p) => p.achievements.includes("christmas-champion"),
+    vars: {
+      "--die-c1": "#fff2b3",
+      "--die-c2": "#e9b93f",
+      "--die-c3": "#8c5e0b",
+      "--die-pip": "#3b2604",
+      "--die-pip2": "#86601a",
+      "--die-lip": "rgba(90,60,5,0.34)",
+    },
+  },
+  // Behind the advent calendar's doors (advent.ts), one a day in December.
+  {
+    id: "candy-cane",
+    name: "Candy Cane",
+    requirement: adventRequirement("candy-cane"),
+    unlock: (p) => adventUnlocked("candy-cane", p),
+    vars: {
+      "--die-c1": "#ffffff",
+      "--die-c2": "#f3e9ea",
+      "--die-c3": "#d9c3c6",
+      "--die-pip": "#c8102e",
+      "--die-pip2": "#ff6b7f",
+      "--die-lip": "rgba(150,20,40,0.25)",
+    },
+  },
+  {
+    id: "gingerbread",
+    name: "Gingerbread",
+    requirement: adventRequirement("gingerbread"),
+    unlock: (p) => adventUnlocked("gingerbread", p),
+    vars: {
+      "--die-c1": "#e0a46a",
+      "--die-c2": "#b8743c",
+      "--die-c3": "#8a4f22",
+      "--die-pip": "#fff7ec",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(90,45,10,0.3)",
+    },
+  },
+  {
+    id: "mistletoe",
+    name: "Mistletoe",
+    requirement: adventRequirement("mistletoe"),
+    unlock: (p) => adventUnlocked("mistletoe", p),
+    vars: {
+      "--die-c1": "#8fd19e",
+      "--die-c2": "#4f9f62",
+      "--die-c3": "#2d6b3d",
+      "--die-pip": "#f7f7f2",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(20,60,30,0.3)",
+    },
+  },
+  {
+    id: "silver-bells",
+    name: "Silver Bells",
+    requirement: adventRequirement("silver-bells"),
+    unlock: (p) => adventUnlocked("silver-bells", p),
+    vars: {
+      "--die-c1": "#f4f6f9",
+      "--die-c2": "#c3cad4",
+      "--die-c3": "#8c95a3",
+      "--die-pip": "#1e2533",
+      "--die-pip2": "#5c6680",
+      "--die-lip": "rgba(40,50,70,0.25)",
+    },
+  },
+  {
+    id: "frosted-glass",
+    name: "Frosted Glass",
+    requirement: adventRequirement("frosted-glass"),
+    unlock: (p) => adventUnlocked("frosted-glass", p),
+    vars: {
+      "--die-c1": "#e9f6ff",
+      "--die-c2": "#b8dcf2",
+      "--die-c3": "#7fb2d6",
+      "--die-pip": "#0f3a5a",
+      "--die-pip2": "#4f86b0",
+      "--die-lip": "rgba(20,70,110,0.22)",
+    },
+  },
+  {
+    id: "cranberry",
+    name: "Cranberry",
+    requirement: adventRequirement("cranberry"),
+    unlock: (p) => adventUnlocked("cranberry", p),
+    vars: {
+      "--die-c1": "#e05a6e",
+      "--die-c2": "#a3203a",
+      "--die-c3": "#6a0f22",
+      "--die-pip": "#fff1f3",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(60,0,15,0.35)",
+    },
+  },
+  {
+    id: "evergreen",
+    name: "Evergreen",
+    requirement: adventRequirement("evergreen"),
+    unlock: (p) => adventUnlocked("evergreen", p),
+    vars: {
+      "--die-c1": "#3f8a5a",
+      "--die-c2": "#22603a",
+      "--die-c3": "#123d24",
+      "--die-pip": "#f2d16b",
+      "--die-pip2": "#fff3c2",
+      "--die-lip": "rgba(5,35,15,0.35)",
+    },
+  },
+  {
+    id: "snowdrift",
+    name: "Snowdrift",
+    requirement: adventRequirement("snowdrift"),
+    unlock: (p) => adventUnlocked("snowdrift", p),
+    vars: {
+      "--die-c1": "#ffffff",
+      "--die-c2": "#eef4fa",
+      "--die-c3": "#c7d6e6",
+      "--die-pip": "#6f8fb3",
+      "--die-pip2": "#a9c3e0",
+      "--die-lip": "rgba(70,100,140,0.22)",
+    },
+  },
+  {
+    id: "gift-box",
+    name: "Wrapped Gift",
+    shape: "gift-box",
+    requirement: adventRequirement("gift-box"),
+    unlock: (p) => adventUnlocked("gift-box", p),
+    vars: {
+      "--die-c1": "#f0505a",
+      "--die-c2": "#c92131",
+      "--die-c3": "#861320",
+      "--die-pip": "#fff7f0",
+      "--die-pip2": "#ffffff",
+      "--die-lip": "rgba(90,10,20,0.32)",
+    },
+  },
 ];
 
 export const TABLE_THEMES: Cosmetic[] = [
@@ -557,6 +878,164 @@ export const TABLE_THEMES: Cosmetic[] = [
       "--felt-edge": "#0c1f1b",
       "--rail-1": "#9c7b46",
       "--rail-2": "#4e3c20",
+    },
+  },
+  // The holiday felts (holidayDice.ts), part of each holiday's set.
+  {
+    id: "confetti-felt",
+    name: "Midnight Confetti",
+    requirement: "Play on New Year's Eve or Day",
+    unlock: (p) => p.achievements.includes("happy-new-year"),
+    vars: {
+      "--felt-1": "#232a52",
+      "--felt-2": "#131733",
+      "--felt-edge": "#090b1a",
+      "--rail-1": "#c9a54b",
+      "--rail-2": "#6b5320",
+    },
+  },
+  {
+    id: "sweetheart-felt",
+    name: "Sweetheart Velvet",
+    requirement: "Play on Valentine's Day",
+    unlock: (p) => p.achievements.includes("be-mine"),
+    vars: {
+      "--felt-1": "#8a2346",
+      "--felt-2": "#5a1530",
+      "--felt-edge": "#330a1b",
+      "--rail-1": "#d9a0a8",
+      "--rail-2": "#7a4450",
+    },
+  },
+  {
+    id: "clover-felt",
+    name: "Clover Field",
+    requirement: "Play on St. Patrick's Day",
+    unlock: (p) => p.achievements.includes("luck-of-the-irish"),
+    vars: {
+      "--felt-1": "#1f7a3c",
+      "--felt-2": "#125528",
+      "--felt-edge": "#093316",
+      "--rail-1": "#c9a54b",
+      "--rail-2": "#5f4a1c",
+    },
+  },
+  {
+    id: "beach-towel-felt",
+    name: "Beach Towel",
+    requirement: "Play during the summer season",
+    unlock: (p) => p.achievements.includes("beach-day"),
+    vars: {
+      "--felt-1": "#1b8ba0",
+      "--felt-2": "#0f6273",
+      "--felt-edge": "#073c47",
+      "--rail-1": "#f2d3a0",
+      "--rail-2": "#a07a4c",
+    },
+  },
+  {
+    id: "haunted-felt",
+    name: "Haunted Parlor",
+    requirement: "Play on Halloween",
+    unlock: (p) => p.achievements.includes("trick-or-treat"),
+    vars: {
+      "--felt-1": "#3c2450",
+      "--felt-2": "#24163a",
+      "--felt-edge": "#120b20",
+      "--rail-1": "#a8784a",
+      "--rail-2": "#4a2f20",
+    },
+  },
+  {
+    id: "harvest-felt",
+    name: "Harvest Plaid",
+    requirement: "Play on Thanksgiving",
+    unlock: (p) => p.achievements.includes("gobble-gobble"),
+    vars: {
+      "--felt-1": "#8a4a1e",
+      "--felt-2": "#5e3013",
+      "--felt-edge": "#361a08",
+      "--rail-1": "#c9935a",
+      "--rail-2": "#5c3a1c",
+    },
+  },
+  {
+    id: "tartan-felt",
+    name: "Christmas Tartan",
+    requirement: "Play on Christmas Day",
+    unlock: (p) => p.achievements.includes("deck-the-halls"),
+    vars: {
+      "--felt-1": "#1d5c3c",
+      "--felt-2": "#123d28",
+      "--felt-edge": "#082416",
+      "--rail-1": "#b8323c",
+      "--rail-2": "#5e1a20",
+    },
+  },
+  // Behind the advent calendar's doors (advent.ts).
+  {
+    id: "peppermint-felt",
+    name: "Peppermint",
+    requirement: adventRequirement("peppermint-felt"),
+    unlock: (p) => adventUnlocked("peppermint-felt", p),
+    vars: {
+      "--felt-1": "#b3283a",
+      "--felt-2": "#7d1726",
+      "--felt-edge": "#4a0c16",
+      "--rail-1": "#f4f0ea",
+      "--rail-2": "#b9b0a6",
+    },
+  },
+  {
+    id: "snowfall-felt",
+    name: "Snowfall",
+    requirement: adventRequirement("snowfall-felt"),
+    unlock: (p) => adventUnlocked("snowfall-felt", p),
+    vars: {
+      "--felt-1": "#2b4a6b",
+      "--felt-2": "#1a3049",
+      "--felt-edge": "#0d1a2a",
+      "--rail-1": "#dfe8f2",
+      "--rail-2": "#8a9bb0",
+    },
+  },
+  {
+    id: "fireside-felt",
+    name: "Fireside",
+    requirement: adventRequirement("fireside-felt"),
+    unlock: (p) => adventUnlocked("fireside-felt", p),
+    vars: {
+      "--felt-1": "#7a3a1e",
+      "--felt-2": "#4e2412",
+      "--felt-edge": "#2c1308",
+      "--rail-1": "#c98a4a",
+      "--rail-2": "#5c3416",
+    },
+  },
+  {
+    id: "gift-wrap-felt",
+    name: "Gift Wrap",
+    requirement: adventRequirement("gift-wrap-felt"),
+    unlock: (p) => adventUnlocked("gift-wrap-felt", p),
+    vars: {
+      "--felt-1": "#1f6a52",
+      "--felt-2": "#144a39",
+      "--felt-edge": "#0a2c22",
+      "--rail-1": "#d8b25a",
+      "--rail-2": "#6e5520",
+    },
+  },
+  {
+    id: "aurora-felt",
+    name: "Northern Lights",
+    requirement: adventRequirement("aurora-felt"),
+    unlock: (p) => adventUnlocked("aurora-felt", p),
+    vars: {
+      "--felt-1": "#14455a",
+      "--felt-2": "#0d2c40",
+      "--felt-edge": "#06162a",
+      "--rail-1": "#7fd6c2",
+      "--rail-2": "#2f6a72",
     },
   },
 ];

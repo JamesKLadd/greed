@@ -2,6 +2,7 @@ import { useBetaActive } from "../beta/BetaContext.js";
 import { useAppearance } from "../beta/AppearanceContext.js";
 import { appearanceVars } from "../beta/appearance.js";
 import { GameCelebration } from "../beta/Celebration.js";
+import { SeasonalBigHand } from "./SeasonalBigHand.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { canToggleLock, isLastHeldDie as lastHeld } from "@greed/core";
 import { useChallengeRun, type PlayMove, type RunView } from "../game/useChallengeRun.js";
@@ -112,6 +113,7 @@ export function ChallengeRun({
       style={beta ? { ...diceSkin, ...appearanceVars(appearance) } : diceSkin}
     >
       {beta && <GameCelebration state={run.state} isRolling={run.isRolling} showVisuals={false} />}
+      <SeasonalBigHand state={run.state} isRolling={run.isRolling} />
       {practice && (
         <p className="growth-coach" role="status">
           {t(

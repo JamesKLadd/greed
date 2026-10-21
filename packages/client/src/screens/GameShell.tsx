@@ -12,6 +12,7 @@ import { loadSettings } from "../game/settings.js";
 import { useI18n } from "../i18n/i18n.js";
 import { useBetaActive } from "../beta/BetaContext.js";
 import { GameCelebration } from "../beta/Celebration.js";
+import { SeasonalBigHand } from "../components/SeasonalBigHand.js";
 import { SeasonalScenery } from "../components/SeasonalScenery.js";
 
 /**
@@ -182,6 +183,7 @@ export function GameShell({
       {betaActive && (
         <GameCelebration key={presentationEpoch} state={state} isRolling={isRolling} />
       )}
+      <SeasonalBigHand key={`season-${presentationEpoch}`} state={state} isRolling={isRolling} />
       <Toast toast={toast} />
       {overlays}
     </div>

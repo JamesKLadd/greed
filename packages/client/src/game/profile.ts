@@ -1,4 +1,10 @@
-import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
+import {
+  cleanAdventProgress,
+  cleanBetaIdentity,
+  mergeAdventProgress,
+  type AdventProgress,
+  type BetaIdentity,
+} from "@greed/protocol";
 import type { BotPersonality, GameState } from "@greed/core";
 import { isWinner, BEST_TOTAL_CEILING, GOAL_DEFAULT } from "@greed/core";
 
@@ -43,6 +49,12 @@ export interface Profile {
   /** Equipped avatar id, or "" to let it be derived from the player's name. */
   avatar: string;
   visualBeta?: BetaIdentity;
+  /**
+   * Advent calendar doors opened, per December ("2026" → 12). Optional so a
+   * profile from before the calendar, or from an older server, still loads.
+   * See advent.ts.
+   */
+  advent?: AdventProgress;
 }
 
 /** One completed solo game, from the human's perspective. */
@@ -374,10 +386,10 @@ export const ACHIEVEMENTS: Achievement[] = [
     tier: "gold",
   },
   // The holidays. Not a measure of skill at all: the ask is to be at the table
-  // on the day, and two of these days come round once a year. Granted by
-  // `claimHolidayDice` (holidayDice.ts) when a game or challenge run finishes,
-  // and each one unlocks a set of shaped dice. Summer is a season rather than a
-  // day, so it is the easier of the three and is weighted that way.
+  // on the day, which comes round once a year. Granted by `claimHolidayDice`
+  // (holidayDice.ts) on sign-in or when a game or challenge run finishes, and
+  // each one unlocks that holiday's set. Summer is a season rather than a day,
+  // so it is the easiest of them and is weighted that way.
   {
     id: "trick-or-treat",
     icon: "🎃",
@@ -398,6 +410,87 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: "Beach Day",
     desc: "Play Greed during the summer season.",
     tier: "silver",
+  },
+  {
+    id: "happy-new-year",
+    icon: "🎆",
+    title: "Happy New Year",
+    desc: "Play Greed on New Year's Eve or New Year's Day.",
+    tier: "gold",
+  },
+  {
+    id: "be-mine",
+    icon: "💝",
+    title: "Be Mine",
+    desc: "Play Greed on Valentine's Day.",
+    tier: "gold",
+  },
+  {
+    id: "luck-of-the-irish",
+    icon: "☘️",
+    title: "Luck of the Irish",
+    desc: "Play Greed on St. Patrick's Day.",
+    tier: "gold",
+  },
+  {
+    id: "gobble-gobble",
+    icon: "🦃",
+    title: "Gobble Gobble",
+    desc: "Play Greed on Thanksgiving.",
+    tier: "gold",
+  },
+  // The holiday trophies: won, not attended. The winner of a holiday's Daily
+  // (played on the day itself — the Fourth of July for summer) or of the Weekly
+  // around it. Only the server can say who won, so it grants these from the
+  // permanent wins ledger (accounts.ts); each unlocks that holiday's gold dice.
+  {
+    id: "newyear-champion",
+    icon: "🏆",
+    title: "New Year's Champion",
+    desc: "Win the New Year's Day Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "valentines-champion",
+    icon: "🏆",
+    title: "Valentine's Champion",
+    desc: "Win the Valentine's Day Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "stpatricks-champion",
+    icon: "🏆",
+    title: "St. Patrick's Champion",
+    desc: "Win the St. Patrick's Day Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "summer-champion",
+    icon: "🏆",
+    title: "Summer Champion",
+    desc: "Win the Fourth of July Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "halloween-champion",
+    icon: "🏆",
+    title: "Halloween Champion",
+    desc: "Win the Halloween Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "thanksgiving-champion",
+    icon: "🏆",
+    title: "Thanksgiving Champion",
+    desc: "Win the Thanksgiving Daily or that week's Weekly.",
+    tier: "gold",
+  },
+  {
+    id: "christmas-champion",
+    icon: "🏆",
+    title: "Christmas Champion",
+    desc: "Win the Christmas Day Daily or that week's Weekly.",
+    tier: "gold",
   },
 ];
 
@@ -493,6 +586,7 @@ function sane(p: Profile): Profile {
   p.visualBeta = cleanBetaIdentity(p.visualBeta);
   if (p.visualBeta && !p.achievements.includes(p.visualBeta.badge)) p.visualBeta.badge = "";
   if (p.bestTotal > BEST_TOTAL_CEILING) p.bestTotal = 0;
+  p.advent = cleanAdventProgress(p.advent);
   return p;
 }
 
@@ -601,6 +695,7 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     table: b.table || a.table,
     avatar: b.avatar || a.avatar,
     visualBeta: cleanBetaIdentity(b.visualBeta) ?? cleanBetaIdentity(a.visualBeta),
+    advent: mergeAdventProgress(a.advent, b.advent),
   });
 }
 

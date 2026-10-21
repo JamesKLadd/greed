@@ -61,6 +61,7 @@ export function onlineScenePlayers(
       name: player.name,
       score: player.total,
       characterId: look.mascot,
+      hat: look.hat,
       nameplate: look.nameplate,
       team: player.team,
       connected: player.isBot || presence[player.id] !== false,

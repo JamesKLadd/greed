@@ -17,6 +17,7 @@ export interface ScenePlayer {
   id: string;
   name: string;
   characterId?: string;
+  hat?: string;
   nameplate?: string;
   score: number;
   status?: ReactNode;
@@ -138,6 +139,7 @@ export function TableScene({
               <CharacterSprite
                 className="character-sprite"
                 characterId={player.characterId}
+                hat={player.hat}
                 view={seat.view}
                 mirrored={seat.mirrored}
               />

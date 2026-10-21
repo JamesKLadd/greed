@@ -57,6 +57,67 @@ function Pine({ flipped = false }: { flipped?: boolean }) {
   );
 }
 
+function Burst({ x, y, r, color }: { x: number; y: number; r: number; color: string }) {
+  return (
+    <g stroke={color} strokeWidth="2.5" strokeLinecap="round">
+      {Array.from({ length: 12 }, (_, i) => {
+        const a = (Math.PI * 2 * i) / 12;
+        return (
+          <path
+            key={i}
+            d={`M${x + Math.cos(a) * r * 0.35} ${y + Math.sin(a) * r * 0.35}L${x + Math.cos(a) * r} ${y + Math.sin(a) * r}`}
+          />
+        );
+      })}
+      <circle cx={x} cy={y} r="3" fill={color} stroke="none" />
+    </g>
+  );
+}
+
+function Heart({ x, y, scale = 1, fill }: { x: number; y: number; scale?: number; fill: string }) {
+  return (
+    <path
+      transform={`translate(${x} ${y}) scale(${scale})`}
+      d="M0 6C-2 0-10-1-10-6c0-5 6-7 10-2 4-5 10-3 10 2 0 5-8 6-10 12Z"
+      fill={fill}
+    />
+  );
+}
+
+function Shamrock({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <path d="M0 0Q4 14-3 26" stroke="#2f7a45" strokeWidth="3" fill="none" />
+      <g fill="#4fbf6a">
+        <circle cx="0" cy="-8" r="7" />
+        <circle cx="7" cy="3" r="7" />
+        <circle cx="-7" cy="3" r="7" />
+      </g>
+    </g>
+  );
+}
+
+function Leaf({
+  x,
+  y,
+  scale = 1,
+  rotate = 0,
+  fill,
+}: {
+  x: number;
+  y: number;
+  scale?: number;
+  rotate?: number;
+  fill: string;
+}) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rotate}) scale(${scale})`}>
+      <path d="M0-14Q11-3 0 14Q-11-3 0-14Z" fill={fill} />
+      <path d="M0-11V18" stroke="#6a3410" strokeWidth="1.5" />
+    </g>
+  );
+}
+
 /** Small vector room sets. Every piece stays behind the interface and ignores input. */
 export function SeasonalScenery({ placement = "hero" }: { placement?: "hero" | "room" }) {
   const id = useId();
@@ -181,6 +242,126 @@ export function SeasonalScenery({ placement = "hero" }: { placement?: "hero" | "
           strokeWidth="2"
         />
       </g>
+      <g className="seasonal-set seasonal-set--newyear">
+        <Burst x={507} y={70} r={42} color="#f2d27a" />
+        <Burst x={438} y={42} r={22} color="#ff8fc0" />
+        <Burst x={560} y={128} r={18} color="#7fd6ff" />
+        <path d="M0 18Q75 46 150 16T300 14" stroke="#f2d27a" strokeWidth="2" opacity=".35" />
+        <path d="M60 0V46" stroke="#cfcde6" strokeWidth="1.5" opacity=".6" />
+        <circle cx="60" cy="62" r="16" fill="#c9ced8" />
+        <path
+          d="M44 62h32M46 54h28M46 70h28M60 46v32M52 47q-4 15 0 30M68 47q4 15 0 30"
+          stroke="#4a5060"
+          strokeWidth="1"
+          opacity=".7"
+        />
+        {[
+          [40, 220, "#f2d27a"],
+          [72, 236, "#ff8fc0"],
+          [104, 214, "#7fd6ff"],
+          [500, 228, "#9be38a"],
+          [532, 214, "#f2d27a"],
+          [566, 238, "#ff8fc0"],
+        ].map(([x, y, c], i) => (
+          <rect
+            key={i}
+            x={x as number}
+            y={y as number}
+            width="9"
+            height="5"
+            fill={c as string}
+            transform={`rotate(${i * 40} ${x} ${y})`}
+          />
+        ))}
+      </g>
+      <g className="seasonal-set seasonal-set--valentines">
+        <circle cx="507" cy="82" r="56" fill="#ff8fab" opacity=".06" />
+        <Heart x={507} y={78} scale={3.6} fill="#e23f6c" />
+        <Heart x={498} y={70} scale={1} fill="#ffc2cf" />
+        <path d="M110 0Q300 46 470 0" stroke="#a0607a" strokeWidth="2" />
+        {[150, 200, 250, 300, 350, 400].map((x, i) => (
+          <Heart
+            key={x}
+            x={x}
+            y={i < 3 ? 14 + i * 5 : 24 - (i - 3) * 5}
+            scale={0.8}
+            fill={i % 2 ? "#ffc2cf" : "#ff6f91"}
+          />
+        ))}
+        <g>
+          <path d="M60 240V188M80 240V196" stroke="#3f7a4c" strokeWidth="3" />
+          <path d="M60 210q-14-6-18 4 12 4 18-4Zm20 6q14-6 18 4-12 4-18-4Z" fill="#4f9a5c" />
+          <circle cx="60" cy="182" r="13" fill="#c2184a" />
+          <circle cx="80" cy="190" r="11" fill="#e23f6c" />
+          <path
+            d="M55 180q5-7 10 0-5 5-10 0Zm20 9q5-6 10 0-5 4-10 0"
+            stroke="#7a0f2e"
+            strokeWidth="1.5"
+            fill="none"
+          />
+        </g>
+        <Heart x={548} y={222} scale={1.4} fill="#ff6f91" />
+        <Heart x={570} y={200} scale={0.8} fill="#ffc2cf" />
+      </g>
+      <g className="seasonal-set seasonal-set--stpatricks">
+        {["#ff6b6b", "#ffb347", "#ffe066", "#7ee08a", "#6fb7ff", "#a78bfa"].map((c, i) => (
+          <path
+            key={c}
+            d={`M${420 + i * 6} 150A${90 - i * 6} ${90 - i * 6} 0 0 1 ${600 - i * 6} 150`}
+            stroke={c}
+            strokeWidth="5"
+            opacity=".55"
+          />
+        ))}
+        <g>
+          <ellipse cx="545" cy="236" rx="32" ry="8" fill="#080813" opacity=".4" />
+          <path d="M515 206q-2 30 12 34h36q14-4 12-34Z" fill="#2a2e33" />
+          <ellipse cx="545" cy="206" rx="31" ry="6" fill="#3a3f46" />
+          <path d="M518 205q6-14 27-15 21 1 27 15Z" fill="#f6c533" />
+          <ellipse cx="535" cy="196" rx="6" ry="4" fill="#ffe08a" />
+          <ellipse cx="552" cy="194" rx="6" ry="4" fill="#ffe08a" />
+        </g>
+        <Shamrock x={48} y={206} scale={1.2} />
+        <Shamrock x={86} y={222} scale={0.8} />
+        <Shamrock x={120} y={50} scale={0.6} />
+        <circle cx="70" cy="40" r="5" fill="#f6c533" />
+        <circle cx="160" cy="30" r="4" fill="#f6c533" opacity=".7" />
+      </g>
+      <g className="seasonal-set seasonal-set--thanksgiving">
+        <circle cx="507" cy="80" r="58" fill="#ffb366" opacity=".06" />
+        <circle cx="507" cy="80" r="42" fill="#e8913a" opacity=".85" />
+        <circle cx="494" cy="68" r="8" fill="#c06a22" opacity=".35" />
+        <circle cx="520" cy="96" r="6" fill="#c06a22" opacity=".3" />
+        <Leaf x={120} y={40} rotate={-30} fill="#e8742a" />
+        <Leaf x={200} y={70} rotate={40} scale={0.8} fill="#c94a1c" />
+        <Leaf x={574} y={172} rotate={-60} scale={0.7} fill="#f2b23c" />
+        <Leaf x={440} y={120} rotate={20} scale={0.9} fill="#e8742a" />
+        <g stroke="#d6a25e" strokeWidth="2.5">
+          {[-14, 0, 14].map((lean) => (
+            <g key={lean} transform={`rotate(${lean} 60 244)`}>
+              <path d="M60 244V170" />
+              {[0, 1, 2, 3].map((i) => (
+                <ellipse
+                  key={i}
+                  cx="60"
+                  cy={176 + i * 9}
+                  rx="4"
+                  ry="7"
+                  fill="#e9c27a"
+                  stroke="none"
+                />
+              ))}
+            </g>
+          ))}
+        </g>
+        <g>
+          <ellipse cx="530" cy="232" rx="22" ry="15" fill="#e07a2a" />
+          <ellipse cx="530" cy="232" rx="9" ry="15" fill="#f09040" />
+          <path d="M530 217q0-8 5-10" stroke="#5a6e2a" strokeWidth="3" />
+          <ellipse cx="566" cy="238" rx="14" ry="10" fill="#d0691e" />
+          <path d="M566 228q0-6 4-7" stroke="#5a6e2a" strokeWidth="2.5" />
+        </g>
+      </g>
     </svg>
   );
 }
@@ -194,6 +375,16 @@ export function SeasonalName({ fallback }: { fallback: string }) {
       <span className="seasonal-name seasonal-name--halloween">{t("seasonal.name.halloween")}</span>
       <span className="seasonal-name seasonal-name--christmas">{t("seasonal.name.christmas")}</span>
       <span className="seasonal-name seasonal-name--summer">{t("seasonal.name.summer")}</span>
+      <span className="seasonal-name seasonal-name--newyear">{t("seasonal.name.newyear")}</span>
+      <span className="seasonal-name seasonal-name--valentines">
+        {t("seasonal.name.valentines")}
+      </span>
+      <span className="seasonal-name seasonal-name--stpatricks">
+        {t("seasonal.name.stpatricks")}
+      </span>
+      <span className="seasonal-name seasonal-name--thanksgiving">
+        {t("seasonal.name.thanksgiving")}
+      </span>
     </>
   );
 }
@@ -214,6 +405,27 @@ export function SeasonalWinFlourish() {
         <circle cx="340" cy="50" r="14" fill="#eaa47d" />
         <path d="M340 25v-9m0 68v-9m25-25h9m-68 0h9m7-18-7-7m50 50-7-7m0-36 7-7m-50 50 7-7" />
         <path d="m43 90 5 12m10 13 10 3m-38-1-6 11" stroke="#79cfc3" />
+      </g>
+      <g className="seasonal-set seasonal-set--newyear">
+        <Burst x={50} y={60} r={26} color="#f2d27a" />
+        <Burst x={345} y={45} r={30} color="#ff8fc0" />
+        <Burst x={310} y={120} r={16} color="#7fd6ff" />
+      </g>
+      <g className="seasonal-set seasonal-set--valentines">
+        <Heart x={46} y={72} scale={2} fill="#ff6f91" />
+        <Heart x={340} y={44} scale={2.4} fill="#e23f6c" />
+        <Heart x={306} y={118} scale={1.2} fill="#ffc2cf" />
+      </g>
+      <g className="seasonal-set seasonal-set--stpatricks">
+        <Shamrock x={46} y={60} />
+        <Shamrock x={342} y={36} scale={1.2} />
+        <circle cx="306" cy="118" r="8" fill="#f6c533" />
+        <circle cx="70" cy="118" r="6" fill="#f6c533" />
+      </g>
+      <g className="seasonal-set seasonal-set--thanksgiving">
+        <Leaf x={46} y={70} rotate={-30} scale={1.3} fill="#e8742a" />
+        <Leaf x={340} y={44} rotate={30} scale={1.5} fill="#c94a1c" />
+        <Leaf x={306} y={120} rotate={70} fill="#f2b23c" />
       </g>
     </svg>
   );

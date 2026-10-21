@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { HATS } from "@greed/protocol";
+import { holidayTrophy } from "@greed/core";
 import {
-  HOLIDAY_DICE,
+  HOLIDAY_SETS,
   claimHolidayDice,
   daysUntilHoliday,
   holidayOn,
   type Holiday,
 } from "./holidayDice.js";
 import { ACHIEVEMENTS, loadProfile } from "./profile.js";
-import { DICE_SKINS, isUnlocked } from "./cosmetics.js";
+import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "./cosmetics.js";
+import { AVATARS } from "./avatars.js";
+import { hatUnlocked } from "../beta/appearance.js";
 import { resolveSeasonalTheme } from "./seasonal.js";
 import { cosmeticUnlockProgress } from "./unlockProgress.js";
 
@@ -50,7 +54,16 @@ describe("holiday calendar (America/Chicago)", () => {
     // the holiday itself.
     ["2026-10-30T17:00:00.000Z", null],
     ["2026-12-24T18:00:00.000Z", null],
-    ["2027-01-01T18:00:00.000Z", null],
+    ["2027-01-02T18:00:00.000Z", null],
+    // New Year's is the Eve and the Day.
+    ["2026-12-31T18:00:00.000Z", "newyear"],
+    ["2027-01-01T18:00:00.000Z", "newyear"],
+    ["2027-02-14T18:00:00.000Z", "valentines"],
+    ["2027-03-17T18:00:00.000Z", "stpatricks"],
+    // Thanksgiving moves: the fourth Thursday of November.
+    ["2026-11-26T18:00:00.000Z", "thanksgiving"],
+    ["2027-11-25T18:00:00.000Z", "thanksgiving"],
+    ["2027-11-26T18:00:00.000Z", null],
   ] as const)("%s → %s", (iso, holiday) => {
     expect(holidayOn(new Date(iso))).toBe(holiday);
   });
@@ -127,7 +140,7 @@ describe("claimHolidayDice", () => {
 
 describe("holiday rewards are wired end to end", () => {
   it("every holiday names a real badge and a real shaped skin", () => {
-    for (const h of HOLIDAY_DICE) {
+    for (const h of HOLIDAY_SETS) {
       expect(
         ACHIEVEMENTS.some((a) => a.id === h.achievement),
         h.achievement,
@@ -138,6 +151,38 @@ describe("holiday rewards are wired end to end", () => {
       // The skin is gated on exactly its holiday's badge.
       expect(isUnlocked(skin!, { ...loadProfile(), achievements: [] })).toBe(false);
       expect(isUnlocked(skin!, { ...loadProfile(), achievements: [h.achievement] })).toBe(true);
+    }
+  });
+
+  it("the whole set comes with the badge, and the gold dice with the trophy", () => {
+    const none = { ...loadProfile(), achievements: [] as string[] };
+    for (const h of HOLIDAY_SETS) {
+      const badge = { ...none, achievements: [h.achievement] };
+      const avatar = AVATARS.find((a) => a.id === h.avatar);
+      const felt = TABLE_THEMES.find((c) => c.id === h.table);
+      expect(avatar, h.avatar).toBeDefined();
+      expect(felt, h.table).toBeDefined();
+      expect(HATS).toContain(h.hat);
+      expect(avatar!.unlock!(none)).toBe(false);
+      expect(avatar!.unlock!(badge)).toBe(true);
+      expect(isUnlocked(felt!, none)).toBe(false);
+      expect(isUnlocked(felt!, badge)).toBe(true);
+      expect(hatUnlocked(h.hat, none)).toBe(false);
+      expect(hatUnlocked(h.hat, badge)).toBe(true);
+
+      expect(
+        ACHIEVEMENTS.some((a) => a.id === h.trophy),
+        h.trophy,
+      ).toBe(true);
+      // The server grants trophies by this name (core/holidays.ts).
+      expect(h.trophy).toBe(holidayTrophy(h.holiday));
+      const gold = DICE_SKINS.find((c) => c.id === h.goldDice)!;
+      const plain = DICE_SKINS.find((c) => c.id === h.dice)!;
+      // The same body as the holiday's own dice, and only a trophy opens it:
+      // turning up on the day is not winning.
+      expect(gold.shape).toBe(plain.shape);
+      expect(isUnlocked(gold, badge)).toBe(false);
+      expect(isUnlocked(gold, { ...none, achievements: [h.trophy] })).toBe(true);
     }
   });
 

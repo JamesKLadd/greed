@@ -121,14 +121,35 @@ build on every push. Node 20.
   (what "best of N attempts" means); `weekly_attempts` is the per-day count the
   cap reads. Neither derives from the other.
 
-- Holiday dice (`client/src/game/holidayDice.ts`): a badge per holiday —
-  Halloween (Oct 31), Christmas Day (Dec 25), summer (the whole June–August
-  summer theme) on the Chicago calendar — each unlocking a SHAPED skin
-  (pumpkin, tree ornament, beach ball). Earned by signing in on the day or
-  finishing any game or challenge run on it, and announced by the popup
-  (`HolidayGift.tsx`). Sign-in claims before or after the profile reconcile,
-  never during it: the reconcile replaces the local profile with the server's
-  reply, which would erase a badge granted mid-flight.
+- Holidays: ONE calendar, `core/src/holidays.ts` (Chicago), shared by client
+  and server. Seven holidays — New Year's, Valentine's, St. Patrick's, Summer,
+  Halloween, Thanksgiving (4th Thursday), Christmas — and three questions with
+  different answers: whose decorations are up (`seasonOnDate`; New Year's takes
+  Dec 31–Jan 5 from Christmas), whose gifts can be earned (`holidayOnDate`: the
+  day itself, New Year's Eve or Day, or any day of summer), and which challenge
+  is the holiday's (`trophyDay`: Jan 1 for New Year's, Jul 4 for Summer).
+- Holiday sets (`client/src/game/holidayDice.ts`): each holiday's badge unlocks
+  shaped dice, a Classic emoji face, a hat (new look) and a felt. Every piece is
+  gated on the BADGE, so holders get pieces added later. Earned by signing in
+  on the day or finishing any game or run on it; announced by `HolidayGift.tsx`.
+  Sign-in claims before or after the profile reconcile, never during it: the
+  reconcile replaces the local profile with the server's reply, which would
+  erase a badge granted mid-flight.
+- Holiday TROPHIES (`<holiday>-champion`, `holidayTrophy`) are the server's:
+  `withChallengeWins` (accounts.ts) adds one for every `challenge_wins` row whose
+  day is a `trophyDay` or whose week holds one, on every profile read and write.
+  Never let a client grant one. Each unlocks that holiday's gold dice; Past
+  winners rows for those periods are themed (`HolidayHall.tsx`).
+- Hats ride in the visual identity (`HATS` in protocol/visual.ts, "none" first
+  so old identities clean bare-headed). Drawn once each in `Hats.tsx` and set
+  on every head by measured skull-top anchors; check placement at `?hat-review`.
+- Advent calendar (`client/src/game/advent.ts`): Dec 1–24, an item behind every
+  door. A finished game or run opens the next door, never past today's date
+  (so a late start can catch up). Never at sign-in. `profile.advent` is doors
+  per year, merged by the higher count (`protocol/src/advent.ts`, both sides).
+- Big hands in season (`SeasonalBigHand.tsx`) reuse `readCelebration`, so a
+  straight or five of a kind bursts once, never on a reconnect; Classic theme
+  gets none.
 - A skin's shape travels with its colours as the `--dice-shape` custom
   property (`diceSkinVars`), and `Die.tsx` reads it back off the cascade. Every
   skin states its shape, cubes included, or a nested cube inherits a pumpkin.
@@ -150,7 +171,9 @@ build on every push. Node 20.
   divide by `decGames`, since rows from before decisions were kept have none.
   `dice_audit` holds every die thrown at a table, bots' included, once per game.
   The all-players view is granted by account id in `stats_admins` (snapshot of
-  James and Jimmy), never by name.
+  James and Jimmy), never by name. Run files are written after the move that
+  finished them returns, so integration tests `await statsSettled()` before
+  `TRUNCATE users` — without it the two race into a deadlock.
 
 ## Deploying — both halves ship on a push to `main`
 

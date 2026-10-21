@@ -3,6 +3,7 @@ import type { GameState, LegalActions } from "@greed/core";
 import { recordGame, summarize, type Achievement, type GameSummary } from "./profile.js";
 import { syncSteamAchievements } from "./steam.js";
 import { claimHolidayDice } from "./holidayDice.js";
+import { claimAdventDoor } from "./adventClaim.js";
 import { rollGameFromState, tableFaces } from "@greed/bots";
 import type { PlayerRolls } from "./useGreed.js";
 import { recordLocalRollGame } from "./rollRecords.js";
@@ -109,6 +110,9 @@ export function useGameChrome({
     }
     const holiday = claimHolidayDice();
     if (holiday) earned.push(holiday);
+    // December: a finished game opens the next advent door (advent.ts). Synced
+    // with everything else just below.
+    claimAdventDoor();
     setSummary(s);
     setUnlocked(earned);
     syncSteamAchievements(earned.map((a) => a.id));

@@ -3,6 +3,7 @@ import { FoxCharacter } from "./FoxCharacter.js";
 import { BearCharacter, PandaCharacter } from "./BearPandaArtwork.js";
 import { CatCharacter, OwlCharacter, FrogCharacter } from "./CatOwlFrogArtwork.js";
 import { loadCharacterImage, type LoadedCharacterImage } from "./loadCharacterImage.js";
+import { WornHat } from "./Hats.js";
 import {
   CHARACTER_CANVAS,
   getArtPlacement,
@@ -20,6 +21,8 @@ export interface CharacterSpriteProps {
   className?: string;
   /** Local art review override; does not write a character or appearance selection. */
   art?: CharacterArt;
+  /** A hat id from the wearer's look; anything else is bare-headed. */
+  hat?: string;
 }
 
 /** Decorative art only: the seat owns its name, score, interactions and accessibility label. */
@@ -29,6 +32,7 @@ export function CharacterSprite({
   mirrored = false,
   className,
   art,
+  hat,
 }: CharacterSpriteProps) {
   const kind = getCharacterKind(characterId);
   const SeatedCharacter = {
@@ -74,6 +78,7 @@ export function CharacterSprite({
         ) : (
           <SeatedCharacter view={view} />
         )}
+        <WornHat hat={hat} kind={kind} view={view} />
       </g>
     </svg>
   );

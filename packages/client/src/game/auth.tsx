@@ -26,7 +26,7 @@ import {
   resetProfile,
   type Profile,
 } from "./profile.js";
-import { claimHolidayDice } from "./holidayDice.js";
+import { announceHolidayGift, claimHolidayDice, holidayForTrophy } from "./holidayDice.js";
 import { syncSteamAchievements } from "./steam.js";
 import { clearDeviceRollGames, flushRollUploads } from "./rollRecords.js";
 
@@ -56,15 +56,36 @@ function claimAtSignIn(): boolean {
 /** Reconcile local progress with the account's stored profile, keeping the best
  * of both, then adopt the reconciled profile locally and on the server. */
 async function reconcileProfile(serverProfile: Profile): Promise<void> {
+  const before = new Set(loadProfile().achievements);
   const merged = mergeProfiles(loadProfile(), serverProfile);
   replaceProfile(merged);
   try {
     const res = await pushProfile(merged);
     // Older servers omit presentation fields during a staggered deployment.
-    replaceProfile({ ...res.profile, visualBeta: res.profile.visualBeta ?? merged.visualBeta });
+    replaceProfile({
+      ...res.profile,
+      visualBeta: res.profile.visualBeta ?? merged.visualBeta,
+      advent: res.profile.advent ?? merged.advent,
+    });
   } catch {
     /* offline is fine — local keeps the merged copy until the next sync */
   }
+  announceTrophies(before);
+}
+
+/**
+ * A holiday trophy arrives with the account: the server grants it from the
+ * wins ledger once the holiday's Daily or Weekly has closed, so the first a
+ * player hears of it is the profile that comes back from a sync. Anything this
+ * device did not already hold is news, and gets the holiday popup.
+ */
+function announceTrophies(before: Set<string>): void {
+  const won = loadProfile().achievements.filter(
+    (id) => !before.has(id) && holidayForTrophy(id) !== undefined,
+  );
+  if (won.length === 0) return;
+  syncSteamAchievements(won);
+  for (const id of won) announceHolidayGift(id);
 }
 
 /**

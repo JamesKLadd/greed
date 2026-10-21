@@ -1,4 +1,5 @@
 import type { Profile } from "./profile.js";
+import { adventDoorFor, adventUnlocked } from "./advent.js";
 
 /**
  * Emoji avatars: the face on a player's seat.
@@ -109,6 +110,68 @@ export const AVATARS: Avatar[] = [
     requirement: "Four weeks of weeklies in a row",
     unlock: (p) => p.achievements.includes("weekly-streak-4"),
   },
+
+  // The holidays (holidayDice.ts): each set's face for the Classic seat, on the
+  // same badge as the rest of the set.
+  {
+    id: "party-face",
+    emoji: "🥳",
+    requirement: "Play on New Year's Eve or Day",
+    unlock: (p) => p.achievements.includes("happy-new-year"),
+  },
+  {
+    id: "cupid",
+    emoji: "💘",
+    requirement: "Play on Valentine's Day",
+    unlock: (p) => p.achievements.includes("be-mine"),
+  },
+  {
+    id: "four-leaf",
+    emoji: "🍀",
+    requirement: "Play on St. Patrick's Day",
+    unlock: (p) => p.achievements.includes("luck-of-the-irish"),
+  },
+  {
+    id: "sunglasses",
+    emoji: "😎",
+    requirement: "Play during the summer season",
+    unlock: (p) => p.achievements.includes("beach-day"),
+  },
+  {
+    id: "jack-o-lantern",
+    emoji: "🎃",
+    requirement: "Play on Halloween",
+    unlock: (p) => p.achievements.includes("trick-or-treat"),
+  },
+  {
+    id: "turkey",
+    emoji: "🦃",
+    requirement: "Play on Thanksgiving",
+    unlock: (p) => p.achievements.includes("gobble-gobble"),
+  },
+  {
+    id: "santa",
+    emoji: "🎅",
+    requirement: "Play on Christmas Day",
+    unlock: (p) => p.achievements.includes("deck-the-halls"),
+  },
+
+  // Behind the advent calendar's doors (advent.ts).
+  ...(
+    [
+      ["snowman", "⛄"],
+      ["present", "🎁"],
+      ["elf", "🧝"],
+      ["cookie", "🍪"],
+      ["teddy", "🧸"],
+      ["shooting-star", "🌠"],
+    ] as const
+  ).map(([id, emoji]) => ({
+    id,
+    emoji,
+    requirement: `Open advent door ${adventDoorFor(id)}`,
+    unlock: (p: Profile) => adventUnlocked(id, p),
+  })),
 ];
 
 /** The faces anyone can have — the pool auto-assignment draws from. */

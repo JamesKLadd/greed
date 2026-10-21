@@ -67,16 +67,130 @@
   --text-dim: #bed6d5;
 }
 
+:root[data-season="newyear"] {
+  --season-room: #0e1024;
+  --season-light: #2c2f5c;
+  --season-panel: #1f2246;
+  --season-panel-deep: #151832;
+  --season-border: #6f6aa0;
+  --season-trim: #f2d27a;
+  --season-muted: #cfcde6;
+  --season-cloth-top: #2d3270;
+  --season-cloth-mid: #1c2050;
+  --season-cloth-edge: #111433;
+  --season-wood-light: #c9a54b;
+  --season-wood-dark: #3a3150;
+  --season-card-top: #323466;
+  --season-card-bottom: #161a38;
+  --surface-1: #24264a;
+  --surface-2: #181a36;
+  --surface-3: #363a66;
+  --line: #4a4d7c;
+  --line-strong: #7f80b0;
+  --text-dim: #c6c6e0;
+}
+:root[data-season="valentines"] {
+  --season-room: #1c0c16;
+  --season-light: #4e2038;
+  --season-panel: #3a1a2c;
+  --season-panel-deep: #26101e;
+  --season-border: #a0607a;
+  --season-trim: #ffc2cf;
+  --season-muted: #e8c9d4;
+  --season-cloth-top: #6e2244;
+  --season-cloth-mid: #4a1630;
+  --season-cloth-edge: #2e0c1e;
+  --season-wood-light: #c9939f;
+  --season-wood-dark: #4a2430;
+  --season-card-top: #5a2a40;
+  --season-card-bottom: #2a1020;
+  --surface-1: #33202c;
+  --surface-2: #24141e;
+  --surface-3: #4a2c3c;
+  --line: #634052;
+  --line-strong: #9a7184;
+  --text-dim: #dcc2cd;
+}
+:root[data-season="stpatricks"] {
+  --season-room: #0c1c13;
+  --season-light: #24452f;
+  --season-panel: #1c3a28;
+  --season-panel-deep: #12281c;
+  --season-border: #6f9a6c;
+  --season-trim: #f2d27a;
+  --season-muted: #c9e0c6;
+  --season-cloth-top: #1f6a3a;
+  --season-cloth-mid: #144a28;
+  --season-cloth-edge: #0c3019;
+  --season-wood-light: #b9945a;
+  --season-wood-dark: #3e2e1c;
+  --season-card-top: #28553a;
+  --season-card-bottom: #10281b;
+  --surface-1: #203a2a;
+  --surface-2: #15281d;
+  --surface-3: #2f4c39;
+  --line: #46684f;
+  --line-strong: #7f9f84;
+  --text-dim: #c0d6c3;
+}
+:root[data-season="thanksgiving"] {
+  --season-room: #1c120b;
+  --season-light: #4a3020;
+  --season-panel: #3a2618;
+  --season-panel-deep: #281a10;
+  --season-border: #9a7350;
+  --season-trim: #ffc677;
+  --season-muted: #e6d2bc;
+  --season-cloth-top: #7a4220;
+  --season-cloth-mid: #552d16;
+  --season-cloth-edge: #36190c;
+  --season-wood-light: #c08a52;
+  --season-wood-dark: #4a2c18;
+  --season-card-top: #5c3a20;
+  --season-card-bottom: #2a180c;
+  --surface-1: #3a2a1e;
+  --surface-2: #281c14;
+  --surface-3: #4c3828;
+  --line: #66503c;
+  --line-strong: #9c8268;
+  --text-dim: #d8c4ae;
+}
+
 /* Equal-specificity palette overrides follow the base presentation; the final
    accessibility layer and explicit high-contrast surfaces remain authoritative. */
-:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"]) {
+:root:is(
+  [data-season="newyear"],
+  [data-season="valentines"],
+  [data-season="stpatricks"],
+  [data-season="summer"],
+  [data-season="halloween"],
+  [data-season="thanksgiving"],
+  [data-season="christmas"]
+) {
   --room-1: var(--season-light);
   --room-2: var(--season-room);
   --room-3: var(--season-room);
   background: var(--season-room);
 }
-:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"]) body,
-:root:is([data-season="halloween"], [data-season="christmas"], [data-season="summer"])
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  body,
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
   :is(.beta-home, .game, .tp-screen) {
   background:
     radial-gradient(
@@ -86,25 +200,53 @@
     ),
     radial-gradient(ellipse at 15% 15%, var(--season-light), transparent 65%), var(--season-room);
 }
-:root[data-season="halloween"] :is(.beta-home, .game, .tp-screen),
-:root[data-season="christmas"] :is(.beta-home, .game, .tp-screen),
-:root[data-season="summer"] :is(.beta-home, .game, .tp-screen) {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  :is(.beta-home, .game, .tp-screen) {
   --hub-border: var(--season-border);
   --hub-muted: var(--season-muted);
 }
-:root[data-season="halloween"] .tp-scene,
-:root[data-season="christmas"] .tp-scene,
-:root[data-season="summer"] .tp-scene {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  .tp-scene {
   background: radial-gradient(ellipse at 50% 0, var(--season-light), transparent 72%);
 }
-:root[data-season="halloween"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand),
-:root[data-season="christmas"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand),
-:root[data-season="summer"] :is(.tp-wordmark, .tp-icon, .tp-felt-brand) {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  :is(.tp-wordmark, .tp-icon, .tp-felt-brand) {
   color: var(--season-trim);
 }
-:root[data-season="halloween"] .tp-room-light,
-:root[data-season="christmas"] .tp-room-light,
-:root[data-season="summer"] .tp-room-light {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  .tp-room-light {
   background: radial-gradient(
     ellipse,
     color-mix(in srgb, var(--season-trim) 44%, transparent),
@@ -139,19 +281,46 @@
   z-index: 0;
   opacity: 0.85;
 }
-:root[data-season="halloween"] :is(.seasonal-scenery, .seasonal-set--halloween, .seasonal-win),
-:root[data-season="christmas"] :is(.seasonal-scenery, .seasonal-set--christmas, .seasonal-win),
-:root[data-season="summer"] :is(.seasonal-scenery, .seasonal-set--summer, .seasonal-win) {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  :is(.seasonal-scenery, .seasonal-win) {
   display: block;
 }
+:root[data-season="newyear"] .seasonal-set--newyear,
+:root[data-season="valentines"] .seasonal-set--valentines,
+:root[data-season="stpatricks"] .seasonal-set--stpatricks,
+:root[data-season="summer"] .seasonal-set--summer,
+:root[data-season="halloween"] .seasonal-set--halloween,
+:root[data-season="thanksgiving"] .seasonal-set--thanksgiving,
+:root[data-season="christmas"] .seasonal-set--christmas {
+  display: block;
+}
+:root[data-season="newyear"] .seasonal-name--newyear,
+:root[data-season="valentines"] .seasonal-name--valentines,
+:root[data-season="stpatricks"] .seasonal-name--stpatricks,
+:root[data-season="summer"] .seasonal-name--summer,
 :root[data-season="halloween"] .seasonal-name--halloween,
-:root[data-season="christmas"] .seasonal-name--christmas,
-:root[data-season="summer"] .seasonal-name--summer {
+:root[data-season="thanksgiving"] .seasonal-name--thanksgiving,
+:root[data-season="christmas"] .seasonal-name--christmas {
   display: inline;
 }
-:root[data-season="halloween"] .seasonal-default-name,
-:root[data-season="christmas"] .seasonal-default-name,
-:root[data-season="summer"] .seasonal-default-name {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  .seasonal-default-name {
   display: none;
 }
 .beta-hub__hero,
@@ -178,45 +347,73 @@
 
 /* A seasonal cloth is provided only for the default mat. Descendant variables
    override inherited inline defaults without touching an equipped Locker mat. */
-:root[data-season="halloween"] [data-seasonal-table="default"] :is(.tp-scene, .felt),
-:root[data-season="christmas"] [data-seasonal-table="default"] :is(.tp-scene, .felt),
-:root[data-season="summer"] [data-seasonal-table="default"] :is(.tp-scene, .felt) {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  [data-seasonal-table="default"]
+  :is(.tp-scene, .felt) {
   --felt-1: var(--season-cloth-top);
   --felt-2: var(--season-cloth-mid);
   --felt-edge: var(--season-cloth-edge);
   --rail-1: var(--season-wood-light);
   --rail-2: var(--season-wood-dark);
 }
-:root[data-season="halloween"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop,
-:root[data-season="christmas"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop,
-:root[data-season="summer"] [data-seasonal-table="default"] .tp-surface__rail-gradient stop {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  [data-seasonal-table="default"]
+  .tp-surface__rail-gradient
+  stop {
   stop-color: var(--season-wood-dark);
 }
-:root[data-season="halloween"]
-  [data-seasonal-table="default"]
-  .tp-surface__rail-gradient
-  stop:is(:first-child, :last-child),
-:root[data-season="christmas"]
-  [data-seasonal-table="default"]
-  .tp-surface__rail-gradient
-  stop:is(:first-child, :last-child),
-:root[data-season="summer"]
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
   [data-seasonal-table="default"]
   .tp-surface__rail-gradient
   stop:is(:first-child, :last-child) {
   stop-color: var(--season-wood-light);
 }
-:root[data-season="halloween"] .daily__run[data-seasonal-table="default"],
-:root[data-season="christmas"] .daily__run[data-seasonal-table="default"],
-:root[data-season="summer"] .daily__run[data-seasonal-table="default"] {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  .daily__run[data-seasonal-table="default"] {
   background: radial-gradient(ellipse at top, var(--season-cloth-top), var(--season-cloth-mid));
 }
 
-:root[data-season="halloween"]
-  :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite),
-:root[data-season="christmas"]
-  :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite),
-:root[data-season="summer"]
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
   :is(.setup__panel, .overlay__card, .scene-menu, .growth-welcome, .growth-coach, .growth-invite) {
   border-color: var(--season-border);
   background:
@@ -227,11 +424,15 @@
     ),
     linear-gradient(155deg, var(--season-panel), var(--season-panel-deep));
 }
-:root[data-season="halloween"]
-  :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online),
-:root[data-season="christmas"]
-  :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online),
-:root[data-season="summer"]
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
   :is(.beta-hub__account, .beta-hub__mode--local, .beta-hub__mode--online) {
   border-color: var(--season-border);
   background: linear-gradient(115deg, var(--season-panel), var(--season-panel-deep));
@@ -277,11 +478,61 @@
   border-width: 3px;
 }
 
+/* New Year's: gold on midnight. Valentine's: blush and claret. St. Patrick's:
+   gold on green. Thanksgiving: amber and rust. */
+:root[data-season="newyear"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffe7a6, #e8b84f);
+  border-color: #fff0c2;
+}
+:root[data-season="newyear"] .beta-hub__mode--weekly {
+  --mode-icon: #d9dcff;
+  --mode-detail: #cfd2f0;
+  background: linear-gradient(115deg, #34397a, #1d2150);
+  border-color: #8a8cc8;
+}
+:root[data-season="valentines"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffd8e0, #f29bb0);
+  border-color: #ffe4ea;
+}
+:root[data-season="valentines"] .beta-hub__mode--weekly {
+  --mode-icon: #ffd0dc;
+  --mode-detail: #f2cdd8;
+  background: linear-gradient(115deg, #6e2244, #3e1428);
+  border-color: #c07890;
+}
+:root[data-season="stpatricks"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffeab0, #e3bd5c);
+  border-color: #fff0c6;
+}
+:root[data-season="stpatricks"] .beta-hub__mode--weekly {
+  --mode-icon: #c9f2cf;
+  --mode-detail: #cde4cf;
+  background: linear-gradient(115deg, #2a7a46, #164a2a);
+  border-color: #8fc29a;
+}
+:root[data-season="thanksgiving"] .beta-hub__mode--daily {
+  background: linear-gradient(110deg, #ffe0b0, #f0a75c);
+  border-color: #ffe8c6;
+}
+:root[data-season="thanksgiving"] .beta-hub__mode--weekly {
+  --mode-icon: #ffd8b0;
+  --mode-detail: #efd4bc;
+  background: linear-gradient(115deg, #7a4220, #4a2612);
+  border-color: #c4946a;
+}
+
 /* Seasonal results match the exported score image, while the player's portrait
    and all result text stay intact. Decorative borders reserve their own space. */
-:root[data-season="halloween"] .growth-result__card,
-:root[data-season="christmas"] .growth-result__card,
-:root[data-season="summer"] .growth-result__card {
+:root:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
+    [data-season="halloween"],
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
+  )
+  .growth-result__card {
   border-color: var(--season-trim);
   background: radial-gradient(ellipse at top, var(--season-card-top), var(--season-card-bottom));
   box-shadow:
@@ -306,6 +557,31 @@
     0 0 0 3px #477c7b,
     0 0 0 4px #ffd0a0;
 }
+/* The winner's ring: each season's two colours. */
+:root[data-season="newyear"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #2d3270,
+    0 0 0 4px #f2d27a;
+}
+:root[data-season="valentines"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #8a2346,
+    0 0 0 4px #ffc2cf;
+}
+:root[data-season="stpatricks"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #1f6a3a,
+    0 0 0 4px #f2d27a;
+}
+:root[data-season="thanksgiving"] .growth-result__portrait {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #7a4220,
+    0 0 0 4px #ffc677;
+}
 .seasonal-win {
   position: absolute;
   width: 100%;
@@ -326,15 +602,78 @@
   }
 }
 
+/* ---- A big hand, in season (SeasonalBigHand.tsx) ----
+   A fixed layer over the whole screen: it takes no room, catches no taps, and
+   is gone in 1.5s. Each piece flies out from the middle along its own angle. */
+.seasonal-burst {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+.seasonal-burst__piece {
+  grid-area: 1 / 1;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+  animation: seasonal-burst 1300ms cubic-bezier(0.15, 0.7, 0.3, 1) var(--delay, 0ms) both;
+}
+@keyframes seasonal-burst {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(0) scale(0.4);
+  }
+  15% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1)) rotate(var(--spin))
+      scale(1);
+  }
+}
+/* Reduced motion: the pieces appear where they would have landed, and fade. */
+@keyframes seasonal-burst-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  25%,
+  70% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seasonal-burst__piece {
+    transform: rotate(var(--angle)) translateY(calc(var(--distance) * -0.8));
+    animation-name: seasonal-burst-still;
+  }
+}
+:root[data-motion="reduced"] .seasonal-burst__piece {
+  transform: rotate(var(--angle)) translateY(calc(var(--distance) * -0.8));
+  animation-name: seasonal-burst-still;
+}
+
 /* Keep high-contrast surfaces authoritative even where beta styles use literal
    colors. Decoration fades away, and no animation runs continuously. */
-:root[data-contrast="high"] :is(.seasonal-scenery, .seasonal-win) {
+:root[data-contrast="high"] :is(.seasonal-scenery, .seasonal-win, .seasonal-burst) {
   display: none;
 }
 :root[data-contrast="high"]:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
     [data-season="halloween"],
-    [data-season="christmas"],
-    [data-season="summer"]
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
   )
   :is(
     .setup__panel,
@@ -353,9 +692,13 @@
   border-color: #a2aebd;
 }
 :root[data-contrast="high"]:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
     [data-season="halloween"],
-    [data-season="christmas"],
-    [data-season="summer"]
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
   )
   .beta-hub__mode--daily {
   --mode-ink: #17120b;
@@ -365,9 +708,13 @@
   border-color: #fff;
 }
 :root[data-contrast="high"]:is(
+    [data-season="newyear"],
+    [data-season="valentines"],
+    [data-season="stpatricks"],
+    [data-season="summer"],
     [data-season="halloween"],
-    [data-season="christmas"],
-    [data-season="summer"]
+    [data-season="thanksgiving"],
+    [data-season="christmas"]
   )
   .beta-hub__mode--weekly {
   --mode-ink: #fff;
@@ -391,7 +738,8 @@
 }
 @media (forced-colors: active) {
   .seasonal-scenery,
-  .seasonal-win {
+  .seasonal-win,
+  .seasonal-burst {
     display: none !important;
   }
 }

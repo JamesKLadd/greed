@@ -90,7 +90,7 @@ describe("production appearance", () => {
         table: "afterhours",
         mascot: "bear",
       }),
-    ).toEqual({ ...p.visualBeta, dice: "gold", table: "midnight" });
+    ).toEqual({ ...p.visualBeta, dice: "gold", table: "midnight", hat: "none" });
     expect(p).toEqual(before);
   });
 
@@ -162,6 +162,8 @@ describe("production appearance", () => {
         frame: "diamond",
         background: "stars",
         nameplate: "marquee",
+        // An identity from before hats cleans to bare-headed.
+        hat: "none",
         badge: "first-win",
       },
     });

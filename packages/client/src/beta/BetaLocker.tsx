@@ -15,6 +15,7 @@ import {
   FRAMES,
   BACKGROUNDS,
   NAMEPLATES,
+  HATS,
   SAMPLE_DICE,
   SAMPLE_TABLES,
   DEFAULT_APPEARANCE,
@@ -24,8 +25,11 @@ import { CelebrationArt } from "./Celebration.js";
 import { CELEBRATION_MS, type CelebrationKind } from "./celebrations.js";
 import { playBetaCue } from "../game/sfx.js";
 import { achievementUnlockProgress, cosmeticUnlockProgress } from "../game/unlockProgress.js";
+import { adventDoorFor } from "../game/advent.js";
+import { holidayUnlocker } from "../game/holidayDice.js";
 
-type Category = "dice" | "table" | "mascot" | "frame" | "background" | "nameplate" | "badge";
+type Category =
+  "dice" | "table" | "mascot" | "hat" | "frame" | "background" | "nameplate" | "badge";
 export default function BetaLocker({ onBack }: { onBack: () => void }) {
   const { user } = useAuth();
   const { appearance, equip } = useAppearance();
@@ -78,6 +82,7 @@ export function BetaLockerView({
     "dice",
     "table",
     "mascot",
+    "hat",
     "frame",
     "background",
     "nameplate",
@@ -91,26 +96,34 @@ export function BetaLockerView({
         ? [...SAMPLE_TABLES, ...TABLE_THEMES.filter((c) => c.id !== "classic").map((c) => c.id)]
         : category === "mascot"
           ? [...MASCOTS]
-          : category === "frame"
-            ? [...FRAMES]
-            : category === "background"
-              ? [...BACKGROUNDS]
-              : category === "nameplate"
-                ? [...NAMEPLATES]
-                : ["", ...ACHIEVEMENTS.map((a) => a.id)];
+          : category === "hat"
+            ? [...HATS]
+            : category === "frame"
+              ? [...FRAMES]
+              : category === "background"
+                ? [...BACKGROUNDS]
+                : category === "nameplate"
+                  ? [...NAMEPLATES]
+                  : ["", ...ACHIEVEMENTS.map((a) => a.id)];
   const available = (id: string, kind: Category = category) =>
     canEquipAppearance({ ...DEFAULT_APPEARANCE, [kind]: id }, profile);
   const itemName = (id: string, kind: Category = category) =>
-    kind === "badge"
-      ? id
-        ? t(`ach.${id}.title` as MsgKey)
-        : t("beta.locker.none")
+    kind === "badge" || kind === "hat"
+      ? id && id !== "none"
+        ? t((kind === "badge" ? `ach.${id}.title` : `beta.look.${id}`) as MsgKey)
+        : t(kind === "hat" ? "beta.locker.noHat" : "beta.locker.none")
       : (kind === "dice" && DICE_SKINS.some((c) => c.id === id)) ||
           (kind === "table" && TABLE_THEMES.some((c) => c.id === id))
         ? t(`cosmetic.${id}.name` as MsgKey)
         : label(id);
   const requirement = (kind: Category, id: string) => {
     if (kind === "badge") return t(`ach.${id}.desc` as MsgKey);
+    if (kind === "hat") {
+      const door = adventDoorFor(id);
+      if (door !== undefined) return t("advent.requirement", { door });
+      const badge = holidayUnlocker(id);
+      return badge ? t(`ach.${badge}.desc` as MsgKey) : t("locker.previewSample");
+    }
     const cosmetic =
       kind === "dice"
         ? DICE_SKINS.find((c) => c.id === id)
@@ -122,7 +135,13 @@ export function BetaLockerView({
       : t("locker.previewSample");
   };
   const progress = (kind: Category, id: string) =>
-    kind === "badge" ? achievementUnlockProgress(id, profile) : cosmeticUnlockProgress(id, profile);
+    kind === "badge"
+      ? achievementUnlockProgress(id, profile)
+      : kind === "hat"
+        ? adventDoorFor(id) === undefined && holidayUnlocker(id)
+          ? achievementUnlockProgress(holidayUnlocker(id)!, profile)
+          : null
+        : cosmeticUnlockProgress(id, profile);
   const lockedSelections = categories.filter((kind) => !available(draft[kind], kind));
   const preview = (kind: CelebrationKind) => {
     clearTimeout(timer.current);

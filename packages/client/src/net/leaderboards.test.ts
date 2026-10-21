@@ -19,6 +19,7 @@ describe.each(LEADERBOARD_CATEGORIES)("%s career leaderboard portraits", (catego
       frame: "brass",
       background: "felt",
       nameplate: "classic",
+      hat: "none",
       badge: "",
     };
     const entry = { username: "Winner", avatar: "panda", visualBeta, value: 100, rank: 1 };
@@ -87,6 +88,7 @@ describe.each([
       frame: "diamond",
       background: "sunset",
       nameplate: "marquee",
+      hat: "none",
       badge: "",
     };
     const entry = {

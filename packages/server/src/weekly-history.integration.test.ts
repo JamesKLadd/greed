@@ -5,6 +5,7 @@ import { weekKey } from "@greed/core";
 import { getPool, migrate, prune, query } from "./db.js";
 import { weeklyStatus } from "./weekly.js";
 import { preserveWeeklyChampions } from "./weekly-history.js";
+import { statsSettled } from "./rollStats.js";
 
 // Explicit test URL only. Migrations and pruning stay in a disposable schema.
 describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
@@ -30,6 +31,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
 
     beforeEach(async () => {
       await query("DROP TRIGGER IF EXISTS reject_archive ON weekly_champions");
+      // A finished run files its statistics in the background; let it land first.
+      await statsSettled();
       await query("TRUNCATE users CASCADE");
       await query(
         `INSERT INTO users (id, email, username, password_hash)

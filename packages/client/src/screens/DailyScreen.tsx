@@ -30,11 +30,13 @@ import {
 import { syncSteamAchievements } from "../game/steam.js";
 import { RollDataButton } from "../components/RollDataButton.js";
 import { claimHolidayDice } from "../game/holidayDice.js";
+import { claimAdventDoor } from "../game/adventClaim.js";
 import { syncProfileUp } from "../net/auth.js";
 import { fetchDailyBest } from "../net/leaderboards.js";
 
 import { Button, Icon } from "../ui/index.js";
 import { ChallengeAvatar } from "../components/ChallengeAvatar.js";
+import { HolidayHallTag, hallRowClass } from "../components/HolidayHall.js";
 import { useAuth } from "../game/auth.js";
 import { loadSettings } from "../game/settings.js";
 import { useI18n } from "../i18n/i18n.js";
@@ -194,6 +196,8 @@ export function DailyScreen({
             (a): a is Achievement => a !== null,
           )
         : [];
+      // And in December, the next advent door (advent.ts).
+      if (final?.complete && claimAdventDoor()) void syncProfileUp();
       if (won.length > 0) {
         setUnlocked((prev) => [...prev, ...won]);
         syncSteamAchievements(won.map((a) => a.id));
@@ -437,13 +441,14 @@ export function DailyScreen({
               <summary>{t("daily.hall")}</summary>
               <ol className="daily-hall__list">
                 {status.champions.map((c) => (
-                  <li className="daily-hall__row" key={c.day}>
+                  <li className={hallRowClass("daily", c.day)} key={c.day}>
                     <span className="daily-hall__face" aria-hidden="true">
                       <ChallengeAvatar {...c} />
                     </span>
                     <span className="daily-hall__body">
                       <span className="daily-hall__name">{c.username}</span>
                       <span className="daily-hall__when">{formatDay(c.day)}</span>
+                      <HolidayHallTag kind="daily" period={c.day} />
                     </span>
                     <span className="daily-hall__score">{n(c.score)}</span>
                   </li>

@@ -14,6 +14,7 @@ import { dailyBest, weeklyBest } from "./leaderboards.js";
 import { playDailyMove } from "./daily.js";
 import { playWeeklyMove, weeklyStatus } from "./weekly.js";
 import { preserveChallengeScores, recordChallengeScore } from "./challenge-scores.js";
+import { statsSettled } from "./rollStats.js";
 
 // Explicit opt-in and a disposable schema: never touch a live application's data.
 describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
@@ -42,6 +43,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)(
       for (const kind of ["daily", "weekly"]) {
         await query(`DROP TRIGGER IF EXISTS reject_score ON ${kind}_scores`);
       }
+      // A finished run files its statistics in the background; let it land first.
+      await statsSettled();
       await query("TRUNCATE users CASCADE");
       await query(
         `INSERT INTO users (id, email, username, password_hash)

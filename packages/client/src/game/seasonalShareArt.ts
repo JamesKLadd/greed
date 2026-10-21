@@ -32,6 +32,34 @@ export const SHARE_PALETTES: Record<
     text: "#fff5e4",
     accent: "#ffd792",
   },
+  newyear: {
+    from: "#262c5c",
+    to: "#0c0e22",
+    frame: "#d9b860",
+    text: "#fff6e2",
+    accent: "#ffd76e",
+  },
+  valentines: {
+    from: "#6a1f3e",
+    to: "#2a0c1c",
+    frame: "#e8a7b4",
+    text: "#fff2f4",
+    accent: "#ffc2cf",
+  },
+  stpatricks: {
+    from: "#1c6a3a",
+    to: "#0b2a19",
+    frame: "#d9b860",
+    text: "#f4fff2",
+    accent: "#ffe08a",
+  },
+  thanksgiving: {
+    from: "#6e3a17",
+    to: "#2a160a",
+    frame: "#d6a25e",
+    text: "#fff4e6",
+    accent: "#ffc677",
+  },
 };
 
 /** Ornament stays at the edges so long translated labels and scores keep their space. */
@@ -42,6 +70,10 @@ export function drawSeasonalShareArt(ctx: CanvasRenderingContext2D, theme: Seaso
   ctx.lineJoin = "round";
   if (theme === "halloween") drawHauntedParlor(ctx);
   else if (theme === "christmas") drawFiresideLodge(ctx);
+  else if (theme === "newyear") drawMidnightBallroom(ctx);
+  else if (theme === "valentines") drawSweetheartLounge(ctx);
+  else if (theme === "stpatricks") drawLuckyCloverPub(ctx);
+  else if (theme === "thanksgiving") drawHarvestTable(ctx);
   else drawBoardwalkClub(ctx);
   ctx.restore();
 }
@@ -211,5 +243,184 @@ function drawBoardwalkClub(ctx: CanvasRenderingContext2D): void {
     ctx.bezierCurveTo(x - 22, 970, x - 11, 994, x, 982);
     ctx.bezierCurveTo(x + 11, 970, x + 22, 994, x + 33, 982);
     ctx.stroke();
+  }
+}
+
+/** A firework: spokes of light round a bright centre. */
+function burst(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+): void {
+  for (let i = 0; i < 12; i++) {
+    const a = (Math.PI * 2 * i) / 12;
+    line(
+      ctx,
+      [
+        x + Math.cos(a) * r * 0.35,
+        y + Math.sin(a) * r * 0.35,
+        x + Math.cos(a) * r,
+        y + Math.sin(a) * r,
+      ],
+      color,
+      3,
+    );
+    circle(ctx, x + Math.cos(a) * (r + 7), y + Math.sin(a) * (r + 7), 3, color);
+  }
+  circle(ctx, x, y, 5, "#fff6e2");
+}
+
+function drawMidnightBallroom(ctx: CanvasRenderingContext2D): void {
+  burst(ctx, 104, 112, 46, "#ffd76e");
+  burst(ctx, 978, 104, 38, "#ff8fc0");
+  burst(ctx, 930, 160, 20, "#7fd6ff");
+  // Confetti in the bottom corners, clear of the address line.
+  const confetti = ["#ffd76e", "#ff8fc0", "#7fd6ff", "#9be38a"];
+  for (let i = 0; i < 14; i++) {
+    const x = i < 7 ? 60 + ((i * 23) % 110) : 920 + ((i * 29) % 110);
+    const y = 940 + ((i * 37) % 90);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(i * 0.7);
+    ctx.fillStyle = confetti[i % confetti.length];
+    ctx.fillRect(-5, -3, 10, 6);
+    ctx.restore();
+  }
+}
+
+function heart(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  fill: string,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / 20, size / 20);
+  ctx.beginPath();
+  ctx.fillStyle = fill;
+  ctx.moveTo(0, 6);
+  ctx.bezierCurveTo(-2, 0, -10, -1, -10, -6);
+  ctx.bezierCurveTo(-10, -11, -4, -13, 0, -8);
+  ctx.bezierCurveTo(4, -13, 10, -11, 10, -6);
+  ctx.bezierCurveTo(10, -1, 2, 0, 0, 6);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSweetheartLounge(ctx: CanvasRenderingContext2D): void {
+  // A garland across each top corner, hearts hung from it.
+  for (const mirror of [false, true]) {
+    ctx.save();
+    if (mirror) {
+      ctx.translate(1080, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.beginPath();
+    ctx.strokeStyle = "#e8a7b4";
+    ctx.lineWidth = 2;
+    ctx.moveTo(40, 60);
+    ctx.quadraticCurveTo(110, 120, 190, 60);
+    ctx.stroke();
+    heart(ctx, 78, 98, 30, "#ff6f91");
+    heart(ctx, 115, 112, 24, "#ffc2cf");
+    heart(ctx, 152, 98, 30, "#ff6f91");
+    ctx.restore();
+  }
+  heart(ctx, 96, 990, 44, "#ff6f91");
+  heart(ctx, 984, 990, 44, "#ff6f91");
+  heart(ctx, 1010, 950, 18, "#ffc2cf");
+}
+
+function shamrock(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
+  for (const a of [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]) {
+    circle(
+      ctx,
+      x + Math.cos(a) * size * 0.45,
+      y + Math.sin(a) * size * 0.45,
+      size * 0.42,
+      "#5ccf75",
+    );
+  }
+  line(ctx, [x, y, x + size * 0.2, y + size * 1.1], "#2e8a45", Math.max(2, size * 0.12));
+}
+
+function drawLuckyCloverPub(ctx: CanvasRenderingContext2D): void {
+  // A rainbow over the top-left corner, ending in a heap of coins top-right.
+  const bands = ["#ff6b6b", "#ffb347", "#ffe066", "#7ee08a", "#6fb7ff", "#a78bfa"];
+  bands.forEach((color, i) => {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.arc(60, 160, 120 - i * 7, Math.PI * 1.5, Math.PI * 2);
+    ctx.stroke();
+  });
+  for (const [x, y] of [
+    [960, 120],
+    [990, 112],
+    [1015, 124],
+    [975, 96],
+  ]) {
+    ctx.beginPath();
+    ctx.fillStyle = "#f6c533";
+    ctx.ellipse(x, y, 16, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = "#a8700a";
+    ctx.lineWidth = 2;
+    ctx.ellipse(x, y, 10, 6, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  shamrock(ctx, 92, 975, 40);
+  shamrock(ctx, 990, 980, 34);
+  shamrock(ctx, 948, 1020, 18);
+}
+
+function leaf(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  angle: number,
+  fill: string,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.fillStyle = fill;
+  ctx.moveTo(0, -size);
+  ctx.quadraticCurveTo(size * 0.8, -size * 0.2, 0, size);
+  ctx.quadraticCurveTo(-size * 0.8, -size * 0.2, 0, -size);
+  ctx.fill();
+  line(ctx, [0, -size * 0.8, 0, size * 1.2], "#7a3a12", 2);
+  ctx.restore();
+}
+
+function drawHarvestTable(ctx: CanvasRenderingContext2D): void {
+  leaf(ctx, 92, 96, 30, -0.6, "#e8742a");
+  leaf(ctx, 140, 136, 22, 0.5, "#c94a1c");
+  leaf(ctx, 70, 160, 18, 1.2, "#f2b23c");
+  leaf(ctx, 986, 100, 28, 0.7, "#c94a1c");
+  leaf(ctx, 944, 146, 20, -0.4, "#f2b23c");
+  // Wheat in the bottom corners.
+  for (const x of [88, 992]) {
+    for (const lean of [-0.25, 0, 0.25]) {
+      ctx.save();
+      ctx.translate(x, 1030);
+      ctx.rotate(lean);
+      line(ctx, [0, 0, 0, -80], "#d6a25e", 2.5);
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = "#e9c27a";
+        ctx.ellipse(-4, -50 - i * 7, 3, 6, -0.5, 0, Math.PI * 2);
+        ctx.ellipse(4, -50 - i * 7, 3, 6, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 }

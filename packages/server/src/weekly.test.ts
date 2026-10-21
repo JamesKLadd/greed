@@ -1005,6 +1005,7 @@ describe("equipped challenge portraits", () => {
       frame: "diamond",
       background: "sunset",
       nameplate: "marquee",
+      hat: "none",
       badge: "",
     };
     portraits.set("rival", look);

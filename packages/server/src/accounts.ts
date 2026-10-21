@@ -1,4 +1,10 @@
-import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
+import {
+  cleanAdventProgress,
+  cleanBetaIdentity,
+  mergeAdventProgress,
+  type AdventProgress,
+  type BetaIdentity,
+} from "@greed/protocol";
 /**
  * Account operations: sign up, log in, verify email, reset password, and the
  * per-user profile (stats / achievements / equipped cosmetics) that syncs across
@@ -8,7 +14,13 @@ import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
  * roll back a stat.
  */
 
-import { hasProfanity, BEST_TOTAL_CEILING } from "@greed/core";
+import {
+  BEST_TOTAL_CEILING,
+  hasProfanity,
+  holidayOfDaily,
+  holidayOfWeek,
+  holidayTrophy,
+} from "@greed/core";
 import { query } from "./db.js";
 import {
   forgetSessionCurrency,
@@ -47,6 +59,8 @@ export interface StoredProfile {
   /** Optional so profiles stored before avatars existed still normalize. */
   avatar?: string;
   visualBeta?: BetaIdentity;
+  /** Advent doors opened per December; merged by the higher count per year. */
+  advent?: AdventProgress;
 }
 
 export interface PublicUser {
@@ -128,6 +142,7 @@ function normalizeProfile(raw: Partial<StoredProfile> | null): StoredProfile {
     ...base,
     ...raw,
     visualBeta: cleanBetaIdentity(raw.visualBeta),
+    advent: cleanAdventProgress(raw.advent),
     achievements: Array.isArray(raw.achievements)
       ? raw.achievements.filter((a): a is string => typeof a === "string")
       : [],
@@ -238,6 +253,7 @@ export function mergeProfile(existing: StoredProfile, incoming: StoredProfile): 
     table: incoming.table || existing.table,
     avatar: incoming.avatar || existing.avatar || "",
     visualBeta,
+    advent: mergeAdventProgress(existing.advent, incoming.advent),
   };
 }
 
@@ -601,15 +617,42 @@ export async function resetPassword(rawToken: unknown, newPassword: unknown): Pr
  * player owns and wrong for one they do not.
  */
 async function withChallengeWins(userId: string, profile: StoredProfile): Promise<StoredProfile> {
-  const { rows } = await query<{ daily_wins: number; weekly_wins: number }>(
-    `SELECT daily_wins, weekly_wins FROM career_stats WHERE user_id = $1`,
-    [userId],
-  );
+  const [{ rows }, trophies] = await Promise.all([
+    query<{ daily_wins: number; weekly_wins: number }>(
+      `SELECT daily_wins, weekly_wins FROM career_stats WHERE user_id = $1`,
+      [userId],
+    ),
+    holidayTrophies(userId),
+  ]);
   return {
     ...profile,
     dailyWins: Number(rows[0]?.daily_wins ?? 0),
     weeklyWins: Number(rows[0]?.weekly_wins ?? 0),
+    // Added, never taken away: a trophy is a closed period's result, and those
+    // stand (CLAUDE.md). Added to the achievements a client already reported,
+    // so the badge and the gold dice it unlocks arrive with the profile.
+    achievements: boundedAchievements([...trophies, ...profile.achievements]),
   };
+}
+
+/**
+ * The holiday trophies a player has won: one per holiday whose Daily (played on
+ * the day) or Weekly (the week around it) they won outright. Read from
+ * challenge_wins, the permanent ledger of who won each closed period, so a
+ * trophy can neither be claimed by a client nor lost when the runs behind it
+ * are pruned.
+ */
+async function holidayTrophies(userId: string): Promise<string[]> {
+  const { rows } = await query<{ kind: string; period: string }>(
+    `SELECT kind, period::text AS period FROM challenge_wins WHERE user_id = $1`,
+    [userId],
+  );
+  const won = new Set<string>();
+  for (const { kind, period } of rows) {
+    const holiday = kind === "daily" ? holidayOfDaily(period) : holidayOfWeek(period);
+    if (holiday) won.add(holidayTrophy(holiday));
+  }
+  return [...won];
 }
 
 export async function getAccount(

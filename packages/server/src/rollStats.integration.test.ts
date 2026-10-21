@@ -15,6 +15,7 @@ import {
   rollExport,
   rollSummary,
   snapshotStatsAdmins,
+  statsSettled,
 } from "./rollStats.js";
 
 /** A finished run's moves, the simple way: roll twice, bank, repeat. */
@@ -41,6 +42,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
   });
 
   beforeEach(async () => {
+    // A finished run files its statistics in the background; let it land first.
+    await statsSettled();
     await query("TRUNCATE users CASCADE");
     // Keyed by game, not by account, so it outlives the users it came from.
     await query("TRUNCATE dice_audit");

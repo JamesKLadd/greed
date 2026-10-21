@@ -56,7 +56,7 @@ it("notifies the mounted new-look provider after Classic equipment is saved", ()
 
   expect(observer).toHaveBeenCalledTimes(1);
   expect(observer.mock.results[0].value).toEqual(equipped);
-  expect(loadProfile()).toEqual({ ...before, dice: "gold", visualBeta: undefined });
+  expect(loadProfile()).toEqual({ ...before, dice: "gold", visualBeta: undefined, advent: {} });
 });
 
 /** A hand-built game state exercising just the fields summarize reads. */

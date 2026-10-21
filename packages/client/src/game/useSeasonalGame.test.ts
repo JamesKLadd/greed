@@ -79,7 +79,7 @@ describe("actual game appearance ownership", () => {
     const restarted = buildGame(setup);
     expect(restarted.state.config.seed).toBe(first.state.config.seed);
     render(restarted.rollOff);
-    expect(currentSeasonalTheme()).toBe("classic");
+    expect(currentSeasonalTheme()).toBe("thanksgiving");
   });
 
   it("keeps ordinary online reconnect snapshots pinned, but refreshes a sanitized-seed rematch", () => {
@@ -100,7 +100,7 @@ describe("actual game appearance ownership", () => {
     const rematch = online();
     expect(rematch.config.seed).toBe(first.config.seed);
     render(undefined, rematch);
-    expect(currentSeasonalTheme()).toBe("classic");
+    expect(currentSeasonalTheme()).toBe("thanksgiving");
   });
 
   it("recognizes leaving a completed online game even if reconnect catch-up has a longer log", () => {
@@ -111,7 +111,7 @@ describe("actual game appearance ownership", () => {
     const next = applyAction(online(), { type: "ROLL" });
     expect(next.log.length).toBeGreaterThan(finished.log.length);
     render(undefined, next);
-    expect(currentSeasonalTheme()).toBe("classic");
+    expect(currentSeasonalTheme()).toBe("thanksgiving");
   });
 
   it("releases completed challenge runs so lobbies and new attempts use the current season", () => {
@@ -119,7 +119,7 @@ describe("actual game appearance ownership", () => {
     vi.setSystemTime(new Date("2026-11-01T05:01:00Z"));
     expect(refreshSeasonalTheme()).toBe("halloween");
     unmount();
-    expect(currentSeasonalTheme()).toBe("classic");
+    expect(currentSeasonalTheme()).toBe("thanksgiving");
     vi.setSystemTime(new Date("2026-12-01T06:01:00Z"));
     expect(refreshSeasonalTheme()).toBe("christmas");
     render();

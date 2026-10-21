@@ -13,6 +13,8 @@ import { HomeScreen } from "./screens/HomeScreen.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ScreenLoadState } from "./components/ScreenLoadState.js";
 import { HolidayGift } from "./components/HolidayGift.js";
+import { AdventDoorGift } from "./components/AdventDoorGift.js";
+import { ADVENT_DOOR_EVENT, adventSeason } from "./game/advent.js";
 import { HOLIDAY_GIFT_EVENT } from "./game/holidayDice.js";
 import type { StatsScope, StatsView } from "./net/rollStats.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
@@ -47,6 +49,9 @@ const StatsScreen = lazy(() =>
 );
 const LeaderboardScreen = lazy(() =>
   import("./screens/LeaderboardScreen.js").then((m) => ({ default: m.LeaderboardScreen })),
+);
+const AdventScreen = lazy(() =>
+  import("./screens/AdventScreen.js").then((m) => ({ default: m.AdventScreen })),
 );
 const LockerScreen = lazy(() =>
   import("./screens/LockerScreen.js").then((m) => ({ default: m.LockerScreen })),
@@ -115,6 +120,9 @@ const CharacterPilotReview = import.meta.env.DEV
 const CastReview = import.meta.env.DEV
   ? lazy(() => import("./dev/characterPilot/CastReview.js"))
   : null;
+const HatReview = import.meta.env.DEV
+  ? lazy(() => import("./dev/characterPilot/HatReview.js"))
+  : null;
 const SupportReview = import.meta.env.DEV
   ? lazy(() => import("./dev/supportReview/SupportReview.js"))
   : null;
@@ -135,7 +143,8 @@ type Mode =
   | "auth"
   | "account"
   | "growth"
-  | "rolldata";
+  | "rolldata"
+  | "advent";
 
 export function App() {
   const t = useT();
@@ -161,14 +170,28 @@ export function App() {
   };
   // Holiday dice just earned (holidayDice.ts), by signing in or by finishing a
   // game or run on the day. The badge id, until the popup is dismissed.
-  const [holidayGift, setHolidayGift] = useState<string | null>(null);
+  // Queued: a sign-in can bring a holiday's badge and a trophy at once, and
+  // the second must wait its turn rather than replace the first.
+  const [holidayGifts, setHolidayGifts] = useState<string[]>([]);
+  const holidayGift = holidayGifts[0] ?? null;
   useEffect(() => {
     const announce = (e: Event) => {
       const id = (e as CustomEvent<unknown>).detail;
-      if (typeof id === "string") setHolidayGift(id);
+      if (typeof id === "string")
+        setHolidayGifts((queue) => (queue.includes(id) ? queue : [...queue, id]));
+    };
+    // An advent door shares the queue, as "advent:7", so two pieces of news
+    // never stack on screen at once.
+    const door = (e: Event) => {
+      const n = (e as CustomEvent<unknown>).detail;
+      if (typeof n === "number") setHolidayGifts((queue) => [...queue, `advent:${n}`]);
     };
     window.addEventListener(HOLIDAY_GIFT_EVENT, announce);
-    return () => window.removeEventListener(HOLIDAY_GIFT_EVENT, announce);
+    window.addEventListener(ADVENT_DOOR_EVENT, door);
+    return () => {
+      window.removeEventListener(HOLIDAY_GIFT_EVENT, announce);
+      window.removeEventListener(ADVENT_DOOR_EVENT, door);
+    };
   }, []);
   useEffect(() => {
     const refresh = () => refreshSeasonalTheme();
@@ -310,6 +333,13 @@ export function App() {
     return (
       <Suspense fallback={<p>Opening supporting-screen review…</p>}>
         <SupportReview />
+      </Suspense>
+    );
+  }
+  if (HatReview && new URLSearchParams(window.location.search).has("hat-review")) {
+    return (
+      <Suspense fallback={<p>Opening hat review…</p>}>
+        <HatReview />
       </Suspense>
     );
   }
@@ -531,6 +561,7 @@ export function App() {
           onBack={() => setMode(rollData.back)}
         />
       );
+    if (mode === "advent") return <AdventScreen onBack={() => setMode("home")} />;
     if (mode === "boards") return <LeaderboardScreen onBack={() => setMode("home")} />;
     if (mode === "locker") return <LockerScreen onBack={() => setMode("home")} />;
     if (mode === "updates") return <UpdateLogScreen onBack={() => setMode("home")} />;
@@ -562,6 +593,7 @@ export function App() {
         onAuthForOnline={() => openAuth("online")}
         onAccount={() => setMode("account")}
         onRollDataAll={user?.statsAdmin ? () => openRollData("all", "games", "home") : undefined}
+        onAdvent={adventSeason() !== null ? () => setMode("advent") : undefined}
       />
     );
   })();
@@ -585,9 +617,23 @@ export function App() {
       {/* Never over a table: a game's own results come first, and the popup
           waits for the player to leave. Nor over a friend's invite, which is
           the one of the two that cannot wait. */}
-      {holidayGift && !atTable && !challenges.invite && (
-        <HolidayGift gift={holidayGift} onClose={() => setHolidayGift(null)} />
-      )}
+      {holidayGift &&
+        !atTable &&
+        !challenges.invite &&
+        (holidayGift.startsWith("advent:") ? (
+          <AdventDoorGift
+            key={holidayGift}
+            door={Number(holidayGift.slice("advent:".length))}
+            onClose={() => setHolidayGifts((queue) => queue.slice(1))}
+            onOpenCalendar={() => setMode("advent")}
+          />
+        ) : (
+          <HolidayGift
+            key={holidayGift}
+            gift={holidayGift}
+            onClose={() => setHolidayGifts((queue) => queue.slice(1))}
+          />
+        ))}
       <Toast toast={challengeToast} />
     </BetaActiveContext.Provider>
   );

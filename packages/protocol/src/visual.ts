@@ -3,6 +3,25 @@ export const MASCOTS = ["fox", "bear", "owl", "cat", "frog", "panda"] as const;
 export const FRAMES = ["brass", "neon", "laurel", "diamond"] as const;
 export const BACKGROUNDS = ["felt", "spotlight", "sunset", "stars"] as const;
 export const NAMEPLATES = ["classic", "ticket", "marquee"] as const;
+/**
+ * Hats the characters can wear: each holiday's, and the advent calendar's.
+ * "none" first, so an identity from before hats existed — or one an older
+ * client sends — cleans to bare-headed.
+ */
+export const HATS = [
+  "none",
+  "party-hat",
+  "heart-boppers",
+  "leprechaun-hat",
+  "sun-hat",
+  "witch-hat",
+  "pilgrim-hat",
+  "santa-hat",
+  "elf-hat",
+  "antlers",
+  "holly-crown",
+  "bobble-hat",
+] as const;
 export interface BetaIdentity {
   version: 1;
   mascot: string;
@@ -10,6 +29,8 @@ export interface BetaIdentity {
   background: string;
   nameplate: string;
   badge: string;
+  /** Optional on the way in (older clients); always set by cleanBetaIdentity. */
+  hat?: string;
 }
 export interface BetaLook extends BetaIdentity {
   dice: string;
@@ -25,6 +46,7 @@ export function cleanBetaIdentity(raw: unknown): BetaIdentity | undefined {
     frame: pick(p.frame, FRAMES),
     background: pick(p.background, BACKGROUNDS),
     nameplate: pick(p.nameplate, NAMEPLATES),
+    hat: pick(p.hat, HATS),
     badge: typeof p.badge === "string" && /^[a-z0-9-]{0,48}$/.test(p.badge) ? p.badge : "",
   };
 }

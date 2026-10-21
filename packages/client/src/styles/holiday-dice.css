@@ -1,6 +1,5 @@
 /* ---------- Holiday dice ----------
-   The pumpkin, ornament and beach-ball skins (DieShell.tsx) are tokens rather
-   than cubes. Everything here draws INSIDE the die's own 1em square, which is
+   The shaped skins (DieShell.tsx) are tokens rather than cubes. Everything here draws INSIDE the die's own 1em square, which is
    why none of it touches layout: the tray, the table's dice corridor and the
    challenge panel size a die by its font-size, and that is the only thing a
    shaped die shares with them. The root keeps .die--3d for its bare stage,
@@ -160,6 +159,89 @@
     0 0 0.07em rgba(255, 200, 40, 0.9);
 }
 
+/* Mirror ball: a sphere like the ornament, so the same inscribed square. Dark
+   pips ringed in white read across light and dark facets alike, and burst
+   into party colours when they score. */
+.die--shape-disco-ball .die__pips {
+  left: 21%;
+  right: 21%;
+  top: 31%;
+  bottom: 11%;
+  --token-pip: 0.13em;
+}
+.die--shape-disco-ball .die__pip--on {
+  box-shadow: 0 0 0 0.018em rgba(255, 255, 255, 0.85);
+}
+.die--shape-disco-ball.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #fff 0 28%, #ff9ad5 60%, #c2187a);
+  box-shadow:
+    0 0 0 0.02em #fff,
+    0 0 0.07em rgba(255, 120, 200, 0.95);
+}
+
+/* Heart: the pips sit in the wide top half; the dip between the lobes is the
+   top-middle cell, which no face uses. */
+.die--shape-heart .die__pips {
+  left: 22%;
+  right: 22%;
+  top: 20%;
+  bottom: 25%;
+  --token-pip: 0.13em;
+}
+.die--shape-heart .die__pip--on {
+  box-shadow: 0 0 0 0.016em rgba(120, 0, 30, 0.5);
+}
+.die--shape-heart.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #fff 0 30%, #ffe08a 62%, #f0a81a);
+  box-shadow: 0 0 0.07em rgba(255, 220, 120, 0.95);
+}
+
+/* Pot of gold: the pips are on the pot, below the heap of coins. */
+.die--shape-pot-of-gold .die__pips {
+  left: 20%;
+  right: 20%;
+  top: 50%;
+  bottom: 11%;
+  --token-pip: 0.12em;
+}
+.die--shape-pot-of-gold.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #f4fff0 0 26%, #7ee08a 60%, #23943a);
+  box-shadow: 0 0 0.07em rgba(110, 230, 130, 0.95);
+}
+
+/* Acorn: the nut narrows to a point, so the face is the wide part under the
+   cap and the pips are a touch smaller. */
+.die--shape-acorn .die__pips {
+  left: 27%;
+  right: 27%;
+  top: 45%;
+  bottom: 18%;
+  --token-pip: 0.115em;
+}
+.die--shape-acorn.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #fff8e0 0 26%, #ffc85a 60%, #d9731a);
+  box-shadow: 0 0 0.07em rgba(255, 190, 80, 0.95);
+}
+
+/* Gift box: the face is the box under the lid; the middle column falls on the
+   gold ribbon, so every pip wears a light ring. */
+.die--shape-gift-box .die__pips {
+  left: 17%;
+  right: 17%;
+  top: 44%;
+  bottom: 9%;
+  --token-pip: 0.12em;
+}
+.die--shape-gift-box .die__pip--on {
+  box-shadow: 0 0 0 0.02em rgba(255, 250, 235, 0.9);
+}
+.die--shape-gift-box.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #fff 0 30%, #fff1b0 58%, #ffc94a);
+  box-shadow:
+    0 0 0 0.02em #7a1420,
+    0 0 0.07em rgba(255, 226, 140, 0.95);
+}
+
 /* Held. The cube strikes its face gold; this traces the shape in gold instead
    and keeps the cube's lift, so a held die reads at arm's length without
    losing what it is. */
@@ -259,6 +341,65 @@
   margin: 0 0 8px;
   line-height: 1.45;
 }
+/* The rest of the set: three small tiles, each a picture and its name. */
+.holiday-gift__set-title {
+  margin: 4px 0 8px;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+.holiday-gift__set {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.holiday-gift__set li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.holiday-gift__set strong {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.holiday-gift__kind {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
+}
+.holiday-gift__piece {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+}
+.holiday-gift__piece svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.holiday-gift__piece--face {
+  font-size: 32px;
+  line-height: 1;
+}
+.holiday-gift__piece--felt {
+  border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-1), var(--felt-2));
+  box-shadow:
+    inset 0 0 0 3px var(--rail-1),
+    inset 0 0 0 5px var(--rail-2);
+}
 .holiday-gift__note {
   margin: 0;
   font-size: 0.8125rem;
@@ -267,8 +408,8 @@
 }
 
 /* ---------- Held charms ----------
-   A holiday die marks itself held with a sweet, a Santa hat or a sun
-   (HeldCharm in DieShell.tsx) where every other die wears the check. Same
+   A holiday die marks itself held with its own charm (HeldCharm in
+   DieShell.tsx) where every other die wears the check. Same
    slot, so it moves nothing; a little bigger, because a picture on its own
    needs more room than a tick on a disc, and drawn over the die's corner as
    the check is. Only where the check is shown at all — the Classic look marks
@@ -306,5 +447,52 @@
 @media (forced-colors: active) {
   :root[data-presentation="beta"] .die .die__held-marker.die__held-marker--charm {
     border-radius: 50%;
+  }
+}
+
+/* ---------- Past winners, holiday rows (HolidayHall.tsx) ----------
+   The holiday Daily and Weekly are the ones that hand out trophies, so their
+   winners' rows wear the holiday: a tinted card, a coloured edge, and a tag
+   naming the occasion. Text stays in the text colours. */
+.daily-hall__row--holiday {
+  --hall-holiday: var(--warn);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--hall-holiday) 22%, transparent),
+    rgba(255, 255, 255, 0.04) 70%
+  );
+  box-shadow: inset 3px 0 0 var(--hall-holiday);
+}
+.daily-hall__row--newyear {
+  --hall-holiday: #e9c45a;
+}
+.daily-hall__row--valentines {
+  --hall-holiday: #ff6f91;
+}
+.daily-hall__row--stpatricks {
+  --hall-holiday: #4fbf6a;
+}
+.daily-hall__row--summer {
+  --hall-holiday: #4f9ee8;
+}
+.daily-hall__row--halloween {
+  --hall-holiday: #f08a2a;
+}
+.daily-hall__row--thanksgiving {
+  --hall-holiday: #d0782e;
+}
+.daily-hall__row--christmas {
+  --hall-holiday: #d7414e;
+}
+.daily-hall__holiday {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+@media (forced-colors: active) {
+  .daily-hall__row--holiday {
+    box-shadow: none;
+    border-left: 3px solid Highlight;
   }
 }

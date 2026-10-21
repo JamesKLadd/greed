@@ -22,9 +22,17 @@ describe("versioned presentation compatibility", () => {
       frame: "brass",
       background: "felt",
       nameplate: "classic",
+      hat: "none",
       badge: "",
       dice: "ivory",
     });
     expect(cleanBetaIdentity({ ...look, dice: "circuit" })).not.toHaveProperty("dice");
+  });
+  it("keeps a known hat and sends anything else out bare-headed", () => {
+    const base = { version: 1, mascot: "fox" };
+    expect(cleanBetaIdentity({ ...base, hat: "witch-hat" })?.hat).toBe("witch-hat");
+    expect(cleanBetaIdentity({ ...base, hat: "crown-of-thorns" })?.hat).toBe("none");
+    // An identity from before hats existed, or from an older client.
+    expect(cleanBetaIdentity(base)?.hat).toBe("none");
   });
 });

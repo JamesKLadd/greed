@@ -913,6 +913,7 @@ describe("equipped challenge portraits", () => {
       frame: "neon",
       background: "stars",
       nameplate: "ticket",
+      hat: "none",
       badge: "",
     };
     portraits.set(USER, look);

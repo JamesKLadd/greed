@@ -117,6 +117,8 @@ describe("equippedDiceVars", () => {
     dailyWins: 100000,
     weeklyWins: 100000,
     achievements: ACHIEVEMENTS.map((a) => a.id),
+    // Every advent door, for the calendar's items.
+    advent: { "2026": 24 },
   });
 
   it("gives the dice half of a look without its table", () => {
@@ -176,12 +178,24 @@ describe("dice shapes", () => {
     expect((diceVarsById("no-such-skin") as Record<string, string>)[DIE_SHAPE_VAR]).toBe("cube");
   });
 
-  it("casts exactly the three holiday sets in a shape of their own", () => {
+  it("casts exactly the holiday sets, their gold trophies and advent's gift in a shape", () => {
     const shaped = DICE_SKINS.filter((s) => s.shape && s.shape !== "cube");
     expect(shaped.map((s) => [s.id, s.shape])).toEqual([
       ["pumpkin", "pumpkin"],
       ["ornament", "ornament"],
       ["beach-ball", "beach-ball"],
+      ["disco-ball", "disco-ball"],
+      ["candy-heart", "heart"],
+      ["pot-of-gold", "pot-of-gold"],
+      ["acorn", "acorn"],
+      ["gold-disco-ball", "disco-ball"],
+      ["gold-heart", "heart"],
+      ["gold-pot", "pot-of-gold"],
+      ["gold-beach-ball", "beach-ball"],
+      ["gold-pumpkin", "pumpkin"],
+      ["gold-acorn", "acorn"],
+      ["gold-ornament", "ornament"],
+      ["gift-box", "gift-box"],
     ]);
   });
 

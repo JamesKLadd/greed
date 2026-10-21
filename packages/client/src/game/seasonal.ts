@@ -1,21 +1,14 @@
+import { HOLIDAYS, challengeDate, seasonOnDate, type Holiday } from "@greed/core";
+
 /** Seasonal appearance follows the same Chicago calendar as the challenges. */
-export type SeasonalTheme = "classic" | "halloween" | "christmas" | "summer";
+export type SeasonalTheme = "classic" | Holiday;
 export type SeasonalPreference = "automatic" | SeasonalTheme;
 
 export const SEASONAL_PREFERENCES = [
   "automatic",
   "classic",
-  "halloween",
-  "christmas",
-  "summer",
+  ...HOLIDAYS,
 ] as const satisfies readonly SeasonalPreference[];
-
-const chicagoCalendar = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Chicago",
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-});
 
 export function isSeasonalPreference(value: unknown): value is SeasonalPreference {
   return SEASONAL_PREFERENCES.some((preference) => preference === value);
@@ -28,29 +21,21 @@ function isSeasonalTheme(value: unknown): value is SeasonalTheme {
 /**
  * The calendar date it is in Chicago (month 1-12), or null for an invalid date.
  *
- * Shared with the holiday dice, so "it's Halloween" means the same instant to
+ * Shared with the holiday sets, so "it's Halloween" means the same instant to
  * the table's decorations and to the pumpkin dice they promise.
  */
 export function chicagoDate(date: Date): { year: number; month: number; day: number } | null {
-  if (!Number.isFinite(date.getTime())) return null;
-  const parts = chicagoCalendar.formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  return { year: part("year"), month: part("month"), day: part("day") };
+  return challengeDate(date);
 }
 
+/** Each holiday's decorations go up for a stretch before it: see core/holidays.ts. */
 export function resolveSeasonalTheme(
   preference: SeasonalPreference,
   date: Date = new Date(),
 ): SeasonalTheme {
   if (preference !== "automatic") return preference;
-  const today = chicagoDate(date);
-  if (!today) return "classic";
-  const { month, day } = today;
-  if (month === 10) return "halloween";
-  if (month === 12 || (month === 1 && day <= 5)) return "christmas";
-  if (month >= 6 && month <= 8) return "summer";
-  return "classic";
+  const today = challengeDate(date);
+  return (today && seasonOnDate(today)) ?? "classic";
 }
 
 let preference: SeasonalPreference = "automatic";

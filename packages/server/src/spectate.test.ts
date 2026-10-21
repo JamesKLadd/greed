@@ -93,6 +93,8 @@ describe("spectator mode", () => {
       frame: "neon",
       background: "stars",
       nameplate: "ticket",
+      // A hat travels with the look, to classic seats and spectators alike.
+      hat: "witch-hat",
       badge: "",
       dice: "circuit",
     };

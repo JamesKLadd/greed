@@ -13,6 +13,7 @@ import { useT } from "../i18n/i18n.js";
 import { useDailyHomeStatus } from "../game/useDailyHomeStatus.js";
 import { hasPracticedChallenge } from "../game/practiceChallenge.js";
 import { SeasonalName, SeasonalScenery } from "../components/SeasonalScenery.js";
+import { AdventEntry } from "../components/AdventEntry.js";
 
 export interface HomeScreenProps {
   onDaily: () => void;
@@ -31,6 +32,8 @@ export interface HomeScreenProps {
   onAccount: () => void;
   /** Everyone's roll statistics. Only passed for the accounts allowed to see them. */
   onRollDataAll?: () => void;
+  /** December only: the advent calendar. */
+  onAdvent?: () => void;
   flash?: string | null;
   onDismissFlash?: () => void;
   dailySubtitle?: string;
@@ -135,6 +138,7 @@ export function HomeScreen(props: HomeScreenProps) {
           <SeasonalName fallback={t("home.tagline")} />
         </p>
       </div>
+      {props.onAdvent && <AdventEntry onOpen={props.onAdvent} />}
 
       {flash && (
         <div className="banner home-flash" onClick={onDismissFlash}>

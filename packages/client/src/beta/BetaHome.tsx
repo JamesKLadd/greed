@@ -11,6 +11,7 @@ import { Icon } from "../ui/index.js";
 import { Button } from "../ui/index.js";
 import { Brand } from "./Brand.js";
 import { SeasonalName, SeasonalScenery } from "../components/SeasonalScenery.js";
+import { AdventEntry } from "../components/AdventEntry.js";
 import { BetaGate } from "./BetaGate.js";
 import { CelebrationDemo } from "./CelebrationDemo.js";
 import "../styles/beta-home-polish.css";
@@ -70,6 +71,7 @@ export default function BetaHome(p: HomeScreenProps) {
             <Die value={5} dimensional size={40} />
             <Die value={1} dimensional size={32} />
           </div>
+          {p.onAdvent && <AdventEntry onOpen={p.onAdvent} />}
         </section>
         <div className="beta-hub__body">
           <section className="beta-hub__play" aria-labelledby="beta-play-heading">

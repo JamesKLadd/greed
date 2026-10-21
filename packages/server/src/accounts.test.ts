@@ -30,7 +30,7 @@ describe("mergeProfile", () => {
       badge: "",
     };
     const merged = mergeProfile({ ...old, visualBeta }, old);
-    expect(merged.visualBeta).toEqual(visualBeta);
+    expect(merged.visualBeta).toEqual({ ...visualBeta, hat: "none" });
     expect(merged.dice).toBe(old.dice);
     expect(merged.achievements).toEqual(old.achievements);
     expect(

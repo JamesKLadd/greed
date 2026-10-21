@@ -10,6 +10,7 @@ import { Toast } from "../components/Toast.js";
 import { Modal } from "../ui/Modal.js";
 import { GameMenuDrawer } from "./GameMenuDrawer.js";
 import { GameCelebration } from "./Celebration.js";
+import { SeasonalBigHand } from "../components/SeasonalBigHand.js";
 import { useAppearance } from "./AppearanceContext.js";
 import { DEFAULT_APPEARANCE, MASCOTS } from "./appearance.js";
 import { Mascot } from "./Mascot.js";
@@ -59,6 +60,7 @@ export function LocalTableGame(props: LocalTableGameProps) {
       name: p.name,
       score: p.total,
       characterId: p.id === perspectiveId ? appearance.mascot : MASCOTS[i % MASCOTS.length],
+      hat: p.id === perspectiveId ? appearance.hat : undefined,
       nameplate: p.id === perspectiveId ? appearance.nameplate : undefined,
       team: p.team,
     }));
@@ -247,6 +249,12 @@ export function LocalTableGame(props: LocalTableGameProps) {
             suspended={suspended}
           />
         </div>
+        <SeasonalBigHand
+          key={`season-${props.presentationEpoch}`}
+          state={state}
+          isRolling={isRolling}
+          suspended={suspended}
+        />
       </TableScene>
       <div className="tp-empty" aria-hidden="true" />
       {sceneOverlay?.kind === "menu" && (

@@ -45,6 +45,8 @@ function mockCanvas() {
     fill: vi.fn(),
     stroke: vi.fn(),
     translate: vi.fn(),
+    rotate: vi.fn(),
+    ellipse: vi.fn(),
     scale: vi.fn(),
     setLineDash: vi.fn(),
     drawImage: vi.fn(),
@@ -102,7 +104,15 @@ describe("seasonal daily score images", () => {
     expect(file.type).toBe("image/png");
   });
 
-  it.each(["halloween", "christmas", "summer"] as const)(
+  it.each([
+    "halloween",
+    "christmas",
+    "summer",
+    "newyear",
+    "valentines",
+    "stpatricks",
+    "thanksgiving",
+  ] as const)(
     "uses the active %s palette and ornaments without changing result text or placement",
     async (theme) => {
       activeTheme.mockReturnValue(theme);
