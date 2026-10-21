@@ -10,6 +10,8 @@ import {
   backfillDailyRolls,
   isStatsAdmin,
   recordLocalGame,
+  migrateRollStats,
+  rollActivity,
   rollExport,
   rollSummary,
   snapshotStatsAdmins,
@@ -40,6 +42,8 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
 
   beforeEach(async () => {
     await query("TRUNCATE users CASCADE");
+    // Keyed by game, not by account, so it outlives the users it came from.
+    await query("TRUNCATE dice_audit");
     await query(
       `INSERT INTO users (id, email, username, password_hash)
        VALUES ($1, 'james@test.invalid', 'James', 'unused'),
@@ -133,7 +137,14 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
   function localGame(playedAt = new Date()) {
     const collector = new ThrowCollector(["you"]);
     const pos = runPosition(77, PLAY, DAILY_TURNS, (b, a) => collector.observe(b, a));
-    const game = rollGameFromState("local", pos.state, "you", collector.throwsFor("you"), playedAt);
+    const game = rollGameFromState(
+      "local",
+      pos.state,
+      "you",
+      collector.throwsFor("you"),
+      playedAt,
+      { decisions: collector.decisionsFor("you") },
+    );
     return {
       ...game,
       won: true,
@@ -175,7 +186,7 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
     await recordLocalGame(james, { id: randomUUID(), game: localGame() });
     const mine = (await rollExport("games", "games", player)).trim().split("\n");
     expect(mine).toHaveLength(2);
-    expect(mine[0].startsWith("played_at,mode,score")).toBe(true);
+    expect(mine[0].startsWith("played_at,mode,finished,score")).toBe(true);
     const all = await rollExport("local", "throws", null);
     expect(all.startsWith("player,")).toBe(true);
     expect(all).not.toContain("James");
@@ -218,5 +229,119 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
     expect(await rowsFor(player, "daily", 1)).toHaveLength(1);
     const { rows } = await query(`SELECT 1 FROM roll_games WHERE user_id = $1`, [james]);
     expect(rows).toHaveLength(0);
+  });
+
+  it("stores each run's decisions and its dice for the fairness audit", async () => {
+    await startDailyRun(player);
+    await playToTheEnd((m) => playDailyMove(player, m));
+    const [row] = await rowsFor(player, "daily", 1);
+    expect(row.tally.dec).toBeGreaterThan(0);
+    const { rows } = await query<{ n: number }>(
+      `SELECT (f1 + f2 + f3 + f4 + f5 + f6)::int AS n FROM dice_audit WHERE key = $1`,
+      [row.key],
+    );
+    expect(rows[0].n).toBe(row.tally.dice);
+  });
+
+  it("counts an unfinished game's throws but keeps it out of scores", async () => {
+    const left = { ...localGame(new Date(Date.now() - 60_000)), finished: false, won: null };
+    await recordLocalGame(player, { id: randomUUID(), game: localGame() });
+    await recordLocalGame(player, { id: randomUUID(), game: left });
+    const t = (await rollSummary("local", player)).tally;
+    expect(t.games).toBe(2);
+    expect(t.finished).toBe(1);
+    expect(t.decided).toBe(1);
+    const series = (await rollSummary("local", player)).series;
+    // Oldest first: the unfinished one was a minute earlier.
+    expect(series.map((p) => p.score === null)).toEqual([true, false]);
+  });
+
+  it("files a solo game's whole table for the audit, bots included", async () => {
+    await recordLocalGame(player, {
+      id: randomUUID(),
+      game: localGame(),
+      faces: [100, 99, 101, 98, 102, 100],
+    });
+    const all = await rollSummary("local", null);
+    expect(all.audit?.counts).toEqual([100, 99, 101, 98, 102, 100]);
+    expect(all.audit!.p).toBeGreaterThan(0.9);
+    // Nonsense counts are dropped; the game is still filed.
+    await recordLocalGame(player, { id: randomUUID(), game: localGame(), faces: [1, 2] });
+    expect((await rollSummary("local", player)).tally.games).toBe(2);
+  });
+
+  it("narrows to a window of days", async () => {
+    const day = 86_400_000;
+    await recordLocalGame(player, { id: randomUUID(), game: localGame() });
+    await recordLocalGame(player, {
+      id: randomUUID(),
+      game: localGame(new Date(Date.now() - 20 * day)),
+    });
+    await recordLocalGame(player, {
+      id: randomUUID(),
+      game: localGame(new Date(Date.now() - 50 * day)),
+    });
+    expect((await rollSummary("local", player, 7)).tally.games).toBe(1);
+    expect((await rollSummary("local", player, 30)).tally.games).toBe(2);
+    expect((await rollSummary("local", player, 100)).tally.games).toBe(3);
+    const csv = await rollExport("local", "games", player, 30);
+    expect(csv.trim().split("\n")).toHaveLength(3);
+  });
+
+  it("compares a player with everyone, and ranks luck only among enough players", async () => {
+    const extra = Array.from({ length: 5 }, () => randomUUID());
+    for (const [i, id] of extra.entries()) {
+      await query(
+        `INSERT INTO users (id, email, username, password_hash)
+         VALUES ($1, $2, $3, 'unused')`,
+        [id, `p${i}@test.invalid`, `Extra${i}`],
+      );
+    }
+    // Enough throws each to be ranked: several games apiece.
+    for (const id of [player, ...extra.slice(0, 4)]) {
+      for (let g = 0; g < 3; g++)
+        await recordLocalGame(id, { id: randomUUID(), game: localGame() });
+    }
+    let mine = await rollSummary("local", player);
+    expect(mine.everyone?.games).toBe(15);
+    // Four others ranked: too few to show where anyone stands.
+    expect(mine.luckRank).toBeUndefined();
+    for (let g = 0; g < 3; g++)
+      await recordLocalGame(extra[4], { id: randomUUID(), game: localGame() });
+    mine = await rollSummary("local", player);
+    expect(mine.luckRank?.others).toBe(5);
+    // Identical games, identical luck: nobody's is lower.
+    expect(mine.luckRank?.below).toBe(0);
+  });
+
+  it("reports activity by day and players returning week to week", async () => {
+    const week = 7 * 86_400_000;
+    await recordLocalGame(player, { id: randomUUID(), game: localGame() });
+    await recordLocalGame(player, {
+      id: randomUUID(),
+      game: localGame(new Date(Date.now() - week)),
+    });
+    await recordLocalGame(james, { id: randomUUID(), game: localGame() });
+    const activity = await rollActivity(100);
+    const today = activity.daily[activity.daily.length - 1];
+    expect(today.players).toBe(2);
+    expect(today.byMode.local?.games).toBe(2);
+    const last = activity.weekly[activity.weekly.length - 1];
+    expect(last.players).toBe(2);
+    expect(last.returning).toBe(1);
+  });
+
+  it("gives rows from before finished-tracking the count their scores need", async () => {
+    await query(
+      `INSERT INTO roll_games (key, user_id, mode, played_at, score, turns, banks, busts,
+                               banked_points, lost_points, best_turn, tally, throws)
+       VALUES ('legacy', $1, 'local', now(), 1200, 0, 0, 0, 0, 0, 0,
+               '{"games": 1, "scoreSum": 1200}', '[]')`,
+      [player],
+    );
+    await migrateRollStats();
+    const t = (await rollSummary("local", player)).tally;
+    expect(t.finished).toBe(1);
+    expect(t.scoreSum / t.finished).toBe(1200);
   });
 });

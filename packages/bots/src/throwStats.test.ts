@@ -178,3 +178,135 @@ describe("storage and validation", () => {
     expect(throws[0].startsWith("player,played_at")).toBe(true);
   });
 });
+
+// ------------------------------------------------------------- decisions etc.
+
+import {
+  createRunGame,
+  getLegalActions,
+  applyAction as apply,
+  runMoveStart,
+  type GameState as State,
+} from "@greed/core";
+import { rollEdge } from "./strategies.js";
+import {
+  emptyTally,
+  mergeTallies,
+  chiSquareFair,
+  decisionsCsv,
+  decodeDecisions,
+  encodeDecisions,
+  tableFaces,
+} from "./throwStats.js";
+
+/** Play a ten-turn run with a chosen policy, watching every throw and bank. */
+function playPolicy(seed: number, shouldRoll: (s: State) => boolean) {
+  const collector = new ThrowCollector(["you"]);
+  let state = createRunGame(seed);
+  let turns = 0;
+  while (turns < 10) {
+    state = runMoveStart(state);
+    const legal = getLegalActions(state);
+    const roll = legal.canRoll && (!legal.canBank || shouldRoll(state));
+    const before = state;
+    state = apply(state, { type: roll ? "ROLL" : "BANK" });
+    collector.observe(before, state);
+    if (state.turn.outcome) turns += 1;
+  }
+  return rollGameFromState("daily", state, "you", collector.throwsFor("you"), new Date(), {
+    decisions: collector.decisionsFor("you"),
+  });
+}
+
+describe("decisions", () => {
+  it("records every choice: each throw after the first, and each bank", () => {
+    const game = playPolicy(9, (s) => s.turn.turnScore < 400);
+    const voluntary = game.throws.filter((r) => r.throw > 1).length;
+    expect(game.decisions.filter((d) => d.choice === "roll")).toHaveLength(voluntary);
+    expect(game.decisions.filter((d) => d.choice === "bank")).toHaveLength(game.banks);
+  });
+
+  it("a player who follows the model makes only good calls", () => {
+    let total = emptyTally();
+    for (let seed = 1; seed <= 40; seed++) {
+      const t = tallyGame(playPolicy(seed, (s) => rollEdge(s.turn) > 0));
+      total = mergeTallies(total, t);
+    }
+    expect(total.dec).toBeGreaterThan(50);
+    expect(total.decGood).toBe(total.dec);
+    expect(total.costGreedy + total.costCautious).toBe(0);
+  });
+
+  it("a player who never stops is called greedy, at a cost in points", () => {
+    let total = emptyTally();
+    for (let seed = 1; seed <= 40; seed++)
+      total = mergeTallies(total, tallyGame(playPolicy(seed, () => true)));
+    expect(total.decGreedy).toBeGreaterThan(0);
+    expect(total.costGreedy).toBeGreaterThan(0);
+    expect(total.decCautious).toBe(0);
+  });
+
+  it("counts per game only over games that recorded decisions", () => {
+    const game = playPolicy(5, (s) => s.turn.turnScore < 350);
+    // A game filed before decisions were kept has none to offer.
+    const total = mergeTallies(tallyGame(game), tallyGame({ ...game, decisions: [] }));
+    expect(total.games).toBe(2);
+    expect(total.decGames).toBe(1);
+  });
+
+  it("round-trips decisions through the compact encoding", () => {
+    const game = playPolicy(3, (s) => s.turn.turnScore < 350);
+    expect(decodeDecisions(encodeDecisions(game.decisions))).toEqual(game.decisions);
+    expect(decisionsCsv([{ game }]).trim().split("\n")).toHaveLength(game.decisions.length + 1);
+  });
+});
+
+describe("point sources and the table's dice", () => {
+  it("credits every scored point to exactly one kind of score", () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const t = tallyGame(playPolicy(seed, (s) => s.turn.turnScore < 500));
+      const credited = t.pOnes + t.pFives + t.pTriple + t.pStraight + t.pFive;
+      expect(credited).toBeCloseTo(t.gain, 6);
+    }
+  });
+
+  it("counts every die anyone threw", () => {
+    const game = playPolicy(5, () => false);
+    // A run has one player, so the table's dice are that player's.
+    let state = createRunGame(5);
+    const faces = tableFaces(state);
+    expect(faces).toEqual([0, 0, 0, 0, 0, 0]);
+    state = apply(runMoveStart(state), { type: "ROLL" });
+    expect(tableFaces(state).reduce((a, b) => a + b, 0)).toBe(5);
+    expect(game.throws.length).toBeGreaterThan(0);
+  });
+});
+
+describe("unfinished games", () => {
+  it("count their throws but not their score or result", () => {
+    const done = playPolicy(4, (s) => s.turn.turnScore < 300);
+    const left = { ...done, finished: false, won: null };
+    const t = tallyGame(left);
+    expect(t.games).toBe(1);
+    expect(t.finished).toBe(0);
+    expect(t.scoreSum).toBe(0);
+    expect(t.throws).toBe(done.throws.length);
+  });
+});
+
+describe("chiSquareFair", () => {
+  it("matches the textbook table for five degrees of freedom", () => {
+    // 11.07 is the 5% critical value; 1.61 the 90% one.
+    const at = (chi2: number) => {
+      // Build counts with a known statistic: n per face, one face shifted.
+      const n = 6000;
+      const d = Math.sqrt((chi2 * (n / 6)) / (1 + 1 / 5));
+      const counts = [n / 6 + d, ...Array(5).fill(n / 6 - d / 5)];
+      return chiSquareFair(counts)!;
+    };
+    expect(at(11.07).p).toBeCloseTo(0.05, 3);
+    expect(at(1.61).p).toBeCloseTo(0.9, 2);
+    expect(chiSquareFair([10, 10, 10, 10, 10, 10])!.p).toBeCloseTo(1, 10);
+    expect(chiSquareFair([0, 0, 0, 0, 0, 0])).toBeNull();
+  });
+});

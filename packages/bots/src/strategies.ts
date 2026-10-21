@@ -24,7 +24,7 @@
  */
 
 import { getLegalActions, rivalBest, scoreFor, teamOf } from "@greed/core";
-import type { BotPersonality, GameAction, GameState } from "@greed/core";
+import type { BotPersonality, GameAction, GameState, TurnState } from "@greed/core";
 import { rollModel, turnRollModel } from "./probabilities.js";
 
 export interface BotContext {
@@ -84,14 +84,31 @@ function optimalValue(score: number, k: number): number {
 
 /** Expected value of taking one more roll now, then playing optimally afterwards. */
 function expectedValueOfRolling(state: GameState): number {
+  return expectedTurnIfRolling(state.turn);
+}
+
+function expectedTurnIfRolling(turn: TurnState): number {
   // The next throw accounts for the held mat and replacement whole-hand awards.
   // Subsequent throws use the cached generic continuation approximation.
-  const model = turnRollModel(state.turn);
+  const model = turnRollModel(turn);
   let eRoll = 0;
   for (const t of model.transitions) {
-    eRoll += t.p * optimalValue(state.turn.turnScore + t.gain, t.kNext);
+    eRoll += t.p * optimalValue(turn.turnScore + t.gain, t.kNext);
   }
   return eRoll;
+}
+
+/**
+ * How many points rolling is worth over banking, from this position, if the
+ * rest of the turn is played perfectly: positive means roll, negative bank.
+ *
+ * The same risk-neutral model the bots stand on, so it judges a choice on
+ * what it does to the turn's expected points — not on the scoreboard, where a
+ * player chasing a lead is right to take a worse bet. The roll statistics use
+ * it to say whether a decision was a good call.
+ */
+export function rollEdge(turn: TurnState): number {
+  return expectedTurnIfRolling(turn) - turn.turnScore;
 }
 
 /** Is there still an opposing seat that can answer our bank this round? */

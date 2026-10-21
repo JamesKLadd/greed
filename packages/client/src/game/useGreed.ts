@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyAction, diceToRoll, getLegalActions } from "@greed/core";
 import type { DieValue, GameState, LegalActions } from "@greed/core";
-import { ThrowCollector, decide, type ThrowRecord } from "@greed/bots";
+import { ThrowCollector, decide, type DecisionRecord, type ThrowRecord } from "@greed/bots";
 import { buildGame, type MatchSetup } from "./setup.js";
 import { toastFor, type ToastMessage } from "./toasts.js";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
@@ -36,11 +36,27 @@ export interface GreedController {
   /** Hold a die, or put it back — the player overruling the auto-lock. */
   toggleDie: (index: number) => void;
   restart: (setup?: MatchSetup) => void;
-  /** Every throw a human at this table has made this game (roll statistics). */
-  throwsFor: (playerId: string) => ThrowRecord[];
+  /** Every throw and choice a human at this table has made this game (roll statistics). */
+  rollsFor: (playerId: string) => PlayerRolls;
 }
 
-export function useGreed(initialSetup: MatchSetup): GreedController {
+export interface PlayerRolls {
+  throws: ThrowRecord[];
+  decisions: DecisionRecord[];
+}
+
+export interface GreedOptions {
+  /**
+   * A game left before it ended — the table closed, the tab closed, or a new
+   * game dealt over it. Given the last position and the throws so far, so it
+   * can still be recorded: leaving out the games players walk away from would
+   * leave only the ones where the dice were kind. Only called if something was
+   * thrown by a human.
+   */
+  onUnfinished?: (state: GameState, rollsFor: (playerId: string) => PlayerRolls) => void;
+}
+
+export function useGreed(initialSetup: MatchSetup, options: GreedOptions = {}): GreedController {
   const [built, setBuilt] = useState(() => buildGame(initialSetup));
   const [state, setState] = useState<GameState>(() => built.state);
   const stateRef = useRef(state);
@@ -55,9 +71,41 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const lastLogLen = useRef(state.log.length);
-  // The humans' throws, for the roll statistics. Watched at the one place a
-  // throw is decided, so what is recorded is exactly what was rolled.
-  const throws = useRef(humanThrows(built.state));
+  // The humans' throws and choices, for the roll statistics. Watched at the one
+  // place each is applied, so what is recorded is exactly what was played.
+  const rolls = useRef(humanThrows(built.state));
+  const rollsFor = useCallback(
+    (id: string): PlayerRolls => ({
+      throws: rolls.current.throwsFor(id),
+      decisions: rolls.current.decisionsFor(id),
+    }),
+    [],
+  );
+  const onUnfinished = useRef(options.onUnfinished);
+  onUnfinished.current = options.onUnfinished;
+  /** Hand an unfinished game over to be recorded, at most once. */
+  const settled = useRef(false);
+  const abandon = useCallback(() => {
+    const s = stateRef.current;
+    if (settled.current || s.phase === "game-over") return;
+    const humans = s.players.filter((p) => !p.isBot);
+    if (!humans.some((p) => rolls.current.throwsFor(p.id).length > 0)) return;
+    settled.current = true;
+    onUnfinished.current?.(s, rollsFor);
+  }, [rollsFor]);
+  // Leaving the table (unmount), or the tab being closed for good. A page
+  // merely put into the back-forward cache (`persisted`) may well come back to
+  // this very game, so it is not counted as left.
+  useEffect(() => {
+    const onHide = (e: PageTransitionEvent) => {
+      if (!e.persisted) abandon();
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      abandon();
+    };
+  }, [abandon]);
 
   const applyNow = useCallback((action: Parameters<typeof applyAction>[1]) => {
     // A hold followed by Roll in the same task must use the changed selection.
@@ -76,7 +124,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     // the same either way — but knowing the faces up front is what lets the dice
     // turn to them in one motion instead of guessing and then correcting.
     const next = applyAction(s, { type: "ROLL" });
-    throws.current.observe(s, next);
+    rolls.current.observe(s, next);
     setRollingIndices(diceToRoll(s.turn));
     setRollingDice(next.turn.dice);
     setIsRolling(true);
@@ -94,6 +142,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     const s = stateRef.current;
     if (!getLegalActions(s).canBank) return;
     applyNow({ type: "BANK" });
+    rolls.current.observe(s, stateRef.current);
   }, [applyNow, rollPlayback]);
 
   const toggleDie = useCallback(
@@ -109,9 +158,12 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     (setup?: MatchSetup) => {
       // A restart during the tumble must not land the old match 650ms later.
       rollPlayback.cancel();
+      // A new game dealt over one still being played leaves that one unfinished.
+      abandon();
+      settled.current = false;
       const next = buildGame(setup ?? initialSetup);
       lastLogLen.current = next.state.log.length;
-      throws.current = humanThrows(next.state);
+      rolls.current = humanThrows(next.state);
       setIsRolling(false);
       setRollingIndices([]);
       setRollingDice(null);
@@ -121,7 +173,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
       setState(next.state);
       setRollOffActive(true);
     },
-    [initialSetup, rollPlayback],
+    [initialSetup, rollPlayback, abandon],
   );
 
   const beginPlay = useCallback(() => setRollOffActive(false), []);
@@ -187,7 +239,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     bank,
     toggleDie,
     restart,
-    throwsFor: (playerId: string) => throws.current.throwsFor(playerId),
+    rollsFor,
   };
 }
 

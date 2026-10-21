@@ -19,6 +19,7 @@
 import { DICE_COUNT, diceToRoll, isWinner, scoreRoll } from "@greed/core";
 import type { DieValue, GameState } from "@greed/core";
 import { turnRollModel } from "./probabilities.js";
+import { rollEdge } from "./strategies.js";
 
 export type StatsMode = "local" | "online" | "daily" | "weekly";
 export const STATS_MODES: readonly StatsMode[] = ["local", "online", "daily", "weekly"];
@@ -71,6 +72,29 @@ export interface ThrowOdds {
   five: number;
   hot: number;
 }
+
+/**
+ * A choice a player made with points on the line: throw again, or bank.
+ *
+ * The first throw of a turn is not a choice (it is the only legal move), so
+ * it is never one of these; every later throw, and every bank, is.
+ */
+export interface DecisionRecord {
+  turn: number;
+  choice: "roll" | "bank";
+  /** Unbanked points at stake when choosing. */
+  atRisk: number;
+  /** Dice a throw would have used (five after hot dice). */
+  dice: number;
+  /**
+   * Points rolling was worth over banking from that position, playing the rest
+   * of the turn perfectly (see rollEdge): positive says roll, negative bank.
+   */
+  edge: number;
+}
+
+/** A call this close to the best one is a good call either way. */
+export const CLOSE_CALL = 5;
 
 const faceList = (s: string) => [...s].map((c) => Number(c) as DieValue);
 
@@ -188,29 +212,77 @@ export function recordThrow(
  */
 export class ThrowCollector {
   private readonly logs = new Map<string, ThrowRecord[]>();
+  private readonly choices = new Map<string, DecisionRecord[]>();
   private readonly turns = new Map<string, number>();
 
   constructor(playerIds: Iterable<string>) {
     for (const id of playerIds) {
       this.logs.set(id, []);
+      this.choices.set(id, []);
       this.turns.set(id, 0);
     }
   }
 
+  /** Hand it the state either side of a ROLL or a BANK; anything else is ignored. */
   observe(before: GameState, after: GameState): void {
     const player = before.players[before.turn.playerIndex];
     if (!player || !this.logs.has(player.id)) return;
+    const event = after.log[before.log.length];
+    if (!event || !("playerId" in event) || event.playerId !== player.id) return;
+
+    if (event.type === "bank") {
+      // Every bank is a choice: one was only legal because a throw had scored,
+      // and with dice left to throw, throwing was the alternative. A mat with
+      // nothing left to throw is the one bank that was not a choice.
+      const dice = diceToRoll(before.turn).length;
+      if (dice > 0) this.decide(player.id, before, "bank", dice);
+      return;
+    }
+
     // The first throw of a turn starts it; a hot-dice re-throw does not.
     const turn = (this.turns.get(player.id) ?? 0) + (before.turn.rollCount === 0 ? 1 : 0);
     const thrown = recordThrow(before, after, turn);
     if (!thrown) return;
     this.turns.set(player.id, turn);
+    // Throwing again is a choice only where banking was the alternative: not
+    // the turn's first throw, and not after releasing dice took the turn's
+    // points back to nothing.
+    if (before.turn.rollCount > 0 && before.turn.turnScore > 0) {
+      this.decide(player.id, before, "roll", diceToRoll(before.turn).length);
+    }
     this.logs.get(player.id)!.push(thrown.record);
+  }
+
+  private decide(id: string, before: GameState, choice: "roll" | "bank", dice: number): void {
+    this.choices.get(id)!.push({
+      turn: this.turns.get(id) ?? 0,
+      choice,
+      atRisk: before.turn.turnScore,
+      dice,
+      edge: Math.round(rollEdge(before.turn) * 10) / 10,
+    });
   }
 
   throwsFor(playerId: string): ThrowRecord[] {
     return this.logs.get(playerId) ?? [];
   }
+
+  decisionsFor(playerId: string): DecisionRecord[] {
+    return this.choices.get(playerId) ?? [];
+  }
+}
+
+/**
+ * Every die thrown at the table this game, by anyone — bots included — as
+ * counts of each face. The fairness audit's sample: far larger than any one
+ * player's throws, and with no player's choices in it at all.
+ */
+export function tableFaces(state: GameState): number[] {
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (const e of state.log) {
+    if (e.type === "roll") for (const f of e.dice) counts[f - 1] += 1;
+  }
+  return counts;
 }
 
 /** One finished game or challenge run, from one player's side of the table. */
@@ -232,17 +304,26 @@ export interface RollGame {
   bankedPoints: number;
   lostPoints: number;
   bestTurn: number;
+  /**
+   * Played to the end. A game left early is still recorded — leaving out the
+   * ones players quit would leave only the games where the dice were kind —
+   * but it has no result, so it stays out of scores and win rates.
+   */
+  finished: boolean;
   throws: ThrowRecord[];
+  decisions: DecisionRecord[];
 }
 
-/** Build a player's record of a finished game from its final state. */
+/** Build a player's record of a game from its last state. */
 export function rollGameFromState(
   mode: StatsMode,
   state: GameState,
   playerId: string,
   throws: ThrowRecord[],
   playedAt: Date = new Date(),
+  opts: { decisions?: DecisionRecord[]; finished?: boolean } = {},
 ): RollGame {
+  const finished = opts.finished ?? true;
   let banks = 0;
   let busts = 0;
   let skips = 0;
@@ -267,7 +348,7 @@ export function rollGameFromState(
     mode,
     playedAt: playedAt.toISOString(),
     score: state.players.find((p) => p.id === playerId)?.total ?? 0,
-    won: run ? null : isWinner(state, playerId),
+    won: run || !finished ? null : isWinner(state, playerId),
     goal: run ? null : state.config.goal,
     players: run ? null : state.players.length,
     turns: banks + busts + skips,
@@ -276,7 +357,9 @@ export function rollGameFromState(
     bankedPoints,
     lostPoints,
     bestTurn,
+    finished,
     throws,
+    decisions: opts.decisions ?? [],
   };
 }
 
@@ -291,6 +374,8 @@ export function rollGameFromState(
 
 export const TALLY_SUM_KEYS = [
   "games",
+  // Of those, played to the end; scores and win rates read only these.
+  "finished",
   "scoreSum",
   "wins",
   "decided",
@@ -348,6 +433,47 @@ export const TALLY_SUM_KEYS = [
   "f4",
   "f5",
   "f6",
+  // Decisions: how many, how many were the better call (or close enough to it),
+  // how many banked when rolling was better (cautious) or rolled when banking
+  // was (greedy), and the expected points those cost.
+  "dec",
+  // Games with any decisions recorded: what "per game" divides by, since games
+  // filed before decisions were kept have none and would dilute it.
+  "decGames",
+  "decGood",
+  "decCautious",
+  "decGreedy",
+  "costCautious",
+  "costGreedy",
+  // By dice available: choices, how many were "roll again", and how many the
+  // model would have rolled.
+  "dn1",
+  "dr1",
+  "do1",
+  "dn2",
+  "dr2",
+  "do2",
+  "dn3",
+  "dr3",
+  "do3",
+  "dn4",
+  "dr4",
+  "do4",
+  "dn5",
+  "dr5",
+  "do5",
+  // Banks by size: under 300, 300-499, 500-749, 750-999, 1000 and up.
+  "bk0",
+  "bk1",
+  "bk2",
+  "bk3",
+  "bk4",
+  // Points the throws scored (before any bust took them back), by what scored.
+  "pOnes",
+  "pFives",
+  "pTriple",
+  "pStraight",
+  "pFive",
 ] as const;
 
 export const TALLY_MAX_KEYS = ["bestTurn", "maxRiskSurvived", "maxLost"] as const;
@@ -372,7 +498,10 @@ export function mergeTallies(a: RollTally, b: Partial<RollTally>): RollTally {
 export function tallyGame(game: RollGame): RollTally {
   const t = emptyTally();
   t.games = 1;
-  t.scoreSum = game.score;
+  if (game.finished) {
+    t.finished = 1;
+    t.scoreSum = game.score;
+  }
   if (game.won !== null) {
     t.decided = 1;
     t.wins = game.won ? 1 : 0;
@@ -418,10 +547,63 @@ export function tallyGame(game: RollGame): RollTally {
     if (!e.bust) t.maxRiskSurvived = Math.max(t.maxRiskSurvived, p.bust);
     else biggestLoss = Math.max(biggestLoss, r.atRisk);
     for (const c of r.faces) t[`f${c}` as TallyKey] += 1;
+    if (!e.bust) addPointSources(t, r, e);
     t.dice += r.faces.length;
   }
   t.maxLost = biggestLoss;
+  if (game.decisions.length > 0) t.decGames = 1;
+  for (const d of game.decisions) {
+    const k = Math.min(5, Math.max(1, d.dice)) as 1 | 2 | 3 | 4 | 5;
+    const rolled = d.choice === "roll";
+    t.dec += 1;
+    t[`dn${k}`] += 1;
+    if (rolled) t[`dr${k}`] += 1;
+    if (d.edge > 0) t[`do${k}`] += 1;
+    const lost = rolled ? -d.edge : d.edge;
+    if (lost <= CLOSE_CALL) t.decGood += 1;
+    else if (rolled) {
+      t.decGreedy += 1;
+      t.costGreedy += lost;
+    } else {
+      t.decCautious += 1;
+      t.costCautious += lost;
+    }
+    if (!rolled) {
+      const bucket =
+        d.atRisk < 300 ? 0 : d.atRisk < 500 ? 1 : d.atRisk < 750 ? 2 : d.atRisk < 1000 ? 3 : 4;
+      t[`bk${bucket}`] += 1;
+    }
+  }
   return t;
+}
+
+/**
+ * Credit what a scoring throw added to the kind of score that made it. A hand
+ * completed on the mat takes the whole gain (it replaced what the held dice
+ * were paying); otherwise the throw's own breakdown is scaled to the gain, so
+ * the categories always add up to the points the throws actually scored.
+ */
+function addPointSources(t: RollTally, r: ThrowRecord, e: ThrowEvents): void {
+  if (r.gain <= 0) return;
+  if (e.straight) {
+    t.pStraight += r.gain;
+    return;
+  }
+  if (e.five) {
+    t.pFive += r.gain;
+    return;
+  }
+  const parts = scoreRoll(faceList(r.faces)).breakdown;
+  const total = parts.reduce((sum, b) => sum + b.points, 0);
+  if (total <= 0) return;
+  for (const b of parts) {
+    const share = (b.points / total) * r.gain;
+    if (b.kind === "ones") t.pOnes += share;
+    else if (b.kind === "fives") t.pFives += share;
+    else if (b.kind === "triple") t.pTriple += share;
+    else if (b.kind === "straight") t.pStraight += share;
+    else t.pFive += share;
+  }
 }
 
 export function tallyGames(games: readonly RollGame[]): RollTally {
@@ -494,6 +676,69 @@ export function faceComparisons(
   });
 }
 
+/**
+ * Chi-square test of face counts against a fair die: the statistic and the
+ * chance a fair die would look at least this uneven (the p-value). With five
+ * degrees of freedom — six faces, one total.
+ */
+export function chiSquareFair(counts: readonly number[]): { chi2: number; p: number } | null {
+  const n = counts.reduce((a, b) => a + b, 0);
+  if (n === 0) return null;
+  const expected = n / counts.length;
+  const chi2 = counts.reduce((sum, c) => sum + (c - expected) ** 2 / expected, 0);
+  return { chi2, p: upperGammaQ((counts.length - 1) / 2, chi2 / 2) };
+}
+
+/** Regularised upper incomplete gamma Q(a, x), by series or continued fraction. */
+function upperGammaQ(a: number, x: number): number {
+  if (x <= 0) return 1;
+  const lnGammaA = lnGamma(a);
+  if (x < a + 1) {
+    let sum = 1 / a;
+    let term = sum;
+    for (let n = 1; n < 500; n++) {
+      term *= x / (a + n);
+      sum += term;
+      if (Math.abs(term) < Math.abs(sum) * 1e-14) break;
+    }
+    return 1 - sum * Math.exp(-x + a * Math.log(x) - lnGammaA);
+  }
+  // Lentz's continued fraction.
+  let b = x + 1 - a;
+  let c = 1e300;
+  let d = 1 / b;
+  let h = d;
+  for (let i = 1; i < 500; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < 1e-300) d = 1e-300;
+    c = b + an / c;
+    if (Math.abs(c) < 1e-300) c = 1e-300;
+    d = 1 / d;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < 1e-14) break;
+  }
+  return Math.exp(-x + a * Math.log(x) - lnGammaA) * h;
+}
+
+function lnGamma(z: number): number {
+  // Lanczos approximation; ample for the half-integers this is asked about.
+  const g = 7;
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6,
+    1.5056327351493116e-7,
+  ];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
 // ---------------------------------------------------------------- storage
 
 type ThrowTuple = [number, number, string, string, number, number, number];
@@ -511,6 +756,76 @@ export function encodeThrows(throws: readonly ThrowRecord[]): string {
       r.expectedGain,
     ]),
   );
+}
+
+type DecisionTuple = [number, 0 | 1, number, number, number];
+
+export function encodeDecisions(decisions: readonly DecisionRecord[]): string {
+  return JSON.stringify(
+    decisions.map((d): DecisionTuple => [
+      d.turn,
+      d.choice === "roll" ? 1 : 0,
+      d.atRisk,
+      d.dice,
+      d.edge,
+    ]),
+  );
+}
+
+/** One decision from untrusted input, or null. */
+export function cleanDecision(raw: unknown): DecisionRecord | null {
+  const tuple = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object"
+      ? (() => {
+          const r = raw as Record<string, unknown>;
+          return [
+            r.turn,
+            r.choice === "roll" ? 1 : r.choice === "bank" ? 0 : -1,
+            r.atRisk,
+            r.dice,
+            r.edge,
+          ];
+        })()
+      : null;
+  if (!tuple || tuple.length < 5) return null;
+  const [turn, choice, atRisk, dice, edge] = tuple;
+  if (choice !== 0 && choice !== 1) return null;
+  const t = sane(turn, 100_000);
+  const risk = sane(atRisk, 1_000_000);
+  const k = sane(dice, DICE_COUNT);
+  if (t === null || risk === null || !k || typeof edge !== "number" || !Number.isFinite(edge))
+    return null;
+  if (Math.abs(edge) > 100_000) return null;
+  return {
+    turn: Math.floor(t),
+    choice: choice === 1 ? "roll" : "bank",
+    atRisk: Math.round(risk),
+    dice: Math.floor(k),
+    edge,
+  };
+}
+
+export function decodeDecisions(text: string | null | undefined): DecisionRecord[] {
+  if (!text) return [];
+  try {
+    const raw = JSON.parse(text) as unknown;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(cleanDecision).filter((d): d is DecisionRecord => d !== null);
+  } catch {
+    return [];
+  }
+}
+
+function parseList(raw: unknown): unknown[] | null {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string") return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 const FACES = /^[1-6]*$/;
@@ -580,20 +895,15 @@ export function cleanRollGame(raw: unknown, mode: StatsMode): RollGame | null {
   const now = Date.now();
   if (at.getTime() > now) at = new Date(now);
   if (at.getTime() < now - ROLL_DATA_DAYS * 86_400_000) return null;
-  const rawThrows = Array.isArray(r.throws)
-    ? r.throws
-    : typeof r.throws === "string"
-      ? (() => {
-          try {
-            return JSON.parse(r.throws) as unknown;
-          } catch {
-            return null;
-          }
-        })()
-      : null;
-  if (!Array.isArray(rawThrows) || rawThrows.length > MAX_THROWS) return null;
+  const rawThrows = parseList(r.throws);
+  if (!rawThrows || rawThrows.length > MAX_THROWS) return null;
   const throws = rawThrows.map(cleanThrow);
   if (throws.some((t) => t === null)) return null;
+  // Absent from a client that predates decisions: none, rather than refused.
+  const rawDecisions = r.decisions == null ? [] : parseList(r.decisions);
+  if (!rawDecisions || rawDecisions.length > MAX_THROWS * 2) return null;
+  const decisions = rawDecisions.map(cleanDecision);
+  if (decisions.some((d) => d === null)) return null;
   const num = (v: unknown, max: number) => sane(v, max);
   const score = num(r.score, 1_000_000);
   const turns = num(r.turns, 100_000);
@@ -618,8 +928,18 @@ export function cleanRollGame(raw: unknown, mode: StatsMode): RollGame | null {
     bankedPoints: Math.round(banked!),
     lostPoints: Math.round(lost!),
     bestTurn: Math.round(best!),
+    // Absent from an older client, whose uploads were always finished games.
+    finished: r.finished !== false,
     throws: throws as ThrowRecord[],
+    decisions: decisions as DecisionRecord[],
   };
+}
+
+/** A table's face counts from untrusted input (six counts), or null. */
+export function cleanFaces(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length !== 6) return null;
+  const counts = raw.map((c) => sane(c, 100_000));
+  return counts.every((c) => c !== null) ? counts.map((c) => Math.round(c!)) : null;
 }
 
 // -------------------------------------------------------------------- CSV
@@ -644,6 +964,7 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
     ...(withPlayer ? ["player"] : []),
     "played_at",
     "mode",
+    "finished",
     "score",
     "won",
     "goal",
@@ -672,6 +993,11 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
     "hot_dice_expected",
     "points_from_throws",
     "points_expected",
+    "decisions",
+    "good_calls",
+    "too_cautious",
+    "too_greedy",
+    "points_cost_by_calls",
   ];
   const rows = games.map(({ game, player }) => {
     const t = tallyGame(game);
@@ -679,6 +1005,7 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
       ...(withPlayer ? [player ?? ""] : []),
       game.playedAt,
       game.mode,
+      game.finished ? "yes" : "no",
       game.score,
       game.won === null ? "" : game.won ? "yes" : "no",
       game.goal ?? "",
@@ -707,6 +1034,11 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
       t.eHot.toFixed(3),
       t.gain,
       t.eGain.toFixed(1),
+      t.dec,
+      t.decGood,
+      t.decCautious,
+      t.decGreedy,
+      (t.costCautious + t.costGreedy).toFixed(1),
     ]);
   });
   return [csvLine(head), ...rows].join("\n") + "\n";
@@ -767,6 +1099,48 @@ export function throwsCsv(games: readonly LabelledGame[]): string {
           pct(p.five),
           yn(e.hot),
           pct(p.hot),
+        ]),
+      );
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
+/** One line per decision: what was chosen, and what the model says it was worth. */
+export function decisionsCsv(games: readonly LabelledGame[]): string {
+  const withPlayer = games.some((g) => g.player);
+  const head = [
+    ...(withPlayer ? ["player"] : []),
+    "played_at",
+    "mode",
+    "turn",
+    "choice",
+    "points_at_risk",
+    "dice_left",
+    "roll_edge_points",
+    "best_call",
+    "verdict",
+    "expected_points_cost",
+  ];
+  const lines = [csvLine(head)];
+  for (const { game, player } of games) {
+    for (const d of game.decisions) {
+      const rolled = d.choice === "roll";
+      const lost = rolled ? -d.edge : d.edge;
+      const verdict = lost <= CLOSE_CALL ? "good" : rolled ? "too greedy" : "too cautious";
+      lines.push(
+        csvLine([
+          ...(withPlayer ? [player ?? ""] : []),
+          game.playedAt,
+          game.mode,
+          d.turn,
+          d.choice,
+          d.atRisk,
+          d.dice,
+          d.edge,
+          d.edge > 0 ? "roll" : "bank",
+          verdict,
+          Math.max(0, lost).toFixed(1),
         ]),
       );
     }

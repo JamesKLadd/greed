@@ -1,4 +1,4 @@
-import { cleanRollGame, type RollGame } from "@greed/bots";
+import { cleanFaces, cleanRollGame, type RollGame } from "@greed/bots";
 import { ApiError, getToken } from "../net/auth.js";
 import { uploadLocalGame } from "../net/rollStats.js";
 
@@ -21,6 +21,8 @@ interface Entry {
   /** Names the upload, so sending it twice still files it once. */
   id: string;
   game: RollGame;
+  /** Every die thrown at the table, bots' included: the fairness audit's. */
+  faces?: number[];
 }
 
 function load(): Entry[] {
@@ -31,7 +33,8 @@ function load(): Entry[] {
     // the window, is dropped rather than shown or sent.
     return raw.flatMap((e: Partial<Entry> | null) => {
       const game = e && typeof e.id === "string" ? cleanRollGame(e.game, "local") : null;
-      return game && e?.id ? [{ id: e.id, game }] : [];
+      const faces = cleanFaces(e?.faces) ?? undefined;
+      return game && e?.id ? [{ id: e.id, game, faces }] : [];
     });
   } catch {
     return [];
@@ -55,8 +58,8 @@ function newId(): string {
 }
 
 /** A solo game just finished: keep it, and send it on if there is an account. */
-export function recordLocalRollGame(game: RollGame): void {
-  save([...load(), { id: newId(), game }]);
+export function recordLocalRollGame(game: RollGame, faces?: number[]): void {
+  save([...load(), { id: newId(), game, faces }]);
   void flushRollUploads();
 }
 
@@ -82,7 +85,7 @@ export function flushRollUploads(): Promise<void> {
 async function sendQueued(): Promise<void> {
   for (const entry of load()) {
     try {
-      await uploadLocalGame(entry.id, entry.game);
+      await uploadLocalGame(entry.id, entry.game, entry.faces);
     } catch (err) {
       // Only a refusal is dropped — the server read it and said no, and it
       // always will. Anything else (offline, asleep, an older server with no

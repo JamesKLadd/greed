@@ -136,14 +136,21 @@ build on every push. Node 20.
 
 - Roll statistics (`bots/src/throwStats.ts`, `server/src/rollStats.ts`): every
   throw a player makes, kept ROLL_DATA_DAYS (100) in `roll_games` — one row per
-  finished game or run with its throws and a summable tally. A throw's odds
+  game or run with its throws, choices and a summable tally. Games left
+  unfinished are kept too (`finished` false) or only the kind-dice games would
+  remain; scores and win rates read finished ones only. A throw's odds
   depend only on the held faces, so "expected" is exact for the player's own
   positions. Daily/weekly are recorded by replaying the run after its
   transaction commits (`afterCommit`); online by watching `applyAndBroadcast`;
   solo games are uploaded from the device (`rollRecords.ts`, which is also a
   guest's only copy). EVERY weekly attempt is recorded, never just the best —
-  best attempts are the lucky ones. The all-players view is granted by account
-  id in `stats_admins` (snapshot of James and Jimmy), never by name.
+  best attempts are the lucky ones. Online, only actions taken while the seat is
+  connected count; auto-played ones were not the player's. Decisions are scored
+  by `rollEdge` — expected points, not win chance — and per-game decision figures
+  divide by `decGames`, since rows from before decisions were kept have none.
+  `dice_audit` holds every die thrown at a table, bots' included, once per game.
+  The all-players view is granted by account id in `stats_admins` (snapshot of
+  James and Jimmy), never by name.
 
 ## Deploying — both halves ship on a push to `main`
 

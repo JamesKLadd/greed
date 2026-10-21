@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { rollGameFromState, tableFaces } from "@greed/bots";
 import { useGreed } from "../game/useGreed.js";
 import { useSeasonalGame } from "../game/useSeasonalGame.js";
 import type { MatchSetup } from "../game/setup.js";
 import { loadProfile } from "../game/profile.js";
 import { cosmeticVars } from "../game/cosmetics.js";
 import { useGameChrome } from "../game/useGameChrome.js";
+import { recordLocalRollGame } from "../game/rollRecords.js";
 import { GameShell } from "./GameShell.js";
 import { GameOver } from "../components/GameOver.js";
 import { RulesModal } from "../components/RulesModal.js";
@@ -27,7 +29,22 @@ interface GameScreenProps {
 
 /** Offline play: local pass-and-play, or one human against bots. */
 export function GameScreen({ setup, onExit, recordResults = true }: GameScreenProps) {
-  const ctl = useGreed(setup);
+  // Only a game this device records results for (one human, results on) has
+  // its unfinished games recorded too; see GreedOptions.onUnfinished.
+  const ctl = useGreed(setup, {
+    onUnfinished: recordResults
+      ? (s, rollsFor) => {
+          const humans = s.players.filter((p) => !p.isBot);
+          if (humans.length !== 1) return;
+          const you = humans[0].id;
+          const { throws, decisions } = rollsFor(you);
+          recordLocalRollGame(
+            rollGameFromState("local", s, you, throws, new Date(), { decisions, finished: false }),
+            tableFaces(s),
+          );
+        }
+      : undefined,
+  });
   useSeasonalGame(ctl.rollOff);
   const { state } = ctl;
   const t = useT();
@@ -61,7 +78,7 @@ export function GameScreen({ setup, onExit, recordResults = true }: GameScreenPr
     isRolling: ctl.isRolling,
     youId: recordResults ? viewerId : null,
     playedHere: recordResults && humans.length > 0,
-    throwsFor: ctl.throwsFor,
+    rollsFor: ctl.rollsFor,
     rollOffActive: ctl.rollOffActive,
     blockingOverlayActive: sceneActive && sceneOverlay !== null,
     onRoll: ctl.roll,

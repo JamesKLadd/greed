@@ -112,6 +112,24 @@
   white-space: normal;
   min-width: 5.5em;
 }
+/* Shown in place of the Luck column on a phone (below). */
+.roll-odds__luck-inline {
+  display: none;
+}
+@media (max-width: 560px) {
+  .roll-odds th,
+  .roll-odds td {
+    padding-inline: 4px;
+  }
+  .roll-odds .roll-odds__luck-col {
+    display: none;
+  }
+  .roll-odds__luck-inline {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+  }
+}
 .roll-luck {
   display: inline-flex;
   gap: 4px;
@@ -312,6 +330,116 @@
   background: var(--text-dim);
 }
 
+/* The reference a signed chart is read against: a step stronger than the
+   grid, still a hairline and still solid. */
+.roll-chart__zero {
+  stroke: var(--text-mute);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* ---- Share bars (bank sizes, where points come from) ---- */
+.roll-bars {
+  margin: 0;
+}
+.roll-bars__list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.roll-bars__row {
+  display: grid;
+  grid-template-columns: minmax(6.5em, 34%) 1fr 3.25em;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+}
+.roll-bars__label {
+  color: var(--text);
+}
+.roll-bars__track {
+  display: block;
+  height: 14px;
+}
+/* Square at the baseline, a 4px rounded data end. */
+.roll-bars__bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--roll-avg);
+}
+.roll-bars__value {
+  color: var(--text-dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.roll-bars__detail {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Everyone's figure under a tile's own, for comparison. */
+.stat-tile__sub {
+  font-size: 0.75rem;
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.roll-data .stat-tile__label {
+  text-align: center;
+}
+
+.roll-data__rank {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* The audit's verdict: icon and words, never colour alone. */
+.roll-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.roll-verdict--fair {
+  color: var(--good);
+}
+.roll-verdict--watch {
+  color: var(--warn);
+}
+.roll-verdict--unfair {
+  color: var(--bad);
+}
+.roll-data__verdict {
+  margin: 4px 0 12px;
+  font-size: 0.9375rem;
+}
+.roll-data__verdict-label {
+  color: var(--text-dim);
+}
+.roll-data__chart-gap {
+  margin-top: 18px;
+}
+
+.roll-data__subhead {
+  margin: 18px 0 0;
+  font-size: 1rem;
+}
+.roll-data .roll-bars + .roll-data__subhead,
+.roll-data .roll-chart + .roll-faces,
+.roll-data .roll-chart + .roll-bars {
+  margin-top: 18px;
+}
+
 .roll-data__export-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -321,8 +449,13 @@
 
 @media (forced-colors: active) {
   .roll-chart__line,
-  .roll-faces__fair {
+  .roll-faces__fair,
+  .roll-chart__zero {
     stroke: Highlight;
+  }
+  .roll-bars__bar {
+    forced-color-adjust: none;
+    background: CanvasText;
   }
   .roll-chart__dot,
   .roll-faces__bar,

@@ -32,8 +32,11 @@ import {
   isStatsAdmin,
   isStatsView,
   recordLocalGame,
+  rollActivity,
   rollExport,
   rollSummary,
+  statsWindow,
+  type ExportKind,
   type StatsView,
 } from "./rollStats.js";
 import {
@@ -78,8 +81,9 @@ function statsView(url: URL): StatsView {
   return raw;
 }
 
-function exportKind(url: URL): "games" | "throws" {
-  return url.searchParams.get("kind") === "throws" ? "throws" : "games";
+function exportKind(url: URL): ExportKind {
+  const kind = url.searchParams.get("kind");
+  return kind === "throws" || kind === "decisions" ? kind : "games";
 }
 
 async function requireStatsAdmin(req: IncomingMessage): Promise<{ id: string }> {
@@ -362,21 +366,39 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     } else if (method === "GET" && path === "/api/stats/me") {
       res.setHeader("Cache-Control", "no-store");
       const { id } = await requireUser(req);
-      json(res, 200, await rollSummary(statsView(url), id));
+      json(
+        res,
+        200,
+        await rollSummary(statsView(url), id, statsWindow(url.searchParams.get("days"))),
+      );
     } else if (method === "GET" && path === "/api/stats/me/export") {
       const { id } = await requireUser(req);
       const view = statsView(url);
       const kind = exportKind(url);
-      csv(res, `greed-${view}-${kind}.csv`, await rollExport(view, kind, id));
+      const days = statsWindow(url.searchParams.get("days"));
+      csv(res, `greed-${view}-${kind}-${days}d.csv`, await rollExport(view, kind, id, days));
     } else if (method === "GET" && path === "/api/stats/all") {
       res.setHeader("Cache-Control", "no-store");
       await requireStatsAdmin(req);
-      json(res, 200, await rollSummary(statsView(url), null));
+      json(
+        res,
+        200,
+        await rollSummary(statsView(url), null, statsWindow(url.searchParams.get("days"))),
+      );
+    } else if (method === "GET" && path === "/api/stats/activity") {
+      res.setHeader("Cache-Control", "no-store");
+      await requireStatsAdmin(req);
+      json(res, 200, await rollActivity(statsWindow(url.searchParams.get("days"))));
     } else if (method === "GET" && path === "/api/stats/all/export") {
       await requireStatsAdmin(req);
       const view = statsView(url);
       const kind = exportKind(url);
-      csv(res, `greed-all-players-${view}-${kind}.csv`, await rollExport(view, kind, null));
+      const days = statsWindow(url.searchParams.get("days"));
+      csv(
+        res,
+        `greed-all-players-${view}-${kind}-${days}d.csv`,
+        await rollExport(view, kind, null, days),
+      );
     } else if (method === "GET" && path === "/api/me/matches") {
       const { id } = await requireUser(req);
       json(res, 200, { matches: await matchHistory(id) });

@@ -17,7 +17,7 @@ import {
   GOAL_DEFAULT,
 } from "@greed/core";
 import type { GameAction } from "@greed/core";
-import { ThrowCollector, decide, rollGameFromState } from "@greed/bots";
+import { ThrowCollector, decide, rollGameFromState, tableFaces } from "@greed/bots";
 import { decode, encode, isEmoteId } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
 import { sessionIsCurrent, verifySession } from "./auth.js";
@@ -25,7 +25,13 @@ import { markOffline, markOnline } from "./presence.js";
 import { requireFriend } from "./social.js";
 import { recordMatch } from "./leaderboards.js";
 import { accountsEnabled } from "./db.js";
-import { fileQuietly, onlineRollKey, recordRollGame } from "./rollStats.js";
+import {
+  fileQuietly,
+  onlineAuditKey,
+  onlineRollKey,
+  recordDiceAudit,
+  recordRollGame,
+} from "./rollStats.js";
 import { publicGameState } from "./public-state.js";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
@@ -571,7 +577,7 @@ export class GreedServer {
     clearTimeout(challenge.timer);
     this.challenges.delete(id);
     const room = this.store.get(challenge.code);
-    if (room && room.seats.length === 0) this.store.delete(room);
+    if (room && room.seats.length === 0) this.closeRoom(room);
   }
 
   /**
@@ -732,7 +738,7 @@ export class GreedServer {
       room.emptyTimer = null;
       for (const ws of room.spectators) this.send(ws, { type: "left" });
       room.spectators.clear();
-      this.store.delete(room);
+      this.closeRoom(room);
     }, EMPTY_ROOM_TTL_MS);
     room.emptyTimer.unref?.();
   }
@@ -936,7 +942,14 @@ export class GreedServer {
     const wasOver = room.game.phase === "game-over";
     const before = room.game;
     room.game = applyAction(room.game, action);
-    if (action.type === "ROLL") this.throwsOf(room, before).observe(before, room.game);
+    if (action.type === "ROLL" || action.type === "BANK") {
+      // Only a seat whose player is here to make the call. A dropped player's
+      // seat is played for them, and those choices — and the throws they lead
+      // to — are the server's, not theirs.
+      const actor = before.players[before.turn.playerIndex];
+      const seat = room.seats.find((s) => s.id === actor?.id);
+      if (seat && !seat.isBot && seat.ws) this.throwsOf(room, before).observe(before, room.game);
+    }
     this.scheduleFollowups(room);
     this.broadcastGame(room);
     // Record the result exactly once, on the transition into game-over.
@@ -989,16 +1002,61 @@ export class GreedServer {
       }).catch(() => {
         /* history is a nicety; never let it break a finished game */
       });
-      const throws = this.throwsOf(room, g).throwsFor(seat.id);
-      const userId = seat.userId;
+      // Someone who left before the end is filed as an unfinished game.
+      this.fileRolls(room, seat, Boolean(seat.ws));
+    }
+    this.auditTable(room);
+  }
+
+  /**
+   * File one signed-in seat's throws and choices for the roll statistics.
+   * `finished` is false for a player who left before the end — recorded all the
+   * same, because leaving out the games people walk away from would leave the
+   * ones where the dice were kind.
+   */
+  private fileRolls(room: Room, seat: Seat, finished: boolean): void {
+    const g = room.game;
+    if (!g || !seat.userId || !accountsEnabled()) return;
+    const collector = this.throwsOf(room, g);
+    const throws = collector.throwsFor(seat.id);
+    const userId = seat.userId;
+    if (finished || throws.length > 0) {
       fileQuietly("an online game", () =>
         recordRollGame(
           userId,
           onlineRollKey(room.code, g.config.seed, userId),
-          rollGameFromState("online", g, seat.id, throws),
+          rollGameFromState("online", g, seat.id, throws, new Date(), {
+            decisions: collector.decisionsFor(seat.id),
+            finished,
+          }),
         ),
       );
     }
+  }
+
+  /**
+   * The table's dice, for the fairness audit — once per game, when it is over
+   * one way or another. Never on a single seat's departure: the audit keys a
+   * game once, so a partial count filed mid-game would stand in for the whole.
+   */
+  private auditTable(room: Room): void {
+    const g = room.game;
+    if (!g || !accountsEnabled()) return;
+    fileQuietly("a table's dice", () =>
+      recordDiceAudit(onlineAuditKey(room.code, g.config.seed), "online", tableFaces(g)),
+    );
+  }
+
+  /**
+   * Close a room for good. A game still being played is filed first, for every
+   * signed-in seat, as unfinished: everyone left, and those games count too.
+   */
+  private closeRoom(room: Room): void {
+    if (room.phase === "in-game" && room.game && room.game.phase !== "game-over") {
+      for (const seat of room.seats) this.fileRolls(room, seat, false);
+      this.auditTable(room);
+    }
+    this.store.delete(room);
   }
 
   private schedule(room: Room, ms: number, fn: () => void): void {
@@ -1101,6 +1159,8 @@ export class GreedServer {
    * like a disconnected player, so turn order and indices are preserved.
    */
   private kickSeat(room: Room, seat: Seat): void {
+    // Their game ends here, whatever happens to the table.
+    if (room.game && room.game.phase !== "game-over") this.fileRolls(room, seat, false);
     const ws = seat.ws;
     seat.ws = null;
     room.seats = room.seats.filter((s) => s.id !== seat.id);
@@ -1118,7 +1178,7 @@ export class GreedServer {
     if (!room.seats.some((s) => !s.isBot && s.ws)) {
       for (const spectatorWs of room.spectators) this.send(spectatorWs, { type: "left" });
       room.spectators.clear();
-      this.store.delete(room);
+      this.closeRoom(room);
     }
   }
 
@@ -1180,7 +1240,7 @@ export class GreedServer {
         this.spectators.delete(spectatorWs);
       }
       room.spectators.clear();
-      this.store.delete(room);
+      this.closeRoom(room);
       return;
     }
     if (room.phase === "lobby") this.broadcastLobby(room);
@@ -1199,7 +1259,7 @@ export class GreedServer {
       room.emptyTimer = null;
       for (const w of room.spectators) this.send(w, { type: "left" });
       room.spectators.clear();
-      this.store.delete(room);
+      this.closeRoom(room);
     }
   }
 

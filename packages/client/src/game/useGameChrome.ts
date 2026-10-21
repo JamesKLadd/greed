@@ -3,7 +3,8 @@ import type { GameState, LegalActions } from "@greed/core";
 import { recordGame, summarize, type Achievement, type GameSummary } from "./profile.js";
 import { syncSteamAchievements } from "./steam.js";
 import { claimHolidayDice } from "./holidayDice.js";
-import { rollGameFromState, type ThrowRecord } from "@greed/bots";
+import { rollGameFromState, tableFaces } from "@greed/bots";
+import type { PlayerRolls } from "./useGreed.js";
 import { recordLocalRollGame } from "./rollRecords.js";
 import { syncProfileUp } from "../net/auth.js";
 import { useGameSounds, useRollSound } from "./useGameSounds.js";
@@ -36,10 +37,11 @@ interface GameChromeOptions {
    */
   playedHere?: boolean;
   /**
-   * The throws this device recorded, for a game played HERE — a solo game.
-   * Online games omit it: the server threw those dice and keeps their record.
+   * The throws and choices this device recorded, for a game played HERE — a
+   * solo game. Online games omit it: the server threw those dice and keeps
+   * their record.
    */
-  throwsFor?: (playerId: string) => ThrowRecord[];
+  rollsFor?: (playerId: string) => PlayerRolls;
   /** True while the opening roll-off overlay is up (suppresses the turn chime). */
   rollOffActive?: boolean;
   /** A presentation-owned dialog, such as the table menu or player details. */
@@ -67,7 +69,7 @@ export function useGameChrome({
   canAct,
   youId,
   playedHere = youId !== null,
-  throwsFor,
+  rollsFor,
   isRolling = false,
   rollOffActive = false,
   blockingOverlayActive = false,
@@ -98,8 +100,12 @@ export function useGameChrome({
     recordedRef.current = true;
     const s = youId ? summarize(state, youId) : null;
     const earned = s ? recordGame(s).unlocked : [];
-    if (youId && throwsFor) {
-      recordLocalRollGame(rollGameFromState("local", state, youId, throwsFor(youId)));
+    if (youId && rollsFor) {
+      const { throws, decisions } = rollsFor(youId);
+      recordLocalRollGame(
+        rollGameFromState("local", state, youId, throws, new Date(), { decisions }),
+        tableFaces(state),
+      );
     }
     const holiday = claimHolidayDice();
     if (holiday) earned.push(holiday);
@@ -107,8 +113,8 @@ export function useGameChrome({
     setUnlocked(earned);
     syncSteamAchievements(earned.map((a) => a.id));
     void syncProfileUp(); // push updated stats to the account if signed in
-    // `throwsFor` reads a ref and is recreated each render; the record is made
-    // once per game whatever it is, so it is deliberately not a dependency.
+    // `rollsFor` reads a ref, and the record is made once per game whatever it
+    // returns, so it is deliberately not a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state, youId, playedHere]);
 

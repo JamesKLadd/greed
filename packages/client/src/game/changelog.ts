@@ -32,6 +32,7 @@ export const RELEASES: Release[] = [
       "Bots now account for straights and five of a kind built from held dice, and make better final-round and sudden-death decisions about ties and opponents still to play",
       "Added holiday dice you can only earn by playing on the holiday: pumpkin dice on Halloween, tree ornament dice on Christmas Day, and beach ball dice any day of summer. Signing in on the day unlocks them with a popup",
       "Added statistical data for every throw: compare your busts, three of a kind, straights, five of a kind and hot dice against the exact odds, see your score over time, and export it all as a CSV. Find it under View Statistical Data in the Daily Challenge, Weekly Challenge and Stats screens",
+      "Statistical data now also counts games left unfinished, and adds your decisions against the best play for points, your banking habits, where your points come from, your luck over time and how it compares with other players, a 7, 30 or 100 day view, and a decisions CSV",
     ],
   },
   {

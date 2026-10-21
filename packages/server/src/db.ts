@@ -25,6 +25,7 @@ import { preserveChallengeScores } from "./challenge-scores.js";
 import {
   backfillDailyRolls,
   migrateRollStats,
+  pruneDiceAuditSql,
   pruneRollGamesSql,
   snapshotStatsAdmins,
 } from "./rollStats.js";
@@ -693,6 +694,7 @@ export async function prune(): Promise<void> {
     ],
     // Roll statistics keep their own, longer window (ROLL_DATA_DAYS).
     ["old roll statistics", pruneRollGamesSql, []],
+    ["old dice audit counts", pruneDiceAuditSql, []],
     // An attempt left open for a month belongs to a week that closed long ago
     // and can never be scored; it only holds its player's one open slot.
     [
