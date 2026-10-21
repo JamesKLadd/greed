@@ -28,6 +28,7 @@ import {
   type Achievement,
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
+import { RollDataButton } from "../components/RollDataButton.js";
 import { claimHolidayDice } from "../game/holidayDice.js";
 import { syncProfileUp } from "../net/auth.js";
 import { fetchDailyBest } from "../net/leaderboards.js";
@@ -60,6 +61,8 @@ import {
 
 interface DailyScreenProps {
   onBack: () => void;
+  /** Open this player's roll statistics for the daily. */
+  onRollData?: () => void;
   onSignIn: () => void;
   onCreateAccount?: () => void;
   onPractice: () => void;
@@ -74,6 +77,7 @@ const readPersonalBest = () => readScoreBaseline(fetchDailyBest);
 
 export function DailyScreen({
   onBack,
+  onRollData,
   onSignIn,
   onCreateAccount,
   onPractice,
@@ -449,6 +453,7 @@ export function DailyScreen({
           </aside>
         )}
       </div>
+      {onRollData && authStatus === "authed" && !inRun && <RollDataButton onOpen={onRollData} />}
       {reading && (
         <ChallengeEntryDetails
           mode="daily"

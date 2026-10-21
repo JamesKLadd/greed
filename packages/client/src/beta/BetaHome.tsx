@@ -208,6 +208,12 @@ export default function BetaHome(p: HomeScreenProps) {
         <small>
           {t("beta.scope")} · v{__APP_VERSION__}
         </small>
+        {p.onRollDataAll && (
+          <button className="beta-hub__preview roll-data-link--admin" onClick={p.onRollDataAll}>
+            <Icon name="chart" size={19} />
+            {t("rollData.admin")}
+          </button>
+        )}
       </footer>
       {rules && <RulesModal onClose={() => setRules(false)} />}
       {demo && <CelebrationDemo onClose={() => setDemo(false)} />}

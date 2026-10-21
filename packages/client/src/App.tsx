@@ -14,6 +14,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ScreenLoadState } from "./components/ScreenLoadState.js";
 import { HolidayGift } from "./components/HolidayGift.js";
 import { HOLIDAY_GIFT_EVENT } from "./game/holidayDice.js";
+import type { StatsScope, StatsView } from "./net/rollStats.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { type MatchSetup } from "./game/setup.js";
 import { useAuth } from "./game/auth.js";
@@ -37,6 +38,9 @@ const GameScreen = lazy(() =>
 );
 const OnlineScreen = lazy(() =>
   import("./screens/OnlineScreen.js").then((m) => ({ default: m.OnlineScreen })),
+);
+const RollStatsScreen = lazy(() =>
+  import("./screens/RollStatsScreen.js").then((m) => ({ default: m.RollStatsScreen })),
 );
 const StatsScreen = lazy(() =>
   import("./screens/StatsScreen.js").then((m) => ({ default: m.StatsScreen })),
@@ -130,12 +134,13 @@ type Mode =
   | "settings"
   | "auth"
   | "account"
-  | "growth";
+  | "growth"
+  | "rolldata";
 
 export function App() {
   const t = useT();
   const challenges = useChallenges();
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   const [roomInvitation, setRoomInvitation] = useState(readRoomInvitation);
   const invitationOpened = useRef(false);
   const invitationJoined = useRef(false);
@@ -144,6 +149,16 @@ export function App() {
     return params.get("growth") === "1" ? "growth" : readPlayEntry(window.location.search);
   });
   const [match, setMatch] = useState<MatchSetup | null>(null);
+  // Roll statistics: whose, which games, and the screen they were opened from.
+  const [rollData, setRollData] = useState<{
+    scope: StatsScope;
+    view: StatsView;
+    back: Mode;
+  } | null>(null);
+  const openRollData = (scope: StatsScope, view: StatsView, back: Mode) => {
+    setRollData({ scope, view, back });
+    setMode("rolldata");
+  };
   // Holiday dice just earned (holidayDice.ts), by signing in or by finishing a
   // game or run on the day. The badge id, until the popup is dismissed.
   const [holidayGift, setHolidayGift] = useState<string | null>(null);
@@ -453,6 +468,7 @@ export function App() {
       return (
         <DailyScreen
           onBack={backHome}
+          onRollData={() => openRollData("me", "daily", "daily")}
           onPractice={startPractice}
           onWeekly={() => setMode("weekly")}
           onFriends={() => setMode("friends")}
@@ -466,6 +482,7 @@ export function App() {
       return (
         <WeeklyScreen
           onBack={backHome}
+          onRollData={() => openRollData("me", "weekly", "weekly")}
           onFriends={() => setMode("friends")}
           onSignIn={() => openAuth("weekly")}
         />
@@ -498,7 +515,22 @@ export function App() {
       );
     }
 
-    if (mode === "stats") return <StatsScreen onBack={() => setMode("home")} />;
+    if (mode === "stats")
+      return (
+        <StatsScreen
+          onBack={() => setMode("home")}
+          onRollData={() => openRollData("me", "games", "stats")}
+        />
+      );
+    if (mode === "rolldata" && rollData)
+      return (
+        <RollStatsScreen
+          key={`${rollData.scope}:${rollData.view}`}
+          scope={rollData.scope}
+          initialView={rollData.view}
+          onBack={() => setMode(rollData.back)}
+        />
+      );
     if (mode === "boards") return <LeaderboardScreen onBack={() => setMode("home")} />;
     if (mode === "locker") return <LockerScreen onBack={() => setMode("home")} />;
     if (mode === "updates") return <UpdateLogScreen onBack={() => setMode("home")} />;
@@ -529,6 +561,7 @@ export function App() {
         onAuth={() => openAuth(null)}
         onAuthForOnline={() => openAuth("online")}
         onAccount={() => setMode("account")}
+        onRollDataAll={user?.statsAdmin ? () => openRollData("all", "games", "home") : undefined}
       />
     );
   })();

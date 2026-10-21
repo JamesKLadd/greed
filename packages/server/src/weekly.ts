@@ -39,6 +39,8 @@ import {
 } from "@greed/core";
 import { randomInt } from "node:crypto";
 import { query, withChallengeTransaction } from "./db.js";
+import { afterCommit } from "./commit-hooks.js";
+import { fileQuietly, recordRollRun, weeklyRollKey } from "./rollStats.js";
 import { publicGameState } from "./public-state.js";
 import {
   careerChallengeWins,
@@ -394,6 +396,21 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
     ],
   );
   await recordChallengeScore("weekly", userId, run.week);
+  // EVERY attempt, not just the best: the best ones are the lucky ones, and a
+  // record of only those would flatter everyone's dice. After the commit, so a
+  // statistics write can never fail the attempt itself.
+  afterCommit(() =>
+    fileQuietly("a weekly attempt", () =>
+      recordRollRun(
+        userId,
+        "weekly",
+        weeklyRollKey(userId, run.week, run.seed),
+        run.seed,
+        run.moves,
+        WEEKLY_TURNS,
+      ),
+    ),
+  );
   // The attempt is recorded, so the open slot is free for the next one. Done
   // after the write rather than before: an open row that outlives its
   // settlement is recoverable (see startWeeklyRun), one that dies before it

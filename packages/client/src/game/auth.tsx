@@ -28,6 +28,7 @@ import {
 } from "./profile.js";
 import { claimHolidayDice } from "./holidayDice.js";
 import { syncSteamAchievements } from "./steam.js";
+import { clearDeviceRollGames, flushRollUploads } from "./rollRecords.js";
 
 type Status = "loading" | "anon" | "authed";
 
@@ -148,6 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await reconcileProfile(me.profile);
         // Not remembered: this is the moment of signing in, now settled.
         if (!restored && !cancelled && claimAtSignIn()) void syncProfileUp();
+        // Solo games finished while signed out, offline or mid-deploy.
+        if (!cancelled) void flushRollUploads();
       } catch (err) {
         if (cancelled) return;
         if (sessionRejected(err)) {
@@ -178,6 +181,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("authed");
     await reconcileProfile(result.profile);
     if (claimAtSignIn()) void syncProfileUp();
+    // A guest's solo games go to the account they just signed in to.
+    void flushRollUploads();
   }, []);
 
   const signup = useCallback(
@@ -206,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // person making a second account, ended up with the same stats. The
     // account's own copy is safe on the server, so signing back in restores it.
     resetProfile();
+    clearDeviceRollGames();
   }, []);
 
   const value = useMemo<AuthContextValue>(

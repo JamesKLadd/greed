@@ -29,6 +29,8 @@ export interface HomeScreenProps {
   onAuth: () => void;
   onAuthForOnline: () => void;
   onAccount: () => void;
+  /** Everyone's roll statistics. Only passed for the accounts allowed to see them. */
+  onRollDataAll?: () => void;
   flash?: string | null;
   onDismissFlash?: () => void;
   dailySubtitle?: string;
@@ -280,6 +282,14 @@ export function HomeScreen(props: HomeScreenProps) {
 
       <p className="home-version">v{__APP_VERSION__}</p>
       <BetaGate />
+      {props.onRollDataAll && (
+        <div className="roll-data-link roll-data-link--admin">
+          <Button variant="ghost" onClick={props.onRollDataAll}>
+            <Icon name="chart" />
+            {t("rollData.admin")}
+          </Button>
+        </div>
+      )}
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>

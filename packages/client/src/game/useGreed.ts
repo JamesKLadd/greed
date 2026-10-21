@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyAction, diceToRoll, getLegalActions } from "@greed/core";
 import type { DieValue, GameState, LegalActions } from "@greed/core";
-import { decide } from "@greed/bots";
+import { ThrowCollector, decide, type ThrowRecord } from "@greed/bots";
 import { buildGame, type MatchSetup } from "./setup.js";
 import { toastFor, type ToastMessage } from "./toasts.js";
 import type { RollOffDisplayEntry } from "../components/RollOffView.js";
@@ -36,6 +36,8 @@ export interface GreedController {
   /** Hold a die, or put it back — the player overruling the auto-lock. */
   toggleDie: (index: number) => void;
   restart: (setup?: MatchSetup) => void;
+  /** Every throw a human at this table has made this game (roll statistics). */
+  throwsFor: (playerId: string) => ThrowRecord[];
 }
 
 export function useGreed(initialSetup: MatchSetup): GreedController {
@@ -53,6 +55,9 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
   const [rollingDice, setRollingDice] = useState<DieValue[] | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const lastLogLen = useRef(state.log.length);
+  // The humans' throws, for the roll statistics. Watched at the one place a
+  // throw is decided, so what is recorded is exactly what was rolled.
+  const throws = useRef(humanThrows(built.state));
 
   const applyNow = useCallback((action: Parameters<typeof applyAction>[1]) => {
     // A hold followed by Roll in the same task must use the changed selection.
@@ -71,6 +76,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     // the same either way — but knowing the faces up front is what lets the dice
     // turn to them in one motion instead of guessing and then correcting.
     const next = applyAction(s, { type: "ROLL" });
+    throws.current.observe(s, next);
     setRollingIndices(diceToRoll(s.turn));
     setRollingDice(next.turn.dice);
     setIsRolling(true);
@@ -105,6 +111,7 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
       rollPlayback.cancel();
       const next = buildGame(setup ?? initialSetup);
       lastLogLen.current = next.state.log.length;
+      throws.current = humanThrows(next.state);
       setIsRolling(false);
       setRollingIndices([]);
       setRollingDice(null);
@@ -180,5 +187,10 @@ export function useGreed(initialSetup: MatchSetup): GreedController {
     bank,
     toggleDie,
     restart,
+    throwsFor: (playerId: string) => throws.current.throwsFor(playerId),
   };
+}
+
+function humanThrows(state: GameState): ThrowCollector {
+  return new ThrowCollector(state.players.filter((p) => !p.isBot).map((p) => p.id));
 }

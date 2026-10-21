@@ -19,6 +19,8 @@ export interface AccountUser {
   emailVerified: boolean;
   createdAt: string;
   growthAdmin?: boolean;
+  /** May open everyone's roll statistics combined (the server decides; see rollStats.ts). */
+  statsAdmin?: boolean;
 }
 
 export interface AuthResult {

@@ -17,7 +17,7 @@ import {
   GOAL_DEFAULT,
 } from "@greed/core";
 import type { GameAction } from "@greed/core";
-import { decide } from "@greed/bots";
+import { ThrowCollector, decide, rollGameFromState } from "@greed/bots";
 import { decode, encode, isEmoteId } from "@greed/protocol";
 import type { ClientMessage, ServerMessage } from "@greed/protocol";
 import { sessionIsCurrent, verifySession } from "./auth.js";
@@ -25,6 +25,7 @@ import { markOffline, markOnline } from "./presence.js";
 import { requireFriend } from "./social.js";
 import { recordMatch } from "./leaderboards.js";
 import { accountsEnabled } from "./db.js";
+import { fileQuietly, onlineRollKey, recordRollGame } from "./rollStats.js";
 import { publicGameState } from "./public-state.js";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import type { WebSocket, WebSocketServer } from "ws";
@@ -167,6 +168,12 @@ const DEFAULT_OPTIONS: GreedServerOptions = {
 
 export class GreedServer {
   private store = new RoomStore();
+  /**
+   * Each room's current game's throws, for the roll statistics, keyed by the
+   * game's seed so a rematch starts a fresh record. Only signed-in seats are
+   * watched; a guest's throws have no account to belong to.
+   */
+  private readonly rolls = new WeakMap<Room, { seed: number; collector: ThrowCollector }>();
   private conns = new Map<WebSocket, { room: Room; seat: Seat }>();
   /** Spectator sockets → the room they're watching (they hold no seat). */
   private spectators = new Map<WebSocket, Room>();
@@ -927,11 +934,23 @@ export class GreedServer {
   private applyAndBroadcast(room: Room, action: Parameters<typeof applyAction>[1]): void {
     if (!room.game) return;
     const wasOver = room.game.phase === "game-over";
+    const before = room.game;
     room.game = applyAction(room.game, action);
+    if (action.type === "ROLL") this.throwsOf(room, before).observe(before, room.game);
     this.scheduleFollowups(room);
     this.broadcastGame(room);
     // Record the result exactly once, on the transition into game-over.
     if (!wasOver && room.game.phase === "game-over") this.recordResults(room);
+  }
+
+  private throwsOf(room: Room, game: NonNullable<Room["game"]>): ThrowCollector {
+    let entry = this.rolls.get(room);
+    if (!entry || entry.seed !== game.config.seed) {
+      const watched = room.seats.filter((s) => s.userId).map((s) => s.id);
+      entry = { seed: game.config.seed, collector: new ThrowCollector(watched) };
+      this.rolls.set(room, entry);
+    }
+    return entry.collector;
   }
 
   /**
@@ -970,6 +989,15 @@ export class GreedServer {
       }).catch(() => {
         /* history is a nicety; never let it break a finished game */
       });
+      const throws = this.throwsOf(room, g).throwsFor(seat.id);
+      const userId = seat.userId;
+      fileQuietly("an online game", () =>
+        recordRollGame(
+          userId,
+          onlineRollKey(room.code, g.config.seed, userId),
+          rollGameFromState("online", g, seat.id, throws),
+        ),
+      );
     }
   }
 

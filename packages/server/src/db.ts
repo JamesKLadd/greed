@@ -8,8 +8,10 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { collectCommitHooks } from "./commit-hooks.js";
 import {
   BEST_TOTAL_CEILING,
+  DAILY_TURNS,
   DAILY_ZONE,
   scoreDailyRun,
   scoreWeeklyRun,
@@ -20,6 +22,12 @@ import type { RunMove } from "@greed/core";
 import { preserveDailyCompletions } from "./daily-streaks.js";
 import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
 import { preserveChallengeScores } from "./challenge-scores.js";
+import {
+  backfillDailyRolls,
+  migrateRollStats,
+  pruneRollGamesSql,
+  snapshotStatsAdmins,
+} from "./rollStats.js";
 
 const { Pool } = pg;
 
@@ -88,8 +96,11 @@ export async function withChallengeTransaction<T>(
     // A separate namespace keeps challenge locks apart from unrelated locks.
     // Hash collisions only make two accounts wait; they never weaken the lock.
     await client.query("SELECT pg_advisory_xact_lock(1735549285, hashtext($1))", [userId]);
-    const result = await transactionClient.run(client, work);
+    const { result, runHooks } = await collectCommitHooks(() =>
+      transactionClient.run(client, work),
+    );
     await client.query("COMMIT");
+    runHooks();
     return result;
   } catch (error) {
     try {
@@ -584,6 +595,24 @@ export async function migrate(): Promise<void> {
     );
   }
 
+  // ---- Roll statistics (rollStats.ts) ----------------------------------------
+  await migrateRollStats();
+  // The owner's two accounts, taken as they stand on the deploy that adds the
+  // view. Not retried: see snapshotStatsAdmins.
+  await applyOnce("stats-admins-2026-10", () => snapshotStatsAdmins(["James", "Jimmy"]));
+  // The daily runs already on record, so the view opens with history in it.
+  // BEFORE the prune below, which would otherwise start deleting them first.
+  // A failure is retried on the next boot rather than failing this one.
+  await applyOnce("roll-stats-daily-backfill-2026-10", async () => {
+    try {
+      const n = await backfillDailyRolls(DAILY_TURNS);
+      console.log(`Roll statistics: filed ${n} daily run(s) already on record.`);
+    } catch (err) {
+      console.error("[roll stats] daily backfill failed; will retry:", (err as Error).message);
+      return false;
+    }
+  });
+
   await prune();
 }
 
@@ -662,6 +691,8 @@ export async function prune(): Promise<void> {
       `DELETE FROM weekly_attempts WHERE day < (now() - $1::interval)::date`,
       [cutoff],
     ],
+    // Roll statistics keep their own, longer window (ROLL_DATA_DAYS).
+    ["old roll statistics", pruneRollGamesSql, []],
     // An attempt left open for a month belongs to a week that closed long ago
     // and can never be scored; it only holds its player's one open slot.
     [

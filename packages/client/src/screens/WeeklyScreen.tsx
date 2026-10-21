@@ -61,6 +61,7 @@ import {
   type Achievement,
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
+import { RollDataButton } from "../components/RollDataButton.js";
 import { claimHolidayDice } from "../game/holidayDice.js";
 import { syncProfileUp } from "../net/auth.js";
 import { Button, Icon } from "../ui/index.js";
@@ -75,6 +76,8 @@ import { recordGrowthEvent } from "../game/growth.js";
 
 interface WeeklyScreenProps {
   onBack: () => void;
+  /** Open this player's roll statistics for the weekly. */
+  onRollData?: () => void;
   onSignIn: () => void;
   onFriends: () => void;
 }
@@ -84,7 +87,7 @@ const resumeRun = async () => (await resumeWeekly()).run;
 // Failure to load record history suppresses the marker, not the challenge.
 const readPersonalBest = () => readScoreBaseline(fetchWeeklyBest);
 
-export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps) {
+export function WeeklyScreen({ onBack, onSignIn, onFriends, onRollData }: WeeklyScreenProps) {
   const { t, n } = useI18n();
   const { status: authStatus, user } = useAuth();
   // Read per render, like the in-game shell, so a change in Settings takes
@@ -610,6 +613,7 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
         )}
       </div>
 
+      {onRollData && authStatus === "authed" && !runView && <RollDataButton onOpen={onRollData} />}
       {reading && (
         <ChallengeEntryDetails
           mode="weekly"

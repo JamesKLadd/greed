@@ -134,6 +134,17 @@ build on every push. Node 20.
   skin states its shape, cubes included, or a nested cube inherits a pumpkin.
   Shaped dice draw inside the cube's 1em square, so they never move layout.
 
+- Roll statistics (`bots/src/throwStats.ts`, `server/src/rollStats.ts`): every
+  throw a player makes, kept ROLL_DATA_DAYS (100) in `roll_games` — one row per
+  finished game or run with its throws and a summable tally. A throw's odds
+  depend only on the held faces, so "expected" is exact for the player's own
+  positions. Daily/weekly are recorded by replaying the run after its
+  transaction commits (`afterCommit`); online by watching `applyAndBroadcast`;
+  solo games are uploaded from the device (`rollRecords.ts`, which is also a
+  guest's only copy). EVERY weekly attempt is recorded, never just the best —
+  best attempts are the lucky ones. The all-players view is granted by account
+  id in `stats_admins` (snapshot of James and Jimmy), never by name.
+
 ## Deploying — both halves ship on a push to `main`
 
 - **Client → Vercel.** Auto-deploys on every push to `main`. Public URL

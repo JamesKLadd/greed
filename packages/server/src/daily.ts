@@ -26,6 +26,8 @@ import {
 } from "@greed/core";
 import { randomInt } from "node:crypto";
 import { query, withChallengeTransaction } from "./db.js";
+import { afterCommit } from "./commit-hooks.js";
+import { dailyRollKey, fileQuietly, recordRollRun } from "./rollStats.js";
 import { publicGameState } from "./public-state.js";
 import {
   careerChallengeWins,
@@ -416,6 +418,12 @@ async function playDailyMoveLocked(
   if (r.complete) {
     await recordDailyCompletion(userId, day);
     await recordChallengeScore("daily", userId, day);
+    // Once committed, never inside: statistics must not be able to fail a run.
+    afterCommit(() =>
+      fileQuietly("a daily run", () =>
+        recordRollRun(userId, "daily", dailyRollKey(userId, day), seed, next, DAILY_TURNS),
+      ),
+    );
   }
 
   return {

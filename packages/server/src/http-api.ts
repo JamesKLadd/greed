@@ -29,6 +29,14 @@ import {
 } from "./accounts.js";
 import { verificationRequired } from "./email.js";
 import {
+  isStatsAdmin,
+  isStatsView,
+  recordLocalGame,
+  rollExport,
+  rollSummary,
+  type StatsView,
+} from "./rollStats.js";
+import {
   dailyBest,
   isLeaderboardCategory,
   leaderboard,
@@ -38,8 +46,47 @@ import {
 
 const MAX_BODY = 64 * 1024; // 64 KB is plenty for auth payloads.
 
-function withGrowthAdmin<T extends { user: { username: string } }>(result: T) {
-  return { ...result, user: { ...result.user, growthAdmin: isGrowthAdmin(result.user.username) } };
+/**
+ * The account as the client sees it, with what it may open. `statsAdmin` is
+ * read from the database (stats_admins), never from the name — see
+ * snapshotStatsAdmins — and only decides whether a button is shown; the
+ * all-players endpoints check it again for themselves.
+ */
+async function withAdmins<T extends { user: { id: string; username: string } }>(result: T) {
+  return {
+    ...result,
+    user: {
+      ...result.user,
+      growthAdmin: isGrowthAdmin(result.user.username),
+      statsAdmin: await isStatsAdmin(result.user.id),
+    },
+  };
+}
+
+function csv(res: ServerResponse, filename: string, body: string): void {
+  res.writeHead(200, {
+    "content-type": "text/csv; charset=utf-8",
+    "content-disposition": `attachment; filename="${filename}"`,
+    "cache-control": "no-store",
+  });
+  res.end(body);
+}
+
+function statsView(url: URL): StatsView {
+  const raw = url.searchParams.get("view") ?? "games";
+  if (!isStatsView(raw)) throw new AccountError(400, "Unknown statistics view.", "stats.view");
+  return raw;
+}
+
+function exportKind(url: URL): "games" | "throws" {
+  return url.searchParams.get("kind") === "throws" ? "throws" : "games";
+}
+
+async function requireStatsAdmin(req: IncomingMessage): Promise<{ id: string }> {
+  const user = await requireUser(req);
+  if (!(await isStatsAdmin(user.id)))
+    throw new AccountError(403, "These statistics are for the game owner only.", "stats.admin");
+  return user;
 }
 
 /** Origins allowed to call the API from a browser. */
@@ -176,6 +223,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     "/api/friends/request": { limit: 30, windowMs: 60 * 60_000 },
     "/api/growth": { limit: 30, windowMs: 60_000 },
     "/api/growth/report": { limit: 30, windowMs: 60_000 },
+    // One upload per finished solo game; generous for a marathon evening.
+    "/api/stats/local": { limit: 300, windowMs: 60 * 60_000 },
+    // Exports read every throw in the window, so they are the costly reads.
+    "/api/stats/me/export": { limit: 30, windowMs: 60 * 60_000 },
+    "/api/stats/all/export": { limit: 30, windowMs: 60 * 60_000 },
   };
   const rule = LIMITS[path];
   if (rule) {
@@ -209,13 +261,13 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       json(
         res,
         201,
-        withGrowthAdmin(
+        await withAdmins(
           await signup({ email: b.email, username: b.username, password: b.password }),
         ),
       );
     } else if (method === "POST" && path === "/api/auth/login") {
       const b = (await readBody(req)) as Record<string, unknown>;
-      json(res, 200, withGrowthAdmin(await login({ login: b.login, password: b.password })));
+      json(res, 200, await withAdmins(await login({ login: b.login, password: b.password })));
     } else if (method === "POST" && path === "/api/auth/verify") {
       const b = (await readBody(req)) as Record<string, unknown>;
       json(res, 200, { verified: await verifyEmail(b.token) });
@@ -224,7 +276,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       json(res, 200, await requestReset(b.email));
     } else if (method === "POST" && path === "/api/auth/reset") {
       const b = (await readBody(req)) as Record<string, unknown>;
-      json(res, 200, withGrowthAdmin(await resetPassword(b.token, b.password)));
+      json(res, 200, await withAdmins(await resetPassword(b.token, b.password)));
     } else if (method === "GET" && path === "/api/auth/username-available") {
       const u = url.searchParams.get("u") ?? "";
       let available = false;
@@ -301,6 +353,30 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       // is open from the start, so there is nothing here to hold back.
       const viewer = await optionalUser(req);
       json(res, 200, await weeklyBest(viewer?.id ?? null, weekKey()));
+    } else if (method === "POST" && path === "/api/stats/local") {
+      // A solo game finished on the player's own device. The server cannot
+      // vouch for those dice, so they are bounded and kept as their own mode.
+      const { id } = await requireUser(req);
+      await recordLocalGame(id, await readBody(req));
+      json(res, 202, { recorded: true });
+    } else if (method === "GET" && path === "/api/stats/me") {
+      res.setHeader("Cache-Control", "no-store");
+      const { id } = await requireUser(req);
+      json(res, 200, await rollSummary(statsView(url), id));
+    } else if (method === "GET" && path === "/api/stats/me/export") {
+      const { id } = await requireUser(req);
+      const view = statsView(url);
+      const kind = exportKind(url);
+      csv(res, `greed-${view}-${kind}.csv`, await rollExport(view, kind, id));
+    } else if (method === "GET" && path === "/api/stats/all") {
+      res.setHeader("Cache-Control", "no-store");
+      await requireStatsAdmin(req);
+      json(res, 200, await rollSummary(statsView(url), null));
+    } else if (method === "GET" && path === "/api/stats/all/export") {
+      await requireStatsAdmin(req);
+      const view = statsView(url);
+      const kind = exportKind(url);
+      csv(res, `greed-all-players-${view}-${kind}.csv`, await rollExport(view, kind, null));
     } else if (method === "GET" && path === "/api/me/matches") {
       const { id } = await requireUser(req);
       json(res, 200, { matches: await matchHistory(id) });
@@ -330,7 +406,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       // The client can't infer this from the account alone, and it decides
       // whether any verification UI is worth showing at all.
       json(res, 200, {
-        ...withGrowthAdmin(account),
+        ...(await withAdmins(account)),
         verificationRequired: verificationRequired(),
       });
     } else if (method === "POST" && path === "/api/me/delete") {

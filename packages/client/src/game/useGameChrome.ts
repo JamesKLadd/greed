@@ -3,6 +3,8 @@ import type { GameState, LegalActions } from "@greed/core";
 import { recordGame, summarize, type Achievement, type GameSummary } from "./profile.js";
 import { syncSteamAchievements } from "./steam.js";
 import { claimHolidayDice } from "./holidayDice.js";
+import { rollGameFromState, type ThrowRecord } from "@greed/bots";
+import { recordLocalRollGame } from "./rollRecords.js";
 import { syncProfileUp } from "../net/auth.js";
 import { useGameSounds, useRollSound } from "./useGameSounds.js";
 import { useTurnCue } from "./useTurnCue.js";
@@ -33,6 +35,11 @@ interface GameChromeOptions {
    * since those ask only that you played. Implied by `youId`.
    */
   playedHere?: boolean;
+  /**
+   * The throws this device recorded, for a game played HERE — a solo game.
+   * Online games omit it: the server threw those dice and keeps their record.
+   */
+  throwsFor?: (playerId: string) => ThrowRecord[];
   /** True while the opening roll-off overlay is up (suppresses the turn chime). */
   rollOffActive?: boolean;
   /** A presentation-owned dialog, such as the table menu or player details. */
@@ -60,6 +67,7 @@ export function useGameChrome({
   canAct,
   youId,
   playedHere = youId !== null,
+  throwsFor,
   isRolling = false,
   rollOffActive = false,
   blockingOverlayActive = false,
@@ -90,12 +98,18 @@ export function useGameChrome({
     recordedRef.current = true;
     const s = youId ? summarize(state, youId) : null;
     const earned = s ? recordGame(s).unlocked : [];
+    if (youId && throwsFor) {
+      recordLocalRollGame(rollGameFromState("local", state, youId, throwsFor(youId)));
+    }
     const holiday = claimHolidayDice();
     if (holiday) earned.push(holiday);
     setSummary(s);
     setUnlocked(earned);
     syncSteamAchievements(earned.map((a) => a.id));
     void syncProfileUp(); // push updated stats to the account if signed in
+    // `throwsFor` reads a ref and is recreated each render; the record is made
+    // once per game whatever it is, so it is deliberately not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state, youId, playedHere]);
 
   useKeyboardShortcuts({

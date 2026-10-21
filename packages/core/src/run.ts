@@ -126,7 +126,17 @@ export function runMoveStart(state: GameState): GameState {
  * advances first — which is why the move list only ever holds ROLL, BANK and
  * holds, and never an ADVANCE the client could desync on.
  */
-export function runPosition(seed: number, moves: RunMove[], turnLimit: number): RunPosition {
+export function runPosition(
+  seed: number,
+  moves: RunMove[],
+  turnLimit: number,
+  /**
+   * Shown the position either side of every throw and bank, for anything that
+   * wants to watch the run being replayed (the roll statistics). Read-only:
+   * the replay is the same with or without it.
+   */
+  observe?: (before: GameState, after: GameState) => void,
+): RunPosition {
   let state = createRunGame(seed);
   let turns = 0;
   let banks = 0;
@@ -159,7 +169,9 @@ export function runPosition(seed: number, moves: RunMove[], turnLimit: number): 
     // the cup as the player picked it up.
     const cup = move === "ROLL" ? diceToRoll(state.turn).length : 0;
     // Narrowed by the two guards above: only ROLL and BANK reach here.
+    const prior = state;
     state = applyAction(state, { type: move as "ROLL" | "BANK" });
+    observe?.(prior, state);
 
     if (state.turn.outcome) {
       if (state.turn.outcome === "banked") {

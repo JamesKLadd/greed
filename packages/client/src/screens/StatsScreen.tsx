@@ -11,14 +11,24 @@ import {
 import { useI18n } from "../i18n/i18n.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { Button, Modal, Screen } from "../ui/index.js";
+import { RollDataButton } from "../components/RollDataButton.js";
 
-export function StatsScreen({ onBack }: { onBack: () => void }) {
+export function StatsScreen({
+  onBack,
+  onRollData,
+}: {
+  onBack: () => void;
+  /** Open the roll statistics for local and online games. */
+  onRollData?: () => void;
+}) {
   const [profile, setProfile] = useState(() => loadProfile());
   const reset = () => {
     resetProfile();
     setProfile(loadProfile());
   };
-  return <StatsScreenView profile={profile} onReset={reset} onBack={onBack} />;
+  return (
+    <StatsScreenView profile={profile} onReset={reset} onBack={onBack} onRollData={onRollData} />
+  );
 }
 
 /** The same view accepts a read-only sample profile in the DEV review screen. */
@@ -26,10 +36,12 @@ export function StatsScreenView({
   profile,
   onReset,
   onBack,
+  onRollData,
 }: {
   profile: Profile;
   onReset: () => void;
   onBack: () => void;
+  onRollData?: () => void;
 }) {
   const { t, n } = useI18n();
   const ids = useId();
@@ -189,6 +201,7 @@ export function StatsScreenView({
           <p className="support-panel__intro">{t("stats.resetHint")}</p>
         </Modal>
       )}
+      {onRollData && <RollDataButton onOpen={onRollData} />}
     </Screen>
   );
 }
