@@ -5,7 +5,7 @@ import { Die } from "../components/Die.js";
 import { UnlockProgress } from "../components/UnlockProgress.js";
 import { equipCosmetic, loadProfile } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
-import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
+import { DICE_SKINS, TABLE_THEMES, diceSkinVars, isUnlocked } from "../game/cosmetics.js";
 import { AVATARS, isUnlocked as avatarUnlocked } from "../game/avatars.js";
 import { seatColor } from "../game/theme.js";
 import { cosmeticUnlockProgress } from "../game/unlockProgress.js";
@@ -95,7 +95,7 @@ export function LockerScreen({ onBack }: { onBack: () => void }) {
       tagline={t("locker.tagline", { done: unlockedCount, total })}
     >
       {section(t("locker.dice"), "dice", DICE_SKINS, (c) => (
-        <div className="locker-preview locker-preview--dice" style={c.vars as CSSProperties}>
+        <div className="locker-preview locker-preview--dice" style={diceSkinVars(c)}>
           <Die value={5} size={32} />
           <Die value={3} size={32} />
         </div>

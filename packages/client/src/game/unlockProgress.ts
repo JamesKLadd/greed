@@ -1,11 +1,14 @@
 import type { Profile } from "./profile.js";
+import { daysUntilHoliday, holidayForAchievement } from "./holidayDice.js";
 
 export type ProgressMetric =
   "games" | "wins" | "bestTurn" | "bestStreak" | "banked" | "hotDice" | "weeklyWins";
 export type ProgressHint = "dailyStreak" | "weeklyStreak" | "singleGame";
 export type UnlockProgress =
   | { kind: "counter"; metric: ProgressMetric; current: number; target: number }
-  | { kind: "hint"; hint: ProgressHint };
+  | { kind: "hint"; hint: ProgressHint }
+  /** A holiday reward: how far off the day is, 0 while it is on. */
+  | { kind: "holiday"; daysAway: number };
 
 type Counter = { field: keyof Profile; metric: ProgressMetric; target: number };
 const ACHIEVEMENT_COUNTERS: Record<string, Counter> = {
@@ -53,6 +56,9 @@ const COSMETIC_ACHIEVEMENTS: Record<string, string> = {
   laurel: "daily-elite",
   regalia: "weekly-champion",
   keystone: "weekly-streak-8",
+  pumpkin: "trick-or-treat",
+  ornament: "deck-the-halls",
+  "beach-ball": "beach-day",
   "crimson-felt": "flawless",
   royal: "hat-trick",
   sunset: "landslide",
@@ -95,8 +101,20 @@ function counterProgress(counter: Counter, profile: Profile): UnlockProgress {
  * challenge streaks. Never turn lifetime hot dice into a single-turn streak,
  * or the last earned streak badge into a made-up current streak.
  */
-export function achievementUnlockProgress(id: string, profile: Profile): UnlockProgress | null {
+export function achievementUnlockProgress(
+  id: string,
+  profile: Profile,
+  date: Date = new Date(),
+): UnlockProgress | null {
   if (profile.achievements.includes(id)) return null;
+  // Nothing to count toward: the only progress is the calendar. Saying how far
+  // off the day is turns "rare" into something a player can plan for, and
+  // saying it is on NOW is the difference between catching it and not.
+  const holiday = holidayForAchievement(id);
+  if (holiday) {
+    const daysAway = daysUntilHoliday(holiday.holiday, date);
+    return daysAway == null ? null : { kind: "holiday", daysAway };
+  }
   const counter = ACHIEVEMENT_COUNTERS[id];
   if (counter) {
     const progress = counterProgress(counter, profile);
@@ -113,9 +131,13 @@ export function achievementUnlockProgress(id: string, profile: Profile): UnlockP
   return null;
 }
 
-export function cosmeticUnlockProgress(id: string, profile: Profile): UnlockProgress | null {
+export function cosmeticUnlockProgress(
+  id: string,
+  profile: Profile,
+  date: Date = new Date(),
+): UnlockProgress | null {
   const direct = DIRECT_COUNTERS[id];
   if (direct) return counterProgress(direct, profile);
   const achievement = COSMETIC_ACHIEVEMENTS[id];
-  return achievement ? achievementUnlockProgress(achievement, profile) : null;
+  return achievement ? achievementUnlockProgress(achievement, profile, date) : null;
 }

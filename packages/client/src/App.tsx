@@ -12,6 +12,8 @@ import { BetaActiveContext, useBeta } from "./beta/BetaContext.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ScreenLoadState } from "./components/ScreenLoadState.js";
+import { HolidayGift } from "./components/HolidayGift.js";
+import { HOLIDAY_GIFT_EVENT } from "./game/holidayDice.js";
 import { ChallengeInvite } from "./components/ChallengeInvite.js";
 import { type MatchSetup } from "./game/setup.js";
 import { useAuth } from "./game/auth.js";
@@ -142,6 +144,17 @@ export function App() {
     return params.get("growth") === "1" ? "growth" : readPlayEntry(window.location.search);
   });
   const [match, setMatch] = useState<MatchSetup | null>(null);
+  // Holiday dice just earned (holidayDice.ts), by signing in or by finishing a
+  // game or run on the day. The badge id, until the popup is dismissed.
+  const [holidayGift, setHolidayGift] = useState<string | null>(null);
+  useEffect(() => {
+    const announce = (e: Event) => {
+      const id = (e as CustomEvent<unknown>).detail;
+      if (typeof id === "string") setHolidayGift(id);
+    };
+    window.addEventListener(HOLIDAY_GIFT_EVENT, announce);
+    return () => window.removeEventListener(HOLIDAY_GIFT_EVENT, announce);
+  }, []);
   useEffect(() => {
     const refresh = () => refreshSeasonalTheme();
     const resume = () => {
@@ -395,6 +408,8 @@ export function App() {
     setMode("home");
   };
 
+  const atTable = (mode === "local" && match !== null) || mode === "online";
+
   // Every screen renders inside the same shell so a friend's challenge can
   // interrupt whatever the player is doing, wherever they are.
   const screen = (() => {
@@ -533,6 +548,12 @@ export function App() {
           onAccept={challenges.accept}
           onDecline={challenges.decline}
         />
+      )}
+      {/* Never over a table: a game's own results come first, and the popup
+          waits for the player to leave. Nor over a friend's invite, which is
+          the one of the two that cannot wait. */}
+      {holidayGift && !atTable && !challenges.invite && (
+        <HolidayGift gift={holidayGift} onClose={() => setHolidayGift(null)} />
       )}
       <Toast toast={challengeToast} />
     </BetaActiveContext.Provider>

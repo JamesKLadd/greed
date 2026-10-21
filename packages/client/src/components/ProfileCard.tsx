@@ -4,11 +4,11 @@ import { Mascot } from "../beta/Mascot.js";
 import { DEFAULT_APPEARANCE } from "../beta/appearance.js";
 /** A player's public card: what they've done, and whether you're friends. */
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Die } from "./Die.js";
 import { Button, Modal } from "../ui/index.js";
 import { ACHIEVEMENTS } from "../game/profile.js";
-import { DICE_SKINS } from "../game/cosmetics.js";
+import { DICE_SKINS, diceSkinVars } from "../game/cosmetics.js";
 import { fetchProfile, requestFriend, type PublicProfile } from "../net/social.js";
 import { useT } from "../i18n/i18n.js";
 import { apiErrorText } from "../i18n/apiError.js";
@@ -96,7 +96,7 @@ export function ProfileCard({ username, onClose, onChanged }: ProfileCardProps) 
               )}
             </div>
           )}
-          <div className="profile__dice" style={skin.vars as CSSProperties}>
+          <div className="profile__dice" style={diceSkinVars(skin)}>
             <Die value={5} size={38} />
             <Die value={3} size={38} />
           </div>

@@ -69,7 +69,7 @@ export function TurnHistory({ state, youId, onClose }: TurnHistoryProps) {
                   <span key={i} className="history__roll">
                     <span className="history__dice">
                       {roll.dice.map((d, j) => (
-                        <Die key={j} value={d} size={18} />
+                        <Die key={j} value={d} size={18} inline />
                       ))}
                     </span>
                     <span

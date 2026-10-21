@@ -61,6 +61,7 @@ import {
   type Achievement,
 } from "../game/profile.js";
 import { syncSteamAchievements } from "../game/steam.js";
+import { claimHolidayDice } from "../game/holidayDice.js";
 import { syncProfileUp } from "../net/auth.js";
 import { Button, Icon } from "../ui/index.js";
 import { ChallengeAvatar } from "../components/ChallengeAvatar.js";
@@ -233,12 +234,17 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends }: WeeklyScreenProps)
       const session = requestSession.current;
       if (final?.complete) recordGrowthEvent("weekly_completed");
       const improvedTurn = recordChallengeBestTurn(final);
-      const turnAward = final?.complete ? claimChallengeTurnAchievement(0) : null;
-      if (turnAward) {
-        setUnlocked((prev) => [...prev, turnAward]);
-        syncSteamAchievements([turnAward.id]);
+      // A finished run is a game played, so on a holiday it earns the dice.
+      const won = final?.complete
+        ? [claimChallengeTurnAchievement(0), claimHolidayDice()].filter(
+            (a): a is Achievement => a !== null,
+          )
+        : [];
+      if (won.length > 0) {
+        setUnlocked((prev) => [...prev, ...won]);
+        syncSteamAchievements(won.map((a) => a.id));
       }
-      if (improvedTurn || turnAward) void syncProfileUp();
+      if (improvedTurn || won.length > 0) void syncProfileUp();
       setRunView(null);
       setLatestAttemptScore(final?.complete ? final.state.players[0].total : null);
       setLatestWeeklyBestBefore(weeklyBestBeforeRun.current);

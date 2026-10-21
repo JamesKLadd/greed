@@ -74,7 +74,7 @@ export function RulesModal({ onClose }: RulesModalProps) {
             <li key={i} className="rules__example">
               <span className="rules__dice">
                 {ex.dice.map((d, j) => (
-                  <Die key={j} value={d} size={30} />
+                  <Die key={j} value={d} size={30} inline />
                 ))}
               </span>
               <span className="rules__points">= {ex.points}</span>

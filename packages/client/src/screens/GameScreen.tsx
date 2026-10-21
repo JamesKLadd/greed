@@ -60,6 +60,7 @@ export function GameScreen({ setup, onExit, recordResults = true }: GameScreenPr
     canAct,
     isRolling: ctl.isRolling,
     youId: recordResults ? viewerId : null,
+    playedHere: recordResults && humans.length > 0,
     rollOffActive: ctl.rollOffActive,
     blockingOverlayActive: sceneActive && sceneOverlay !== null,
     onRoll: ctl.roll,

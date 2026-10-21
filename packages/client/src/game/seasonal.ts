@@ -12,6 +12,7 @@ export const SEASONAL_PREFERENCES = [
 
 const chicagoCalendar = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago",
+  year: "numeric",
   month: "numeric",
   day: "numeric",
 });
@@ -24,15 +25,28 @@ function isSeasonalTheme(value: unknown): value is SeasonalTheme {
   return value !== "automatic" && isSeasonalPreference(value);
 }
 
+/**
+ * The calendar date it is in Chicago (month 1-12), or null for an invalid date.
+ *
+ * Shared with the holiday dice, so "it's Halloween" means the same instant to
+ * the table's decorations and to the pumpkin dice they promise.
+ */
+export function chicagoDate(date: Date): { year: number; month: number; day: number } | null {
+  if (!Number.isFinite(date.getTime())) return null;
+  const parts = chicagoCalendar.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return { year: part("year"), month: part("month"), day: part("day") };
+}
+
 export function resolveSeasonalTheme(
   preference: SeasonalPreference,
   date: Date = new Date(),
 ): SeasonalTheme {
   if (preference !== "automatic") return preference;
-  if (!Number.isFinite(date.getTime())) return "classic";
-  const parts = chicagoCalendar.formatToParts(date);
-  const month = Number(parts.find((part) => part.type === "month")?.value);
-  const day = Number(parts.find((part) => part.type === "day")?.value);
+  const today = chicagoDate(date);
+  if (!today) return "classic";
+  const { month, day } = today;
   if (month === 10) return "halloween";
   if (month === 12 || (month === 1 && day <= 5)) return "christmas";
   if (month >= 6 && month <= 8) return "summer";

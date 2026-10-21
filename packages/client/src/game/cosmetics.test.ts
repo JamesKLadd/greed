@@ -4,7 +4,10 @@ import { ACHIEVEMENTS } from "./profile.js";
 import {
   DICE_SKINS,
   TABLE_THEMES,
+  DIE_SHAPE_VAR,
   cosmeticVars,
+  diceSkinVars,
+  diceVarsById,
   equippedDiceVars,
   isUnlocked,
   tableVars,
@@ -127,7 +130,7 @@ describe("equippedDiceVars", () => {
     for (const skin of DICE_SKINS) {
       const p = unlockAll(profile({ dice: skin.id }));
       const vars = equippedDiceVars(p) as Record<string, string>;
-      expect(vars, skin.id).toEqual(skin.vars);
+      expect(vars, skin.id).toEqual(diceSkinVars(skin));
       expect(
         Object.keys(vars).filter((k) => tableKeys.has(k)),
         skin.id,
@@ -152,10 +155,42 @@ describe("equippedDiceVars", () => {
     if (!locked) throw new Error("no lockable dice skin to test with");
     const p = profile({ dice: locked.id });
     expect(isUnlocked(locked, p)).toBe(false);
-    expect(equippedDiceVars(p)).toEqual(DICE_SKINS[0].vars);
+    expect(equippedDiceVars(p)).toEqual(diceSkinVars(DICE_SKINS[0]));
   });
 
   it("falls back to the default for a skin that does not exist", () => {
-    expect(equippedDiceVars(profile({ dice: "no-such-skin" }))).toEqual(DICE_SKINS[0].vars);
+    expect(equippedDiceVars(profile({ dice: "no-such-skin" }))).toEqual(
+      diceSkinVars(DICE_SKINS[0]),
+    );
+  });
+});
+
+describe("dice shapes", () => {
+  it("every skin states its shape, cubes included", () => {
+    // Skins nest (another player's dice on a card inside your own table), and a
+    // cube that said nothing would inherit the pumpkin around it.
+    for (const skin of DICE_SKINS) {
+      const vars = diceVarsById(skin.id) as Record<string, string>;
+      expect(vars[DIE_SHAPE_VAR], skin.id).toBe(skin.shape ?? "cube");
+    }
+    expect((diceVarsById("no-such-skin") as Record<string, string>)[DIE_SHAPE_VAR]).toBe("cube");
+  });
+
+  it("casts exactly the three holiday sets in a shape of their own", () => {
+    const shaped = DICE_SKINS.filter((s) => s.shape && s.shape !== "cube");
+    expect(shaped.map((s) => [s.id, s.shape])).toEqual([
+      ["pumpkin", "pumpkin"],
+      ["ornament", "ornament"],
+      ["beach-ball", "beach-ball"],
+    ]);
+  });
+
+  it("a locked holiday set falls back to the ivory cube, shape and all", () => {
+    const vars = equippedDiceVars(profile({ dice: "pumpkin" })) as Record<string, string>;
+    expect(vars[DIE_SHAPE_VAR]).toBe("cube");
+    const earned = equippedDiceVars(
+      profile({ dice: "pumpkin", achievements: ["trick-or-treat"] }),
+    ) as Record<string, string>;
+    expect(earned[DIE_SHAPE_VAR]).toBe("pumpkin");
   });
 });

@@ -121,6 +121,19 @@ build on every push. Node 20.
   (what "best of N attempts" means); `weekly_attempts` is the per-day count the
   cap reads. Neither derives from the other.
 
+- Holiday dice (`client/src/game/holidayDice.ts`): a badge per holiday —
+  Halloween (Oct 31), Christmas Day (Dec 25), summer (the whole June–August
+  summer theme) on the Chicago calendar — each unlocking a SHAPED skin
+  (pumpkin, tree ornament, beach ball). Earned by signing in on the day or
+  finishing any game or challenge run on it, and announced by the popup
+  (`HolidayGift.tsx`). Sign-in claims before or after the profile reconcile,
+  never during it: the reconcile replaces the local profile with the server's
+  reply, which would erase a badge granted mid-flight.
+- A skin's shape travels with its colours as the `--dice-shape` custom
+  property (`diceSkinVars`), and `Die.tsx` reads it back off the cascade. Every
+  skin states its shape, cubes included, or a nested cube inherits a pumpkin.
+  Shaped dice draw inside the cube's 1em square, so they never move layout.
+
 ## Deploying — both halves ship on a push to `main`
 
 - **Client → Vercel.** Auto-deploys on every push to `main`. Public URL

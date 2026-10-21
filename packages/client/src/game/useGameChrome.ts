@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { GameState, LegalActions } from "@greed/core";
 import { recordGame, summarize, type Achievement, type GameSummary } from "./profile.js";
 import { syncSteamAchievements } from "./steam.js";
+import { claimHolidayDice } from "./holidayDice.js";
 import { syncProfileUp } from "../net/auth.js";
 import { useGameSounds, useRollSound } from "./useGameSounds.js";
 import { useTurnCue } from "./useTurnCue.js";
@@ -26,6 +27,12 @@ interface GameChromeOptions {
   isRolling?: boolean;
   /** The seat progression is recorded against, or null to record nothing. */
   youId: string | null;
+  /**
+   * Whoever holds this device played the game, even with no one seat to record
+   * against — pass-and-play. Earns the holiday dice when it finishes on the day,
+   * since those ask only that you played. Implied by `youId`.
+   */
+  playedHere?: boolean;
   /** True while the opening roll-off overlay is up (suppresses the turn chime). */
   rollOffActive?: boolean;
   /** A presentation-owned dialog, such as the table menu or player details. */
@@ -52,6 +59,7 @@ export function useGameChrome({
   legal,
   canAct,
   youId,
+  playedHere = youId !== null,
   isRolling = false,
   rollOffActive = false,
   blockingOverlayActive = false,
@@ -78,15 +86,17 @@ export function useGameChrome({
       setUnlocked([]);
       return;
     }
-    if (recordedRef.current || !youId) return;
+    if (recordedRef.current || !(youId || playedHere)) return;
     recordedRef.current = true;
-    const s = summarize(state, youId);
-    const result = recordGame(s);
+    const s = youId ? summarize(state, youId) : null;
+    const earned = s ? recordGame(s).unlocked : [];
+    const holiday = claimHolidayDice();
+    if (holiday) earned.push(holiday);
     setSummary(s);
-    setUnlocked(result.unlocked);
-    syncSteamAchievements(result.unlocked.map((a) => a.id));
+    setUnlocked(earned);
+    syncSteamAchievements(earned.map((a) => a.id));
     void syncProfileUp(); // push updated stats to the account if signed in
-  }, [state.phase, state, youId]);
+  }, [state.phase, state, youId, playedHere]);
 
   useKeyboardShortcuts({
     enabled:

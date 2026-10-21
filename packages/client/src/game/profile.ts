@@ -373,6 +373,32 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: "Play the weekly challenge eight weeks in a row.",
     tier: "gold",
   },
+  // The holidays. Not a measure of skill at all: the ask is to be at the table
+  // on the day, and two of these days come round once a year. Granted by
+  // `claimHolidayDice` (holidayDice.ts) when a game or challenge run finishes,
+  // and each one unlocks a set of shaped dice. Summer is a season rather than a
+  // day, so it is the easier of the three and is weighted that way.
+  {
+    id: "trick-or-treat",
+    icon: "🎃",
+    title: "Trick or Treat",
+    desc: "Play Greed on Halloween.",
+    tier: "gold",
+  },
+  {
+    id: "deck-the-halls",
+    icon: "🎄",
+    title: "Deck the Halls",
+    desc: "Play Greed on Christmas Day.",
+    tier: "gold",
+  },
+  {
+    id: "beach-day",
+    icon: "🏖️",
+    title: "Beach Day",
+    desc: "Play Greed during the summer season.",
+    tier: "silver",
+  },
 ];
 
 /**

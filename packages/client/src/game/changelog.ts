@@ -30,6 +30,7 @@ export const RELEASES: Release[] = [
       "Added seasonal themes to the menus & game for Halloween, Christmas, and Summer",
       "Local and online bots now aim for larger turns when far behind, with stronger catch-up play as the leader approaches the goal while keeping their different temperaments",
       "Bots now account for straights and five of a kind built from held dice, and make better final-round and sudden-death decisions about ties and opponents still to play",
+      "Added holiday dice you can only earn by playing on the holiday: pumpkin dice on Halloween, tree ornament dice on Christmas Day, and beach ball dice any day of summer. Signing in on the day unlocks them with a popup",
     ],
   },
   {

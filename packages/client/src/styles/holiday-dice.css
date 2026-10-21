@@ -1,0 +1,310 @@
+/* ---------- Holiday dice ----------
+   The pumpkin, ornament and beach-ball skins (DieShell.tsx) are tokens rather
+   than cubes. Everything here draws INSIDE the die's own 1em square, which is
+   why none of it touches layout: the tray, the table's dice corridor and the
+   challenge panel size a die by its font-size, and that is the only thing a
+   shaped die shares with them. The root keeps .die--3d for its bare stage,
+   hop, felt shadow and unlit darkening (see Die.tsx). */
+
+.die__token {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.die--shaped.die--rolling .die__token {
+  /* Whole turns only (--token-spin), so it always lands upright. */
+  animation: die-token-spin var(--cube-roll-ms) cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+@keyframes die-token-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  40% {
+    transform: rotate(calc(var(--token-spin, 720deg) * 0.6)) scale(0.94);
+  }
+  100% {
+    transform: rotate(var(--token-spin, 720deg)) scale(1);
+  }
+}
+
+.die__shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* The held ring reaches a few units past the silhouette; it paints, it does
+     not take room. */
+  overflow: visible;
+  filter: drop-shadow(0 0.04em 0.03em rgba(40, 20, 6, 0.32));
+  transition: filter 0.18s ease;
+}
+.die__shell-ring > * {
+  fill: var(--score-2);
+  stroke: var(--score-2);
+  stroke-width: 9;
+  stroke-linejoin: round;
+}
+.die__shell-ring {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.die__shell-edge > * {
+  fill: rgba(28, 12, 4, 0.75);
+  stroke: rgba(28, 12, 4, 0.75);
+  stroke-width: 3.2;
+  stroke-linejoin: round;
+}
+.die__shell-ring > .die__shell-loop,
+.die__shell-edge > .die__shell-loop {
+  fill: none;
+  stroke-width: 5;
+}
+
+/* The pips: the same 3 × 3 grid as every die, fitted to where each body has a
+   face. Their own classes rather than .pip, so nothing styled for a cube's
+   drilled pips leaks onto a carved pumpkin. */
+.die__pips {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+}
+.die__pip {
+  width: var(--token-pip, 0.13em);
+  height: var(--token-pip, 0.13em);
+  border-radius: 50%;
+}
+.die__pip--on {
+  background: radial-gradient(circle at 38% 30%, var(--die-pip2), var(--die-pip) 76%);
+}
+
+/* Pumpkin: wide and squat, so the face spans the front three lobes. The pips
+   are carved — little triangles — and light up like a candle when they score. */
+.die--shape-pumpkin .die__pips {
+  left: 15%;
+  right: 15%;
+  top: 31%;
+  bottom: 11%;
+  /* As big as the rows allow: a triangle's apex is a point, so they can sit
+     closer than round pips would before they read as touching. */
+  --token-pip: 0.2em;
+}
+/* Two triangles, one inside the other: the dark cut edge, and the hollow it
+   opens onto — ember-dark when unlit, candlelight when the die scores. The
+   edge is what keeps a lit pip readable against orange skin. (A single clipped
+   shape can't carry it: a clip-path cuts away any shadow or outline.) */
+.die--shape-pumpkin .die__pip--on {
+  position: relative;
+  border-radius: 0;
+  background: none;
+}
+.die--shape-pumpkin .die__pip--on::before,
+.die--shape-pumpkin .die__pip--on::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 4%, 98% 92%, 2% 92%);
+}
+.die--shape-pumpkin .die__pip--on::before {
+  inset: 0;
+  background: var(--die-pip);
+}
+.die--shape-pumpkin .die__pip--on::after {
+  inset: 22% 20% 12%;
+  background: radial-gradient(circle at 50% 70%, #a4470e, var(--die-pip2) 55%, var(--die-pip));
+}
+.die--shape-pumpkin.die--locked .die__pip--on::after {
+  background: radial-gradient(circle at 50% 66%, #fffdf0 0 26%, #ffe066 52%, #ffab1f);
+}
+.die--shape-pumpkin.die--locked .die__pips {
+  filter: drop-shadow(0 0 0.03em rgba(255, 196, 64, 0.85));
+}
+
+/* Ornament: a sphere, so the face is the square that fits inside it with the
+   gilded bands left clear. Gold pips that turn to sparkle when they score. */
+.die--shape-ornament .die__pips {
+  left: 21%;
+  right: 21%;
+  top: 29%;
+  bottom: 13%;
+  --token-pip: 0.135em;
+}
+.die--shape-ornament .die__pip--on {
+  box-shadow:
+    0 0 0 0.012em rgba(60, 0, 10, 0.65),
+    inset 0 -0.015em 0.02em rgba(90, 50, 0, 0.5);
+}
+.die--shape-ornament.die--locked .die__pip--on {
+  background: radial-gradient(circle at 45% 40%, #fff 0 30%, #fff1b0 58%, #ffc94a);
+  box-shadow:
+    0 0 0 0.012em rgba(70, 0, 12, 0.7),
+    0 0 0.06em 0.01em rgba(255, 226, 140, 0.95);
+}
+
+/* Beach ball: the largest face of the three. The pips cross several panels,
+   so each sits in a white ring that keeps it readable on red, blue, yellow or
+   white alike, and they turn sun-gold when they score. */
+.die--shape-beach-ball .die__pips {
+  inset: 14%;
+  --token-pip: 0.14em;
+}
+.die--shape-beach-ball .die__pip--on {
+  box-shadow:
+    0 0 0 0.022em #fff,
+    0 0.01em 0.02em 0.022em rgba(10, 25, 50, 0.3);
+}
+.die--shape-beach-ball.die--locked .die__pip--on {
+  background: radial-gradient(circle at 40% 35%, #fffbe6, #ffc933 62%, #e08a00);
+  box-shadow:
+    0 0 0 0.03em var(--die-pip),
+    0 0 0.07em rgba(255, 200, 40, 0.9);
+}
+
+/* Held. The cube strikes its face gold; this traces the shape in gold instead
+   and keeps the cube's lift, so a held die reads at arm's length without
+   losing what it is. */
+.die--shaped.die--locked .die__shell-ring {
+  opacity: 1;
+}
+.die--shaped.die--locked .die__shell {
+  filter: drop-shadow(0 0 0.1em color-mix(in srgb, var(--score-2) 65%, transparent));
+}
+
+/* A bust's red glow follows the body, not the square around it. */
+.dice-tray--busted .die--shaped {
+  box-shadow: none;
+}
+.dice-tray--busted .die--shaped .die__shell {
+  filter: drop-shadow(0 0 0.14em rgba(229, 84, 75, 0.75));
+}
+
+:root[data-contrast="high"] .die__shell-edge > * {
+  fill: #000;
+  stroke: #000;
+  stroke-width: 5;
+}
+:root[data-contrast="high"] .die__shell-ring > * {
+  stroke-width: 12;
+}
+
+/* Forced colours: the art is decoration and goes; the silhouette stays as a
+   flat outlined body, held dice take the highlight, and the pips stay solid. */
+@media (forced-colors: active) {
+  .die__shell {
+    forced-color-adjust: none;
+    filter: none;
+  }
+  .die--shaped.die--locked .die__shell {
+    filter: none;
+  }
+  .die__shell-art,
+  .die__shell-ring {
+    display: none;
+  }
+  .die__shell-edge > * {
+    fill: Canvas;
+    stroke: CanvasText;
+    stroke-width: 3;
+  }
+  .die--locked .die__shell-edge > * {
+    fill: Highlight;
+    stroke: HighlightText;
+  }
+  .die__shell-edge > .die__shell-loop {
+    fill: none;
+  }
+  .die__pip--on,
+  .die--shaped .die__pip--on {
+    forced-color-adjust: none;
+    background: CanvasText;
+    box-shadow: none;
+  }
+  .die--locked .die__pip--on,
+  .die--shaped.die--locked .die__pip--on {
+    background: HighlightText;
+  }
+  /* The pumpkin's pip is its two triangles, not the square they sit in. */
+  .die--shape-pumpkin .die__pip--on,
+  .die--shape-pumpkin.die--locked .die__pip--on {
+    background: none;
+  }
+  .die--shape-pumpkin .die__pip--on::before,
+  .die--shape-pumpkin .die__pip--on::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .die--shape-pumpkin.die--locked .die__pip--on::before,
+  .die--shape-pumpkin.die--locked .die__pip--on::after {
+    background: HighlightText;
+  }
+}
+
+/* ---------- The holiday dice popup (HolidayGift.tsx) ---------- */
+.holiday-gift {
+  text-align: center;
+}
+.holiday-gift__dice {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 18px;
+  margin: 4px 0 14px;
+  /* Room above for a held die's lift and ring; the dice keep their own size. */
+  padding: 26px 12px 16px;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-1), var(--felt-2));
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.holiday-gift__lead {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+.holiday-gift__note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+/* ---------- Held charms ----------
+   A holiday die marks itself held with a sweet, a Santa hat or a sun
+   (HeldCharm in DieShell.tsx) where every other die wears the check. Same
+   slot, so it moves nothing; a little bigger, because a picture on its own
+   needs more room than a tick on a disc, and drawn over the die's corner as
+   the check is. Only where the check is shown at all — the Classic look marks
+   held dice by their lift and colour, and still does. */
+:root[data-presentation="beta"] .die__held-marker.die__held-marker--charm {
+  width: 21px;
+  height: 21px;
+  right: -7px;
+  top: -12px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+}
+:root[data-presentation="beta"] .daily__run .die__held-marker.die__held-marker--charm {
+  width: 23px;
+  height: 23px;
+}
+.die__charm {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* The Santa hat sits ON the ornament, tipped the way a hat on a bauble would. */
+:root[data-presentation="beta"] .die--shape-ornament .die__held-marker--charm {
+  transform: rotate(14deg);
+}
+/* High contrast keeps the charm on the check's dark disc and white ring. */
+:root[data-presentation="beta"][data-contrast="high"] .die__held-marker.die__held-marker--charm {
+  background: #081019;
+  box-shadow: 0 0 0 1px #fff;
+  border-radius: 50%;
+  filter: none;
+}
+@media (forced-colors: active) {
+  :root[data-presentation="beta"] .die .die__held-marker.die__held-marker--charm {
+    border-radius: 50%;
+  }
+}

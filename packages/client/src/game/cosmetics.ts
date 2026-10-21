@@ -7,10 +7,37 @@ import type { Profile } from "./profile.js";
  * unlock condition against the local profile. Purely visual — no engine effect.
  */
 
+/**
+ * The body a set of dice is cast in. Every skin but the holiday ones is a cube;
+ * those are a pumpkin, a tree ornament and a beach ball, drawn by Die.tsx as a
+ * standing token in the same square a cube occupies.
+ */
+export type DieShape = "cube" | "pumpkin" | "ornament" | "beach-ball";
+
+export const DIE_SHAPES: readonly DieShape[] = ["cube", "pumpkin", "ornament", "beach-ball"];
+
+/**
+ * The custom property that carries a skin's shape alongside its colours.
+ *
+ * A skin reaches the dice as inline custom properties on whatever contains them
+ * — the table, the online tray (which changes hands every turn), a challenge
+ * panel, a locker card — and Die.tsx reads its shape back off the same cascade.
+ * Riding along with the colours means the shape goes everywhere they go, and a
+ * screen that applies a skin cannot forget half of it. Deliberately not
+ * `--die-*`: those are the six colours a skin is held to (styles.contract.test).
+ */
+export const DIE_SHAPE_VAR = "--dice-shape";
+
+export function isDieShape(value: unknown): value is DieShape {
+  return DIE_SHAPES.some((shape) => shape === value);
+}
+
 export interface Cosmetic {
   id: string;
   name: string;
   vars: Record<string, string>;
+  /** Dice only: the body the dice are cast in (omit for the usual cube). */
+  shape?: DieShape;
   /** Human-readable unlock requirement (omit for always-available items). */
   requirement?: string;
   /** True when the profile has earned it (omit => free from the start). */
@@ -297,6 +324,56 @@ export const DICE_SKINS: Cosmetic[] = [
       "--die-lip": "rgba(25,30,38,0.34)",
     },
   },
+  // The holiday dice (holidayDice.ts). Earned by playing on the day, and the
+  // only skins that change the dice's SHAPE as well as their colour. Their
+  // colours are the body's: they drive the art's own gradients, and they are
+  // what a die falls back to if it is ever drawn as a plain cube (the small
+  // dice in the turn history and the rules, which are read rather than watched).
+  {
+    id: "pumpkin",
+    name: "Jack-o'-Lantern",
+    shape: "pumpkin",
+    requirement: "Play on Halloween",
+    unlock: (p) => p.achievements.includes("trick-or-treat"),
+    vars: {
+      "--die-c1": "#ffc163",
+      "--die-c2": "#f07d1a",
+      "--die-c3": "#b4460a",
+      "--die-pip": "#2c1003",
+      "--die-pip2": "#7a3409",
+      "--die-lip": "rgba(92,32,2,0.34)",
+    },
+  },
+  {
+    id: "ornament",
+    name: "Tree Ornament",
+    shape: "ornament",
+    requirement: "Play on Christmas Day",
+    unlock: (p) => p.achievements.includes("deck-the-halls"),
+    vars: {
+      "--die-c1": "#ff7b86",
+      "--die-c2": "#d21f37",
+      "--die-c3": "#76091b",
+      "--die-pip": "#c8901f",
+      "--die-pip2": "#fff2c6",
+      "--die-lip": "rgba(70,0,12,0.36)",
+    },
+  },
+  {
+    id: "beach-ball",
+    name: "Beach Ball",
+    shape: "beach-ball",
+    requirement: "Play during the summer season",
+    unlock: (p) => p.achievements.includes("beach-day"),
+    vars: {
+      "--die-c1": "#ffffff",
+      "--die-c2": "#f1f4f8",
+      "--die-c3": "#cdd7e3",
+      "--die-pip": "#10264b",
+      "--die-pip2": "#3f619b",
+      "--die-lip": "rgba(20,40,80,0.24)",
+    },
+  },
 ];
 
 export const TABLE_THEMES: Cosmetic[] = [
@@ -488,6 +565,18 @@ export function isUnlocked(item: Cosmetic, profile: Profile): boolean {
   return !item.unlock || item.unlock(profile);
 }
 
+/**
+ * A dice skin as inline custom properties: its colours plus its shape.
+ *
+ * Every skin states its shape, cubes included. Skins nest — another player's
+ * dice on a profile card inside your own table, the online tray inside a
+ * viewer's room — and a cube that said nothing would inherit the pumpkin
+ * around it.
+ */
+export function diceSkinVars(skin: Cosmetic): CSSProperties {
+  return { ...skin.vars, [DIE_SHAPE_VAR]: skin.shape ?? "cube" } as CSSProperties;
+}
+
 function find(list: Cosmetic[], id: string): Cosmetic {
   return list.find((c) => c.id === id) ?? list[0];
 }
@@ -510,7 +599,7 @@ export function cosmeticVars(profile: Profile): CSSProperties {
  */
 export function equippedDiceVars(profile: Profile): CSSProperties {
   const dice = find(DICE_SKINS, profile.dice);
-  return { ...(isUnlocked(dice, profile) ? dice.vars : DICE_SKINS[0].vars) } as CSSProperties;
+  return diceSkinVars(isUnlocked(dice, profile) ? dice : DICE_SKINS[0]);
 }
 
 /**
@@ -520,8 +609,7 @@ export function equippedDiceVars(profile: Profile): CSSProperties {
  * Unknown ids fall back to the default; the mat comes from `tableVars` instead.
  */
 export function diceVarsById(id: string): CSSProperties {
-  const dice = DICE_SKINS.find((c) => c.id === id) ?? DICE_SKINS[0];
-  return { ...dice.vars } as CSSProperties;
+  return diceSkinVars(DICE_SKINS.find((c) => c.id === id) ?? DICE_SKINS[0]);
 }
 
 /**

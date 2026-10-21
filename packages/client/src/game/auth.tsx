@@ -15,6 +15,7 @@ import {
   pushProfile,
   setToken,
   signup as apiSignup,
+  syncProfileUp,
   type AccountUser,
   type AuthResult,
 } from "../net/auth.js";
@@ -25,6 +26,8 @@ import {
   resetProfile,
   type Profile,
 } from "./profile.js";
+import { claimHolidayDice } from "./holidayDice.js";
+import { syncSteamAchievements } from "./steam.js";
 
 type Status = "loading" | "anon" | "authed";
 
@@ -41,6 +44,13 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+/** Claim today's holiday dice for a sign-in; true when they are newly earned. */
+function claimAtSignIn(): boolean {
+  const gift = claimHolidayDice();
+  if (gift) syncSteamAchievements([gift.id]);
+  return gift !== null;
+}
 
 /** Reconcile local progress with the account's stored profile, keeping the best
  * of both, then adopt the reconciled profile locally and on the server. */
@@ -115,6 +125,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!getToken()) return;
     let cancelled = false;
+    // Signing in on a holiday earns its dice (holidayDice.ts), and both ways
+    // in — this one and `adopt` — claim them either BEFORE the sign-in's
+    // profile reconcile starts or AFTER it has finished, never during it. The
+    // reconcile ends by replacing the local profile with the server's reply to
+    // what it pushed, and a badge granted while that push was in flight is not
+    // in the reply: it would be erased from the device the moment it was won.
+    //
+    // A remembered account is signed in from the first frame, so it claims now,
+    // before the reconcile reads the local profile — which then carries the
+    // badge up to the account with everything else, and a sleeping server
+    // cannot hold up the popup.
+    if (restored) claimAtSignIn();
     (async () => {
       try {
         const me = await fetchMe();
@@ -124,6 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setVerificationRequired(me.verificationRequired ?? false);
         setStatus("authed");
         await reconcileProfile(me.profile);
+        // Not remembered: this is the moment of signing in, now settled.
+        if (!restored && !cancelled && claimAtSignIn()) void syncProfileUp();
       } catch (err) {
         if (cancelled) return;
         if (sessionRejected(err)) {
@@ -153,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     rememberUser(result.user);
     setStatus("authed");
     await reconcileProfile(result.profile);
+    if (claimAtSignIn()) void syncProfileUp();
   }, []);
 
   const signup = useCallback(

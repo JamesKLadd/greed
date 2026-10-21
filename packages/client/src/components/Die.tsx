@@ -1,6 +1,15 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import type { DieValue } from "@greed/core";
 import { useT } from "../i18n/i18n.js";
+import { DIE_SHAPE_VAR, isDieShape, type DieShape } from "../game/cosmetics.js";
+import { DieShell, HeldCharm } from "./DieShell.js";
 
 // Pip positions on a 3x3 grid (index = row * 3 + col).
 const PIPS: Record<number, number[]> = {
@@ -120,6 +129,41 @@ interface DieProps {
    */
   refusedReason?: string;
   describedBy?: string;
+  /**
+   * A die set in a line of reading — the turn history, the rules — rather than
+   * one on the table. Always drawn as a plain cube face, whatever shape the
+   * equipped skin is cast in: at 18px a pumpkin's pips are too small to count,
+   * and those dice are there to be read.
+   */
+  inline?: boolean;
+}
+
+/**
+ * The shape the skin around a die is cast in.
+ *
+ * Read off the cascade, where the skin's colours already are (see
+ * DIE_SHAPE_VAR): every screen that dresses dice does it with inline custom
+ * properties on a container, and online the container's skin changes hands
+ * every turn. Reading it here means no screen has to pass the shape down
+ * separately, or can forget to. Checked after every render — the dice re-render
+ * whenever the turn moves — and before paint, so a die never shows a frame as
+ * the wrong shape.
+ */
+function useSkinShape(inline: boolean): [RefObject<HTMLElement>, DieShape] {
+  const ref = useRef<HTMLElement>(null);
+  const [shape, setShape] = useState<DieShape>("cube");
+  // No dependency list on purpose: the skin lives in the DOM, not in props, so
+  // there is nothing to list. It settles in one pass — an unchanged shape
+  // returns the same state, which React does not re-render for.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (inline || !el) return;
+    const read = getComputedStyle(el).getPropertyValue(DIE_SHAPE_VAR).trim();
+    const next = isDieShape(read) ? read : "cube";
+    setShape((prev) => (prev === next ? prev : next));
+  });
+  return [ref, inline ? "cube" : shape];
 }
 
 function Face({ value, className = "" }: { value: number; className?: string }) {
@@ -145,12 +189,18 @@ export function Die({
   toggleLabel,
   refusedReason,
   describedBy,
+  inline = false,
 }: DieProps) {
   const t = useT();
   const [shown, setShown] = useState<number>(value);
+  const [ref, shape] = useSkinShape(inline);
+  const shaped = shape !== "cube";
+  // A shaped die is a token that spins in place: it shows one face, like the
+  // flat die, rather than turning a cube to bring a new face up.
+  const cube = dimensional && !shaped;
 
   useEffect(() => {
-    if (!rolling || dimensional) {
+    if (!rolling || cube) {
       setShown(value);
       return;
     }
@@ -158,7 +208,7 @@ export function Die({
     // it physically turns — so this is skipped there.
     const id = window.setInterval(() => setShown(1 + Math.floor(Math.random() * 6)), 80);
     return () => clearInterval(id);
-  }, [rolling, value, dimensional]);
+  }, [rolling, value, cube]);
 
   // The face this throw ends on. Known BEFORE the tumble starts (the controllers
   // resolve the roll up front and hold its result back from the rest of the UI),
@@ -170,10 +220,13 @@ export function Die({
   const angle = useRef({ x: REST[value].x, y: REST[value].y });
   // A throw is a fresh scatter: new tumble path, new short travel across the mat.
   const scatter = useRef({ tx: 0, ty: 0, delay: 0 });
+  // How far a shaped die spins on this throw: whole turns, so it lands upright.
+  const spin = useRef(0);
   const wasRolling = useRef(rolling);
 
-  if (dimensional) {
+  if (dimensional || shaped) {
     if (rolling && !wasRolling.current) {
+      spin.current = (2 + rand(2)) * 360 * (Math.random() < 0.5 ? -1 : 1);
       // One arc: several whole turns on both axes, ending exactly on the face
       // that was rolled. When the throw finishes, the die is already there and
       // nothing further moves.
@@ -201,11 +254,16 @@ export function Die({
   }
   wasRolling.current = rolling;
 
-  const v = rolling && !dimensional ? shown : value;
+  const v = rolling && !cube ? shown : value;
   const classes = [
     "die",
     onToggle ? "die--tappable" : "",
-    dimensional ? "die--3d" : "",
+    // A shaped die wants the same bare stage as the cube — no square stock,
+    // bevel or outline of its own; its body is drawn inside — and the cube's
+    // hop across the mat, felt shadow and darkening when unlit. Flat contexts
+    // included: the token is the whole point of the skin.
+    dimensional || shaped ? "die--3d" : "",
+    shaped ? `die--shaped die--shape-${shape}` : "",
     locked ? "die--locked" : "",
     rolling ? "die--rolling" : "",
     dim ? "die--dim" : "",
@@ -217,7 +275,7 @@ export function Die({
   // size; leaving it unset lets CSS drive it (responsively) for the in-game tray.
   const style: CSSProperties = {
     ...(size != null ? { fontSize: `${size}px` } : null),
-    ...(dimensional
+    ...(dimensional || shaped
       ? ({
           "--travel-x": `${scatter.current.tx}px`,
           "--travel-y": `${scatter.current.ty}px`,
@@ -237,6 +295,9 @@ export function Die({
   const hint = explained ? refusedReason : toggleDisabled ? undefined : toggleLabel;
   return (
     <Tag
+      // The two element types are told apart by `Tag`; the ref only ever reads
+      // computed style, which both have.
+      ref={ref as RefObject<HTMLButtonElement & HTMLDivElement>}
       className={classes}
       {...(onToggle
         ? {
@@ -254,7 +315,24 @@ export function Die({
       aria-describedby={describedBy}
       style={style}
     >
-      {dimensional ? (
+      {shaped ? (
+        <span
+          className="die__token"
+          style={
+            {
+              "--token-spin": `${spin.current}deg`,
+              animationDelay: `${scatter.current.delay}ms`,
+            } as CSSProperties
+          }
+        >
+          <DieShell shape={shape} />
+          <span className="die__pips">
+            {Array.from({ length: 9 }, (_, i) => (
+              <span key={i} className={`die__pip${PIPS[v].includes(i) ? " die__pip--on" : ""}`} />
+            ))}
+          </span>
+        </span>
+      ) : dimensional ? (
         <div className="die__volume">
           <div
             className="die__cube"
@@ -282,8 +360,11 @@ export function Die({
         <Face value={v} />
       )}
       {locked && (
-        <span className="die__held-marker" aria-hidden="true">
-          ✓
+        <span
+          className={`die__held-marker${shaped ? " die__held-marker--charm" : ""}`}
+          aria-hidden="true"
+        >
+          {shaped ? <HeldCharm shape={shape} /> : "✓"}
         </span>
       )}
     </Tag>

@@ -11,7 +11,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import type { DieValue } from "@greed/core";
 import { Die } from "../components/Die.js";
 import { Icon, type IconName } from "../ui/index.js";
-import { DICE_SKINS, TABLE_THEMES } from "../game/cosmetics.js";
+import { DICE_SKINS, TABLE_THEMES, diceSkinVars } from "../game/cosmetics.js";
 import { seatColor, initials } from "../game/theme.js";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -210,7 +210,7 @@ export function UiGallery() {
           <div style={row}>
             {DICE_SKINS.map((c) => (
               <div key={c.id} style={{ textAlign: "center" }}>
-                <div style={{ ...row, gap: 5, ...(c.vars as CSSProperties) }}>
+                <div style={{ ...row, gap: 5, ...diceSkinVars(c) }}>
                   <Die value={5} size={34} />
                   <Die value={2} size={34} />
                 </div>
@@ -218,6 +218,40 @@ export function UiGallery() {
               </div>
             ))}
           </div>
+        </Section>
+
+        <Section title="Holiday dice — shapes, states, sizes">
+          {DICE_SKINS.filter((c) => c.shape).map((c) => (
+            <div
+              key={c.id}
+              className="felt"
+              style={{ ...diceSkinVars(c), padding: 12, marginBottom: 10 }}
+            >
+              <div style={row}>
+                {([1, 2, 3, 4, 5, 6] as DieValue[]).map((v) => (
+                  <Die key={v} value={v} size={56} dimensional />
+                ))}
+              </div>
+              <div style={{ ...row, marginTop: 14 }}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>held · dim · inline 18/30:</span>
+                <Die value={5} size={56} dimensional locked />
+                <Die value={6} size={56} dimensional dim />
+                <Die value={4} size={18} inline />
+                <Die value={4} size={30} inline />
+              </div>
+              <div style={{ ...row, marginTop: 14, alignItems: "flex-start" }}>
+                {["dice-tray", "dice-tray dice-tray--hot", "dice-tray dice-tray--busted"].map(
+                  (cls) => (
+                    <div key={cls} className={cls}>
+                      {([1, 5, 3, 3, 6] as DieValue[]).map((v, i) => (
+                        <Die key={i} value={v} size={30} dimensional locked={i < 2} />
+                      ))}
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
         </Section>
 
         <Section title={`Table themes (${TABLE_THEMES.length})`}>

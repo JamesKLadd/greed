@@ -1,5 +1,11 @@
 import type { CSSProperties } from "react";
-import { DICE_SKINS, TABLE_THEMES, isUnlocked } from "../game/cosmetics.js";
+import {
+  DICE_SKINS,
+  DIE_SHAPE_VAR,
+  TABLE_THEMES,
+  diceSkinVars,
+  isUnlocked,
+} from "../game/cosmetics.js";
 import type { Profile } from "../game/profile.js";
 import { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES, cleanBetaIdentity } from "@greed/protocol";
 export { MASCOTS, FRAMES, BACKGROUNDS, NAMEPLATES };
@@ -100,14 +106,21 @@ export function profileWithAppearance(a: Appearance, p: Profile): Profile | null
   };
 }
 export function appearanceVars(a: Appearance): CSSProperties {
-  const dice = DICE_SKINS.find((c) => c.id === a.dice)?.vars ?? {
-    "--die-c1": a.dice === "circuit" ? "#123e4b" : a.dice === "volcanic" ? "#52382f" : "#fff4d6",
-    "--die-c2": a.dice === "circuit" ? "#082632" : a.dice === "volcanic" ? "#231c21" : "#e6cf98",
-    "--die-c3": "#151c22",
-    "--die-pip": a.dice === "house" ? "#30281a" : "#effff7",
-    "--die-pip2": "#cab77b",
-    "--die-lip": "#ac8e56",
-  };
+  const skin = DICE_SKINS.find((c) => c.id === a.dice);
+  const dice: Record<string, string> = skin
+    ? (diceSkinVars(skin) as Record<string, string>)
+    : {
+        "--die-c1":
+          a.dice === "circuit" ? "#123e4b" : a.dice === "volcanic" ? "#52382f" : "#fff4d6",
+        "--die-c2":
+          a.dice === "circuit" ? "#082632" : a.dice === "volcanic" ? "#231c21" : "#e6cf98",
+        "--die-c3": "#151c22",
+        "--die-pip": a.dice === "house" ? "#30281a" : "#effff7",
+        "--die-pip2": "#cab77b",
+        "--die-lip": "#ac8e56",
+        // The sample sets are cubes, and must say so: see diceSkinVars.
+        [DIE_SHAPE_VAR]: "cube",
+      };
   const table = TABLE_THEMES.find((c) => c.id === a.table)?.vars ?? {
     "--felt-1": a.table === "afterhours" ? "#262b58" : "#10523f",
     "--felt-2": a.table === "afterhours" ? "#10182e" : "#07352e",

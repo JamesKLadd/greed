@@ -5,6 +5,20 @@ import { useI18n, type MsgKey } from "../i18n/i18n.js";
 export function UnlockProgress({ progress }: { progress: Progress | null }) {
   const { t, n } = useI18n();
   if (!progress) return null;
+  if (progress.kind === "holiday") {
+    const { daysAway } = progress;
+    return (
+      <span
+        className={`locker-progress locker-progress--hint${daysAway === 0 ? " locker-progress--today" : ""}`}
+      >
+        {daysAway === 0
+          ? t("locker.progress.holidayToday")
+          : daysAway === 1
+            ? t("locker.progress.holidayTomorrow")
+            : t("locker.progress.holidayAway", { days: n(daysAway) })}
+      </span>
+    );
+  }
   if (progress.kind === "hint")
     return (
       <span className="locker-progress locker-progress--hint">
