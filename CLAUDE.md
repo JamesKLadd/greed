@@ -171,7 +171,9 @@ build on every push. Node 20.
   divide by `decGames`, since rows from before decisions were kept have none.
   `dice_audit` holds every die thrown at a table, bots' included, once per game.
   The all-players view is granted by account id in `stats_admins` (snapshot of
-  James and Jimmy), never by name. Run files are written after the move that
+  James and Jimmy), never by name. That view can also open one account's own
+  report (`/api/stats/user`, `/api/stats/accounts` for the name suggestions),
+  both behind the same admin check. Run files are written after the move that
   finished them returns, so integration tests `await statsSettled()` before
   `TRUNCATE users` — without it the two race into a deadlock.
 

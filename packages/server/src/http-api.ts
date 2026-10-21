@@ -6,7 +6,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { accountsEnabled } from "./db.js";
+import { accountsEnabled, query } from "./db.js";
 import { growthReport, isGrowthAdmin, parseGrowthBatch, recordGrowth } from "./growth.js";
 import { sessionIsCurrent, verifySession } from "./auth.js";
 import { dailyKey, weekKey } from "@greed/core";
@@ -91,6 +91,41 @@ async function requireStatsAdmin(req: IncomingMessage): Promise<{ id: string }> 
   if (!(await isStatsAdmin(user.id)))
     throw new AccountError(403, "These statistics are for the game owner only.", "stats.admin");
   return user;
+}
+
+/**
+ * The account named by `?username=` (any case), for the owner's per-account
+ * view. Not found is its own code, so the client can tell "no such player"
+ * from "this server has no such endpoint".
+ */
+async function statsAccount(url: URL): Promise<{ id: string; username: string }> {
+  const name = (url.searchParams.get("username") ?? "").trim();
+  if (!name || name.length > 64) throw new AccountError(400, "Enter a username.", "stats.noUser");
+  const { rows } = await query<{ id: string; username: string }>(
+    `SELECT id, username FROM users WHERE lower(username) = lower($1) LIMIT 1`,
+    [name],
+  );
+  if (!rows[0]) throw new AccountError(404, "No account by that name.", "stats.noUser");
+  return rows[0];
+}
+
+/** How many names the account picker offers at once. */
+const ACCOUNT_SUGGESTIONS = 8;
+
+/**
+ * Usernames that start with `prefix`, any case, shortest first so an exact
+ * match leads. LIKE's wildcards are escaped: a typed "%" or "_" is a letter.
+ */
+async function accountsStartingWith(prefix: string): Promise<string[]> {
+  const typed = prefix.trim().slice(0, 64);
+  if (!typed) return [];
+  const pattern = `${typed.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const { rows } = await query<{ username: string }>(
+    `SELECT username FROM users WHERE username ILIKE $1
+      ORDER BY length(username), lower(username) LIMIT $2`,
+    [pattern, ACCOUNT_SUGGESTIONS],
+  );
+  return rows.map((r) => r.username);
 }
 
 /** Origins allowed to call the API from a browser. */
@@ -232,6 +267,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
     // Exports read every throw in the window, so they are the costly reads.
     "/api/stats/me/export": { limit: 30, windowMs: 60 * 60_000 },
     "/api/stats/all/export": { limit: 30, windowMs: 60 * 60_000 },
+    "/api/stats/user/export": { limit: 30, windowMs: 60 * 60_000 },
   };
   const rule = LIMITS[path];
   if (rule) {
@@ -384,6 +420,36 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
         res,
         200,
         await rollSummary(statsView(url), null, statsWindow(url.searchParams.get("days"))),
+      );
+    } else if (method === "GET" && path === "/api/stats/user") {
+      // One account's own numbers, for the game owner: the same report the
+      // player sees, everyone-comparisons and luck rank included.
+      res.setHeader("Cache-Control", "no-store");
+      await requireStatsAdmin(req);
+      const account = await statsAccount(url);
+      json(res, 200, {
+        ...(await rollSummary(
+          statsView(url),
+          account.id,
+          statsWindow(url.searchParams.get("days")),
+        )),
+        username: account.username,
+      });
+    } else if (method === "GET" && path === "/api/stats/accounts") {
+      // Names starting with what the owner has typed, for the account picker.
+      res.setHeader("Cache-Control", "no-store");
+      await requireStatsAdmin(req);
+      json(res, 200, { accounts: await accountsStartingWith(url.searchParams.get("q") ?? "") });
+    } else if (method === "GET" && path === "/api/stats/user/export") {
+      await requireStatsAdmin(req);
+      const account = await statsAccount(url);
+      const view = statsView(url);
+      const kind = exportKind(url);
+      const days = statsWindow(url.searchParams.get("days"));
+      csv(
+        res,
+        `greed-${account.username}-${view}-${kind}-${days}d.csv`,
+        await rollExport(view, kind, account.id, days),
       );
     } else if (method === "GET" && path === "/api/stats/activity") {
       res.setHeader("Cache-Control", "no-store");

@@ -16,7 +16,8 @@ import { API_BASE, ApiError, api, getToken } from "./auth.js";
 
 /** Which games a view covers: one mode, or local and online together. */
 export type StatsView = "games" | "local" | "online" | "daily" | "weekly";
-export type StatsScope = "me" | "all";
+/** "user" is one named account, for the game owner (see fetchRollSummary's `account`). */
+export type StatsScope = "me" | "all" | "user";
 export type ExportKind = "games" | "throws" | "decisions";
 
 /** The windows a summary can cover, in days back from now. */
@@ -34,6 +35,8 @@ export interface SeriesPoint {
 
 export interface RollSummary {
   view: StatsView;
+  /** The account's name as stored, for a "user" summary. */
+  username?: string;
   days: number;
   tally: RollTally;
   playerCount: number;
@@ -70,6 +73,8 @@ export class StatsUnavailable extends Error {
 }
 
 function unavailable(err: unknown): never {
+  // "No account by that name" is a real answer, not a missing endpoint.
+  if (err instanceof ApiError && err.code === "stats.noUser") throw err;
   if (err instanceof ApiError && (err.status === 404 || err.status === 503)) {
     throw new StatsUnavailable();
   }
@@ -125,16 +130,29 @@ function fill(raw: Partial<RollSummary> | null, view: StatsView): RollSummary {
   return summary;
 }
 
+/** The query string for one account, when the scope is "user". */
+const accountParam = (scope: StatsScope, account?: string) =>
+  scope === "user" && account ? `&username=${encodeURIComponent(account)}` : "";
+
+/** True when the server said there is no account by the name asked for. */
+export function isNoSuchAccount(err: unknown): boolean {
+  return err instanceof ApiError && err.code === "stats.noUser";
+}
+
 export async function fetchRollSummary(
   scope: StatsScope,
   view: StatsView,
   days: number,
+  account?: string,
 ): Promise<RollSummary> {
   try {
-    const raw = await api<Partial<RollSummary>>(`/api/stats/${scope}?view=${view}&days=${days}`, {
-      auth: true,
-    });
-    return fill(raw, view);
+    const raw = await api<Partial<RollSummary>>(
+      `/api/stats/${scope}?view=${view}&days=${days}${accountParam(scope, account)}`,
+      { auth: true },
+    );
+    const summary = fill(raw, view);
+    if (typeof raw?.username === "string") summary.username = raw.username;
+    return summary;
   } catch (err) {
     return unavailable(err);
   }
@@ -173,12 +191,13 @@ export async function fetchRollCsv(
   view: StatsView,
   kind: ExportKind,
   days: number,
+  account?: string,
 ): Promise<string> {
   let res: Response;
   try {
     const token = getToken();
     res = await fetch(
-      `${API_BASE}/api/stats/${scope}/export?view=${view}&kind=${kind}&days=${days}`,
+      `${API_BASE}/api/stats/${scope}/export?view=${view}&kind=${kind}&days=${days}${accountParam(scope, account)}`,
       {
         headers: token ? { authorization: `Bearer ${token}` } : {},
       },
@@ -201,4 +220,25 @@ export async function fetchRollCsv(
 /** Send a finished solo game to the account. `id` makes a retry harmless. */
 export async function uploadLocalGame(id: string, game: RollGame, faces?: number[]): Promise<void> {
   await api(`/api/stats/local`, { body: { id, game, faces }, auth: true });
+}
+
+/**
+ * Accounts whose names start with what has been typed (any case), for the
+ * owner's account picker. Empty on any failure — including an older server
+ * with no such endpoint — so the box still works as a plain text field.
+ */
+export async function fetchAccountSuggestions(typed: string): Promise<string[]> {
+  const q = typed.trim();
+  if (!q) return [];
+  try {
+    const raw = await api<{ accounts?: unknown }>(
+      `/api/stats/accounts?q=${encodeURIComponent(q)}`,
+      { auth: true },
+    );
+    return Array.isArray(raw?.accounts)
+      ? raw.accounts.filter((a): a is string => typeof a === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }

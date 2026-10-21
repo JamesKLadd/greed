@@ -20,6 +20,7 @@ import {
   STATS_WINDOWS,
   StatsUnavailable,
   fetchRollActivity,
+  isNoSuchAccount,
   fetchRollCsv,
   fetchRollSummary,
   type ExportKind,
@@ -35,6 +36,7 @@ import {
   TrendChart,
   type ShareRow,
 } from "../components/ScoreChart.js";
+import { AccountPicker } from "../components/AccountPicker.js";
 import { apiErrorText } from "../i18n/apiError.js";
 import { useI18n, type MsgKey } from "../i18n/i18n.js";
 import { Button, Screen } from "../ui/index.js";
@@ -136,6 +138,11 @@ export function RollStatsScreen({
   const [exportFailed, setExportFailed] = useState(false);
   const [activity, setActivity] = useState<RollActivity | null>(null);
   const [activityFailed, setActivityFailed] = useState(false);
+  // The owner looking at one player: their own report, as that player sees it.
+  const [account, setAccount] = useState<string | null>(null);
+  const [accountDraft, setAccountDraft] = useState("");
+  const [accountProblem, setAccountProblem] = useState<string | null>(null);
+  const viewing: StatsScope = scope === "all" && account ? "user" : scope;
 
   const guest = scope === "me" && authStatus !== "authed";
   const isGames = view === "games" || view === "local" || view === "online";
@@ -147,10 +154,21 @@ export function RollStatsScreen({
       if (guest) {
         setData(deviceData(days));
       } else {
-        const summary = await fetchRollSummary(scope, view, days);
-        setData({ summary, guest: false, csv: (kind) => fetchRollCsv(scope, view, kind, days) });
+        const summary = await fetchRollSummary(viewing, view, days, account ?? undefined);
+        setData({
+          summary,
+          guest: false,
+          csv: (kind) => fetchRollCsv(viewing, view, kind, days, account ?? undefined),
+        });
+        if (summary.username) setAccount(summary.username);
       }
     } catch (err) {
+      if (isNoSuchAccount(err)) {
+        // Stay on what was showing; say so beside the box it was typed in.
+        setAccountProblem(t("rollData.account.notFound", { name: account ?? "" }));
+        setAccount(null);
+        return;
+      }
       setData(null);
       setProblem(
         err instanceof StatsUnavailable
@@ -160,7 +178,7 @@ export function RollStatsScreen({
     } finally {
       setLoading(false);
     }
-  }, [guest, scope, view, days, t]);
+  }, [guest, viewing, account, view, days, t]);
 
   useEffect(() => {
     if (authStatus === "loading") return;
@@ -190,14 +208,24 @@ export function RollStatsScreen({
   const dec = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale]);
 
   const runs = view === "daily" || view === "weekly";
-  const title = scope === "all" ? t("rollData.titleAll") : t("rollData.title");
+  const title =
+    viewing === "user" && account
+      ? t("rollData.account.title", { name: account })
+      : scope === "all"
+        ? t("rollData.titleAll")
+        : t("rollData.title");
 
   const exportCsv = async (kind: ExportKind) => {
     if (!data) return;
     setExporting(kind);
     setExportFailed(false);
     try {
-      const prefix = scope === "all" ? "greed-all-players" : "greed";
+      const prefix =
+        viewing === "user" && account
+          ? `greed-${account}`
+          : scope === "all"
+            ? "greed-all-players"
+            : "greed";
       save(await data.csv(kind), `${prefix}-${view}-${kind}-${days}d.csv`);
     } catch {
       setExportFailed(true);
@@ -243,6 +271,51 @@ export function RollStatsScreen({
             </button>
           ))}
         </div>
+      )}
+      {scope === "all" && (
+        <form
+          className="roll-data__account"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = accountDraft.trim();
+            if (!name) return;
+            setAccountProblem(null);
+            setAccount(name);
+          }}
+        >
+          <div className="roll-data__account-row">
+            <AccountPicker
+              value={accountDraft}
+              onChange={setAccountDraft}
+              onPick={(name) => {
+                setAccountProblem(null);
+                setAccount(name);
+              }}
+              label={t("rollData.account.label")}
+              placeholder={t("rollData.account.placeholder")}
+            />
+            <Button type="submit" disabled={!accountDraft.trim()}>
+              {t("rollData.account.view")}
+            </Button>
+          </div>
+          {accountProblem && (
+            <p className="roll-data__note" role="alert">
+              {accountProblem}
+            </p>
+          )}
+          {account && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setAccount(null);
+                setAccountDraft("");
+              }}
+            >
+              {t("rollData.account.back")}
+            </Button>
+          )}
+        </form>
       )}
       {isGames && !guest && (
         <div
@@ -303,7 +376,7 @@ export function RollStatsScreen({
           <Report
             tally={tally}
             summary={data!.summary}
-            scope={scope}
+            scope={viewing === "user" ? "me" : scope}
             runs={runs}
             pct={pct}
             dec={dec}
@@ -311,7 +384,7 @@ export function RollStatsScreen({
         )}
       </div>
 
-      {scope === "all" && (activity || activityFailed) && (
+      {scope === "all" && !account && (activity || activityFailed) && (
         <Activity activity={activity} onRetry={() => void loadActivity()} />
       )}
 
@@ -370,6 +443,7 @@ function Report({
   dec,
 }: {
   tally: RollTally;
+  /** `username` set: the owner reading one player's report, named rather than "you". */
   summary: RollSummary;
   scope: StatsScope;
   runs: boolean;
@@ -490,7 +564,9 @@ function Report({
 
       <section className="support-section" aria-labelledby={`${ids}-odds`}>
         <h2 id={`${ids}-odds`}>
-          {t(scope === "all" ? "rollData.odds.titleAll" : "rollData.odds.title")}
+          {summary.username
+            ? t("rollData.account.odds", { name: summary.username })
+            : t(scope === "all" ? "rollData.odds.titleAll" : "rollData.odds.title")}
         </h2>
         <div className="roll-odds__scroll">
           <table className="roll-odds">
@@ -498,7 +574,8 @@ function Report({
               <tr>
                 <th scope="col">{t("rollData.odds.event")}</th>
                 <th scope="col">
-                  {t(scope === "all" ? "rollData.odds.actual" : "rollData.odds.you")}
+                  {summary.username ??
+                    t(scope === "all" ? "rollData.odds.actual" : "rollData.odds.you")}
                 </th>
                 {evOdds && <th scope="col">{t("rollData.odds.everyone")}</th>}
                 <th scope="col">{t("rollData.odds.expected")}</th>
@@ -553,7 +630,8 @@ function Report({
         />
         {summary.luckRank && (
           <p className="roll-data__rank">
-            {t("rollData.points.rank", {
+            {t(summary.username ? "rollData.account.rank" : "rollData.points.rank", {
+              name: summary.username ?? "",
               pct: pct.format(summary.luckRank.below / summary.luckRank.others),
               others: n(summary.luckRank.others),
             })}
@@ -629,7 +707,8 @@ function Report({
                 <tr>
                   <th scope="col">{t("rollData.bank.dice")}</th>
                   <th scope="col">
-                    {t(scope === "all" ? "rollData.odds.actual" : "rollData.odds.you")}
+                    {summary.username ??
+                      t(scope === "all" ? "rollData.odds.actual" : "rollData.odds.you")}
                   </th>
                   {ev && <th scope="col">{t("rollData.odds.everyone")}</th>}
                   <th scope="col">{t("rollData.bank.best")}</th>
