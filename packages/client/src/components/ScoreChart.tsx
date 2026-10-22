@@ -134,11 +134,17 @@ function tickText(v: number, n: (v: number) => string): string {
  * average through them as the line the eye follows. One y-axis, hairline grid,
  * a crosshair that snaps to the nearest point, the same readout on keyboard
  * focus, and the numbers as a table for anyone who would rather read them.
+ *
+ * `byAttempt` spaces the points evenly, one per attempt, instead of by the
+ * clock. The weekly's attempts come in bursts — ten in a sitting, then nothing
+ * until tomorrow — and on a time axis each burst piled into one column while
+ * the gap between them took the whole width.
  */
 export function ScoreChart({
   points,
   perDay,
   runs = false,
+  byAttempt = false,
   title,
 }: {
   points: ScorePoint[];
@@ -146,22 +152,25 @@ export function ScoreChart({
   perDay: boolean;
   /** Each point is a challenge run rather than a game. */
   runs?: boolean;
+  /** One evenly spaced point per attempt, numbered, rather than placed by time. */
+  byAttempt?: boolean;
   title: string;
 }) {
   const { t, n } = useI18n();
   const ids = useId();
   const { wrap, width } = usePlotWidth();
   const when = useWhen(perDay);
+  const attempt = (i: number) => t("rollData.chart.attemptN", { n: n(i + 1) });
 
   const rows = useMemo(() => {
     let games = 0;
     let total = 0;
-    return points.map((p) => {
+    return points.map((p, i) => {
       games += p.games;
       total += p.score * p.games;
-      return { ...p, t: timeOf(p.at), avg: total / games };
+      return { ...p, t: byAttempt ? i : timeOf(p.at), avg: total / games };
     });
-  }, [points]);
+  }, [points, byAttempt]);
 
   const t0 = rows[0]?.t ?? 0;
   const t1 = rows[rows.length - 1]?.t ?? 0;
@@ -228,7 +237,7 @@ export function ScoreChart({
             </g>
           ))}
           <text className="roll-chart__tick" x={PAD.left} y={HEIGHT - 8} textAnchor="start">
-            {when(rows[0].at)}
+            {byAttempt ? attempt(0) : when(rows[0].at)}
           </text>
           {rows.length > 1 && (
             <text
@@ -237,7 +246,7 @@ export function ScoreChart({
               y={HEIGHT - 8}
               textAnchor="end"
             >
-              {when(last.at)}
+              {byAttempt ? attempt(rows.length - 1) : when(last.at)}
             </text>
           )}
           {shown && (
@@ -272,7 +281,9 @@ export function ScoreChart({
               top: Math.max(4, y(Math.max(shown.score, shown.avg)) - 64),
             }}
           >
-            <span className="roll-chart__tip-when">{when(shown.at)}</span>
+            <span className="roll-chart__tip-when">
+              {byAttempt ? `${attempt(active!)} · ${when(shown.at)}` : when(shown.at)}
+            </span>
             <span>
               <i className="roll-chart__key roll-chart__key--dot" aria-hidden="true" />
               <strong>{n(shown.score)}</strong> {dotLabel}
@@ -292,6 +303,7 @@ export function ScoreChart({
         <table>
           <thead>
             <tr>
+              {byAttempt && <th scope="col">{t("rollData.chart.attempt")}</th>}
               <th scope="col">{t("rollData.chart.date")}</th>
               <th scope="col">{dotLabel}</th>
               <th scope="col">{t("rollData.chart.avg")}</th>
@@ -300,6 +312,7 @@ export function ScoreChart({
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
+                {byAttempt && <td>{n(i + 1)}</td>}
                 <td>{when(r.at)}</td>
                 <td>{n(r.score)}</td>
                 <td>{n(Math.round(r.avg))}</td>

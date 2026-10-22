@@ -378,6 +378,7 @@ export function RollStatsScreen({
             summary={data!.summary}
             scope={viewing === "user" ? "me" : scope}
             runs={runs}
+            weekly={view === "weekly"}
             pct={pct}
             dec={dec}
           />
@@ -439,6 +440,7 @@ function Report({
   summary,
   scope,
   runs,
+  weekly,
   pct,
   dec,
 }: {
@@ -447,6 +449,8 @@ function Report({
   summary: RollSummary;
   scope: StatsScope;
   runs: boolean;
+  /** The weekly's attempts: charted one after another, not on the clock. */
+  weekly: boolean;
   pct: Intl.NumberFormat;
   dec: Intl.NumberFormat;
 }) {
@@ -753,7 +757,10 @@ function Report({
             points={scores}
             perDay={scope === "all"}
             runs={runs}
-            title={t("rollData.chart.title")}
+            byAttempt={weekly && scope !== "all"}
+            title={t(
+              weekly && scope !== "all" ? "rollData.chart.titleAttempts" : "rollData.chart.title",
+            )}
           />
         </section>
       )}
