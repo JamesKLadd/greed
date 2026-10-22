@@ -519,21 +519,25 @@ function Report({
   // A player's luck is a running total, game by game; everyone's is each day's
   // average per game, which fair dice keep near zero.
   const luckSeries = useMemo(() => {
-    const known = summary.series.filter((s) => s.luck !== null);
+    const known = summary.series.flatMap((s, i) => (s.luck === null ? [] : [{ ...s, i }]));
     if (scope === "all") {
       return known.map((s) => ({ at: s.at, value: s.luck!, games: s.games }));
     }
     let total = 0;
-    return known.map((s) => ({ at: s.at, value: (total += s.luck!) }));
+    return known.map((s) => ({ at: s.at, value: (total += s.luck!), attempt: s.i + 1 }));
   }, [summary.series, scope]);
 
+  // A player's series is one row per game or run, oldest first, so its place in
+  // the series is its attempt number — unfinished ones included, which is what
+  // keeps the score and luck charts numbering the same attempts alike.
   const scores = useMemo(
     () =>
-      summary.series.flatMap((s) =>
-        s.score === null ? [] : [{ at: s.at, score: s.score, games: s.games }],
+      summary.series.flatMap((s, i) =>
+        s.score === null ? [] : [{ at: s.at, score: s.score, games: s.games, attempt: i + 1 }],
       ),
     [summary.series],
   );
+  const byAttempt = weekly && scope !== "all";
 
   const bankRows: ShareRow[] = [
     { key: "bk0", label: t("rollData.bank.under", { n: n(300) }), value: tl.bk0 },
@@ -650,7 +654,14 @@ function Report({
             points={luckSeries}
             perDay={scope === "all"}
             signed
-            title={t(scope === "all" ? "rollData.luckChart.titleAll" : "rollData.luckChart.title")}
+            byAttempt={byAttempt}
+            title={t(
+              scope === "all"
+                ? "rollData.luckChart.titleAll"
+                : byAttempt
+                  ? "rollData.luckChart.titleAttempts"
+                  : "rollData.luckChart.title",
+            )}
             valueLabel={t("rollData.luckChart.value")}
             ariaKey="rollData.luckChart.aria"
           />
@@ -757,10 +768,8 @@ function Report({
             points={scores}
             perDay={scope === "all"}
             runs={runs}
-            byAttempt={weekly && scope !== "all"}
-            title={t(
-              weekly && scope !== "all" ? "rollData.chart.titleAttempts" : "rollData.chart.title",
-            )}
+            byAttempt={byAttempt}
+            title={t(byAttempt ? "rollData.chart.titleAttempts" : "rollData.chart.title")}
           />
         </section>
       )}

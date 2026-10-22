@@ -1050,6 +1050,7 @@ export const en = {
   "rollData.points.rank":
     "Your dice have been kinder than {pct} of the {others} other players with enough throws to compare.",
   "rollData.luckChart.title": "Luck over time",
+  "rollData.luckChart.titleAttempts": "Luck by attempt",
   "rollData.luckChart.titleAll": "Luck by day",
   "rollData.luckChart.value": "Luck",
   "rollData.luckChart.note":
@@ -2522,6 +2523,7 @@ export const es: Record<MsgKey, string> = {
   "rollData.points.rank":
     "Tus dados han sido más amables que los de un {pct} de los otros {others} jugadores con tiradas suficientes para comparar.",
   "rollData.luckChart.title": "Suerte a lo largo del tiempo",
+  "rollData.luckChart.titleAttempts": "Suerte por intento",
   "rollData.luckChart.titleAll": "Suerte por día",
   "rollData.luckChart.value": "Suerte",
   "rollData.luckChart.note":
@@ -3992,6 +3994,7 @@ export const fr: Record<MsgKey, string> = {
   "rollData.points.rank":
     "Vos dés ont été plus cléments que ceux de {pct} des {others} autres joueurs ayant assez de lancers pour comparer.",
   "rollData.luckChart.title": "Chance au fil du temps",
+  "rollData.luckChart.titleAttempts": "Chance par essai",
   "rollData.luckChart.titleAll": "Chance par jour",
   "rollData.luckChart.value": "Chance",
   "rollData.luckChart.note":

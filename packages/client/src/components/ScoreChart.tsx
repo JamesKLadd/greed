@@ -16,6 +16,8 @@ export interface ScorePoint {
   score: number;
   /** Games behind the point: 1 for a single game, more for a day's average. */
   games: number;
+  /** Which attempt this was, counting unfinished ones, for `byAttempt`. */
+  attempt?: number;
 }
 
 const HEIGHT = 220;
@@ -95,6 +97,12 @@ function useWhen(perDay: boolean) {
     perDay ? date.format(new Date(timeOf(at))) : dateTime.format(new Date(at));
 }
 
+/** "Attempt 7": the x-axis and readout of a chart drawn by attempt. */
+function useAttemptLabel() {
+  const { t, n } = useI18n();
+  return (k: number) => t("rollData.chart.attemptN", { n: n(k) });
+}
+
 function timeOf(at: string): number {
   // A bare date is a Chicago calendar day; noon UTC keeps it on that date
   // wherever the chart is read.
@@ -138,7 +146,9 @@ function tickText(v: number, n: (v: number) => string): string {
  * `byAttempt` spaces the points evenly, one per attempt, instead of by the
  * clock. The weekly's attempts come in bursts — ten in a sitting, then nothing
  * until tomorrow — and on a time axis each burst piled into one column while
- * the gap between them took the whole width.
+ * the gap between them took the whole width. Points carry their own attempt
+ * number, so an unfinished attempt (no score, but luck) leaves a gap here
+ * rather than renumbering everything after it out of step with the luck chart.
  */
 export function ScoreChart({
   points,
@@ -156,11 +166,11 @@ export function ScoreChart({
   byAttempt?: boolean;
   title: string;
 }) {
+  const attempt = useAttemptLabel();
   const { t, n } = useI18n();
   const ids = useId();
   const { wrap, width } = usePlotWidth();
   const when = useWhen(perDay);
-  const attempt = (i: number) => t("rollData.chart.attemptN", { n: n(i + 1) });
 
   const rows = useMemo(() => {
     let games = 0;
@@ -168,7 +178,7 @@ export function ScoreChart({
     return points.map((p, i) => {
       games += p.games;
       total += p.score * p.games;
-      return { ...p, t: byAttempt ? i : timeOf(p.at), avg: total / games };
+      return { ...p, t: byAttempt ? (p.attempt ?? i + 1) : timeOf(p.at), avg: total / games };
     });
   }, [points, byAttempt]);
 
@@ -237,7 +247,7 @@ export function ScoreChart({
             </g>
           ))}
           <text className="roll-chart__tick" x={PAD.left} y={HEIGHT - 8} textAnchor="start">
-            {byAttempt ? attempt(0) : when(rows[0].at)}
+            {byAttempt ? attempt(rows[0].t) : when(rows[0].at)}
           </text>
           {rows.length > 1 && (
             <text
@@ -246,7 +256,7 @@ export function ScoreChart({
               y={HEIGHT - 8}
               textAnchor="end"
             >
-              {byAttempt ? attempt(rows.length - 1) : when(last.at)}
+              {byAttempt ? attempt(last.t) : when(last.at)}
             </text>
           )}
           {shown && (
@@ -282,7 +292,7 @@ export function ScoreChart({
             }}
           >
             <span className="roll-chart__tip-when">
-              {byAttempt ? `${attempt(active!)} · ${when(shown.at)}` : when(shown.at)}
+              {byAttempt ? `${attempt(shown.t)} · ${when(shown.at)}` : when(shown.at)}
             </span>
             <span>
               <i className="roll-chart__key roll-chart__key--dot" aria-hidden="true" />
@@ -312,7 +322,7 @@ export function ScoreChart({
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
-                {byAttempt && <td>{n(i + 1)}</td>}
+                {byAttempt && <td>{n(r.t)}</td>}
                 <td>{when(r.at)}</td>
                 <td>{n(r.score)}</td>
                 <td>{n(Math.round(r.avg))}</td>
@@ -331,6 +341,8 @@ export interface TrendPoint {
   value: number;
   /** Games behind a day's point, for the readout. */
   games?: number;
+  /** Which attempt this was, for `byAttempt`. */
+  attempt?: number;
 }
 
 /**
@@ -347,6 +359,7 @@ export function TrendChart({
   ariaKey,
   signed = false,
   whole = false,
+  byAttempt = false,
 }: {
   points: TrendPoint[];
   perDay: boolean;
@@ -358,12 +371,18 @@ export function TrendChart({
   signed?: boolean;
   /** Counts: no fractional ticks, and a small span is still a small span. */
   whole?: boolean;
+  /** One evenly spaced point per attempt, as ScoreChart's. */
+  byAttempt?: boolean;
 }) {
   const { t, n } = useI18n();
   const ids = useId();
   const { wrap, width } = usePlotWidth();
   const when = useWhen(perDay);
-  const rows = useMemo(() => points.map((p) => ({ ...p, t: timeOf(p.at) })), [points]);
+  const attempt = useAttemptLabel();
+  const rows = useMemo(
+    () => points.map((p, i) => ({ ...p, t: byAttempt ? (p.attempt ?? i + 1) : timeOf(p.at) })),
+    [points, byAttempt],
+  );
 
   const t0 = rows[0]?.t ?? 0;
   const t1 = rows[rows.length - 1]?.t ?? 0;
@@ -418,7 +437,7 @@ export function TrendChart({
             </g>
           ))}
           <text className="roll-chart__tick" x={PAD.left} y={HEIGHT - 8} textAnchor="start">
-            {when(rows[0].at)}
+            {byAttempt ? attempt(rows[0].t) : when(rows[0].at)}
           </text>
           {rows.length > 1 && (
             <text
@@ -427,7 +446,7 @@ export function TrendChart({
               y={HEIGHT - 8}
               textAnchor="end"
             >
-              {when(last.at)}
+              {byAttempt ? attempt(last.t) : when(last.at)}
             </text>
           )}
           {shown && (
@@ -456,7 +475,9 @@ export function TrendChart({
               top: Math.max(4, y(shown.value) - 56),
             }}
           >
-            <span className="roll-chart__tip-when">{when(shown.at)}</span>
+            <span className="roll-chart__tip-when">
+              {byAttempt ? `${attempt(shown.t)} · ${when(shown.at)}` : when(shown.at)}
+            </span>
             <span>
               <strong>{fmt(shown.value)}</strong> {valueLabel}
               {perDay && shown.games && shown.games > 1
@@ -471,6 +492,7 @@ export function TrendChart({
         <table>
           <thead>
             <tr>
+              {byAttempt && <th scope="col">{t("rollData.chart.attempt")}</th>}
               <th scope="col">{t("rollData.chart.date")}</th>
               <th scope="col">{valueLabel}</th>
             </tr>
@@ -478,6 +500,7 @@ export function TrendChart({
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
+                {byAttempt && <td>{n(r.t)}</td>}
                 <td>{when(r.at)}</td>
                 <td>{fmt(r.value)}</td>
               </tr>
