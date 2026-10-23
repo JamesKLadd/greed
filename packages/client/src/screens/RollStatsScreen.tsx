@@ -593,27 +593,32 @@ function Report({
               </tr>
             </thead>
             <tbody>
-              {oddsComparisons(tl).map((row) => {
-                const everyone = evOdds?.get(row.key);
-                const verdict = <LuckVerdict luck={luckOf(row)} />;
-                return (
-                  <tr key={row.key}>
-                    <th scope="row">
-                      {t(`rollData.odds.${row.key}` as MsgKey)}
-                      <span className="roll-odds__chances">
-                        {t("rollData.odds.chances", { n: n(row.chances), count: n(row.actual) })}
-                      </span>
-                      {/* On a phone the verdict moves under the event, which
+              {/* Hot dice are rare enough that a short window can hold no
+                  re-throw at all — and a server from before the row existed
+                  sends none — so the row waits until there is one. */}
+              {oddsComparisons(tl)
+                .filter((row) => row.key !== "superBustHot" || row.chances > 0)
+                .map((row) => {
+                  const everyone = evOdds?.get(row.key);
+                  const verdict = <LuckVerdict luck={luckOf(row)} />;
+                  return (
+                    <tr key={row.key}>
+                      <th scope="row">
+                        {t(`rollData.odds.${row.key}` as MsgKey)}
+                        <span className="roll-odds__chances">
+                          {t("rollData.odds.chances", { n: n(row.chances), count: n(row.actual) })}
+                        </span>
+                        {/* On a phone the verdict moves under the event, which
                           makes room for the Everyone column; see roll-data.css. */}
-                      <span className="roll-odds__luck-inline">{verdict}</span>
-                    </th>
-                    <td>{p(row.actual, row.chances)}</td>
-                    {evOdds && <td>{everyone ? p(everyone.actual, everyone.chances) : "—"}</td>}
-                    <td>{p(row.expected, row.chances)}</td>
-                    <td className="roll-odds__luck-col">{verdict}</td>
-                  </tr>
-                );
-              })}
+                        <span className="roll-odds__luck-inline">{verdict}</span>
+                      </th>
+                      <td>{p(row.actual, row.chances)}</td>
+                      {evOdds && <td>{everyone ? p(everyone.actual, everyone.chances) : "—"}</td>}
+                      <td>{p(row.expected, row.chances)}</td>
+                      <td className="roll-odds__luck-col">{verdict}</td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>

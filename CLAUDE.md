@@ -169,6 +169,9 @@ build on every push. Node 20.
   connected count; auto-played ones were not the player's. Decisions are scored
   by `rollEdge` — expected points, not win chance — and per-game decision figures
   divide by `decGames`, since rows from before decisions were kept have none.
+  A tally field added later is backfilled from each row's stored throws in
+  `migrateRollStats` (`backfillHotRethrows`, keyed on the field being absent),
+  never left at zero: zero reads as "never happened".
   `dice_audit` holds every die thrown at a table, bots' included, once per game.
   The all-players view is granted by account id in `stats_admins` (snapshot of
   James and Jimmy), never by name. That view can also open one account's own

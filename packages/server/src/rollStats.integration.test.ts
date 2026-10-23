@@ -347,4 +347,28 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
     expect(t.finished).toBe(1);
     expect(t.scoreSum / t.finished).toBe(1200);
   });
+
+  it("counts super busts after hot dice in rows filed before they were tallied", async () => {
+    // Hot dice on a straight, then the fresh five busts: 800 thrown away.
+    const throws = encodeThrows([
+      { turn: 1, throw: 1, held: "", faces: "12345", atRisk: 0, gain: 500, expectedGain: 400 },
+      { turn: 1, throw: 2, held: "", faces: "22346", atRisk: 500, gain: 0, expectedGain: 400 },
+      { turn: 2, throw: 1, held: "", faces: "22346", atRisk: 0, gain: 0, expectedGain: 400 },
+    ]);
+    await query(
+      `INSERT INTO roll_games (key, user_id, mode, played_at, score, turns, banks, busts,
+                               banked_points, lost_points, best_turn, tally, throws)
+       VALUES ('before-hot', $1, 'local', now(), 0, 2, 0, 2, 0, 500, 0,
+               '{"games": 1, "finished": 1, "throws": 3, "n5": 3, "b5": 2}', $2)`,
+      [player, throws],
+    );
+    await migrateRollStats();
+    await migrateRollStats();
+    const t = (await rollSummary("local", player)).tally;
+    // Only the re-throw counts: the second turn's bust was its first throw.
+    expect(t.n5h).toBe(1);
+    expect(t.b5h).toBe(1);
+    expect(t.eb5h).toBeGreaterThan(0);
+    expect(t.b5).toBe(2);
+  });
 });

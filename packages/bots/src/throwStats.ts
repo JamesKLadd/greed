@@ -407,6 +407,13 @@ export const TALLY_SUM_KEYS = [
   "b5",
   "eb5",
   "vb5",
+  // The five-dice throws that came from hot dice: a super bust there throws
+  // away a turn that had already scored every die once. Rows filed before
+  // these existed are filled in by migrateRollStats from their throws.
+  "n5h",
+  "b5h",
+  "eb5h",
+  "vb5h",
   "triThrows",
   "tri",
   "eTri",
@@ -495,6 +502,27 @@ export function mergeTallies(a: RollTally, b: Partial<RollTally>): RollTally {
   return out;
 }
 
+/**
+ * Five-dice throws made on hot dice, and how many of them busted. A turn's
+ * first throw is the only other way to have all five dice in the cup, so a
+ * five-dice throw after the first is the hot-dice re-throw. Its odds are any
+ * fresh five's; it is the stakes that differ.
+ */
+export function hotRethrowTally(
+  throws: readonly ThrowRecord[],
+): Pick<RollTally, "n5h" | "b5h" | "eb5h" | "vb5h"> {
+  const t = { n5h: 0, b5h: 0, eb5h: 0, vb5h: 0 };
+  for (const r of throws) {
+    if (r.throw <= 1 || r.faces.length !== DICE_COUNT) continue;
+    const p = throwOdds(r.held).bust;
+    t.n5h += 1;
+    t.eb5h += p;
+    t.vb5h += p * (1 - p);
+    if (throwEvents(r).bust) t.b5h += 1;
+  }
+  return t;
+}
+
 export function tallyGame(game: RollGame): RollTally {
   const t = emptyTally();
   t.games = 1;
@@ -551,6 +579,7 @@ export function tallyGame(game: RollGame): RollTally {
     t.dice += r.faces.length;
   }
   t.maxLost = biggestLoss;
+  Object.assign(t, hotRethrowTally(game.throws));
   if (game.decisions.length > 0) t.decGames = 1;
   for (const d of game.decisions) {
     const k = Math.min(5, Math.max(1, d.dice)) as 1 | 2 | 3 | 4 | 5;
@@ -616,7 +645,17 @@ export function tallyGames(games: readonly RollGame[]): RollTally {
 export type Leaning = "good" | "bad" | "neutral";
 
 export interface OddsComparison {
-  key: "superBust" | "bust4" | "bust3" | "bust2" | "bust1" | "triple" | "straight" | "five" | "hot";
+  key:
+    | "superBust"
+    | "superBustHot"
+    | "bust4"
+    | "bust3"
+    | "bust2"
+    | "bust1"
+    | "triple"
+    | "straight"
+    | "five"
+    | "hot";
   leaning: Leaning;
   /** Throws it could have happened on. */
   chances: number;
@@ -653,6 +692,7 @@ function compare(
 export function oddsComparisons(t: RollTally): OddsComparison[] {
   return [
     compare("superBust", "bad", t.n5, t.b5, t.eb5, t.vb5),
+    compare("superBustHot", "bad", t.n5h, t.b5h, t.eb5h, t.vb5h),
     compare("bust4", "bad", t.n4, t.b4, t.eb4, t.vb4),
     compare("bust3", "bad", t.n3, t.b3, t.eb3, t.vb3),
     compare("bust2", "bad", t.n2, t.b2, t.eb2, t.vb2),
@@ -978,6 +1018,9 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
     "throws",
     "super_busts",
     "super_bust_expected",
+    "throws_after_hot_dice",
+    "super_busts_after_hot_dice",
+    "super_busts_after_hot_dice_expected",
     ...[4, 3, 2, 1].flatMap((k) => [
       `throws_${k}_dice`,
       `busts_${k}_dice`,
@@ -1019,6 +1062,9 @@ export function gamesCsv(games: readonly LabelledGame[]): string {
       t.throws,
       t.b5,
       t.eb5.toFixed(3),
+      t.n5h,
+      t.b5h,
+      t.eb5h.toFixed(3),
       ...[4, 3, 2, 1].flatMap((k) => [
         t[`n${k}` as TallyKey],
         t[`b${k}` as TallyKey],

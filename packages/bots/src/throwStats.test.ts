@@ -9,6 +9,7 @@ import {
   decodeThrows,
   encodeThrows,
   gamesCsv,
+  hotRethrowTally,
   oddsComparisons,
   rollGameFromState,
   tallyGame,
@@ -279,6 +280,33 @@ describe("point sources and the table's dice", () => {
     state = apply(runMoveStart(state), { type: "ROLL" });
     expect(tableFaces(state).reduce((a, b) => a + b, 0)).toBe(5);
     expect(game.throws.length).toBeGreaterThan(0);
+  });
+});
+
+describe("super busts after hot dice", () => {
+  it("count only the five-dice re-throws, at a fresh five's odds", () => {
+    const t = hotRethrowTally([
+      { turn: 1, throw: 1, held: "", faces: "12345", atRisk: 0, gain: 500, expectedGain: 0 },
+      { turn: 1, throw: 2, held: "", faces: "22346", atRisk: 500, gain: 0, expectedGain: 0 },
+      { turn: 2, throw: 1, held: "", faces: "22346", atRisk: 0, gain: 0, expectedGain: 0 },
+      { turn: 3, throw: 2, held: "1", faces: "2346", atRisk: 100, gain: 0, expectedGain: 0 },
+    ]);
+    expect(t).toMatchObject({ n5h: 1, b5h: 1 });
+    expect(t.eb5h).toBeCloseTo(throwOdds("").bust, 12);
+  });
+
+  it("are a share of the super busts, and follow hot dice", () => {
+    let rethrows = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const t = tallyGame(playPolicy(seed, (s) => s.turn.turnScore < 700));
+      rethrows += t.n5h;
+      expect(t.n5h).toBeLessThanOrEqual(t.n5);
+      expect(t.b5h).toBeLessThanOrEqual(t.b5);
+      // Every re-throw of five follows a hot dice; a player may bank instead.
+      expect(t.n5h).toBeLessThanOrEqual(t.hot);
+    }
+    // The games do reach a re-throw, or the bounds above test nothing.
+    expect(rethrows).toBeGreaterThan(0);
   });
 });
 
