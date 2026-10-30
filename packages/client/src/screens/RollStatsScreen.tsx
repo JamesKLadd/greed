@@ -208,6 +208,8 @@ export function RollStatsScreen({
   const dec = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale]);
 
   const runs = view === "daily" || view === "weekly";
+  const windowText = (d: number) =>
+    d === 1 ? t("rollData.windowLast24h") : t("rollData.window", { days: n(d) });
   const title =
     viewing === "user" && account
       ? t("rollData.account.title", { name: account })
@@ -253,7 +255,10 @@ export function RollStatsScreen({
         <p className="support-panel__intro">
           {/* A guest has no online games: only solo games live on a device. */}
           {t(guest ? "rollData.view.local" : (`rollData.view.${view}` as MsgKey))} ·{" "}
-          {t("rollData.window", { days: n(days) })}
+          {/* The window the numbers on screen cover: the reply's own, so a
+              server from before the 24-hour window, which answers with its
+              default, is not labelled as something it is not. */}
+          {windowText(data?.summary.days ?? days)}
         </p>
       </header>
 
@@ -349,7 +354,7 @@ export function RollStatsScreen({
             aria-pressed={days === d}
             onClick={() => setDays(d)}
           >
-            {t("rollData.windowDays", { days: n(d) })}
+            {d === 1 ? t("rollData.window24h") : t("rollData.windowDays", { days: n(d) })}
           </button>
         ))}
       </div>

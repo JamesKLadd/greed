@@ -64,8 +64,11 @@ function modesOf(view: StatsView): StatsMode[] {
 
 const KEEP = `${ROLL_DATA_DAYS} days`;
 
-/** The windows a view can be narrowed to, in days. */
-export const STATS_WINDOWS = [7, 30, ROLL_DATA_DAYS] as const;
+/**
+ * The windows a view can be narrowed to, in days. Every query reads one as
+ * `now() - interval`, so 1 is the last 24 hours, not "today" on the calendar.
+ */
+export const STATS_WINDOWS = [1, 7, 30, ROLL_DATA_DAYS] as const;
 
 export function statsWindow(raw: unknown): number {
   const days = Number(raw);

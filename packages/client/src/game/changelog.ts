@@ -37,6 +37,7 @@ export const RELEASES: Release[] = [
       "Straights and five of a kind get a seasonal burst, December brings an advent calendar with something behind all 24 doors, and winning a holiday's Daily or Weekly earns a trophy, gold holiday dice and a themed spot in Past winners",
       "The Weekly Challenge's score and luck charts in statistical data now go attempt by attempt instead of by time, so a day's attempts no longer bunch up",
       "Statistical data now has a line for super busts after hot dice, under super busts, so you can see how often a hot dice re-throw comes up empty against the odds",
+      "Statistical data can now be narrowed to the last 24 hours, beside the 7, 30 and 100 day views",
     ],
   },
   {

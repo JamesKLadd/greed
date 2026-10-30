@@ -20,8 +20,8 @@ export type StatsView = "games" | "local" | "online" | "daily" | "weekly";
 export type StatsScope = "me" | "all" | "user";
 export type ExportKind = "games" | "throws" | "decisions";
 
-/** The windows a summary can cover, in days back from now. */
-export const STATS_WINDOWS = [7, 30, 100] as const;
+/** The windows a summary can cover, in days back from now; 1 is the last 24 hours. */
+export const STATS_WINDOWS = [1, 7, 30, 100] as const;
 export type StatsWindow = (typeof STATS_WINDOWS)[number];
 
 export interface SeriesPoint {

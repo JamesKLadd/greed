@@ -16,6 +16,7 @@ import {
   rollSummary,
   snapshotStatsAdmins,
   statsSettled,
+  statsWindow,
 } from "./rollStats.js";
 
 /** A finished run's moves, the simple way: roll twice, bank, repeat. */
@@ -276,6 +277,11 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
   it("narrows to a window of days", async () => {
     const day = 86_400_000;
     await recordLocalGame(player, { id: randomUUID(), game: localGame() });
+    // Yesterday on the calendar, but 30 hours ago: outside the last 24 hours.
+    await recordLocalGame(player, {
+      id: randomUUID(),
+      game: localGame(new Date(Date.now() - 1.25 * day)),
+    });
     await recordLocalGame(player, {
       id: randomUUID(),
       game: localGame(new Date(Date.now() - 20 * day)),
@@ -284,11 +290,13 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
       id: randomUUID(),
       game: localGame(new Date(Date.now() - 50 * day)),
     });
-    expect((await rollSummary("local", player, 7)).tally.games).toBe(1);
-    expect((await rollSummary("local", player, 30)).tally.games).toBe(2);
-    expect((await rollSummary("local", player, 100)).tally.games).toBe(3);
+    expect(statsWindow("1")).toBe(1);
+    expect((await rollSummary("local", player, 1)).tally.games).toBe(1);
+    expect((await rollSummary("local", player, 7)).tally.games).toBe(2);
+    expect((await rollSummary("local", player, 30)).tally.games).toBe(3);
+    expect((await rollSummary("local", player, 100)).tally.games).toBe(4);
     const csv = await rollExport("local", "games", player, 30);
-    expect(csv.trim().split("\n")).toHaveLength(3);
+    expect(csv.trim().split("\n")).toHaveLength(4);
   });
 
   it("compares a player with everyone, and ranks luck only among enough players", async () => {
