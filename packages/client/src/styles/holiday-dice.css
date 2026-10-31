@@ -10,19 +10,41 @@
   inset: 0;
   display: block;
 }
+/* Whole turns only (--token-spin), so it always lands upright.
+
+   The spin is ONE keyframe interval under one easing curve: thrown fast,
+   slowing steadily to rest. It used to pass through a 40% keyframe that also
+   carried the squash, and a timing function applies afresh to each interval —
+   so the token decelerated almost to a stop at 40%, then lurched back up to
+   speed for a second, separate spin. The squash now has its own animation on
+   the individual `scale` property, where it cannot touch the rotation's pace.
+
+   It starts with the throw's stagger (--spin-delay) and is cut short by the
+   same amount, so it is at rest before the controllers end the throw — online
+   that is exactly --cube-roll-ms. Running past it, the animation was removed
+   mid-turn and the token snapped back upright. */
 .die--shaped.die--rolling .die__token {
-  /* Whole turns only (--token-spin), so it always lands upright. */
-  animation: die-token-spin var(--cube-roll-ms) cubic-bezier(0.2, 0.6, 0.3, 1) both;
+  --token-ms: calc(var(--cube-roll-ms) - var(--spin-delay, 0ms) - 40ms);
+  animation:
+    die-token-spin var(--token-ms) cubic-bezier(0.3, 0.6, 0.4, 1) var(--spin-delay, 0ms) both,
+    die-token-squash var(--token-ms) ease-in-out var(--spin-delay, 0ms) both;
+  will-change: transform;
 }
 @keyframes die-token-spin {
-  0% {
-    transform: rotate(0deg) scale(1);
+  from {
+    rotate: 0deg;
   }
-  40% {
-    transform: rotate(calc(var(--token-spin, 720deg) * 0.6)) scale(0.94);
+  to {
+    rotate: var(--token-spin, 360deg);
   }
+}
+@keyframes die-token-squash {
+  0%,
   100% {
-    transform: rotate(var(--token-spin, 720deg)) scale(1);
+    scale: 1;
+  }
+  45% {
+    scale: 0.94;
   }
 }
 
@@ -36,6 +58,12 @@
   overflow: visible;
   filter: drop-shadow(0 0.04em 0.03em rgba(40, 20, 6, 0.32));
   transition: filter 0.18s ease;
+}
+/* In the air the token casts no shadow of its own — the felt shadow under the
+   die (.die--3d::after) does that job. Left on, the drop shadow turned with
+   the token, its offset circling the die, and was re-filtered every frame. */
+.die--shaped.die--rolling .die__shell {
+  filter: none;
 }
 .die__shell-ring > * {
   fill: var(--score-2);

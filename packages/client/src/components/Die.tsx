@@ -57,6 +57,17 @@ const REST: Record<DieValue, { x: number; y: number }> = {
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 /**
+ * A shaped die's pips during its spin: a few changes while it turns fast, each
+ * further apart as it slows, then the real face for the last stretch, so it
+ * comes to rest already showing its answer. Changing every 80ms for the whole
+ * throw — the flat die's flicker — swapped the face under a token that was
+ * still turning, and the true face only appeared after it had stopped: a
+ * visible pop once the spin was over.
+ */
+const TOKEN_FACE_CHANGES_MS = [60, 140, 240];
+const TOKEN_LANDED_FACE_MS = 330;
+
+/**
  * Next absolute angle for an axis: at least `turns` whole revolutions on from
  * where it is, landing congruent to the resting angle.
  *
@@ -199,17 +210,6 @@ export function Die({
   // flat die, rather than turning a cube to bring a new face up.
   const cube = dimensional && !shaped;
 
-  useEffect(() => {
-    if (!rolling || cube) {
-      setShown(value);
-      return;
-    }
-    // The flat die cycles faces to read as tumbling. The cube doesn't need it —
-    // it physically turns — so this is skipped there.
-    const id = window.setInterval(() => setShown(1 + Math.floor(Math.random() * 6)), 80);
-    return () => clearInterval(id);
-  }, [rolling, value, cube]);
-
   // The face this throw ends on. Known BEFORE the tumble starts (the controllers
   // resolve the roll up front and hold its result back from the rest of the UI),
   // which is what lets the cube turn to its answer in one continuous motion.
@@ -226,7 +226,10 @@ export function Die({
 
   if (dimensional || shaped) {
     if (rolling && !wasRolling.current) {
-      spin.current = (2 + rand(2)) * 360 * (Math.random() < 0.5 ? -1 : 1);
+      // One or two turns. Two or three, front-loaded into a fraction of a
+      // second, peaked near 4,500°/s — over 140° a frame, which a screen shows
+      // as a token jumping between poses rather than turning.
+      spin.current = (1 + rand(2)) * 360 * (Math.random() < 0.5 ? -1 : 1);
       // One arc: several whole turns on both axes, ending exactly on the face
       // that was rolled. When the throw finishes, the die is already there and
       // nothing further moves.
@@ -253,6 +256,26 @@ export function Die({
     }
   }
   wasRolling.current = rolling;
+
+  const stagger = scatter.current.delay;
+  useEffect(() => {
+    if (!rolling || cube) {
+      setShown(value);
+      return;
+    }
+    if (shaped) {
+      // Never the same face twice running: (s + 0..4) mod 6 + 1 skips s.
+      const timers = TOKEN_FACE_CHANGES_MS.map((ms) =>
+        window.setTimeout(() => setShown((s) => ((s + rand(5)) % 6) + 1), stagger + ms),
+      );
+      timers.push(window.setTimeout(() => setShown(target), stagger + TOKEN_LANDED_FACE_MS));
+      return () => timers.forEach((id) => clearTimeout(id));
+    }
+    // The flat die cycles faces to read as tumbling. The cube doesn't need it —
+    // it physically turns — so this is skipped there.
+    const id = window.setInterval(() => setShown(1 + Math.floor(Math.random() * 6)), 80);
+    return () => clearInterval(id);
+  }, [rolling, value, cube, shaped, target, stagger]);
 
   const v = rolling && !cube ? shown : value;
   const classes = [
@@ -321,7 +344,6 @@ export function Die({
           style={
             {
               "--token-spin": `${spin.current}deg`,
-              animationDelay: `${scatter.current.delay}ms`,
             } as CSSProperties
           }
         >
