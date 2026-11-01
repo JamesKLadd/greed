@@ -53,6 +53,7 @@ import { DailyShareCard } from "../components/DailyShareCard.js";
 import { recordGrowthEvent } from "../game/growth.js";
 import { useChallengeStake } from "../game/challengeStake.js";
 import { HolidayGift } from "../components/HolidayGift.js";
+import { ChallengeStakeBanner } from "../components/ChallengeStakeBanner.js";
 import {
   claimChallengeTurnAchievement,
   recordChallengeBestTurn,
@@ -288,6 +289,9 @@ export function DailyScreen({
         <h1 className="setup__logo">{t("daily.title")}</h1>
         {!inRun && <p className="setup__tagline">{t("daily.tagline")}</p>}
       </header>
+      {!inRun && stake.prize && (
+        <ChallengeStakeBanner trophy={stake.prize} kind="daily" onOpen={stake.open} />
+      )}
       <div className="daily__layout">
         <div className="setup__panel daily" aria-busy={loading || starting}>
           {authStatus === "loading" ? (

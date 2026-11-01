@@ -77,6 +77,7 @@ import type { MsgKey } from "../i18n/i18n.js";
 import { recordGrowthEvent } from "../game/growth.js";
 import { useChallengeStake } from "../game/challengeStake.js";
 import { HolidayGift } from "../components/HolidayGift.js";
+import { ChallengeStakeBanner } from "../components/ChallengeStakeBanner.js";
 
 interface WeeklyScreenProps {
   onBack: () => void;
@@ -425,6 +426,9 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends, onRollData }: Weekly
         <h1 className="setup__logo">{t("weekly.title")}</h1>
         {!runView && <p className="setup__tagline">{tagline}</p>}
       </div>
+      {!runView && stake.prize && (
+        <ChallengeStakeBanner trophy={stake.prize} kind="weekly" onOpen={stake.open} />
+      )}
 
       <div className="daily__layout">
         <div className="setup__panel daily">

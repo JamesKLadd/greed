@@ -1346,6 +1346,8 @@ export const en = {
   "holiday.stake.weekly":
     "Be on top of the board when this week closes on Monday and you win the {event} trophy and the {dice} dice. They can't be earned any other way.",
   "holiday.stake.ok": "Let's play",
+  "holiday.stake.bannerDaily": "{event} trophy · finish today on top to win them",
+  "holiday.stake.bannerWeekly": "{event} trophy · be on top when the week closes Monday",
   "holiday.event.newyear": "New Year's Day",
   "holiday.event.valentines": "Valentine's Day",
   "holiday.event.stpatricks": "St. Patrick's Day",
@@ -2822,6 +2824,9 @@ export const es: Record<MsgKey, string> = {
   "holiday.stake.weekly":
     "Si estás en lo más alto de la clasificación cuando la semana cierre el lunes, ganarás el trofeo de {event} y los dados {dice}. No se pueden conseguir de ninguna otra forma.",
   "holiday.stake.ok": "¡A jugar!",
+  "holiday.stake.bannerDaily": "Trofeo de {event} · termina hoy en lo más alto para ganarlos",
+  "holiday.stake.bannerWeekly":
+    "Trofeo de {event} · gana quien vaya primero cuando la semana cierre el lunes",
   "holiday.event.newyear": "Año Nuevo",
   "holiday.event.valentines": "San Valentín",
   "holiday.event.stpatricks": "San Patricio",
@@ -4302,6 +4307,9 @@ export const fr: Record<MsgKey, string> = {
   "holiday.stake.weekly":
     "Soyez en tête du classement à la clôture de la semaine, lundi, et vous remportez le trophée « {event} » et les dés {dice}. Impossible de les obtenir autrement.",
   "holiday.stake.ok": "C’est parti",
+  "holiday.stake.bannerDaily": "Trophée « {event} » · terminez la journée en tête pour les gagner",
+  "holiday.stake.bannerWeekly":
+    "Trophée « {event} » · soyez en tête à la clôture de la semaine, lundi",
   "holiday.event.newyear": "Jour de l’An",
   "holiday.event.valentines": "Saint-Valentin",
   "holiday.event.stpatricks": "Saint-Patrick",

@@ -143,7 +143,7 @@ build on every push. Node 20.
   `holidayOfChallenge(kind, period)` is the one answer to "what does this
   period play for" — the server's grant, Past winners, and the lobby popup
   (`useChallengeStake` + `HolidayGift stake`, once per account, period and
-  device) all ask it. A week can be given a holiday's trophy by hand in
+  device, and `ChallengeStakeBanner` all period) all ask it. A week can be given a holiday's trophy by hand in
   `EXTRA_TROPHY_WEEKS`; add it before the week starts, never to a closed one.
 - Hats ride in the visual identity (`HATS` in protocol/visual.ts, "none" first
   so old identities clean bare-headed). Drawn once each in `Hats.tsx` and set

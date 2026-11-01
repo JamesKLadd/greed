@@ -524,3 +524,75 @@
     border-left: 3px solid Highlight;
   }
 }
+
+/* ---------- The prize on the line (ChallengeStakeBanner) ----------
+   A struck-gold strip above the lobby panel, the panel's width. Gold rather
+   than the holiday's colours: the prize is the gold dice, whatever the
+   holiday, and the die inside it already wears the holiday's shape. */
+.stake-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(680px, 100%);
+  margin: -6px 0 16px;
+  padding: 10px 14px 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      120% 160% at 0% 0%,
+      color-mix(in srgb, var(--gold) 26%, transparent),
+      transparent 60%
+    ),
+    color-mix(in srgb, var(--gold-deep) 12%, var(--ink));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+.stake-banner:hover {
+  border-color: var(--gold);
+}
+.stake-banner:active {
+  transform: translateY(1px);
+}
+.stake-banner:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.stake-banner__die {
+  flex: none;
+  display: grid;
+  place-items: center;
+  /* The die's own box is 1em; this leaves room for its held glow. */
+  width: 48px;
+  height: 48px;
+}
+.stake-banner__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stake-banner__title {
+  font-family: var(--ff-display);
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--gold);
+}
+.stake-banner__sub {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--text-dim);
+}
+.stake-banner__more {
+  flex: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--gold);
+}
