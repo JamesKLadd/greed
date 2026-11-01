@@ -24,8 +24,20 @@ const ROLL_MS = 600;
  * trip to the locker most players would never make.
  *
  * A trophy shows the gold dice instead, and no set: the set was the badge's.
+ *
+ * With `stake`, the same trophy is announced BEFORE it is won: opening a Daily
+ * or Weekly that plays for one says what is on the line (useChallengeStake).
+ * Nothing to equip yet, so one button.
  */
-export function HolidayGift({ gift: id, onClose }: { gift: string; onClose: () => void }) {
+export function HolidayGift({
+  gift: id,
+  stake,
+  onClose,
+}: {
+  gift: string;
+  stake?: "daily" | "weekly";
+  onClose: () => void;
+}) {
   const t = useT();
   // Set down, thrown, landed: a die only spins when it goes from resting to
   // rolling, so it has to be on the felt for a moment before it is thrown.
@@ -54,25 +66,35 @@ export function HolidayGift({ gift: id, onClose }: { gift: string; onClose: () =
       onClose={onClose}
       icon={gift.icon}
       title={
-        trophy ? t("holiday.trophy.title", { event }) : t(`holiday.${set.holiday}.title` as MsgKey)
+        stake
+          ? t("holiday.stake.title", { dice })
+          : trophy
+            ? t("holiday.trophy.title", { event })
+            : t(`holiday.${set.holiday}.title` as MsgKey)
       }
       actions={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            {t("holiday.later")}
+        stake ? (
+          <Button variant="roll" size="lg" onClick={onClose}>
+            {t("holiday.stake.ok")}
           </Button>
-          <Button
-            variant="roll"
-            size="lg"
-            onClick={() => {
-              equipCosmetic("dice", skin.id);
-              void syncProfileUp();
-              onClose();
-            }}
-          >
-            {t("holiday.equip")}
-          </Button>
-        </>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              {t("holiday.later")}
+            </Button>
+            <Button
+              variant="roll"
+              size="lg"
+              onClick={() => {
+                equipCosmetic("dice", skin.id);
+                void syncProfileUp();
+                onClose();
+              }}
+            >
+              {t("holiday.equip")}
+            </Button>
+          </>
+        )
       }
     >
       <div className="holiday-gift__dice" style={diceSkinVars(skin)} aria-hidden="true">
@@ -88,9 +110,11 @@ export function HolidayGift({ gift: id, onClose }: { gift: string; onClose: () =
         ))}
       </div>
       <p className="holiday-gift__lead">
-        {trophy
-          ? t("holiday.trophy.body", { event, dice })
-          : t(`holiday.${set.holiday}.body` as MsgKey, { dice })}
+        {stake
+          ? t(stake === "daily" ? "holiday.stake.daily" : "holiday.stake.weekly", { event, dice })
+          : trophy
+            ? t("holiday.trophy.body", { event, dice })
+            : t(`holiday.${set.holiday}.body` as MsgKey, { dice })}
       </p>
       {!trophy && face && felt && isHatId(set.hat) && (
         <>

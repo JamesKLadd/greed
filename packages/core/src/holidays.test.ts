@@ -5,6 +5,7 @@ import {
   daysUntilHoliday,
   holidayOfDaily,
   holidayOfWeek,
+  holidayOfChallenge,
   holidayOnDate,
   seasonOnDate,
   thanksgivingDay,
@@ -71,6 +72,14 @@ describe("holiday calendar", () => {
     expect(holidayOfDaily("2026-10-30")).toBeNull();
     expect(holidayOfDaily("2026-12-31")).toBeNull();
     expect(holidayOfWeek("2026-10-19")).toBeNull();
+    // The week after Halloween 2026 plays for its trophy too; the one after
+    // that does not.
+    expect(holidayOfWeek("2026-10-26")).toBe("halloween");
+    expect(holidayOfWeek("2026-11-02")).toBe("halloween");
+    expect(holidayOfWeek("2026-11-09")).toBeNull();
+    expect(holidayOfChallenge("weekly", "2026-11-02")).toBe("halloween");
+    expect(holidayOfChallenge("daily", "2026-10-31")).toBe("halloween");
+    expect(holidayOfChallenge("daily", "2026-11-02")).toBeNull();
     // Christmas and New Year's Day land in neighbouring weeks, never one.
     expect(holidayOfWeek(weekKey(new Date("2026-12-25T18:00:00Z")))).toBe("christmas");
     expect(holidayOfWeek(weekKey(new Date("2027-01-01T18:00:00Z")))).toBe("newyear");

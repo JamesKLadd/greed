@@ -75,6 +75,8 @@ import { apiErrorText } from "../i18n/apiError.js";
 import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { recordGrowthEvent } from "../game/growth.js";
+import { useChallengeStake } from "../game/challengeStake.js";
+import { HolidayGift } from "../components/HolidayGift.js";
 
 interface WeeklyScreenProps {
   onBack: () => void;
@@ -116,6 +118,7 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends, onRollData }: Weekly
         ? t("weekly.tagline.capped.day", { n: weekRation.limit })
         : t("weekly.tagline.capped", { n: weekRation.limit });
   const [status, setStatus] = useState<WeeklyStatus | null>(null);
+  const stake = useChallengeStake("weekly", status?.week, user?.id);
   const [unlocked, setUnlocked] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -628,6 +631,7 @@ export function WeeklyScreen({ onBack, onSignIn, onFriends, onRollData }: Weekly
           onClose={() => setReading(null)}
         />
       )}
+      {stake.trophy && <HolidayGift gift={stake.trophy} stake="weekly" onClose={stake.dismiss} />}
     </div>
   );
 }

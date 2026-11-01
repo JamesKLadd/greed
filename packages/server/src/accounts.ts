@@ -14,13 +14,7 @@ import {
  * roll back a stat.
  */
 
-import {
-  BEST_TOTAL_CEILING,
-  hasProfanity,
-  holidayOfDaily,
-  holidayOfWeek,
-  holidayTrophy,
-} from "@greed/core";
+import { BEST_TOTAL_CEILING, hasProfanity, holidayOfChallenge, holidayTrophy } from "@greed/core";
 import { query } from "./db.js";
 import {
   forgetSessionCurrency,
@@ -649,7 +643,7 @@ async function holidayTrophies(userId: string): Promise<string[]> {
   );
   const won = new Set<string>();
   for (const { kind, period } of rows) {
-    const holiday = kind === "daily" ? holidayOfDaily(period) : holidayOfWeek(period);
+    const holiday = kind === "daily" || kind === "weekly" ? holidayOfChallenge(kind, period) : null;
     if (holiday) won.add(holidayTrophy(holiday));
   }
   return [...won];

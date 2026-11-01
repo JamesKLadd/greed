@@ -1340,6 +1340,12 @@ export const en = {
   "holiday.trophy.title": "{event} champion!",
   "holiday.trophy.body":
     "You won the {event} challenge, so the {dice} dice are yours. Only holiday champions have them.",
+  "holiday.stake.title": "{dice} dice on the line",
+  "holiday.stake.daily":
+    "Finish today on top of the board and you win the {event} trophy and the {dice} dice. They can't be earned any other way.",
+  "holiday.stake.weekly":
+    "Be on top of the board when this week closes on Monday and you win the {event} trophy and the {dice} dice. They can't be earned any other way.",
+  "holiday.stake.ok": "Let's play",
   "holiday.event.newyear": "New Year's Day",
   "holiday.event.valentines": "Valentine's Day",
   "holiday.event.stpatricks": "St. Patrick's Day",
@@ -2810,6 +2816,12 @@ export const es: Record<MsgKey, string> = {
   "holiday.trophy.title": "¡Campeón de {event}!",
   "holiday.trophy.body":
     "Ganaste el reto de {event}, así que los dados {dice} son tuyos. Solo los campeones de fiesta los tienen.",
+  "holiday.stake.title": "En juego: dados {dice}",
+  "holiday.stake.daily":
+    "Termina el día en lo más alto de la clasificación y ganarás el trofeo de {event} y los dados {dice}. No se pueden conseguir de ninguna otra forma.",
+  "holiday.stake.weekly":
+    "Si estás en lo más alto de la clasificación cuando la semana cierre el lunes, ganarás el trofeo de {event} y los dados {dice}. No se pueden conseguir de ninguna otra forma.",
+  "holiday.stake.ok": "¡A jugar!",
   "holiday.event.newyear": "Año Nuevo",
   "holiday.event.valentines": "San Valentín",
   "holiday.event.stpatricks": "San Patricio",
@@ -4284,6 +4296,12 @@ export const fr: Record<MsgKey, string> = {
   "holiday.trophy.title": "Champion : {event} !",
   "holiday.trophy.body":
     "Vous avez remporté le défi « {event} » : les dés {dice} sont à vous. Seuls les champions des fêtes les possèdent.",
+  "holiday.stake.title": "En jeu : les dés {dice}",
+  "holiday.stake.daily":
+    "Terminez la journée en tête du classement et vous remportez le trophée « {event} » et les dés {dice}. Impossible de les obtenir autrement.",
+  "holiday.stake.weekly":
+    "Soyez en tête du classement à la clôture de la semaine, lundi, et vous remportez le trophée « {event} » et les dés {dice}. Impossible de les obtenir autrement.",
+  "holiday.stake.ok": "C’est parti",
   "holiday.event.newyear": "Jour de l’An",
   "holiday.event.valentines": "Saint-Valentin",
   "holiday.event.stpatricks": "Saint-Patrick",

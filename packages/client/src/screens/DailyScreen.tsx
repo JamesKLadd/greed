@@ -51,6 +51,8 @@ import { formatDay } from "../i18n/dates.js";
 import type { MsgKey } from "../i18n/i18n.js";
 import { DailyShareCard } from "../components/DailyShareCard.js";
 import { recordGrowthEvent } from "../game/growth.js";
+import { useChallengeStake } from "../game/challengeStake.js";
+import { HolidayGift } from "../components/HolidayGift.js";
 import {
   claimChallengeTurnAchievement,
   recordChallengeBestTurn,
@@ -93,6 +95,7 @@ export function DailyScreen({
   const { dice3d } = loadSettings();
   const [day, setDay] = useState(() => dailyKey());
   const [status, setStatus] = useState<DailyStatus | null>(null);
+  const stake = useChallengeStake("daily", status?.day, user?.id);
   const [unlocked, setUnlocked] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -468,6 +471,7 @@ export function DailyScreen({
           onClose={() => setReading(null)}
         />
       )}
+      {stake.trophy && <HolidayGift gift={stake.trophy} stake="daily" onClose={stake.dismiss} />}
     </div>
   );
 }

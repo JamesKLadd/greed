@@ -132,11 +132,28 @@ export function holidayOfDaily(day: string): Holiday | null {
 }
 
 /**
+ * Weeks that play for a holiday's trophy besides the one holding its day,
+ * named by their Monday. Added by hand and ahead of time: a week's prize is
+ * part of its terms, and like the weekly ration (weeklyAllowance) it must not
+ * change while the week is being played. A closed week is never added — its
+ * result already stands.
+ *
+ * 2026-11-02: Halloween 2026 fell on the Saturday of a week that was nearly
+ * over before anyone was told it played for the golden pumpkin, so the week
+ * after plays for it too.
+ */
+const EXTRA_TROPHY_WEEKS: Readonly<Record<string, Holiday>> = {
+  "2026-11-02": "halloween",
+};
+
+/**
  * The holiday whose Weekly this is — the week (named by its Monday) that holds
- * the holiday's challenge day. Christmas and New Year's Day are a week apart,
- * so they always fall in different weeks.
+ * the holiday's challenge day, or one of EXTRA_TROPHY_WEEKS. Christmas and New
+ * Year's Day are a week apart, so they always fall in different weeks.
  */
 export function holidayOfWeek(week: string): Holiday | null {
+  const extra = EXTRA_TROPHY_WEEKS[week];
+  if (extra) return extra;
   const d = parseKey(week);
   if (!d) return null;
   const monday = Date.UTC(d.year, d.month - 1, d.day);
@@ -147,6 +164,15 @@ export function holidayOfWeek(week: string): Holiday | null {
     if (holiday) return holiday;
   }
   return null;
+}
+
+/**
+ * The holiday trophy a Daily (by its day) or Weekly (by its Monday) plays for:
+ * the one answer the server grants by, the record of past winners is dressed
+ * by, and the lobby announces.
+ */
+export function holidayOfChallenge(kind: "daily" | "weekly", period: string): Holiday | null {
+  return kind === "daily" ? holidayOfDaily(period) : holidayOfWeek(period);
 }
 
 /**

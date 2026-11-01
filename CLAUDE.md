@@ -140,6 +140,11 @@ build on every push. Node 20.
   day is a `trophyDay` or whose week holds one, on every profile read and write.
   Never let a client grant one. Each unlocks that holiday's gold dice; Past
   winners rows for those periods are themed (`HolidayHall.tsx`).
+  `holidayOfChallenge(kind, period)` is the one answer to "what does this
+  period play for" — the server's grant, Past winners, and the lobby popup
+  (`useChallengeStake` + `HolidayGift stake`, once per account, period and
+  device) all ask it. A week can be given a holiday's trophy by hand in
+  `EXTRA_TROPHY_WEEKS`; add it before the week starts, never to a closed one.
 - Hats ride in the visual identity (`HATS` in protocol/visual.ts, "none" first
   so old identities clean bare-headed). Drawn once each in `Hats.tsx` and set
   on every head by measured skull-top anchors; check placement at `?hat-review`.

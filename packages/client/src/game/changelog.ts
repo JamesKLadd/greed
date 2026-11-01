@@ -39,6 +39,7 @@ export const RELEASES: Release[] = [
       "Statistical data now has a line for super busts after hot dice, under super busts, so you can see how often a hot dice re-throw comes up empty against the odds",
       "Statistical data can now be narrowed to the last 24 hours, beside the 7, 30 and 100 day views",
       "Smoother rolling animation for the shaped holiday dice: one steady spin that lands showing its face, instead of a stutter partway through and a jump at the end",
+      "Holiday Dailies and Weeklies now tell you what's on the line with a popup the first time you open them, and the week after Halloween 2026 also plays for the Golden Pumpkin dice",
     ],
   },
   {

@@ -59,6 +59,12 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("holiday trophies (Pos
     ]);
   });
 
+  it("hands out Halloween's trophy for the extra week after Halloween 2026 too", async () => {
+    await win("weekly", "2026-11-02");
+    const account = await getAccount(winner);
+    expect(account!.profile.achievements).toContain("halloween-champion");
+  });
+
   it("keeps a trophy through a sync that does not mention it, and never grants one asked for", async () => {
     await win("daily", "2027-02-14");
     const saved = await saveProfile(winner, { achievements: ["first-win"] });
