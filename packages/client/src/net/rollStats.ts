@@ -20,9 +20,18 @@ export type StatsView = "games" | "local" | "online" | "daily" | "weekly";
 export type StatsScope = "me" | "all" | "user";
 export type ExportKind = "games" | "throws" | "decisions";
 
-/** The windows a summary can cover, in days back from now; 1 is the last 24 hours. */
-export const STATS_WINDOWS = [1, 7, 30, 100] as const;
-export type StatsWindow = (typeof STATS_WINDOWS)[number];
+/**
+ * The windows a summary can cover: "week", the current challenge week (since
+ * Monday midnight in Chicago), or a number of days back from now — 1 is the
+ * last 24 hours.
+ */
+export const STATS_WINDOWS = ["week", 1, 7, 30, 100] as const;
+export type StatsWindow = number | "week";
+
+/** The window a reply says it covers. A server from before "week" answers 100. */
+function windowOf(raw: unknown, fallback: StatsWindow): StatsWindow {
+  return raw === "week" ? "week" : Number(raw) || fallback;
+}
 
 export interface SeriesPoint {
   at: string;
@@ -37,7 +46,7 @@ export interface RollSummary {
   view: StatsView;
   /** The account's name as stored, for a "user" summary. */
   username?: string;
-  days: number;
+  days: StatsWindow;
   tally: RollTally;
   playerCount: number;
   series: SeriesPoint[];
@@ -50,7 +59,7 @@ export interface RollSummary {
 }
 
 export interface RollActivity {
-  days: number;
+  days: StatsWindow;
   daily: {
     day: string;
     players: number;
@@ -97,7 +106,7 @@ const num = (v: unknown): number | null =>
 function fill(raw: Partial<RollSummary> | null, view: StatsView): RollSummary {
   const summary: RollSummary = {
     view,
-    days: Number(raw?.days) || 100,
+    days: windowOf(raw?.days, 100),
     tally: fillTally(raw?.tally),
     playerCount: Number(raw?.playerCount) || 0,
     series: Array.isArray(raw?.series)
@@ -142,7 +151,7 @@ export function isNoSuchAccount(err: unknown): boolean {
 export async function fetchRollSummary(
   scope: StatsScope,
   view: StatsView,
-  days: number,
+  days: StatsWindow,
   account?: string,
 ): Promise<RollSummary> {
   try {
@@ -159,7 +168,7 @@ export async function fetchRollSummary(
 }
 
 /** Who plays, by day and by week (the game owner only). */
-export async function fetchRollActivity(days: number): Promise<RollActivity> {
+export async function fetchRollActivity(days: StatsWindow): Promise<RollActivity> {
   let raw: Partial<RollActivity> | null;
   try {
     raw = await api<Partial<RollActivity>>(`/api/stats/activity?days=${days}`, { auth: true });
@@ -168,7 +177,7 @@ export async function fetchRollActivity(days: number): Promise<RollActivity> {
   }
   const count = (v: unknown) => Number(v) || 0;
   return {
-    days: Number(raw?.days) || days,
+    days: windowOf(raw?.days, days),
     daily: (Array.isArray(raw?.daily) ? raw.daily : [])
       .filter((d) => d && typeof d.day === "string")
       .map((d) => {
@@ -190,7 +199,7 @@ export async function fetchRollCsv(
   scope: StatsScope,
   view: StatsView,
   kind: ExportKind,
-  days: number,
+  days: StatsWindow,
   account?: string,
 ): Promise<string> {
   let res: Response;

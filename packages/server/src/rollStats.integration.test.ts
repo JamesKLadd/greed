@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { DAILY_TURNS, dailyKey, runPosition, type RunMove } from "@greed/core";
+import { DAILY_TURNS, dailyKey, runPosition, weekStartMs, type RunMove } from "@greed/core";
 import { ROLL_DATA_DAYS, ThrowCollector, encodeThrows, rollGameFromState } from "@greed/bots";
 import { getPool, migrate, prune, query } from "./db.js";
 import { playDailyMove, startDailyRun } from "./daily.js";
@@ -297,6 +297,21 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
     expect((await rollSummary("local", player, 100)).tally.games).toBe(4);
     const csv = await rollExport("local", "games", player, 30);
     expect(csv.trim().split("\n")).toHaveLength(4);
+  });
+
+  it("narrows to this challenge week, since Monday midnight in Chicago", async () => {
+    const start = weekStartMs();
+    await recordLocalGame(player, { id: randomUUID(), game: localGame() });
+    await recordLocalGame(player, { id: randomUUID(), game: localGame(new Date(start + 1000)) });
+    // A minute before the week began: last week's.
+    await recordLocalGame(player, { id: randomUUID(), game: localGame(new Date(start - 60_000)) });
+    expect(statsWindow("week")).toBe("week");
+    const summary = await rollSummary("local", player, "week");
+    expect(summary.days).toBe("week");
+    expect(summary.tally.games).toBe(2);
+    expect((await rollSummary("local", player, 100)).tally.games).toBe(3);
+    const csv = await rollExport("local", "games", player, "week");
+    expect(csv.trim().split("\n")).toHaveLength(3);
   });
 
   it("compares a player with everyone, and ranks luck only among enough players", async () => {

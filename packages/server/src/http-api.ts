@@ -36,6 +36,7 @@ import {
   rollExport,
   rollSummary,
   statsWindow,
+  windowSlug,
   type ExportKind,
   type StatsView,
 } from "./rollStats.js";
@@ -412,7 +413,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const view = statsView(url);
       const kind = exportKind(url);
       const days = statsWindow(url.searchParams.get("days"));
-      csv(res, `greed-${view}-${kind}-${days}d.csv`, await rollExport(view, kind, id, days));
+      csv(
+        res,
+        `greed-${view}-${kind}-${windowSlug(days)}.csv`,
+        await rollExport(view, kind, id, days),
+      );
     } else if (method === "GET" && path === "/api/stats/all") {
       res.setHeader("Cache-Control", "no-store");
       await requireStatsAdmin(req);
@@ -448,7 +453,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const days = statsWindow(url.searchParams.get("days"));
       csv(
         res,
-        `greed-${account.username}-${view}-${kind}-${days}d.csv`,
+        `greed-${account.username}-${view}-${kind}-${windowSlug(days)}.csv`,
         await rollExport(view, kind, account.id, days),
       );
     } else if (method === "GET" && path === "/api/stats/activity") {
@@ -462,7 +467,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse): Prom
       const days = statsWindow(url.searchParams.get("days"));
       csv(
         res,
-        `greed-all-players-${view}-${kind}-${days}d.csv`,
+        `greed-all-players-${view}-${kind}-${windowSlug(days)}.csv`,
         await rollExport(view, kind, null, days),
       );
     } else if (method === "GET" && path === "/api/me/matches") {

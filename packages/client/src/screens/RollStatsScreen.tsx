@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { dailyKey } from "@greed/core";
+import { dailyKey, weekStartMs } from "@greed/core";
 import {
   CLOSE_CALL,
   STATS_MODES,
@@ -28,6 +28,7 @@ import {
   type RollSummary,
   type StatsScope,
   type StatsView,
+  type StatsWindow,
 } from "../net/rollStats.js";
 import {
   FaceChart,
@@ -76,8 +77,8 @@ interface Data {
   guest: boolean;
 }
 
-function deviceData(days: number): Data {
-  const since = Date.now() - days * DAY_MS;
+function deviceData(days: StatsWindow): Data {
+  const since = days === "week" ? weekStartMs() : Date.now() - days * DAY_MS;
   const games = deviceRollGames()
     .filter((g) => Date.parse(g.playedAt) >= since)
     .sort((a, b) => Date.parse(a.playedAt) - Date.parse(b.playedAt));
@@ -130,7 +131,7 @@ export function RollStatsScreen({
   const ids = useId();
   const { status: authStatus } = useAuth();
   const [view, setView] = useState<StatsView>(initialView);
-  const [days, setDays] = useState<number>(STATS_WINDOWS[STATS_WINDOWS.length - 1]);
+  const [days, setDays] = useState<StatsWindow>(STATS_WINDOWS[STATS_WINDOWS.length - 1]);
   const [data, setData] = useState<Data | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,8 +209,12 @@ export function RollStatsScreen({
   const dec = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale]);
 
   const runs = view === "daily" || view === "weekly";
-  const windowText = (d: number) =>
-    d === 1 ? t("rollData.windowLast24h") : t("rollData.window", { days: n(d) });
+  const windowText = (d: StatsWindow) =>
+    d === "week"
+      ? t("rollData.windowThisWeek")
+      : d === 1
+        ? t("rollData.windowLast24h")
+        : t("rollData.window", { days: n(d) });
   const title =
     viewing === "user" && account
       ? t("rollData.account.title", { name: account })
@@ -228,7 +233,10 @@ export function RollStatsScreen({
           : scope === "all"
             ? "greed-all-players"
             : "greed";
-      save(await data.csv(kind), `${prefix}-${view}-${kind}-${days}d.csv`);
+      save(
+        await data.csv(kind),
+        `${prefix}-${view}-${kind}-${days === "week" ? "this-week" : `${days}d`}.csv`,
+      );
     } catch {
       setExportFailed(true);
     } finally {
@@ -354,7 +362,11 @@ export function RollStatsScreen({
             aria-pressed={days === d}
             onClick={() => setDays(d)}
           >
-            {d === 1 ? t("rollData.window24h") : t("rollData.windowDays", { days: n(d) })}
+            {d === "week"
+              ? t("rollData.windowWeek")
+              : d === 1
+                ? t("rollData.window24h")
+                : t("rollData.windowDays", { days: n(d) })}
           </button>
         ))}
       </div>

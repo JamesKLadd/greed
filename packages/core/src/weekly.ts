@@ -142,6 +142,17 @@ export function weekKey(date: Date = new Date()): string {
 }
 
 /**
+ * The instant the current challenge week began: this week's Monday midnight
+ * in WEEKLY_ZONE, the instant `weekKey` started naming it. What "this week"
+ * means anywhere a screen counts from the week's start.
+ */
+export function weekStartMs(now: Date = new Date()): number {
+  const p = zonedParts(now.getTime());
+  const monday = shift(p.year, p.month, p.day, -dayOfWeekOffset(p.year, p.month, p.day));
+  return zonedMidnight(monday.year, monday.month, monday.day);
+}
+
+/**
  * Milliseconds until the next challenge week begins — the coming Monday
  * midnight in WEEKLY_ZONE, the instant `weekKey` starts naming a new week.
  *

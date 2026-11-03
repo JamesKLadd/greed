@@ -47,7 +47,7 @@ import {
   type RollTally,
   type StatsMode,
 } from "@greed/bots";
-import { RUN_PLAYER_ID, runPosition, type RunMove } from "@greed/core";
+import { RUN_PLAYER_ID, runPosition, weekStartMs, type RunMove } from "@greed/core";
 import { query } from "./db.js";
 import { AccountError } from "./accounts.js";
 
@@ -65,17 +65,29 @@ function modesOf(view: StatsView): StatsMode[] {
 const KEEP = `${ROLL_DATA_DAYS} days`;
 
 /**
- * The windows a view can be narrowed to, in days. Every query reads one as
- * `now() - interval`, so 1 is the last 24 hours, not "today" on the calendar.
+ * The windows a view can be narrowed to: a number of days, or "week", the
+ * current challenge week. Every query reads one as `now() - interval`, so 1 is
+ * the last 24 hours, not "today" on the calendar; "week" reaches back to this
+ * week's Monday midnight in Chicago, the instant the Weekly last reset.
  */
-export const STATS_WINDOWS = [1, 7, 30, ROLL_DATA_DAYS] as const;
+export const STATS_WINDOWS = ["week", 1, 7, 30, ROLL_DATA_DAYS] as const;
+export type StatsWindow = number | "week";
 
-export function statsWindow(raw: unknown): number {
+export function statsWindow(raw: unknown): StatsWindow {
+  if (raw === "week") return "week";
   const days = Number(raw);
   return STATS_WINDOWS.some((d) => d === days) ? days : ROLL_DATA_DAYS;
 }
 
-const interval = (days: number) => `${days} days`;
+/** A window as it reads in a download's file name: "7d", "this-week". */
+export const windowSlug = (w: StatsWindow) => (w === "week" ? "this-week" : `${w}d`);
+
+function interval(w: StatsWindow): string {
+  if (w !== "week") return `${w} days`;
+  // Whole seconds since the week began, rounded up so a run filed in its very
+  // first second is not lost to the rounding.
+  return `${Math.ceil((Date.now() - weekStartMs()) / 1000)} seconds`;
+}
 
 export async function migrateRollStats(): Promise<void> {
   await query(`
@@ -370,7 +382,7 @@ export interface SeriesPoint {
 
 export interface RollSummary {
   view: StatsView;
-  days: number;
+  days: StatsWindow;
   tally: RollTally;
   /** Distinct players in the data (the all-players view). */
   playerCount: number;
@@ -406,7 +418,7 @@ const MIN_RANKED = 5;
 
 async function sumTally(
   modes: StatsMode[],
-  days: number,
+  days: StatsWindow,
   userId: string | null,
 ): Promise<{ tally: RollTally; players: number }> {
   const who = userId ? "AND user_id = $3" : "";
@@ -426,7 +438,7 @@ const LUCK = `((tally ->> 'gain')::float8 - (tally ->> 'eGain')::float8)`;
 export async function rollSummary(
   view: StatsView,
   userId: string | null,
-  days: number = ROLL_DATA_DAYS,
+  days: StatsWindow = ROLL_DATA_DAYS,
 ): Promise<RollSummary> {
   const modes = modesOf(view);
   const span = interval(days);
@@ -507,7 +519,7 @@ export async function rollSummary(
 }
 
 export interface RollActivity {
-  days: number;
+  days: StatsWindow;
   /** Per Chicago day: signed-in players and games, overall and by mode. */
   daily: {
     day: string;
@@ -520,7 +532,7 @@ export interface RollActivity {
 }
 
 /** Who is playing, and who comes back — for the all-players view. */
-export async function rollActivity(days: number = ROLL_DATA_DAYS): Promise<RollActivity> {
+export async function rollActivity(days: StatsWindow = ROLL_DATA_DAYS): Promise<RollActivity> {
   const span = interval(days);
   const day = `(played_at AT TIME ZONE 'America/Chicago')::date`;
   const [overall, byMode, weeks] = await Promise.all([
@@ -577,7 +589,7 @@ export async function rollExport(
   view: StatsView,
   kind: ExportKind,
   userId: string | null,
-  days: number = ROLL_DATA_DAYS,
+  days: StatsWindow = ROLL_DATA_DAYS,
 ): Promise<string> {
   const modes = modesOf(view);
   const who = userId ? "AND user_id = $3" : "";

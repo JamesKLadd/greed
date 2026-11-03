@@ -4,6 +4,7 @@ import {
   WEEKLY_CAP_FROM,
   WEEKLY_TURNS,
   msUntilNextWeek,
+  weekStartMs,
   scoreWeeklyRun,
   weekKey,
   WEEKLY_ATTEMPTS_PER_DAY,
@@ -57,6 +58,27 @@ describe("weekKey", () => {
     // must be the day the daily is naming at that instant.
     const mondayMidnight = new Date("2026-08-31T05:00:00Z");
     expect(weekKey(mondayMidnight)).toBe(dailyKey(mondayMidnight));
+  });
+});
+
+describe("weekStartMs", () => {
+  it("is this week's Monday midnight Central, on either side of a clock change", () => {
+    // Tuesday afternoon after the fall-back weekend: the week began on CST.
+    expect(weekStartMs(new Date("2026-11-03T20:00:00Z"))).toBe(Date.parse("2026-11-02T06:00:00Z"));
+    // The Saturday before it, still inside a week that began on CDT.
+    expect(weekStartMs(new Date("2026-10-31T17:00:00Z"))).toBe(Date.parse("2026-10-26T05:00:00Z"));
+    // Sunday 23:30 Central is still the old week; Monday 00:00 is the new one.
+    expect(weekStartMs(new Date("2026-08-31T04:30:00Z"))).toBe(Date.parse("2026-08-24T05:00:00Z"));
+    expect(weekStartMs(new Date("2026-08-31T05:00:00Z"))).toBe(Date.parse("2026-08-31T05:00:00Z"));
+  });
+
+  it("and the week it starts is the one weekKey names, ending where msUntilNextWeek does", () => {
+    for (const iso of ["2026-03-08T12:00:00Z", "2026-11-01T12:00:00Z", "2027-01-01T00:00:00Z"]) {
+      const now = new Date(iso);
+      expect(weekKey(new Date(weekStartMs(now)))).toBe(weekKey(now));
+      const length = now.getTime() + msUntilNextWeek(now) - weekStartMs(now);
+      expect([167, 168, 169]).toContain(length / 3_600_000);
+    }
   });
 });
 
