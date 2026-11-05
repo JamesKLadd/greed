@@ -362,11 +362,23 @@ export function RollStatsScreen({
             aria-pressed={days === d}
             onClick={() => setDays(d)}
           >
-            {d === "week"
-              ? t("rollData.windowWeek")
-              : d === 1
-                ? t("rollData.window24h")
-                : t("rollData.windowDays", { days: n(d) })}
+            {/* Both labels, one shown: a phone gets the short ones so all five
+                fit on a row (roll-data.css). The hidden one is display:none,
+                so a screen reader hears only the one on screen. */}
+            <span className="roll-data__tab-long">
+              {d === "week"
+                ? t("rollData.windowWeek")
+                : d === 1
+                  ? t("rollData.window24h")
+                  : t("rollData.windowDays", { days: n(d) })}
+            </span>
+            <span className="roll-data__tab-short">
+              {d === "week"
+                ? t("rollData.windowWeekShort")
+                : d === 1
+                  ? t("rollData.window24hShort")
+                  : t("rollData.windowDaysShort", { days: n(d) })}
+            </span>
           </button>
         ))}
       </div>

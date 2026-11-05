@@ -43,6 +43,31 @@
   min-height: 32px;
   font-size: 0.75rem;
 }
+.roll-data__tab-short {
+  display: none;
+}
+/* Five windows on a phone: the full labels need about 430px of row, so below
+   that the tabs take short labels ("7d") and share the row, which fits one
+   line down to the narrowest phones in every language. Wider screens keep the words. */
+@media (max-width: 479px) {
+  .roll-data__tabs--sub {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .roll-data__tabs--sub .btn {
+    /* Sized by label and sharing what is left, not five equal columns: equal
+       columns clipped "Semaine" on a 320px phone while "7 j" had room. */
+    flex: 1 1 auto;
+    padding-inline: 4px;
+    white-space: nowrap;
+  }
+  .roll-data__tabs--sub .roll-data__tab-long {
+    display: none;
+  }
+  .roll-data__tabs--sub .roll-data__tab-short {
+    display: inline;
+  }
+}
 
 /* The owner's way into one player's numbers. */
 .roll-data__account {
