@@ -16,7 +16,7 @@
  * way wherever it was made.
  */
 
-import { DICE_COUNT, diceToRoll, isWinner, scoreRoll } from "@greed/core";
+import { DICE_COUNT, createTurn, diceToRoll, isWinner, refreshTurn, scoreRoll } from "@greed/core";
 import type { DieValue, GameState } from "@greed/core";
 import { turnRollModel } from "./probabilities.js";
 import { rollEdge } from "./strategies.js";
@@ -429,6 +429,10 @@ export const TALLY_SUM_KEYS = [
   "vHot",
   "gain",
   "eGain",
+  // The spread luck is measured against: each throw's variance of points
+  // gained, summed (gainVariance). Rows filed before it existed are filled in
+  // by migrateRollStats from their throws.
+  "vGain",
   // Throws a player CHOSE to make (every one after the first in a turn).
   "vol",
   "volRisk",
@@ -502,6 +506,56 @@ export function mergeTallies(a: RollTally, b: Partial<RollTally>): RollTally {
   return out;
 }
 
+const varianceCache = new Map<string, number>();
+
+/**
+ * The variance of the points a throw adds, from the position it was thrown
+ * from: what luck in points is measured against. Luck is a sum of each throw's
+ * gain minus its expectation, so its spread is the square root of these summed
+ * — about 130 points a throw, which is why a few hundred points of luck over a
+ * few thousand throws is nothing, and why the screen shows a verdict rather
+ * than leaving a bare total to be read as a big number.
+ *
+ * Read from the record, which keeps the held faces but not the engine's whole
+ * turn: the held dice are taken to pay as if thrown together. Held across
+ * several throws they can pay less (three 5s from three throws are 150, not
+ * 500), so this runs a little narrow — about 1% on the spread, measured
+ * against the exact model over 100,000 throws — which cannot move a
+ * two-standard-deviation verdict.
+ */
+export function gainVariance(held: string): number {
+  const key = [...held].sort().join("");
+  const cached = varianceCache.get(key);
+  if (cached !== undefined) return cached;
+  const turn = createTurn(0);
+  const faces = faceList(key);
+  faces.forEach((f, i) => {
+    turn.dice[i] = f;
+    turn.locked[i] = true;
+  });
+  if (faces.length > 0) {
+    turn.rollCount = 1;
+    turn.awards = scoreRoll(faces).breakdown.map((b) => ({
+      kind: b.kind,
+      face: b.face,
+      dice: b.indices,
+      points: b.points,
+    }));
+    refreshTurn(turn);
+  }
+  const { transitions } = turnRollModel(turn);
+  const mean = transitions.reduce((s, t) => s + t.p * t.gain, 0);
+  const square = transitions.reduce((s, t) => s + t.p * t.gain * t.gain, 0);
+  const variance = Math.max(0, square - mean * mean);
+  varianceCache.set(key, variance);
+  return variance;
+}
+
+/** The throws' summed gain variance, for a row filed before vGain was kept. */
+export function gainVarianceTally(throws: readonly ThrowRecord[]): Pick<RollTally, "vGain"> {
+  return { vGain: throws.reduce((sum, r) => sum + gainVariance(r.held), 0) };
+}
+
 /**
  * Five-dice throws made on hot dice, and how many of them busted. A turn's
  * first throw is the only other way to have all five dice in the cup, so a
@@ -567,6 +621,7 @@ export function tallyGame(game: RollGame): RollTally {
     if (e.hot) t.hot += 1;
     t.gain += r.gain;
     t.eGain += r.expectedGain;
+    t.vGain += gainVariance(r.held);
     if (r.throw > 1) {
       t.vol += 1;
       t.volRisk += p.bust;

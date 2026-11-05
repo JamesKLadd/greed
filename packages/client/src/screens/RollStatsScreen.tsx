@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { dailyKey, weekStartMs } from "@greed/core";
 import {
   CLOSE_CALL,
@@ -435,6 +435,8 @@ interface Tile {
   value: string;
   /** Everyone's figure, or what a count cost, in small type underneath. */
   sub?: string;
+  /** A judgement on the figure, under everything else. */
+  verdict?: ReactNode;
 }
 
 function Tiles({ tiles, className = "" }: { tiles: Tile[]; className?: string }) {
@@ -446,6 +448,7 @@ function Tiles({ tiles, className = "" }: { tiles: Tile[]; className?: string })
           <dt className="stat-tile__label">{t(tile.label)}</dt>
           <dd className="stat-tile__value">{tile.value}</dd>
           {tile.sub && <dd className="stat-tile__sub">{tile.sub}</dd>}
+          {tile.verdict && <dd className="stat-tile__sub">{tile.verdict}</dd>}
         </div>
       ))}
     </dl>
@@ -480,6 +483,28 @@ function Report({
     return (r > 0 ? "+" : r < 0 ? "−" : "") + n(Math.abs(r));
   };
   const luckPoints = tl.gain - tl.eGain;
+  /**
+   * Luck as a total grows with the number of throws whether or not anything is
+   * unusual — −11,700 over twenty thousand throws is half a point a throw — so
+   * it is shown per throw, and judged against its own spread: the square root
+   * of every throw's variance (vGain), the same two-standard-deviation line the
+   * odds table uses. A server from before vGain sends none, and then there is
+   * no verdict rather than a wrong one.
+   */
+  const luckVerdict: "good" | "bad" | "normal" | "few" | null =
+    tl.vGain > 0
+      ? tl.throws < MIN_CHANCES
+        ? "few"
+        : Math.abs(luckPoints) < LUCK_Z * Math.sqrt(tl.vGain)
+          ? "normal"
+          : luckPoints > 0
+            ? "good"
+            : "bad"
+      : null;
+  const signedDec = (v: number) => {
+    const r = Math.round(v * 10) / 10;
+    return (r > 0 ? "+" : r < 0 ? "−" : "") + dec.format(Math.abs(r));
+  };
   // Everyone's numbers, beside a player's own; never on the all-players view,
   // where "everyone" is the view itself.
   const ev = summary.everyone && summary.everyone.throws > 0 ? summary.everyone : null;
@@ -655,7 +680,12 @@ function Report({
               label: "rollData.points.expectedPerThrow",
               value: dec.format(ratio(tl.eGain, tl.throws)),
             },
-            { label: "rollData.points.luck", value: signed(luckPoints) },
+            {
+              label: "rollData.points.luck",
+              value: signedDec(ratio(luckPoints, tl.throws)),
+              sub: t("rollData.points.luckTotal", { points: signed(luckPoints) }),
+              verdict: luckVerdict && <LuckVerdict luck={luckVerdict} />,
+            },
           ]}
         />
         {summary.luckRank && (

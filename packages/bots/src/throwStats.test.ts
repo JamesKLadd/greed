@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runPosition, type RunMove } from "@greed/core";
-import { rollStats } from "./probabilities.js";
+import { rollModel, rollStats } from "./probabilities.js";
 import {
   ROLL_DATA_DAYS,
   ThrowCollector,
@@ -10,6 +10,7 @@ import {
   encodeThrows,
   gamesCsv,
   hotRethrowTally,
+  gainVariance,
   oddsComparisons,
   rollGameFromState,
   tallyGame,
@@ -307,6 +308,32 @@ describe("super busts after hot dice", () => {
     }
     // The games do reach a re-throw, or the bounds above test nothing.
     expect(rethrows).toBeGreaterThan(0);
+  });
+});
+
+describe("luck and its spread", () => {
+  it("measures a fresh five's spread exactly", () => {
+    const fresh = rollModel(5).transitions;
+    const mean = fresh.reduce((s, t) => s + t.p * t.gain, 0);
+    const exact = fresh.reduce((s, t) => s + t.p * t.gain * t.gain, 0) - mean * mean;
+    expect(gainVariance("")).toBeCloseTo(exact, 6);
+    // Fewer dice, less to gain, less spread.
+    expect(gainVariance("1155")).toBeLessThan(gainVariance("15"));
+  });
+
+  it("stays within its own spread with fair dice, whatever the play", () => {
+    let luck = 0;
+    let variance = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const t = tallyGame(playPolicy(seed, (s) => s.turn.turnScore < [300, 600, 1000][seed % 3]));
+      luck += t.gain - t.eGain;
+      variance += t.vGain;
+    }
+    // Fixed seeds, so this is one draw, not a flaky one: about six thousand
+    // throws whose luck must sit inside four standard deviations of zero. A
+    // bias of a point a throw would put it near six.
+    expect(variance).toBeGreaterThan(0);
+    expect(Math.abs(luck / Math.sqrt(variance))).toBeLessThan(4);
   });
 });
 

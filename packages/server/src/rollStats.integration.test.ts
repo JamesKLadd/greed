@@ -393,5 +393,7 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("roll statistics (Post
     expect(t.b5h).toBe(1);
     expect(t.eb5h).toBeGreaterThan(0);
     expect(t.b5).toBe(2);
+    // The spread luck is judged by is filled in from the same throws.
+    expect(t.vGain).toBeGreaterThan(0);
   });
 });

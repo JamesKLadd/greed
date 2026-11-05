@@ -36,6 +36,7 @@ import {
   emptyTally,
   encodeThrows,
   hotRethrowTally,
+  gainVarianceTally,
   gamesCsv,
   isStatsMode,
   rollGameFromState,
@@ -46,6 +47,7 @@ import {
   type RollGame,
   type RollTally,
   type StatsMode,
+  type ThrowRecord,
 } from "@greed/bots";
 import { RUN_PLAYER_ID, runPosition, weekStartMs, type RunMove } from "@greed/core";
 import { query } from "./db.js";
@@ -127,7 +129,7 @@ export async function migrateRollStats(): Promise<void> {
     `UPDATE roll_games SET tally = tally || '{"finished": 1}'::jsonb
       WHERE finished AND NOT tally ? 'finished'`,
   );
-  await backfillHotRethrows();
+  await backfillThrowTallies();
   // The fairness audit: every die thrown in a game, by ANYONE — bots included —
   // one row per game rather than per player, so a table of four is counted
   // once. Nobody's choices are in it, which is what makes it a test of the dice.
@@ -151,27 +153,39 @@ export async function migrateRollStats(): Promise<void> {
 }
 
 /**
- * Super busts after hot dice joined the tally after games were already filed.
- * Every row keeps its throws, so each is counted from those rather than left at
- * zero, which would read as "never busted" beside the new games that do count.
+ * Tally fields that joined after games were already filed, each with how to
+ * work it out from a row's stored throws: super busts after hot dice (n5h,
+ * with its siblings), and the spread luck is judged against (vGain). Left
+ * absent they would sum as zero — "never busted on hot dice", or a luck total
+ * with nothing to measure it by — beside the new games that do count them.
+ */
+const THROW_BACKFILLS: readonly {
+  field: string;
+  fill: (throws: ThrowRecord[]) => Record<string, number>;
+}[] = [
+  { field: "n5h", fill: hotRethrowTally },
+  { field: "vGain", fill: gainVarianceTally },
+];
+
+/**
  * Batched, and keyed on the field being absent, so a boot cut short resumes
  * where it stopped and later boots do nothing.
  */
-async function backfillHotRethrows(): Promise<void> {
-  for (;;) {
-    const { rows } = await query<{ key: string; throws: string }>(
-      `SELECT key, throws FROM roll_games WHERE NOT tally ? 'n5h' LIMIT 500`,
-    );
-    if (rows.length === 0) return;
-    await query(
-      `UPDATE roll_games g SET tally = g.tally || v.add
-         FROM unnest($1::text[], $2::jsonb[]) AS v(key, add)
-        WHERE g.key = v.key`,
-      [
-        rows.map((r) => r.key),
-        rows.map((r) => JSON.stringify(hotRethrowTally(decodeThrows(r.throws)))),
-      ],
-    );
+async function backfillThrowTallies(): Promise<void> {
+  for (const { field, fill } of THROW_BACKFILLS) {
+    for (;;) {
+      const { rows } = await query<{ key: string; throws: string }>(
+        `SELECT key, throws FROM roll_games WHERE NOT tally ? $1 LIMIT 500`,
+        [field],
+      );
+      if (rows.length === 0) break;
+      await query(
+        `UPDATE roll_games g SET tally = g.tally || v.add
+           FROM unnest($1::text[], $2::jsonb[]) AS v(key, add)
+          WHERE g.key = v.key`,
+        [rows.map((r) => r.key), rows.map((r) => JSON.stringify(fill(decodeThrows(r.throws))))],
+      );
+    }
   }
 }
 

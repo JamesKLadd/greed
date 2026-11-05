@@ -175,8 +175,10 @@ build on every push. Node 20.
   by `rollEdge` — expected points, not win chance — and per-game decision figures
   divide by `decGames`, since rows from before decisions were kept have none.
   A tally field added later is backfilled from each row's stored throws in
-  `migrateRollStats` (`backfillHotRethrows`, keyed on the field being absent),
-  never left at zero: zero reads as "never happened".
+  `migrateRollStats` (`THROW_BACKFILLS`, keyed on the field being absent),
+  never left at zero: zero reads as "never happened". Luck is shown PER THROW
+  with a verdict against its own spread (`vGain`, from `gainVariance`), never
+  as a bare total: a total grows with the throw count whatever the dice do.
   `dice_audit` holds every die thrown at a table, bots' included, once per game.
   The all-players view is granted by account id in `stats_admins` (snapshot of
   James and Jimmy), never by name. That view can also open one account's own
