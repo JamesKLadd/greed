@@ -40,6 +40,7 @@ export const RELEASES: Release[] = [
       "Statistical data can now be narrowed to the last 24 hours, beside the 7, 30 and 100 day views",
       "Statistical data has a This week view too: everything since the Weekly last reset on Monday",
       "Luck in statistical data is now shown per throw, with a verdict on whether it is more than ordinary chance, instead of a running total that grows with every throw",
+      "When one player wins both a holiday's Daily and its Weekly, whoever finishes second on that Weekly is now gifted the holiday's gold dice too",
       "Smoother rolling animation for the shaped holiday dice: one steady spin that lands showing its face, instead of a stutter partway through and a jump at the end",
       "Holiday Dailies and Weeklies now tell you what's on the line with a popup the first time you open them and a banner in the lobby, and the week after Halloween 2026 also plays for the Golden Pumpkin dice",
     ],

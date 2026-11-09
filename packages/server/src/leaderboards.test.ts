@@ -23,6 +23,14 @@ vi.mock("./db.js", () => ({
   },
 }));
 
+/**
+ * A weekly refresh goes on to settle holiday runners-up, which is its own
+ * module with its own tests (holidayTrophies.integration.test.ts). Stubbed so
+ * the statements checked here are the banking ones.
+ */
+const settled = vi.fn(async () => {});
+vi.mock("./holidayRunnersUp.js", () => ({ settleHolidayRunnersUp: () => settled() }));
+
 const {
   LEADERBOARD_CATEGORIES,
   isLeaderboardCategory,
@@ -35,6 +43,7 @@ const {
 beforeEach(() => {
   sql.length = 0;
   bound.length = 0;
+  settled.mockClear();
 });
 
 describe("categories", () => {
@@ -120,6 +129,13 @@ describe("career challenge wins", () => {
     await refreshCareerChallengeWins("weekly");
     expect(sql.join("\n")).toContain("weekly_wins");
     expect(sql.join("\n")).not.toContain("daily_wins");
+  });
+
+  it("settles holiday runners-up after banking a week, never a day", async () => {
+    await refreshCareerChallengeWins("daily");
+    expect(settled).not.toHaveBeenCalled();
+    await refreshCareerChallengeWins("weekly");
+    expect(settled).toHaveBeenCalledTimes(1);
   });
 
   it("counts a week as closed only once the NEXT week has started", async () => {

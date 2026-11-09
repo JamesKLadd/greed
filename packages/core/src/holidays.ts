@@ -91,6 +91,21 @@ export function seasonOnDate({ month, day }: CalendarDate): Holiday | null {
 }
 
 /**
+ * Each holiday's gold dice, by cosmetic id: what its trophy unlocks, and what
+ * a holiday runner-up is given (server/holidayRunnersUp.ts). Here so the
+ * client's catalogue (holidayDice.ts) and the server's gift name one id.
+ */
+export const HOLIDAY_GOLD_DICE: Readonly<Record<Holiday, string>> = {
+  newyear: "gold-disco-ball",
+  valentines: "gold-heart",
+  stpatricks: "gold-pot",
+  summer: "gold-beach-ball",
+  halloween: "gold-pumpkin",
+  thanksgiving: "gold-acorn",
+  christmas: "gold-ornament",
+};
+
+/**
  * The badge for winning a holiday's Daily or Weekly: "halloween-champion".
  * Named here so the server, which grants it, and the client, which shows it,
  * cannot spell it two ways.
@@ -162,6 +177,25 @@ export function holidayOfWeek(week: string): Holiday | null {
     const key = dateKey(at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate());
     const holiday = holidayOfDaily(key);
     if (holiday) return holiday;
+  }
+  return null;
+}
+
+/**
+ * The holiday Daily a holiday Weekly goes with: the trophy day inside the
+ * week, or — for one of EXTRA_TROPHY_WEEKS, which follow their holiday — the
+ * most recent one before it. Null for an ordinary week.
+ */
+export function holidayDailyOfWeek(week: string): string | null {
+  const holiday = holidayOfWeek(week);
+  const d = parseKey(week);
+  if (!holiday || !d) return null;
+  for (const year of [d.year + 1, d.year, d.year - 1]) {
+    const day = trophyDay(holiday, year);
+    // Inside the week, or before it; never after (YYYY-MM-DD compares as text).
+    const sunday = new Date(Date.UTC(d.year, d.month - 1, d.day + 6));
+    const end = dateKey(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate());
+    if (day <= end) return day;
   }
   return null;
 }

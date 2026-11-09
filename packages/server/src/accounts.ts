@@ -648,7 +648,7 @@ async function withChallengeWins(userId: string, profile: StoredProfile): Promis
  * trophy can neither be claimed by a client nor lost when the runs behind it
  * are pruned.
  */
-async function holidayTrophies(userId: string): Promise<string[]> {
+export async function holidayTrophies(userId: string): Promise<string[]> {
   const { rows } = await query<{ kind: string; period: string }>(
     `SELECT kind, period::text AS period FROM challenge_wins WHERE user_id = $1`,
     [userId],

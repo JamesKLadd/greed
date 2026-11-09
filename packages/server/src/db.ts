@@ -609,6 +609,17 @@ export async function migrate(): Promise<void> {
       PRIMARY KEY (user_id, cosmetic)
     );
   `);
+  // Holiday runners-up (holidayRunnersUp.ts): each holiday week, decided once
+  // — who was second when one player swept the holiday, or null — so a week
+  // is never re-decided from whatever runs outlive the 30-day cleanup.
+  await query(`
+    CREATE TABLE IF NOT EXISTS holiday_runner_ups (
+      week       date PRIMARY KEY,
+      holiday    text NOT NULL,
+      user_id    uuid REFERENCES users(id) ON DELETE SET NULL,
+      decided_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
   // Halloween 2026: James won the Daily and both Halloween Weeklies, so nobody
   // else won the golden pumpkin; Jimmy came second in both Weeklies, and the
   // owner gave him the dice — the dice alone, not the champion's badge, which

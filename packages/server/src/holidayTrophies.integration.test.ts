@@ -3,6 +3,7 @@ import pg from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPool, migrate, query } from "./db.js";
 import { getAccount, saveProfile } from "./accounts.js";
+import { refreshCareerChallengeWins } from "./leaderboards.js";
 
 // Explicit opt-in and a disposable schema: never touch a live application's data.
 describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("holiday trophies (Postgres)", () => {
@@ -107,6 +108,78 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("holiday trophies (Pos
     await query(`DELETE FROM cosmetic_gifts`);
     await migrate();
     expect((await getAccount(jimmy))!.profile.gifts).toEqual([]);
+  });
+
+  describe("holiday runners-up", () => {
+    const second = randomUUID();
+    const third = randomUUID();
+    beforeEach(async () => {
+      await query("TRUNCATE holiday_runner_ups, weekly_runs, daily_runs");
+      await query(
+        `INSERT INTO users (id, email, username, password_hash)
+         VALUES ($1, 'second@test.invalid', 'Second', 'unused'),
+                ($2, 'third@test.invalid', 'Third', 'unused')`,
+        [second, third],
+      );
+    });
+    const weekly = (user: string, week: string, score: number) =>
+      query(
+        `INSERT INTO weekly_runs
+           (user_id, week, score, turns, banks, busts, super_busts, hot_dice, best_turn, seed, moves)
+         VALUES ($1, $2, $3, 10, 8, 2, 0, 1, 500, 0, '')`,
+        [user, week, score],
+      );
+    const daily = (user: string, day: string, score: number) =>
+      query(
+        `INSERT INTO daily_runs
+           (user_id, day, score, turns, banks, busts, super_busts, hot_dice, best_turn, moves, complete)
+         VALUES ($1, $2, $3, 10, 8, 2, 0, 1, 500, '', true)`,
+        [user, day, score],
+      );
+    const giftsOf = async (user: string) => (await getAccount(user))!.profile.gifts;
+
+    it("gives second place on the week the gold dice when one player swept the holiday", async () => {
+      await daily(winner, "2026-10-31", 4000);
+      await daily(second, "2026-10-31", 3000);
+      await weekly(winner, "2026-10-26", 5000);
+      await weekly(second, "2026-10-26", 4500);
+      await weekly(third, "2026-10-26", 4000);
+      await refreshCareerChallengeWins("weekly");
+      expect(await giftsOf(second)).toEqual(["gold-pumpkin"]);
+      expect(await giftsOf(third)).toEqual([]);
+      // The sweeper has the trophy, not a gift; second has the dice, not the badge.
+      expect(await giftsOf(winner)).toEqual([]);
+      expect((await getAccount(second))!.profile.achievements).not.toContain("halloween-champion");
+      // The extra week after Halloween 2026 goes with the same Daily.
+      await weekly(winner, "2026-11-02", 5000);
+      await weekly(third, "2026-11-02", 4000);
+      await refreshCareerChallengeWins("weekly");
+      expect(await giftsOf(third)).toEqual(["gold-pumpkin"]);
+    });
+
+    it("gives nothing when the Daily and the Weekly went to different players", async () => {
+      await daily(third, "2026-10-31", 4000);
+      await weekly(winner, "2026-10-26", 5000);
+      await weekly(second, "2026-10-26", 4500);
+      await refreshCareerChallengeWins("weekly");
+      expect(await giftsOf(second)).toEqual([]);
+      const { rows } = await query(`SELECT user_id FROM holiday_runner_ups`);
+      expect(rows).toEqual([{ user_id: null }]);
+    });
+
+    it("skips a runner-up who has won the holiday before, and decides a week once", async () => {
+      await win("daily", "2025-10-31");
+      await query(`UPDATE challenge_wins SET user_id = $1 WHERE period = '2025-10-31'`, [second]);
+      await daily(winner, "2026-10-31", 4000);
+      await weekly(winner, "2026-10-26", 5000);
+      await weekly(second, "2026-10-26", 4500);
+      await weekly(third, "2026-10-26", 4000);
+      await refreshCareerChallengeWins("weekly");
+      expect(await giftsOf(second)).toEqual([]);
+      // Third does not inherit it, then or on any later look.
+      await refreshCareerChallengeWins("weekly");
+      expect(await giftsOf(third)).toEqual([]);
+    });
   });
 
   it("merges advent doors by the higher count per year", async () => {

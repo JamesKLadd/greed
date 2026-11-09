@@ -1,4 +1,5 @@
 import {
+  HOLIDAY_GOLD_DICE,
   challengeDate,
   daysUntilHoliday as daysUntil,
   holidayOnDate,
@@ -58,7 +59,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "confetti-felt",
     hat: "party-hat",
     trophy: "newyear-champion",
-    goldDice: "gold-disco-ball",
+    goldDice: HOLIDAY_GOLD_DICE.newyear,
   },
   {
     holiday: "valentines",
@@ -68,7 +69,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "sweetheart-felt",
     hat: "heart-boppers",
     trophy: "valentines-champion",
-    goldDice: "gold-heart",
+    goldDice: HOLIDAY_GOLD_DICE.valentines,
   },
   {
     holiday: "stpatricks",
@@ -78,7 +79,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "clover-felt",
     hat: "leprechaun-hat",
     trophy: "stpatricks-champion",
-    goldDice: "gold-pot",
+    goldDice: HOLIDAY_GOLD_DICE.stpatricks,
   },
   {
     holiday: "summer",
@@ -88,7 +89,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "beach-towel-felt",
     hat: "sun-hat",
     trophy: "summer-champion",
-    goldDice: "gold-beach-ball",
+    goldDice: HOLIDAY_GOLD_DICE.summer,
   },
   {
     holiday: "halloween",
@@ -98,7 +99,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "haunted-felt",
     hat: "witch-hat",
     trophy: "halloween-champion",
-    goldDice: "gold-pumpkin",
+    goldDice: HOLIDAY_GOLD_DICE.halloween,
   },
   {
     holiday: "thanksgiving",
@@ -108,7 +109,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "harvest-felt",
     hat: "pilgrim-hat",
     trophy: "thanksgiving-champion",
-    goldDice: "gold-acorn",
+    goldDice: HOLIDAY_GOLD_DICE.thanksgiving,
   },
   {
     holiday: "christmas",
@@ -118,7 +119,7 @@ export const HOLIDAY_SETS: readonly HolidaySet[] = [
     table: "tartan-felt",
     hat: "santa-hat",
     trophy: "christmas-champion",
-    goldDice: "gold-ornament",
+    goldDice: HOLIDAY_GOLD_DICE.christmas,
   },
 ];
 

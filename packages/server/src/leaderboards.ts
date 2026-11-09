@@ -9,6 +9,7 @@
 import { GOAL_DEFAULT, dailyKey, weekKey } from "@greed/core";
 import { cleanBetaIdentity, type BetaIdentity } from "@greed/protocol";
 import { query } from "./db.js";
+import { settleHolidayRunnersUp } from "./holidayRunnersUp.js";
 import {
   DAILY_ALLTIME_ORDER_R,
   DAILY_ORDER,
@@ -334,6 +335,15 @@ export async function refreshCareerChallengeWins(
            updated_at = now()`,
     [openBoard, kind],
   );
+  // A holiday week just banked may owe its runner-up the gold dice — decided
+  // now, while the week's runs still say who was second. Never fails the board.
+  if (kind === "weekly") {
+    try {
+      await settleHolidayRunnersUp();
+    } catch (err) {
+      console.error("[holiday runners-up] could not settle:", (err as Error).message);
+    }
+  }
 }
 
 /**

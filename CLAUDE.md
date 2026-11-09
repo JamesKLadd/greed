@@ -152,6 +152,13 @@ build on every push. Node 20.
   one-time `applyOnce` naming the account as it stands on that deploy, never
   retried (a later sign-up with the name is not the one meant). Announced as
   "gift:<id>" through the holiday popup queue.
+- Holiday runners-up (`server/holidayRunnersUp.ts`): when one player wins a
+  holiday's Daily AND a holiday Weekly, second place on that Weekly is GIFTED
+  the gold dice (`HOLIDAY_GOLD_DICE` in core) — never the trophy — unless they
+  already hold it. Decided once per holiday week as it is banked
+  (`refreshCareerChallengeWins("weekly")`), while its runs still say who was
+  second, and written to `holiday_runner_ups` whatever the answer, so pruning
+  can never re-decide it. `holidayDailyOfWeek` pairs a week with its Daily.
 - Hats ride in the visual identity (`HATS` in protocol/visual.ts, "none" first
   so old identities clean bare-headed). Drawn once each in `Hats.tsx` and set
   on every head by measured skull-top anchors; check placement at `?hat-review`.
