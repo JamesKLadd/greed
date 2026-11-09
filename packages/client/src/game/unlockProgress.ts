@@ -134,6 +134,8 @@ export function cosmeticUnlockProgress(
   profile: Profile,
   date: Date = new Date(),
 ): UnlockProgress | null {
+  // Given outright, so there is nothing left to count toward.
+  if (profile.gifts?.includes(id)) return null;
   const direct = DIRECT_COUNTERS[id];
   if (direct) return counterProgress(direct, profile);
   // An advent item's requirement already names its door; there is nothing to

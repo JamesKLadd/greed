@@ -50,6 +50,17 @@ describe("isUnlocked", () => {
     expect(isUnlocked(midnight, profile({ wins: 4 }))).toBe(false);
     expect(isUnlocked(midnight, profile({ wins: 5 }))).toBe(true);
   });
+
+  it("a gift from the account unlocks its piece, and only that piece", () => {
+    const gold = DICE_SKINS.find((c) => c.id === "gold-pumpkin")!;
+    const ornament = DICE_SKINS.find((c) => c.id === "gold-ornament")!;
+    expect(isUnlocked(gold, profile())).toBe(false);
+    const gifted = profile({ gifts: ["gold-pumpkin"] });
+    expect(isUnlocked(gold, gifted)).toBe(true);
+    expect(isUnlocked(ornament, gifted)).toBe(false);
+    // No badge comes with it.
+    expect(gifted.achievements).not.toContain("halloween-champion");
+  });
 });
 
 describe("cosmeticVars", () => {

@@ -4,7 +4,12 @@ import { Die } from "./Die.js";
 import { Button, Modal } from "../ui/index.js";
 import { DICE_SKINS, TABLE_THEMES, diceSkinVars } from "../game/cosmetics.js";
 import { AVATARS } from "../game/avatars.js";
-import { holidayForAchievement, holidayForTrophy } from "../game/holidayDice.js";
+import {
+  GIFT_PREFIX,
+  holidayForAchievement,
+  holidayForDice,
+  holidayForTrophy,
+} from "../game/holidayDice.js";
 import { HatSwatch, isHatId } from "../beta/characters/Hats.js";
 import { ACHIEVEMENTS, equipCosmetic } from "../game/profile.js";
 import { syncProfileUp } from "../net/auth.js";
@@ -24,6 +29,9 @@ const ROLL_MS = 600;
  * trip to the locker most players would never make.
  *
  * A trophy shows the gold dice instead, and no set: the set was the badge's.
+ *
+ * A gift ("gift:gold-pumpkin", profile.gifts) shows the dice it gives, and
+ * says it is a gift — no badge, and nothing that claims a win.
  *
  * With `stake`, the same trophy is announced BEFORE it is won: opening a Daily
  * or Weekly that plays for one says what is on the line (useChallengeStake).
@@ -50,11 +58,12 @@ export function HolidayGift({
       window.clearTimeout(landed);
     };
   }, []);
+  const gifted = id.startsWith(GIFT_PREFIX) ? id.slice(GIFT_PREFIX.length) : null;
   const gift = ACHIEVEMENTS.find((a) => a.id === id);
   const trophy = holidayForTrophy(id);
-  const set = trophy ?? holidayForAchievement(id);
-  const skin = DICE_SKINS.find((c) => c.id === (trophy ? set?.goldDice : set?.dice));
-  if (!gift || !set || !skin) return null;
+  const set = gifted ? holidayForDice(gifted) : (trophy ?? holidayForAchievement(id));
+  const skin = DICE_SKINS.find((c) => c.id === (gifted ?? (trophy ? set?.goldDice : set?.dice)));
+  if ((!gift && !gifted) || !set || !skin) return null;
   const dice = t(`cosmetic.${skin.id}.name` as MsgKey);
   const event = t(`holiday.event.${set.holiday}` as MsgKey);
   const felt = TABLE_THEMES.find((c) => c.id === set.table);
@@ -64,13 +73,15 @@ export function HolidayGift({
     <Modal
       className="holiday-gift"
       onClose={onClose}
-      icon={gift.icon}
+      icon={gifted ? "🎁" : gift!.icon}
       title={
-        stake
-          ? t("holiday.stake.title", { dice })
-          : trophy
-            ? t("holiday.trophy.title", { event })
-            : t(`holiday.${set.holiday}.title` as MsgKey)
+        gifted
+          ? t("holiday.gifted.title", { dice })
+          : stake
+            ? t("holiday.stake.title", { dice })
+            : trophy
+              ? t("holiday.trophy.title", { event })
+              : t(`holiday.${set.holiday}.title` as MsgKey)
       }
       actions={
         stake ? (
@@ -110,13 +121,15 @@ export function HolidayGift({
         ))}
       </div>
       <p className="holiday-gift__lead">
-        {stake
-          ? t(stake === "daily" ? "holiday.stake.daily" : "holiday.stake.weekly", { event, dice })
-          : trophy
-            ? t("holiday.trophy.body", { event, dice })
-            : t(`holiday.${set.holiday}.body` as MsgKey, { dice })}
+        {gifted
+          ? t("holiday.gifted.body", { event, dice })
+          : stake
+            ? t(stake === "daily" ? "holiday.stake.daily" : "holiday.stake.weekly", { event, dice })
+            : trophy
+              ? t("holiday.trophy.body", { event, dice })
+              : t(`holiday.${set.holiday}.body` as MsgKey, { dice })}
       </p>
-      {!trophy && face && felt && isHatId(set.hat) && (
+      {!trophy && !gifted && face && felt && isHatId(set.hat) && (
         <>
           <p className="holiday-gift__set-title">{t("holiday.set")}</p>
           <ul className="holiday-gift__set">
@@ -147,9 +160,11 @@ export function HolidayGift({
         </>
       )}
       <p className="holiday-gift__note">
-        {trophy
-          ? `🏆 ${t(`ach.${gift.id}.title` as MsgKey)}`
-          : `🏅 ${t(`ach.${gift.id}.title` as MsgKey)} · ${t("holiday.rare")}`}
+        {gifted
+          ? `🎁 ${t("holiday.gifted.note")}`
+          : trophy
+            ? `🏆 ${t(`ach.${gift!.id}.title` as MsgKey)}`
+            : `🏅 ${t(`ach.${gift!.id}.title` as MsgKey)} · ${t("holiday.rare")}`}
       </p>
     </Modal>
   );

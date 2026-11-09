@@ -55,6 +55,12 @@ export interface Profile {
    * See advent.ts.
    */
   advent?: AdventProgress;
+  /**
+   * Cosmetics given to this account by hand, unlocked with no badge behind
+   * them. The server's list, never this device's: adopted from the account on
+   * every sync (see mergeProfiles) and never added to here.
+   */
+  gifts?: string[];
 }
 
 /** One completed solo game, from the human's perspective. */
@@ -587,6 +593,9 @@ function sane(p: Profile): Profile {
   if (p.visualBeta && !p.achievements.includes(p.visualBeta.badge)) p.visualBeta.badge = "";
   if (p.bestTotal > BEST_TOTAL_CEILING) p.bestTotal = 0;
   p.advent = cleanAdventProgress(p.advent);
+  p.gifts = Array.isArray(p.gifts)
+    ? p.gifts.filter((g): g is string => typeof g === "string")
+    : undefined;
   return p;
 }
 
@@ -696,6 +705,8 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
     avatar: b.avatar || a.avatar,
     visualBeta: cleanBetaIdentity(b.visualBeta) ?? cleanBetaIdentity(a.visualBeta),
     advent: mergeAdventProgress(a.advent, b.advent),
+    // The server's, like the win counts: `b` is the account on sign-in.
+    gifts: b.gifts ?? a.gifts,
   });
 }
 

@@ -26,7 +26,12 @@ import {
   resetProfile,
   type Profile,
 } from "./profile.js";
-import { announceHolidayGift, claimHolidayDice, holidayForTrophy } from "./holidayDice.js";
+import {
+  GIFT_PREFIX,
+  announceHolidayGift,
+  claimHolidayDice,
+  holidayForTrophy,
+} from "./holidayDice.js";
 import { syncSteamAchievements } from "./steam.js";
 import { clearDeviceRollGames, flushRollUploads } from "./rollRecords.js";
 
@@ -57,6 +62,7 @@ function claimAtSignIn(): boolean {
  * of both, then adopt the reconciled profile locally and on the server. */
 async function reconcileProfile(serverProfile: Profile): Promise<void> {
   const before = new Set(loadProfile().achievements);
+  const giftsBefore = new Set(loadProfile().gifts ?? []);
   const merged = mergeProfiles(loadProfile(), serverProfile);
   replaceProfile(merged);
   try {
@@ -66,11 +72,24 @@ async function reconcileProfile(serverProfile: Profile): Promise<void> {
       ...res.profile,
       visualBeta: res.profile.visualBeta ?? merged.visualBeta,
       advent: res.profile.advent ?? merged.advent,
+      gifts: res.profile.gifts ?? merged.gifts,
     });
   } catch {
     /* offline is fine — local keeps the merged copy until the next sync */
   }
   announceTrophies(before);
+  announceGifts(giftsBefore);
+}
+
+/**
+ * A gifted cosmetic arrives with the account, like a trophy: anything this
+ * device did not already hold is news. Queued as "gift:<id>" beside the
+ * holiday popups, so two pieces of news never stack on screen.
+ */
+function announceGifts(before: Set<string>): void {
+  for (const id of loadProfile().gifts ?? []) {
+    if (!before.has(id)) announceHolidayGift(`${GIFT_PREFIX}${id}`);
+  }
 }
 
 /**

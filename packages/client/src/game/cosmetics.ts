@@ -1041,7 +1041,9 @@ export const TABLE_THEMES: Cosmetic[] = [
 ];
 
 export function isUnlocked(item: Cosmetic, profile: Profile): boolean {
-  return !item.unlock || item.unlock(profile);
+  // A gift from the account (profile.gifts) unlocks the piece on its own,
+  // without the badge its own rule asks for.
+  return !item.unlock || item.unlock(profile) || (profile.gifts?.includes(item.id) ?? false);
 }
 
 /**

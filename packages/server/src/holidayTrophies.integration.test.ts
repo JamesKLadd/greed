@@ -78,6 +78,37 @@ describe.skipIf(!process.env.CHALLENGE_TEST_DATABASE_URL)("holiday trophies (Pos
     expect(rows[0].profile.achievements).toContain("valentines-champion");
   });
 
+  it("lays a gifted cosmetic over the profile, and never takes one from a client", async () => {
+    await query(`INSERT INTO cosmetic_gifts (user_id, cosmetic) VALUES ($1, 'gold-pumpkin')`, [
+      winner,
+    ]);
+    const account = await getAccount(winner);
+    expect(account!.profile.gifts).toEqual(["gold-pumpkin"]);
+    // The dice, not the badge: a gift claims no win.
+    expect(account!.profile.achievements).not.toContain("halloween-champion");
+    const saved = await saveProfile(winner, { gifts: ["gold-ornament"] });
+    expect(saved.gifts).toEqual(["gold-pumpkin"]);
+  });
+
+  it("gives the golden pumpkin to the account named Jimmy, once", async () => {
+    const jimmy = randomUUID();
+    await query(
+      `INSERT INTO users (id, email, username, password_hash)
+       VALUES ($1, 'jimmy@test.invalid', 'Jimmy', 'unused')`,
+      [jimmy],
+    );
+    // The boot that added it found no Jimmy in this empty schema and was
+    // written down regardless; run it again as a deploy would with him here.
+    await query(`DELETE FROM schema_fixes WHERE id = 'gold-pumpkin-jimmy-2026-11'`);
+    await migrate();
+    expect((await getAccount(jimmy))!.profile.gifts).toEqual(["gold-pumpkin"]);
+    expect((await getAccount(winner))!.profile.gifts).toEqual([]);
+    // Not again: a later boot leaves the ledger as it is.
+    await query(`DELETE FROM cosmetic_gifts`);
+    await migrate();
+    expect((await getAccount(jimmy))!.profile.gifts).toEqual([]);
+  });
+
   it("merges advent doors by the higher count per year", async () => {
     await saveProfile(winner, { advent: { "2026": 7 } });
     await saveProfile(winner, { advent: { "2026": 3, "2025": 24 } });

@@ -167,6 +167,12 @@ export function holidayUnlocker(id: string): string | undefined {
  */
 export const HOLIDAY_GIFT_EVENT = "greed:holiday-gift";
 
+/**
+ * How a gifted cosmetic rides in that queue: "gift:gold-pumpkin". A gift is a
+ * cosmetic id, not a badge, so it is marked to keep the two apart.
+ */
+export const GIFT_PREFIX = "gift:";
+
 export function announceHolidayGift(id: string): void {
   if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
     window.dispatchEvent(new CustomEvent(HOLIDAY_GIFT_EVENT, { detail: id }));

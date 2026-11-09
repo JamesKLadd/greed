@@ -1352,6 +1352,10 @@ export const en = {
   "holiday.stake.weekly":
     "Be on top of the board when this week closes on Monday and you win the {event} trophy and the {dice} dice. They can't be earned any other way.",
   "holiday.stake.ok": "Let's play",
+  "holiday.gifted.title": "A gift: {dice} dice",
+  "holiday.gifted.body":
+    "You came so close in the {event} challenges that the {dice} dice are yours anyway, as a gift.",
+  "holiday.gifted.note": "Gifted",
   "holiday.stake.bannerDaily": "{event} trophy · finish today on top to win them",
   "holiday.stake.bannerWeekly": "{event} trophy · be on top when the week closes Monday",
   "holiday.event.newyear": "New Year's Day",
@@ -2836,6 +2840,10 @@ export const es: Record<MsgKey, string> = {
   "holiday.stake.weekly":
     "Si estás en lo más alto de la clasificación cuando la semana cierre el lunes, ganarás el trofeo de {event} y los dados {dice}. No se pueden conseguir de ninguna otra forma.",
   "holiday.stake.ok": "¡A jugar!",
+  "holiday.gifted.title": "Un regalo: dados {dice}",
+  "holiday.gifted.body":
+    "Estuviste tan cerca en los retos de {event} que los dados {dice} son tuyos de todos modos, como regalo.",
+  "holiday.gifted.note": "Regalo",
   "holiday.stake.bannerDaily": "Trofeo de {event} · termina hoy en lo más alto para ganarlos",
   "holiday.stake.bannerWeekly":
     "Trofeo de {event} · gana quien vaya primero cuando la semana cierre el lunes",
@@ -4325,6 +4333,10 @@ export const fr: Record<MsgKey, string> = {
   "holiday.stake.weekly":
     "Soyez en tête du classement à la clôture de la semaine, lundi, et vous remportez le trophée « {event} » et les dés {dice}. Impossible de les obtenir autrement.",
   "holiday.stake.ok": "C’est parti",
+  "holiday.gifted.title": "Un cadeau : les dés {dice}",
+  "holiday.gifted.body":
+    "Vous avez frôlé la victoire dans les défis « {event} » : les dés {dice} sont à vous quand même, en cadeau.",
+  "holiday.gifted.note": "Offert",
   "holiday.stake.bannerDaily": "Trophée « {event} » · terminez la journée en tête pour les gagner",
   "holiday.stake.bannerWeekly":
     "Trophée « {event} » · soyez en tête à la clôture de la semaine, lundi",

@@ -145,6 +145,13 @@ build on every push. Node 20.
   (`useChallengeStake` + `HolidayGift stake`, once per account, period and
   device, and `ChallengeStakeBanner` all period) all ask it. A week can be given a holiday's trophy by hand in
   `EXTRA_TROPHY_WEEKS`; add it before the week starts, never to a closed one.
+- Gifted cosmetics (`cosmetic_gifts`, `profile.gifts`): a piece given to one
+  account by hand, with NO badge — a gift must not claim a win. Server-owned,
+  laid over the profile by `withChallengeWins` like the trophies, so a client
+  can neither add one nor lose one; `isUnlocked` honours it. Grant by a
+  one-time `applyOnce` naming the account as it stands on that deploy, never
+  retried (a later sign-up with the name is not the one meant). Announced as
+  "gift:<id>" through the holiday popup queue.
 - Hats ride in the visual identity (`HATS` in protocol/visual.ts, "none" first
   so old identities clean bare-headed). Drawn once each in `Hats.tsx` and set
   on every head by measured skull-top anchors; check placement at `?hat-review`.

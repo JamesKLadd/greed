@@ -596,6 +596,33 @@ export async function migrate(): Promise<void> {
     );
   }
 
+  // ---- Gifted cosmetics ------------------------------------------------------
+  // A cosmetic given to one account by hand, with no badge behind it: the
+  // owner's call, not anything the account did in a game. Server-owned like
+  // the trophies — withChallengeWins (accounts.ts) lays the list over every
+  // profile read and write, so a client can neither add to it nor lose it.
+  await query(`
+    CREATE TABLE IF NOT EXISTS cosmetic_gifts (
+      user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      cosmetic   text NOT NULL,
+      granted_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (user_id, cosmetic)
+    );
+  `);
+  // Halloween 2026: James won the Daily and both Halloween Weeklies, so nobody
+  // else won the golden pumpkin; Jimmy came second in both Weeklies, and the
+  // owner gave him the dice — the dice alone, not the champion's badge, which
+  // would say he had won. The account as it stands on this deploy, by name,
+  // and not retried: a later sign-up called Jimmy is not the one meant.
+  await applyOnce("gold-pumpkin-jimmy-2026-11", async () => {
+    const { rowCount } = await query(
+      `INSERT INTO cosmetic_gifts (user_id, cosmetic)
+       SELECT id, 'gold-pumpkin' FROM users WHERE lower(username) = 'jimmy'
+       ON CONFLICT DO NOTHING`,
+    );
+    console.log(`Gifts: gold-pumpkin dice given to ${rowCount ?? 0} account(s) named Jimmy.`);
+  });
+
   // ---- Roll statistics (rollStats.ts) ----------------------------------------
   await migrateRollStats();
   // The owner's two accounts, taken as they stand on the deploy that adds the

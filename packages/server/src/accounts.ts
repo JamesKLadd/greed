@@ -55,6 +55,13 @@ export interface StoredProfile {
   visualBeta?: BetaIdentity;
   /** Advent doors opened per December; merged by the higher count per year. */
   advent?: AdventProgress;
+  /**
+   * Cosmetics given to this account by hand (cosmetic_gifts), unlocked with
+   * no badge behind them. Server-owned: laid over the profile by
+   * withChallengeWins on the way in and out, so anything a client sends here
+   * is replaced.
+   */
+  gifts?: string[];
 }
 
 export interface PublicUser {
@@ -611,12 +618,16 @@ export async function resetPassword(rawToken: unknown, newPassword: unknown): Pr
  * player owns and wrong for one they do not.
  */
 async function withChallengeWins(userId: string, profile: StoredProfile): Promise<StoredProfile> {
-  const [{ rows }, trophies] = await Promise.all([
+  const [{ rows }, trophies, gifts] = await Promise.all([
     query<{ daily_wins: number; weekly_wins: number }>(
       `SELECT daily_wins, weekly_wins FROM career_stats WHERE user_id = $1`,
       [userId],
     ),
     holidayTrophies(userId),
+    query<{ cosmetic: string }>(
+      `SELECT cosmetic FROM cosmetic_gifts WHERE user_id = $1 ORDER BY granted_at, cosmetic`,
+      [userId],
+    ),
   ]);
   return {
     ...profile,
@@ -626,6 +637,7 @@ async function withChallengeWins(userId: string, profile: StoredProfile): Promis
     // stand (CLAUDE.md). Added to the achievements a client already reported,
     // so the badge and the gold dice it unlocks arrive with the profile.
     achievements: boundedAchievements([...trophies, ...profile.achievements]),
+    gifts: gifts.rows.map((r) => r.cosmetic),
   };
 }
 
