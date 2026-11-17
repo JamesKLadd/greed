@@ -71,6 +71,10 @@ build on every push. Node 20.
   and migration/pruning copy completed dates from retained runs before cleanup.
   Never count a streak from `daily_runs`: those expire after 30 days, which is
   what capped streaks at 31. If copying completions fails, skip daily-run pruning.
+  The weekly streak is the same, on `weekly_completions` (`weekly-streaks.ts`):
+  counted from `weekly_runs` it stopped at about five weeks. Written with the
+  attempt in `settle()`; backfilled from runs, `weekly_scores` and
+  `weekly_champions`; weekly-run pruning is skipped if that copy fails.
 - Weekly challenge: same 10-turn run, resets **Monday 00:00 America/Chicago**,
   best attempt of the week stands. Every attempt gets a fresh secret seed, and
   only one attempt may be open at a time. Unlike the daily, this week's board is

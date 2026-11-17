@@ -52,6 +52,7 @@ import { WEEKLY_ORDER, WEEKLY_ORDER_R } from "./ranking.js";
 import { challengeFriends } from "./challengeFriends.js";
 import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
 import { recordChallengeScore } from "./challenge-scores.js";
+import { currentWeeklyStreak, recordWeeklyCompletion } from "./weekly-streaks.js";
 
 /** Cap on a single attempt's move list — a legitimate 10-turn run is far shorter. */
 const MAX_MOVES = 2000;
@@ -396,6 +397,8 @@ async function settle(userId: string, run: OpenRun): Promise<WeeklyResult> {
     ],
   );
   await recordChallengeScore("weekly", userId, run.week);
+  // In the same transaction as the run, as the daily's completion is.
+  await recordWeeklyCompletion(userId, run.week);
   // EVERY attempt, not just the best: the best ones are the lucky ones, and a
   // record of only those would flatter everyone's dice. After the commit, so a
   // statistics write can never fail the attempt itself.
@@ -559,24 +562,6 @@ export async function resumeWeeklyRun(
   if (run === null || run.week !== week) return null;
   const view = viewOf(run);
   return view.complete ? null : view;
-}
-
-/** Consecutive weeks with a finished attempt, counting back from this one. */
-async function currentStreak(userId: string, thisWeek: string): Promise<number> {
-  const { rows } = await query<{ week: string }>(
-    `SELECT to_char(week, 'YYYY-MM-DD') AS week FROM weekly_runs
-       WHERE user_id = $1 AND week <= $2
-       ORDER BY week DESC LIMIT 400`,
-    [userId, thisWeek],
-  );
-  let streak = 0;
-  const cursor = new Date(`${thisWeek}T00:00:00Z`);
-  for (const row of rows) {
-    if (row.week !== cursor.toISOString().slice(0, 10)) break;
-    streak += 1;
-    cursor.setUTCDate(cursor.getUTCDate() - 7);
-  }
-  return streak;
 }
 
 /** What a player has to show for the weekly boards that have CLOSED. */
@@ -775,7 +760,7 @@ export async function weeklyStatus(
     attemptLimit: ration.limit,
     attemptPeriod: ration.per,
     attemptsUsed: ration.used,
-    streak: await currentStreak(userId, week),
+    streak: await currentWeeklyStreak(userId, week),
     leaderboard: board.rows.map((r) => ({
       username: r.username,
       avatar: r.avatar ?? "",

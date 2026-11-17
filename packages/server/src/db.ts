@@ -20,6 +20,7 @@ import {
 import { refreshCareerChallengeWins, seedChallengeWinsLedger } from "./leaderboards.js";
 import type { RunMove } from "@greed/core";
 import { preserveDailyCompletions } from "./daily-streaks.js";
+import { preserveWeeklyCompletions } from "./weekly-streaks.js";
 import { preserveWeeklyChampions, WEEKLY_HISTORY_WEEKS } from "./weekly-history.js";
 import { preserveChallengeScores } from "./challenge-scores.js";
 import {
@@ -497,6 +498,17 @@ export async function migrate(): Promise<void> {
     ON daily_scores (score DESC, best_turn DESC, day ASC);`);
   await query(`CREATE INDEX IF NOT EXISTS weekly_scores_rank_idx
     ON weekly_scores (score DESC, best_turn DESC NULLS LAST, week ASC);`);
+  // The weekly streak's record, as daily_completions is the daily's: which
+  // weeks a player finished an attempt in, kept after the runs expire. Counted
+  // from weekly_runs, the streak stopped at about five weeks (weekly-streaks.ts).
+  await query(`
+    CREATE TABLE IF NOT EXISTS weekly_completions (
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      week    date NOT NULL,
+      PRIMARY KEY (user_id, week)
+    );
+  `);
+  await preserveWeeklyCompletions();
   // Two earlier repairs, "weekly-wins-open-week-2026-09" and
   // "challenge-wins-tiebreak-2026-09", recounted these columns from the run
   // tables and SET them to the answer. Both rested on a premise that was false
@@ -682,6 +694,13 @@ export async function prune(): Promise<void> {
   } catch (err) {
     console.error("[prune] could not preserve daily completions:", err);
   }
+  let weeklyCompletionsSaved = false;
+  try {
+    await preserveWeeklyCompletions();
+    weeklyCompletionsSaved = true;
+  } catch (err) {
+    console.error("[prune] could not preserve weekly completions:", err);
+  }
   // Bank what the runs about to be deleted were worth, BEFORE deleting them.
   // A day taken outright is a career figure; the run proving it is a log entry
   // with a month to live, so the win is copied into challenge_wins — which this
@@ -743,7 +762,11 @@ export async function prune(): Promise<void> {
   ];
   for (const [what, sql, params] of jobs) {
     if (what === "old daily runs" && (!dailyCompletionsSaved || !scoresSaved.daily)) continue;
-    if (what === "old weekly runs" && (!weeklyChampionsSaved || !scoresSaved.weekly)) continue;
+    if (
+      what === "old weekly runs" &&
+      (!weeklyChampionsSaved || !scoresSaved.weekly || !weeklyCompletionsSaved)
+    )
+      continue;
     if (what === "old weekly winner summaries" && !scoresSaved.weekly) continue;
     try {
       const { rowCount } = await query(sql, params);

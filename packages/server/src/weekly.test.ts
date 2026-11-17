@@ -226,18 +226,18 @@ vi.mock("./db.js", () => ({
       const row = best.get(key(user, week));
       return { rows: row ? [{ attempts: row.attempts }] : [] };
     }
-    if (sql.includes("week <= $2")) {
-      // The streak read: every week this player has finished, newest first.
+    if (sql.includes("streak_weeks")) {
+      // The streak read (weekly-streaks.ts): consecutive finished weeks back
+      // from this one. The weeks a player finished are the weeks they have a
+      // best attempt for.
       const [user, thisWeek] = params as [string, string];
-      return {
-        rows: [...best.keys()]
-          .filter((k) => k.startsWith(`${user}|`))
-          .map((k) => k.split("|")[1])
-          .filter((w) => w <= thisWeek)
-          .sort()
-          .reverse()
-          .map((week) => ({ week })),
-      };
+      let streak = 0;
+      const cursor = new Date(`${thisWeek}T00:00:00Z`);
+      while (best.has(key(user, cursor.toISOString().slice(0, 10)))) {
+        streak += 1;
+        cursor.setUTCDate(cursor.getUTCDate() - 7);
+      }
+      return { rows: [{ streak: String(streak) }] };
     }
     // Checked before the SELECT below, which its own text would otherwise match.
     if (sql.includes("DELETE FROM weekly_open")) {
